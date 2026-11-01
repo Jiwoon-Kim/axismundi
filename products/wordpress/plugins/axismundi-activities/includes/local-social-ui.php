@@ -70,8 +70,68 @@ function axismundi_act_follow_target_available( Axismundi_Actor $subject, Axismu
 		&& $target->is_handle_locked();
 }
 
+/** Render only the acting Person's own directional Block action. */
+function axismundi_act_block_control_html( Axismundi_Actor $subject, Axismundi_Actor $target, string $button_class = 'button', string $return_to = '' ) : string {
+	$current = axismundi_act_current_local_actor();
+	if ( ! $current instanceof Axismundi_Actor || $current->get_uri() !== $subject->get_uri()
+		|| ! axismundi_actors_can_act_as( $subject, get_current_user_id() )
+		|| 'Person' !== $target->get_type() || $subject->get_uri() === $target->get_uri()
+		|| ! function_exists( 'axismundi_act_block_actor' ) || ! function_exists( 'axismundi_act_unblock_actor' ) ) {
+		return '';
+	}
+	$blocked = axismundi_act_actor_blocks( $subject->get_uri(), $target->get_uri() );
+	if ( is_wp_error( $blocked ) ) {
+		return '<span role="status">' . esc_html__( 'Block status unavailable.', 'axismundi-activities' ) . '</span>';
+	}
+	$intent = $blocked ? 'unblock' : 'block';
+	ob_start();
+	?>
+	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+		<input type="hidden" name="action" value="axismundi_act_block">
+		<input type="hidden" name="intent" value="<?php echo esc_attr( $intent ); ?>">
+		<input type="hidden" name="target_uri" value="<?php echo esc_attr( $target->get_uri() ); ?>">
+		<input type="hidden" name="subject_uri" value="<?php echo esc_attr( $subject->get_uri() ); ?>">
+		<input type="hidden" name="return_to" value="<?php echo esc_attr( $return_to ); ?>">
+		<?php wp_nonce_field( 'axismundi_act_block_' . hash( 'sha256', $subject->get_uri() . "\n" . $target->get_uri() . "\n" . $intent ) ); ?>
+		<button type="submit" class="<?php echo esc_attr( $button_class ); ?>"><?php echo esc_html( $blocked ? __( 'Unblock', 'axismundi-activities' ) : __( 'Block', 'axismundi-activities' ) ); ?></button>
+	</form>
+	<?php
+	return (string) ob_get_clean();
+}
+
+/** Re-resolve workspace authority; a rendered subject is not mutation authority. */
+function axismundi_act_handle_block() : void {
+	if ( 'POST' !== ( $_SERVER['REQUEST_METHOD'] ?? '' ) ) {
+		wp_die( esc_html__( 'A POST request is required.', 'axismundi-activities' ), '', array( 'response' => 405 ) );
+	}
+	$subject = axismundi_act_current_local_actor();
+	$subject_uri = isset( $_POST['subject_uri'] ) ? esc_url_raw( wp_unslash( $_POST['subject_uri'] ) ) : '';
+	$target_uri = isset( $_POST['target_uri'] ) ? esc_url_raw( wp_unslash( $_POST['target_uri'] ) ) : '';
+	$intent = isset( $_POST['intent'] ) ? sanitize_key( wp_unslash( $_POST['intent'] ) ) : '';
+	check_admin_referer( 'axismundi_act_block_' . hash( 'sha256', $subject_uri . "\n" . $target_uri . "\n" . $intent ) );
+	$target = axismundi_actors_get_by_uri( $target_uri );
+	if ( ! $subject instanceof Axismundi_Actor || $subject_uri !== $subject->get_uri()
+		|| ! axismundi_actors_can_act_as( $subject, get_current_user_id() )
+		|| ! $target instanceof Axismundi_Actor || 'Person' !== $target->get_type()
+		|| $subject_uri === $target->get_uri() || ! in_array( $intent, array( 'block', 'unblock' ), true )
+		|| ! function_exists( 'axismundi_act_block_actor' ) || ! function_exists( 'axismundi_act_unblock_actor' ) ) {
+		axismundi_act_follow_redirect( axismundi_act_follows_admin_url(), 'error' );
+	}
+	$result = 'block' === $intent ? axismundi_act_block_actor( $subject, $target ) : axismundi_act_unblock_actor( $subject, $target );
+	$return_to = isset( $_POST['return_to'] ) ? sanitize_key( wp_unslash( $_POST['return_to'] ) ) : '';
+	$fallback = 'follows' === $return_to ? axismundi_act_follows_admin_url() : $target->get_profile_url();
+	axismundi_act_follow_redirect( $fallback ?: home_url( '/' ), is_wp_error( $result ) ? 'error' : $intent . 'ed' );
+}
+add_action( 'admin_post_axismundi_act_block', 'axismundi_act_handle_block' );
+
 /** Render one reusable nonce-protected Follow control. */
 function axismundi_act_follow_control_html( Axismundi_Actor $subject, Axismundi_Actor $target, string $button_class = 'button', string $return_to = '' ) : string {
+	if ( 'Person' === $target->get_type() ) {
+		$blocked = axismundi_act_actor_blocks( $subject->get_uri(), $target->get_uri() );
+		if ( is_wp_error( $blocked ) || $blocked ) {
+			return axismundi_act_block_control_html( $subject, $target, $button_class, $return_to );
+		}
+	}
 	if ( ! axismundi_act_follow_target_available( $subject, $target ) ) {
 		return '';
 	}
@@ -95,7 +155,7 @@ function axismundi_act_follow_control_html( Axismundi_Actor $subject, Axismundi_
 			</form>
 		</div>
 		<?php
-		return (string) ob_get_clean();
+		return (string) ob_get_clean() . axismundi_act_block_control_html( $subject, $target, $button_class, $return_to );
 	}
 	ob_start();
 	?>
@@ -108,18 +168,20 @@ function axismundi_act_follow_control_html( Axismundi_Actor $subject, Axismundi_
 		<button type="submit" class="<?php echo esc_attr( $button_class ); ?>"><?php echo esc_html( $label ); ?></button>
 	</form>
 	<?php
-	return (string) ob_get_clean();
+	return (string) ob_get_clean() . axismundi_act_block_control_html( $subject, $target, $button_class, $return_to );
 }
 
 /** Append Follow state/action to a local or cached remote Actor profile block. */
 function axismundi_act_render_profile_follow_control( string $content ) : string {
 	$target  = function_exists( 'axismundi_actors_profile_actor' ) ? axismundi_actors_profile_actor() : null;
 	$subject = axismundi_act_current_local_actor();
-	if ( ! $target instanceof Axismundi_Actor || ! $subject instanceof Axismundi_Actor || ! axismundi_act_follow_target_available( $subject, $target ) ) {
+	if ( ! $target instanceof Axismundi_Actor || ! $subject instanceof Axismundi_Actor ) {
 		return $content;
 	}
 	$notice   = isset( $_GET['ax_follow_notice'] ) ? sanitize_key( wp_unslash( $_GET['ax_follow_notice'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only redirect notice.
 	$messages = array(
+		'blocked'   => __( 'Actor blocked.', 'axismundi-activities' ),
+		'unblocked' => __( 'Actor unblocked.', 'axismundi-activities' ),
 		'followed'  => __( 'Following.', 'axismundi-activities' ),
 		'requested' => __( 'Follow request sent.', 'axismundi-activities' ),
 		'unfollowed' => __( 'No longer following.', 'axismundi-activities' ),
@@ -140,7 +202,7 @@ add_filter( 'render_block_axismundi/actor-profile', 'axismundi_act_render_profil
 /** Add the same Follow control to Actors' administrator remote-detail seam. */
 function axismundi_act_render_remote_admin_follow_control( Axismundi_Actor $target ) : void {
 	$subject = axismundi_act_current_local_actor();
-	if ( ! $subject instanceof Axismundi_Actor || ! axismundi_act_follow_target_available( $subject, $target ) ) {
+	if ( ! $subject instanceof Axismundi_Actor ) {
 		return;
 	}
 	echo '<h3>' . esc_html__( 'Relationship', 'axismundi-activities' ) . '</h3><div class="ax-local-follow">';
@@ -243,6 +305,55 @@ function axismundi_act_remove_follower_control_html( Axismundi_Actor $target, st
 	return (string) ob_get_clean();
 }
 
+/** Private, paged outgoing Blocks for the currently authorized workspace only. */
+function axismundi_act_render_blocked_actors() : void {
+	$actor = axismundi_act_current_local_actor();
+	if ( ! $actor instanceof Axismundi_Actor || ! axismundi_actors_can_act_as( $actor, get_current_user_id() ) ) {
+		return;
+	}
+	echo '<h2>' . esc_html__( 'Blocked actors', 'axismundi-activities' ) . '</h2>';
+	if ( ! axismundi_act_relations_ready() ) {
+		echo '<p role="status">' . esc_html__( 'Block status unavailable.', 'axismundi-activities' ) . '</p>';
+		return;
+	}
+	global $wpdb;
+	$page = isset( $_GET['ax_block_page'] ) ? max( 1, min( 1000000, absint( $_GET['ax_block_page'] ) ) ) : 1; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only pagination.
+	$per_page = 20;
+	$table = axismundi_act_relations_table();
+	$uri = $actor->get_uri();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- repository-owned table; exact subject and hash restrict this private UI query.
+	$rows = $wpdb->get_col( $wpdb->prepare( "SELECT object_actor_uri FROM {$table} WHERE relation_type = 'block' AND state = 'active' AND subject_actor_uri_hash = %s AND subject_actor_uri = %s ORDER BY id DESC LIMIT %d OFFSET %d", hash( 'sha256', $uri ), $uri, $per_page + 1, ( $page - 1 ) * $per_page ) );
+	if ( '' !== $wpdb->last_error ) {
+		echo '<p role="status">' . esc_html__( 'Block status unavailable.', 'axismundi-activities' ) . '</p>';
+		return;
+	}
+	$rows = (array) $rows;
+	if ( empty( $rows ) ) {
+		echo '<p>' . esc_html( 1 === $page ? __( 'No blocked actors.', 'axismundi-activities' ) : __( 'No blocked actors on this page.', 'axismundi-activities' ) ) . '</p>';
+	} else {
+		echo '<ul>';
+		foreach ( array_slice( $rows, 0, $per_page ) as $target_uri ) {
+			echo '<li>' . axismundi_act_local_actor_label( (string) $target_uri ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- helper escapes label markup.
+			$target = axismundi_actors_get_by_uri( (string) $target_uri );
+			if ( $target instanceof Axismundi_Actor ) {
+				echo axismundi_act_block_control_html( $actor, $target, 'button', 'follows' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- helper escapes form markup and rechecks outgoing Block status.
+			}
+			echo '</li>';
+		}
+		echo '</ul>';
+	}
+	if ( $page > 1 || count( $rows ) > $per_page ) {
+		echo '<nav aria-label="' . esc_attr__( 'Blocked actors pages', 'axismundi-activities' ) . '">';
+		if ( $page > 1 ) {
+			echo '<a href="' . esc_url( add_query_arg( 'ax_block_page', $page - 1, axismundi_act_follows_admin_url() ) ) . '">' . esc_html__( 'Previous', 'axismundi-activities' ) . '</a> ';
+		}
+		if ( count( $rows ) > $per_page ) {
+			echo '<a href="' . esc_url( add_query_arg( 'ax_block_page', $page + 1, axismundi_act_follows_admin_url() ) ) . '">' . esc_html__( 'Next', 'axismundi-activities' ) . '</a>';
+		}
+		echo '</nav>';
+	}
+}
+
 /** Render the current Actor's requests and accepted edges. */
 function axismundi_act_render_follows_page() : void {
 	$actor = axismundi_act_current_local_actor();
@@ -256,6 +367,8 @@ function axismundi_act_render_follows_page() : void {
 	$approval      = axismundi_act_local_follow_requires_approval( $actor );
 	$notice        = isset( $_GET['ax_follow_notice'] ) ? sanitize_key( wp_unslash( $_GET['ax_follow_notice'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only redirect notice.
 	$notice_messages = array(
+		'blocked'    => __( 'Actor blocked.', 'axismundi-activities' ),
+		'unblocked'  => __( 'Actor unblocked.', 'axismundi-activities' ),
 		'accepted'   => __( 'Follow request accepted.', 'axismundi-activities' ),
 		'followed'   => __( 'Following.', 'axismundi-activities' ),
 		'rejected'   => __( 'Follower removed or request rejected.', 'axismundi-activities' ),
@@ -274,6 +387,8 @@ function axismundi_act_render_follows_page() : void {
 			<?php submit_button( __( 'Save', 'axismundi-activities' ), 'secondary', 'submit', false ); ?>
 		</form>
 
+		<?php axismundi_act_render_blocked_actors(); ?>
+
 		<h2><?php esc_html_e( 'Follow requests', 'axismundi-activities' ); ?></h2>
 		<table class="widefat striped"><tbody>
 		<?php if ( empty( $requests ) ) : ?><tr><td><?php esc_html_e( 'No pending requests.', 'axismundi-activities' ); ?></td></tr><?php else : foreach ( $requests as $request ) : ?>
@@ -283,6 +398,12 @@ function axismundi_act_render_follows_page() : void {
 					<?php wp_nonce_field( 'axismundi_act_follow_decision_' . hash( 'sha256', (string) $request['initiating_activity_uri'] ) ); ?>
 					<button class="button button-primary" name="decision" value="accept"><?php esc_html_e( 'Accept', 'axismundi-activities' ); ?></button> <button class="button" name="decision" value="reject"><?php esc_html_e( 'Reject', 'axismundi-activities' ); ?></button>
 				</form>
+				<?php
+				$request_actor = axismundi_actors_get_by_uri( (string) $request['subject_actor_uri'] );
+				if ( $request_actor instanceof Axismundi_Actor ) {
+					echo axismundi_act_block_control_html( $actor, $request_actor, 'button', 'follows' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- helper escapes form markup.
+				}
+				?>
 			</td></tr>
 		<?php endforeach; endif; ?>
 		</tbody></table>

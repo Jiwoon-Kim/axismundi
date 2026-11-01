@@ -193,7 +193,7 @@ try {
 		$ax_fm_results,
 		'a local Person may follow its own site managed Group and an approval Forum holds them pending',
 		is_array( $local_relation )
-			&& 'local' === (string) $local_relation['direction']
+			&& 'outbound' === (string) $local_relation['direction']
 			&& 'pending' === (string) $local_relation['state']
 			&& is_array( $local_membership )
 			&& 'pending' === (string) $local_membership['membership_state']
@@ -403,5 +403,5 @@ try {
 
 $ax_fm_failed = count( array_filter( $ax_fm_results, static fn( $result ) => ! $result ) );
 // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI test output.
-printf( "\n%d/%d passed\n", count( $ax_fm_results ) - $ax_fm_failed, count( $ax_fm_results ) );
+printf( "\n== %d checks, %d failed ==\n", count( $ax_fm_results ), $ax_fm_failed );
 exit( $ax_fm_failed > 0 ? 1 : 0 );

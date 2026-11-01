@@ -37,6 +37,7 @@ function axismundi_act_install_relations() : bool {
 			state varchar(16) NOT NULL,
 			initiating_activity_uri text DEFAULT NULL,
 			state_activity_uri text DEFAULT NULL,
+			termination_activity_uri text DEFAULT NULL,
 			evidence_type varchar(16) NOT NULL DEFAULT 'activity',
 			evidence_ref text DEFAULT NULL,
 			created_at datetime NOT NULL,
@@ -74,6 +75,7 @@ function axismundi_act_install_relations() : bool {
 		&& in_array( 'object_actor_uri', $columns, true )
 		&& in_array( 'evidence_type', $columns, true )
 		&& in_array( 'evidence_ref', $columns, true )
+		&& in_array( 'termination_activity_uri', $columns, true )
 		&& 'YES' === (string) ( $column_map['initiating_activity_uri']['Null'] ?? '' )
 		&& 'varchar(16)' === strtolower( (string) ( $column_map['state']['Type'] ?? '' ) )
 		&& ! in_array( 'blog_id', $columns, true )
@@ -83,7 +85,7 @@ function axismundi_act_install_relations() : bool {
 }
 
 /** Exact materialized relation lookup. */
-function axismundi_act_get_relation( string $type, string $subject_uri, string $object_uri ) : ?array {
+function axismundi_act_get_relation( string $type, string $subject_uri, string $object_uri, bool $lock = false ) : ?array {
 	global $wpdb;
 	$type = sanitize_key( $type );
 	if ( ! axismundi_act_relations_ready() || ! in_array( $type, array( 'follow', 'block' ), true ) || '' === axismundi_act_uri( $subject_uri ) || '' === axismundi_act_uri( $object_uri ) ) {
@@ -93,7 +95,7 @@ function axismundi_act_get_relation( string $type, string $subject_uri, string $
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- exact custom relation lookup.
 	$row = $wpdb->get_row(
 		$wpdb->prepare(
-			"SELECT * FROM {$table} WHERE relation_type = %s AND subject_actor_uri_hash = %s AND object_actor_uri_hash = %s",
+			"SELECT * FROM {$table} WHERE relation_type = %s AND subject_actor_uri_hash = %s AND object_actor_uri_hash = %s" . ( $lock ? ' FOR UPDATE' : '' ),
 			$type,
 			hash( 'sha256', $subject_uri ),
 			hash( 'sha256', $object_uri )
@@ -108,12 +110,12 @@ function axismundi_act_get_relation( string $type, string $subject_uri, string $
 }
 
 /** Account-owned Block policy; repository failures must not be treated as an absent Block. */
-function axismundi_act_actor_blocks( string $subject_uri, string $object_uri ) {
+function axismundi_act_actor_blocks( string $subject_uri, string $object_uri, bool $lock = false ) {
 	if ( ! axismundi_act_relations_ready() || '' === axismundi_act_uri( $subject_uri ) || '' === axismundi_act_uri( $object_uri ) ) {
 		return new WP_Error( 'ax_act_block_policy', 'The Block relation policy is unavailable.' );
 	}
 	global $wpdb;
-	$relation = axismundi_act_get_relation( 'block', $subject_uri, $object_uri );
+	$relation = axismundi_act_get_relation( 'block', $subject_uri, $object_uri, $lock );
 	if ( '' !== $wpdb->last_error ) {
 		return new WP_Error( 'ax_act_block_read', 'The Block relation could not be read.' );
 	}
@@ -128,7 +130,7 @@ function axismundi_act_relation_direction( string $subject_uri, string $object_u
 		return new WP_Error( 'ax_act_relation_actor', __( 'A social relation requires two known Actors.', 'axismundi-activities' ) );
 	}
 	if ( $subject->is_local() && $object->is_local() ) {
-		return 'local';
+		return 'outbound';
 	}
 	if ( $subject->is_local() ) {
 		return 'outbound';
@@ -140,7 +142,7 @@ function axismundi_act_relation_direction( string $subject_uri, string $object_u
 }
 
 /** Insert or update one relation row inside the caller's transaction. */
-function axismundi_act_write_relation( string $type, string $subject_uri, string $object_uri, string $direction, string $state, ?string $initiating_uri, ?string $state_uri, string $evidence_type = 'activity', ?string $evidence_ref = null ) {
+function axismundi_act_write_relation( string $type, string $subject_uri, string $object_uri, string $direction, string $state, ?string $initiating_uri, ?string $state_uri, string $evidence_type = 'activity', ?string $evidence_ref = null, ?string $termination_uri = null ) {
 	global $wpdb;
 	$table = axismundi_act_relations_table();
 	$now   = current_time( 'mysql', true );
@@ -167,6 +169,8 @@ function axismundi_act_write_relation( string $type, string $subject_uri, string
 		'state'                  => $state,
 		'initiating_activity_uri' => $initiating_uri,
 		'state_activity_uri'     => $state_uri,
+		// Preserve the terminal cause for this cycle, independently of later response/Undo URIs.
+		'termination_activity_uri' => 'follow' === $type ? ( $termination_uri ?? ( is_array( $existing ) && $existing['initiating_activity_uri'] === $initiating_uri ? ( $existing['termination_activity_uri'] ?? null ) : null ) ) : null,
 		'evidence_type'          => $evidence_type,
 		'evidence_ref'           => null !== $evidence_ref ? $evidence_ref : $initiating_uri,
 		'updated_at'             => $now,
@@ -179,10 +183,14 @@ function axismundi_act_write_relation( string $type, string $subject_uri, string
 
 /** Start a Follow/Block without downgrading an already live relation. */
 function axismundi_act_start_relation( string $type, string $subject_uri, string $object_uri, string $direction, string $activity_uri ) {
-	$existing = axismundi_act_get_relation( $type, $subject_uri, $object_uri );
+	$existing = axismundi_act_get_relation( $type, $subject_uri, $object_uri, true );
+	// The same Follow never starts a fresh cycle merely because its state is terminal.
+	if ( 'follow' === $type && is_array( $existing ) && hash_equals( (string) ( $existing['initiating_activity_uri'] ?? '' ), $activity_uri ) ) {
+		return $existing;
+	}
 	$live     = 'follow' === $type ? array( 'pending', 'accepted' ) : array( 'active' );
 	if ( is_array( $existing ) && 'activity' === (string) ( $existing['evidence_type'] ?? 'activity' ) && in_array( (string) $existing['state'], $live, true ) ) {
-		if ( 'follow' !== $type || hash_equals( (string) ( $existing['initiating_activity_uri'] ?? '' ), $activity_uri ) ) {
+		if ( hash_equals( (string) ( $existing['initiating_activity_uri'] ?? '' ), $activity_uri ) ) {
 			return $existing;
 		}
 	}
@@ -216,6 +224,11 @@ function axismundi_act_import_follow_snapshot( string $subject_uri, string $obje
 	}
 	$wpdb->query( 'START TRANSACTION' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- atomic snapshot materialization.
 	$existing = axismundi_act_get_relation( 'follow', $subject_uri, $object_uri );
+	$blocked = axismundi_act_follow_pair_blocked( $subject_uri, $object_uri );
+	if ( is_wp_error( $blocked ) || $blocked || ! empty( $existing['termination_activity_uri'] ) ) {
+		$wpdb->query( 'ROLLBACK' );
+		return is_wp_error( $blocked ) ? $blocked : ( $existing ?? new WP_Error( 'ax_act_follow_blocked', 'A blocked pair cannot import a live Follow.' ) );
+	}
 	if ( is_array( $existing ) && 'activity' === (string) ( $existing['evidence_type'] ?? 'activity' ) ) {
 		$wpdb->query( 'COMMIT' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		return $existing;
@@ -252,6 +265,32 @@ function axismundi_act_relation_transitions( string $activity_uri ) : array {
 	return array_values( array_filter( $rows, static fn( array $row ) : bool => hash_equals( (string) $row['object_uri'], $activity_uri ) ) );
 }
 
+/** Fail closed on either directional Block when starting or accepting a Follow. */
+function axismundi_act_follow_pair_blocked( string $subject_uri, string $object_uri ) {
+	foreach ( array( array( $subject_uri, $object_uri ), array( $object_uri, $subject_uri ) ) as [ $subject, $object ] ) {
+		$blocked = axismundi_act_actor_blocks( $subject, $object, true );
+		if ( is_wp_error( $blocked ) || $blocked ) { return $blocked; }
+	}
+	return false;
+}
+
+/** A recorded Person Block permanently ends earlier Follow cycles, even after its Undo. */
+function axismundi_act_follow_termination_block( array $follow ) {
+	$relation = axismundi_act_get_relation( 'follow', $follow['actor_uri'], $follow['object_uri'] );
+	if ( ! is_array( $relation ) || $follow['activity_uri'] !== $relation['initiating_activity_uri'] || empty( $relation['termination_activity_uri'] ) ) { return null; }
+	$block = axismundi_act_transaction_row( $relation['termination_activity_uri'] );
+	if ( is_array( $block ) && 'Block' === $block['activity_type'] && empty( $block['target_uri'] )
+		&& ( ( $block['actor_uri'] === $follow['actor_uri'] && $block['object_uri'] === $follow['object_uri'] ) || ( $block['actor_uri'] === $follow['object_uri'] && $block['object_uri'] === $follow['actor_uri'] ) ) ) { return $block; }
+	return new WP_Error( 'ax_act_block_cause', 'The terminal Follow evidence is unavailable.' );
+}
+
+/** Resolve an actual active same-author Undo rather than pointing back at its target. */
+function axismundi_act_effective_undo_uri( array $root ) {
+	global $wpdb;
+	$uri = $wpdb->get_var( $wpdb->prepare( "SELECT activity_uri FROM %i WHERE activity_type='Undo' AND effective_status='active' AND object_uri_hash=%s AND object_uri=%s AND actor_uri_hash=%s AND actor_uri=%s ORDER BY id DESC LIMIT 1", axismundi_act_activities_table(), hash( 'sha256', $root['activity_uri'] ), $root['activity_uri'], hash( 'sha256', $root['actor_uri'] ), $root['actor_uri'] ) );
+	return '' === $wpdb->last_error && is_string( $uri ) && '' !== $uri ? $uri : new WP_Error( 'ax_act_transition_evidence', 'The effective Undo evidence could not be read.' );
+}
+
 /** Reconcile a Follow from its effective state and any out-of-order Accept/Reject rows. */
 function axismundi_act_reconcile_follow( array $follow ) {
 	$subject_uri = (string) $follow['actor_uri'];
@@ -259,6 +298,11 @@ function axismundi_act_reconcile_follow( array $follow ) {
 	$direction   = axismundi_act_relation_direction( $subject_uri, $object_uri );
 	if ( is_wp_error( $direction ) ) {
 		return $direction;
+	}
+	$current = axismundi_act_get_relation( 'follow', $subject_uri, $object_uri );
+	if ( is_array( $current ) && ! empty( $current['initiating_activity_uri'] ) && $current['initiating_activity_uri'] !== $follow['activity_uri'] ) {
+		$owner = axismundi_act_transaction_row( $current['initiating_activity_uri'] );
+		if ( is_array( $owner ) && (int) $owner['id'] > (int) $follow['id'] ) { return $current; }
 	}
 	$relation = axismundi_act_start_relation( 'follow', $subject_uri, $object_uri, $direction, (string) $follow['activity_uri'] );
 	if ( is_wp_error( $relation ) || ! is_array( $relation ) ) {
@@ -268,8 +312,22 @@ function axismundi_act_reconcile_follow( array $follow ) {
 		return $relation;
 	}
 	if ( 'undone' === (string) $follow['effective_status'] ) {
-		return axismundi_act_transition_relation( 'follow', $subject_uri, $object_uri, (string) $follow['activity_uri'], 'undone', (string) $follow['activity_uri'] );
+		$undo = axismundi_act_effective_undo_uri( $follow );
+		return is_wp_error( $undo ) ? $undo : axismundi_act_transition_relation( 'follow', $subject_uri, $object_uri, (string) $follow['activity_uri'], 'undone', $undo );
 	}
+	$block = axismundi_act_follow_termination_block( $follow );
+	if ( is_wp_error( $block ) ) { return $block; }
+	if ( is_array( $block ) ) {
+		$state = $block['actor_uri'] === $subject_uri ? 'undone' : 'rejected';
+		$state_uri = $block['activity_uri'];
+		foreach ( axismundi_act_relation_transitions( $follow['activity_uri'] ) as $transition ) {
+			if ( 'rejected' === $state && 'Reject' === $transition['activity_type'] && $object_uri === $transition['actor_uri'] && (int) $transition['id'] > (int) $block['id'] ) { $state_uri = $transition['activity_uri']; }
+		}
+		return axismundi_act_transition_relation( 'follow', $subject_uri, $object_uri, $follow['activity_uri'], $state, $state_uri );
+	}
+	// Derive from effective evidence, not the previous materialization (e.g. Undo(Accept)).
+	$relation = axismundi_act_transition_relation( 'follow', $subject_uri, $object_uri, $follow['activity_uri'], 'pending', $follow['activity_uri'] );
+	if ( is_wp_error( $relation ) ) { return $relation; }
 	foreach ( axismundi_act_relation_transitions( (string) $follow['activity_uri'] ) as $transition ) {
 		if ( ! hash_equals( (string) $transition['actor_uri'], $object_uri ) ) {
 			continue;
@@ -288,13 +346,20 @@ function axismundi_act_reconcile_block( array $block ) {
 	if ( is_wp_error( $direction ) ) {
 		return $direction;
 	}
+	$current = axismundi_act_get_relation( 'block', $subject_uri, $object_uri );
+	if ( is_array( $current ) && ! empty( $current['initiating_activity_uri'] ) && $current['initiating_activity_uri'] !== $block['activity_uri'] ) {
+		$owner = axismundi_act_transaction_row( $current['initiating_activity_uri'] );
+		if ( is_array( $owner ) && (int) $owner['id'] > (int) $block['id'] ) { return $current; }
+	}
 	$relation = axismundi_act_start_relation( 'block', $subject_uri, $object_uri, $direction, (string) $block['activity_uri'] );
 	if ( is_wp_error( $relation ) || ! is_array( $relation ) || ! hash_equals( (string) $relation['initiating_activity_uri'], (string) $block['activity_uri'] ) ) {
 		return $relation;
 	}
-	return 'undone' === (string) $block['effective_status']
-		? axismundi_act_transition_relation( 'block', $subject_uri, $object_uri, (string) $block['activity_uri'], 'undone', (string) $block['activity_uri'] )
-		: $relation;
+	if ( 'undone' === (string) $block['effective_status'] ) {
+		$undo = axismundi_act_effective_undo_uri( $block );
+		return is_wp_error( $undo ) ? $undo : axismundi_act_transition_relation( 'block', $subject_uri, $object_uri, (string) $block['activity_uri'], 'undone', $undo );
+	}
+	return $relation;
 }
 
 /** Follow an Undo chain to the non-Undo root Activity. */
@@ -337,8 +402,18 @@ function axismundi_act_apply_relation_activity( array $normalized ) {
 			return new WP_Error( 'ax_act_follow_transition_actor', __( 'Only the followed Actor may Accept or Reject a Follow.', 'axismundi-activities' ) );
 		}
 	}
+	if ( is_array( $root ) && in_array( $root['activity_type'], array( 'Accept', 'Reject' ), true ) ) {
+		$root = axismundi_act_transaction_row( (string) $root['object_uri'] );
+	}
 	if ( ! is_array( $root ) || ! in_array( (string) $root['activity_type'], array( 'Follow', 'Block' ), true ) ) {
 		return array();
+	}
+	// Lemmy-style target-scoped bans are not personal Block relations.
+	if ( 'Block' === $root['activity_type'] && ! empty( $root['target_uri'] ) ) { return array(); }
+	if ( 'Follow' === $type ) {
+		$blocked = axismundi_act_follow_pair_blocked( $root['actor_uri'], $root['object_uri'] );
+		if ( is_wp_error( $blocked ) ) { return $blocked; }
+		if ( $blocked ) { return 'inbound' === $normalized['direction'] ? array() : new WP_Error( 'ax_act_follow_blocked', 'A blocked Actor pair cannot start a Follow.' ); }
 	}
 	// A receipt for another Account must not mutate a blocked Account's Follow state.
 	if ( 'inbound' === ( $normalized['direction'] ?? '' ) && 'Follow' === $root['activity_type'] ) {
@@ -362,10 +437,69 @@ function axismundi_act_apply_relation_activity( array $normalized ) {
 	if ( is_wp_error( $after ) ) {
 		return $after;
 	}
-	if ( ! is_array( $after ) || $before === $after ) {
-		return array();
+	$events = array();
+	if ( 'block' === $relation_type && is_array( $after ) && $after['initiating_activity_uri'] === $root['activity_uri'] ) {
+		$closed = axismundi_act_close_block_follows( $root );
+		if ( is_wp_error( $closed ) ) { return $closed; }
+		$events = $closed;
 	}
-	return array( $after );
+	if ( ! is_array( $after ) || $before === $after ) {
+		return $events;
+	}
+	$events[] = $after;
+	return $events;
+}
+
+/** Atomically close both Person Follow edges, retaining the Block as causal evidence. */
+function axismundi_act_close_block_follows( array $block ) {
+	$events = array();
+	if ( ! empty( $block['target_uri'] ) ) { return $events; }
+	foreach ( array( array( $block['actor_uri'], $block['object_uri'] ), array( $block['object_uri'], $block['actor_uri'] ) ) as [ $subject, $object ] ) {
+		$a = axismundi_actors_get_by_uri( $subject );
+		$b = axismundi_actors_get_by_uri( $object );
+		if ( ! $a instanceof Axismundi_Actor || ! $b instanceof Axismundi_Actor || 'Person' !== $a->get_type() || 'Person' !== $b->get_type() ) { continue; }
+		$before = axismundi_act_get_relation( 'follow', $subject, $object, true );
+		if ( ! is_array( $before ) || ! empty( $before['termination_activity_uri'] ) ) { continue; }
+		$follow = ! empty( $before['initiating_activity_uri'] ) ? axismundi_act_transaction_row( $before['initiating_activity_uri'] ) : null;
+		if ( is_array( $follow ) && (int) $follow['id'] > (int) $block['id'] && 'undone' === $block['effective_status'] ) { continue; }
+		$live = in_array( $before['state'], array( 'accepted', 'pending', 'legacy_pending' ), true );
+		$state = $live ? ( $subject === $block['actor_uri'] ? 'undone' : 'rejected' ) : $before['state'];
+		$after = axismundi_act_write_relation( 'follow', $subject, $object, $before['direction'], $state, $before['initiating_activity_uri'], $live ? $block['activity_uri'] : $before['state_activity_uri'], $before['evidence_type'], $before['evidence_ref'], $block['activity_uri'] );
+		if ( is_wp_error( $after ) ) { return $after; }
+		$events[] = $after;
+	}
+	return $events;
+}
+
+/** Upgrade only active, Activity-backed Person Blocks; schema version is not yet advanced. */
+function axismundi_act_backfill_active_person_blocks() : bool {
+	global $wpdb;
+	$table = axismundi_act_relations_table();
+	if ( false === $wpdb->query( 'START TRANSACTION' ) ) { return false; }
+	$committed = false;
+	try {
+		$blocks = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM %i WHERE relation_type='block' AND state='active' FOR UPDATE", $table ), ARRAY_A );
+		if ( '' !== $wpdb->last_error ) { return false; }
+		foreach ( $blocks as $relation ) {
+			$block = ! empty( $relation['initiating_activity_uri'] ) ? axismundi_act_transaction_row( $relation['initiating_activity_uri'] ) : null;
+			if ( '' !== $wpdb->last_error ) { return false; }
+			if ( ! is_array( $block ) || 'Block' !== $block['activity_type'] || 'active' !== $block['effective_status'] || ! empty( $block['target_uri'] )
+				|| $block['actor_uri'] !== $relation['subject_actor_uri'] || $block['object_uri'] !== $relation['object_actor_uri'] ) { continue; }
+			$a = axismundi_actors_get_by_uri( $block['actor_uri'] );
+			$b = axismundi_actors_get_by_uri( $block['object_uri'] );
+			if ( ! $a instanceof Axismundi_Actor || ! $b instanceof Axismundi_Actor || 'Person' !== $a->get_type() || 'Person' !== $b->get_type() || ( ! $a->is_local() && ! $b->is_local() ) ) { continue; }
+			foreach ( array( array( $a->get_uri(), $b->get_uri() ), array( $b->get_uri(), $a->get_uri() ) ) as [ $subject, $object ] ) {
+				$follow = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM %i WHERE relation_type='follow' AND subject_actor_uri_hash=%s AND object_actor_uri_hash=%s FOR UPDATE", $table, hash( 'sha256', $subject ), hash( 'sha256', $object ) ), ARRAY_A );
+				if ( '' !== $wpdb->last_error ) { return false; }
+				if ( ! is_array( $follow ) || $follow['subject_actor_uri'] !== $subject || $follow['object_actor_uri'] !== $object || ! empty( $follow['termination_activity_uri'] ) ) { continue; }
+				$live = in_array( $follow['state'], array( 'accepted', 'pending', 'legacy_pending' ), true );
+				$state = $live ? ( $subject === $a->get_uri() ? 'undone' : 'rejected' ) : $follow['state'];
+				if ( false === $wpdb->update( $table, array( 'state' => $state, 'state_activity_uri' => $live ? $block['activity_uri'] : $follow['state_activity_uri'], 'termination_activity_uri' => $block['activity_uri'], 'updated_at' => current_time( 'mysql', true ) ), array( 'id' => (int) $follow['id'] ) ) ) { return false; }
+			}
+		}
+		$committed = false !== $wpdb->query( 'COMMIT' );
+		return $committed;
+	} finally { if ( ! $committed ) { $wpdb->query( 'ROLLBACK' ); } }
 }
 
 /** Accepted follower Actor URIs for one Actor. */

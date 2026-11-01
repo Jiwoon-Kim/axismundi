@@ -80,7 +80,7 @@ try {
 	wp_set_current_user( 0 );
 	wp_set_current_user( (int) $follower->get_local_user_id() );
 	$auto = axismundi_act_follow_local_actor( $follower, $target );
-	ax_local_assert( $ax_local_results, 'NULL follower policy uses the site auto-accept default and records an accepted local edge', is_array( $auto ) && 'accepted' === $auto['state'] && 'local' === $auto['direction'] );
+	ax_local_assert( $ax_local_results, 'NULL follower policy uses the site auto-accept default and records an accepted outbound edge', is_array( $auto ) && 'accepted' === $auto['state'] && 'outbound' === $auto['direction'] );
 	ax_local_assert( $ax_local_results, 'accepted local edges derive following and followers symmetrically', in_array( $target->get_uri(), axismundi_act_get_following( $follower->get_uri() ), true ) && in_array( $follower->get_uri(), axismundi_act_get_followers( $target->get_uri() ), true ) );
 
 	$undone = axismundi_act_unfollow_local_actor( $follower, $target );

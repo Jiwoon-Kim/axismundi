@@ -114,7 +114,7 @@ function axismundi_act_quote_request_response_object( Axismundi_Activity $reques
  * @return Axismundi_Activity|WP_Error
  */
 function axismundi_act_process_quote_request( Axismundi_Activity $request ) {
-	if ( 'QuoteRequest' !== $request->get_type() || ! in_array( $request->get_direction(), array( 'inbound', 'local' ), true ) ) {
+	if ( 'QuoteRequest' !== $request->get_type() || ! in_array( $request->get_direction(), array( 'inbound', 'outbound', 'local' ), true ) ) {
 		return new WP_Error( 'ax_act_quote_request', __( 'Only a committed inbound or local QuoteRequest can be decided.', 'axismundi-activities' ) );
 	}
 	$request_uri = $request->get_uri();

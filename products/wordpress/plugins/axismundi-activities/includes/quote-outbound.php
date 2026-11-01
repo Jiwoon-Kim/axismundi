@@ -203,7 +203,7 @@ function axismundi_act_outbound_quote_decision( string $request_uri ) : ?array {
 		foreach ( $rows as $row ) {
 			$cursor   = max( $cursor, (int) $row['id'] );
 			$activity = axismundi_act_hydrate( $row );
-			if ( ! in_array( $activity->get_direction(), array( 'inbound', 'local' ), true ) ) {
+			if ( ! in_array( $activity->get_direction(), array( 'inbound', 'outbound', 'local' ), true ) ) {
 				continue;
 			}
 			$decider   = $activity->get_actor_uri();
@@ -242,7 +242,7 @@ function axismundi_act_outbound_quote_decision( string $request_uri ) : ?array {
  */
 function axismundi_act_maybe_decide_outbound_quote( Axismundi_Activity $activity ) : void {
 	if ( ! in_array( $activity->get_type(), array( 'Accept', 'Reject' ), true )
-		|| ! in_array( $activity->get_direction(), array( 'inbound', 'local' ), true )
+		|| ! in_array( $activity->get_direction(), array( 'inbound', 'outbound', 'local' ), true )
 	) {
 		return;
 	}

@@ -61,6 +61,39 @@ function axismundi_act_inbox_payload( array $payload ) : array {
 	return $payload;
 }
 
+/** Trusted internal delivery of an already committed local Activity; never records or replays it. */
+function axismundi_act_receive_local_activity( string $activity_uri, int $recipient_id ) {
+	global $wpdb;
+	if ( AXISMUNDI_ACT_DB_VERSION !== (string) get_option( AXISMUNDI_ACT_DB_VERSION_OPTION, '' ) ) {
+		return new WP_Error( 'ax_act_schema', 'The Inbox repository is unavailable.' );
+	}
+	if ( false === $wpdb->query( 'START TRANSACTION' ) ) {
+		return new WP_Error( 'ax_act_inbox_write', 'The receipt transaction could not start.' );
+	}
+	$committed = false;
+	try {
+		$row = axismundi_act_transaction_row( $activity_uri );
+		$activity = is_array( $row ) ? axismundi_act_hydrate( $row ) : null;
+		$sender = $activity ? axismundi_actors_get_by_uri( $activity->get_actor_uri() ) : null;
+		if ( ! $activity || ! hash_equals( $activity_uri, $activity->get_uri() )
+			|| 'outbound' !== $activity->get_direction() || ! $sender instanceof Axismundi_Actor
+			|| ! $sender->is_local() || 'public' !== $sender->get_status() ) {
+			return new WP_Error( 'ax_act_inbox_direction', 'Local delivery requires a stored outbound local Activity.' );
+		}
+		if ( ! axismundi_act_write_inbox_memberships( $activity->get_id(), array( $recipient_id ), current_time( 'mysql', true ) )
+			|| false === $wpdb->query( 'COMMIT' ) ) {
+			return new WP_Error( 'ax_act_inbox_write', 'The Inbox receipt could not be stored.' );
+		}
+		$committed = true;
+		return $activity;
+	} finally {
+		// Also releases locks after validation, INSERT, or COMMIT failure.
+		if ( ! $committed ) {
+			$wpdb->query( 'ROLLBACK' );
+		}
+	}
+}
+
 /** Private receipt collection, ordered by immutable receipt id, not sender-controlled published time. */
 function axismundi_act_get_actor_inbox_page( string $actor_uri, int $limit = 20, string $cursor = '' ) {
 	global $wpdb;
@@ -80,7 +113,7 @@ function axismundi_act_get_actor_inbox_page( string $actor_uri, int $limit = 20,
 	$where = '' === $cursor ? '' : $wpdb->prepare( ' AND m.id < %d', (int) substr( $cursor, 1 ) );
 	$rows = $wpdb->get_results( $wpdb->prepare(
 		"SELECT a.*, m.id AS receipt_id FROM %i m INNER JOIN %i a ON a.id = m.activity_id
-		 WHERE m.actor_identity_id = %d AND a.direction = 'inbound' {$where} ORDER BY m.id DESC LIMIT %d",
+		 WHERE m.actor_identity_id = %d {$where} ORDER BY m.id DESC LIMIT %d",
 		axismundi_act_inbox_table(), axismundi_act_activities_table(), $actor->get_identity_id(), $limit + 1
 	), ARRAY_A );
 	if ( null === $rows || '' !== $wpdb->last_error ) {

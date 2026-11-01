@@ -368,7 +368,7 @@ function axismundi_forum_is_membership_evidence( string $relation_type ) : bool 
 function axismundi_forum_sync_membership_from_follow( array $relation ) : void {
 	$relation = axismundi_act_relation_read_model( $relation );
 	if ( ! axismundi_forum_is_membership_evidence( (string) ( $relation['relation_type'] ?? '' ) )
-		|| ! in_array( (string) ( $relation['direction'] ?? '' ), array( 'inbound', 'local' ), true ) ) {
+		|| ! in_array( (string) ( $relation['direction'] ?? '' ), array( 'inbound', 'outbound', 'local' ), true ) ) {
 		return;
 	}
 	$group = function_exists( 'axismundi_actors_get_by_uri' ) ? axismundi_actors_get_by_uri( $relation['object_uri'] ) : null;
@@ -397,8 +397,8 @@ function axismundi_forum_sync_membership_from_follow( array $relation ) : void {
 	 * not go through, the member is recorded as still waiting, which is exactly what they are,
 	 * and the next relation change or rebuild admits them.
 	 *
-	 * Delivery is not decided here. axismundi_act_respond_to_local_follow() reads the relation's
-	 * own direction and only sends the Accept outward when the follower is remote.
+	 * Delivery is not decided here. The response addresses the follower, and Bridge resolves
+	 * whether that Actor receives it through a local Inbox or a remote endpoint.
 	 */
 	if ( 'accepted' === $state && 'pending' === $relation_state && function_exists( 'axismundi_act_respond_to_local_follow' )
 		&& is_wp_error( axismundi_act_respond_to_local_follow( $group, $evidence_uri, 'accept' ) ) ) {

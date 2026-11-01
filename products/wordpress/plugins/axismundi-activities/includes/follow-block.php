@@ -424,11 +424,16 @@ function axismundi_act_render_follow_button( array $attributes, string $content,
 		<?php
 		return (string) ob_get_clean();
 	}
+	axismundi_act_no_cache_like_state();
+	if ( 'Person' === $target->get_type() ) {
+		$blocked = axismundi_act_actor_blocks( $subject->get_uri(), $target->get_uri() );
+		if ( is_wp_error( $blocked ) || $blocked ) {
+			return axismundi_act_block_control_html( $subject, $target, 'wp-element-button' );
+		}
+	}
 	if ( ! axismundi_act_follow_target_available( $subject, $target ) ) {
 		return '';
 	}
-
-	axismundi_act_no_cache_like_state();
 	$state   = axismundi_act_follow_button_state( $subject, $target );
 	$classes = 'wp-element-button axismundi-follow-button__button';
 	if ( 'accepted' === (string) $state['state'] ) {
@@ -460,7 +465,7 @@ function axismundi_act_render_follow_button( array $attributes, string $content,
 		<span class="axismundi-follow-button__status" data-wp-text="context.error" aria-live="polite"></span>
 	</div>
 	<?php
-	return (string) ob_get_clean();
+	return (string) ob_get_clean() . axismundi_act_block_control_html( $subject, $target, 'wp-element-button' );
 }
 
 /** Register the reusable Follow control block. */

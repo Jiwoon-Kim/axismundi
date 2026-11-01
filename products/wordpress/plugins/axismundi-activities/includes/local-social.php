@@ -101,6 +101,8 @@ function axismundi_act_follow_remote_actor( Axismundi_Actor $subject, Axismundi_
 	if ( is_wp_error( $valid ) ) {
 		return $valid;
 	}
+	$blocked = axismundi_act_follow_pair_blocked( $subject->get_uri(), $object->get_uri() );
+	if ( is_wp_error( $blocked ) || $blocked ) { return is_wp_error( $blocked ) ? $blocked : new WP_Error( 'ax_act_follow_blocked', 'This Actor pair is blocked.' ); }
 	$existing = axismundi_act_get_relation( 'follow', $subject->get_uri(), $object->get_uri() );
 	if ( is_array( $existing ) && in_array( (string) $existing['state'], array( 'pending', 'accepted', 'legacy_pending' ), true ) ) {
 		return $existing;
@@ -188,13 +190,15 @@ function axismundi_act_follow_local_actor( Axismundi_Actor $subject, Axismundi_A
 	if ( is_wp_error( $valid ) ) {
 		return $valid;
 	}
+	$blocked = axismundi_act_follow_pair_blocked( $subject->get_uri(), $object->get_uri() );
+	if ( is_wp_error( $blocked ) || $blocked ) { return is_wp_error( $blocked ) ? $blocked : new WP_Error( 'ax_act_follow_blocked', 'This Actor pair is blocked.' ); }
 	$existing = axismundi_act_get_relation( 'follow', $subject->get_uri(), $object->get_uri() );
 	if ( is_array( $existing ) && in_array( (string) $existing['state'], array( 'pending', 'accepted' ), true ) ) {
 		return $existing;
 	}
 	$follow = axismundi_act_record_activity(
-		array( 'type' => 'Follow', 'actor' => $subject->get_uri(), 'object' => $object->get_uri() ),
-		'local'
+		array( 'type' => 'Follow', 'actor' => $subject->get_uri(), 'object' => $object->get_uri(), 'to' => array( $object->get_uri() ) ),
+		'outbound'
 	);
 	if ( is_wp_error( $follow ) ) {
 		return $follow;
@@ -207,8 +211,8 @@ function axismundi_act_follow_local_actor( Axismundi_Actor $subject, Axismundi_A
 	 */
 	if ( ! axismundi_act_local_follow_target_is_group( $object ) && ! axismundi_act_local_follow_requires_approval( $object ) ) {
 		$accept = axismundi_act_record_activity(
-			array( 'type' => 'Accept', 'actor' => $object->get_uri(), 'object' => $follow->get_uri() ),
-			'local'
+			array( 'type' => 'Accept', 'actor' => $object->get_uri(), 'object' => $follow->get_uri(), 'to' => array( $subject->get_uri() ) ),
+			'outbound'
 		);
 		if ( is_wp_error( $accept ) ) {
 			return $accept;
@@ -228,8 +232,8 @@ function axismundi_act_unfollow_local_actor( Axismundi_Actor $subject, Axismundi
 		return new WP_Error( 'ax_act_follow_missing', __( 'There is no active Follow to undo.', 'axismundi-activities' ) );
 	}
 	$undo = axismundi_act_record_activity(
-		array( 'type' => 'Undo', 'actor' => $subject->get_uri(), 'object' => (string) $relation['initiating_activity_uri'] ),
-		'local'
+		array( 'type' => 'Undo', 'actor' => $subject->get_uri(), 'object' => (string) $relation['initiating_activity_uri'], 'to' => array( $object->get_uri() ) ),
+		'outbound'
 	);
 	return is_wp_error( $undo ) ? $undo : axismundi_act_get_relation( 'follow', $subject->get_uri(), $object->get_uri() );
 }
@@ -251,17 +255,18 @@ function axismundi_act_respond_to_local_follow( Axismundi_Actor $target, string 
 	) {
 		return new WP_Error( 'ax_act_follow_request_state', __( 'That Follow request is no longer pending.', 'axismundi-activities' ) );
 	}
-	$remote   = 'inbound' === (string) $relation['direction'];
 	/*
 	 * A remote server must be able to correlate this decision without fetching a
 	 * possibly transient Follow URL. Lemmy in particular requires the original
 	 * Follow Activity here, rather than its id alone.
 	 */
 	$payload  = array( 'type' => 'accept' === $decision ? 'Accept' : 'Reject', 'actor' => $target->get_uri(), 'object' => $follow->get_payload() );
-	if ( $remote ) {
-		$payload['to'] = array( $follow->get_actor_uri() );
+	if ( 'accept' === $decision ) {
+		$blocked = axismundi_act_follow_pair_blocked( $follow->get_actor_uri(), $target->get_uri() );
+		if ( is_wp_error( $blocked ) || $blocked ) { return is_wp_error( $blocked ) ? $blocked : new WP_Error( 'ax_act_follow_blocked', 'A blocked Follow cannot be accepted.' ); }
 	}
-	$activity = axismundi_act_record_activity( $payload, $remote ? 'outbound' : 'local' );
+	$payload['to'] = array( $follow->get_actor_uri() );
+	$activity = axismundi_act_record_activity( $payload, 'outbound' );
 	return is_wp_error( $activity ) ? $activity : axismundi_act_get_relation( 'follow', $follow->get_actor_uri(), $target->get_uri() );
 }
 
@@ -284,3 +289,55 @@ function axismundi_act_maybe_auto_accept_inbound_follow( array $relation ) : voi
 	axismundi_act_respond_to_local_follow( $target, (string) $relation['initiating_activity_uri'], 'accept' );
 }
 add_action( 'axismundi_act_relation_changed', 'axismundi_act_maybe_auto_accept_inbound_follow' );
+
+/** A Person may manage only its own directional Block through an authorized workspace. */
+function axismundi_act_validate_person_block( Axismundi_Actor $subject, Axismundi_Actor $object ) {
+	if ( ! $subject->is_local() || 'Person' !== $subject->get_type() || 'Person' !== $object->get_type()
+		|| 'public' !== $subject->get_status() || ! $subject->is_handle_locked() || 'tombstone' === $object->get_status()
+		|| $subject->get_uri() === $object->get_uri() ) {
+		return new WP_Error( 'ax_act_block_actor', 'Person Block requires an activated local Person and a different known Person.' );
+	}
+	return axismundi_actors_can_act_as( $subject, get_current_user_id() ) ? true : new WP_Error( 'ax_act_block_forbidden', 'This user cannot act as the blocking Actor.' );
+}
+
+/** Commit local enforcement before any delivery adapter runs. */
+function axismundi_act_block_actor( Axismundi_Actor $subject, Axismundi_Actor $object ) {
+	$valid = axismundi_act_validate_person_block( $subject, $object );
+	if ( is_wp_error( $valid ) ) { return $valid; }
+	$existing = axismundi_act_get_relation( 'block', $subject->get_uri(), $object->get_uri() );
+	if ( is_array( $existing ) && 'active' === $existing['state'] ) { return $existing; }
+	$activity = axismundi_act_record_activity( array( 'type' => 'Block', 'actor' => $subject->get_uri(), 'object' => $object->get_uri(), 'to' => array( $object->get_uri() ) ), 'outbound' );
+	return is_wp_error( $activity ) ? $activity : axismundi_act_get_relation( 'block', $subject->get_uri(), $object->get_uri() );
+}
+
+/** Undo only this Actor's Block. No old Follow is restored. */
+function axismundi_act_unblock_actor( Axismundi_Actor $subject, Axismundi_Actor $object ) {
+	$valid = axismundi_act_validate_person_block( $subject, $object );
+	if ( is_wp_error( $valid ) ) { return $valid; }
+	$existing = axismundi_act_get_relation( 'block', $subject->get_uri(), $object->get_uri() );
+	if ( ! is_array( $existing ) ) { return new WP_Error( 'ax_act_block_missing', 'There is no Block to undo.' ); }
+	if ( 'undone' === $existing['state'] ) { return $existing; }
+	$activity = axismundi_act_record_source_activity(
+		array( 'type' => 'Undo', 'actor' => $subject->get_uri(), 'object' => $existing['initiating_activity_uri'], 'to' => array( $object->get_uri() ) ),
+		'outbound', 'person-unblock:' . $existing['initiating_activity_uri']
+	);
+	return is_wp_error( $activity ) ? $activity : axismundi_act_get_relation( 'block', $subject->get_uri(), $object->get_uri() );
+}
+
+/** Emit cleanup only as the local blocker, never as an impersonated remote Actor. */
+function axismundi_act_publish_block_cleanup( Axismundi_Activity $block ) : void {
+	if ( 'Block' !== $block->get_type() || 'outbound' !== $block->get_direction() ) { return; }
+	$actor = axismundi_actors_get_by_uri( $block->get_actor_uri() );
+	$target = axismundi_actors_get_by_uri( $block->get_object_uri() );
+	if ( ! $actor instanceof Axismundi_Actor || ! $target instanceof Axismundi_Actor || ! $actor->is_local() || 'Person' !== $actor->get_type() || 'Person' !== $target->get_type() || $block->get_target_uri() ) { return; }
+	foreach ( array( array( $actor->get_uri(), $target->get_uri(), 'Undo' ), array( $target->get_uri(), $actor->get_uri(), 'Reject' ) ) as [ $subject, $object, $type ] ) {
+		$relation = axismundi_act_get_relation( 'follow', $subject, $object );
+		if ( ! is_array( $relation ) || $block->get_uri() !== $relation['state_activity_uri'] || empty( $relation['initiating_activity_uri'] ) ) { continue; }
+		$result = axismundi_act_record_source_activity(
+			array( 'type' => $type, 'actor' => $actor->get_uri(), 'object' => $relation['initiating_activity_uri'], 'to' => array( $target->get_uri() ) ),
+			'outbound', 'person-block-cleanup:' . $block->get_uri() . ':' . $type . ':' . $relation['initiating_activity_uri']
+		);
+		if ( is_wp_error( $result ) ) { do_action( 'axismundi_act_block_cleanup_failed', $block, $result ); }
+	}
+}
+add_action( 'axismundi_act_activity_recorded', 'axismundi_act_publish_block_cleanup', 5 );

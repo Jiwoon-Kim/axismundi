@@ -2,6 +2,54 @@
 /** Actor-addressed transport, using the upstream verifier without rewriting signed requests. @package AxismundiActivityPubBridge */
 defined( 'ABSPATH' ) || exit;
 
+/** Only recipient-addressed Block controls may bypass the recipient's own Block gate. */
+function axismundi_activitypub_bridge_is_block_control( array $payload, Axismundi_Actor $recipient ) : bool {
+	$sender = axismundi_act_member_uri( $payload['actor'] ?? '' );
+	if ( 'Block' === ( $payload['type'] ?? '' ) ) {
+		return '' !== $sender && $recipient->get_uri() === axismundi_act_member_uri( $payload['object'] ?? '' );
+	}
+	if ( 'Undo' !== ( $payload['type'] ?? '' ) ) {
+		return false;
+	}
+	$uri = axismundi_act_member_uri( $payload['object'] ?? '' );
+	$block = '' !== $uri ? axismundi_act_get( $uri ) : null;
+	return $block instanceof Axismundi_Activity && 'Block' === $block->get_type()
+		&& $sender === $block->get_actor_uri() && $recipient->get_uri() === $block->get_object_uri();
+}
+
+/** Internal local transport: resolve the canonical ledger row, not a caller-supplied payload. */
+function axismundi_activitypub_bridge_receive_local_activity( string $activity_uri, int $recipient_id ) {
+	if ( ! axismundi_activitypub_bridge_ready() ) {
+		return new WP_Error( 'ax_bridge_inbox_not_ready', 'The Inbox repositories are unavailable.' );
+	}
+	$activity = axismundi_act_get( $activity_uri );
+	$recipient = axismundi_actors_get_by_identity( $recipient_id );
+	$sender = $activity ? axismundi_actors_get_by_uri( $activity->get_actor_uri() ) : null;
+	if ( ! $activity instanceof Axismundi_Activity || 'outbound' !== $activity->get_direction()
+		|| ! $sender instanceof Axismundi_Actor || ! $sender->is_local() || 'public' !== $sender->get_status()
+		|| ! $recipient instanceof Axismundi_Actor || ! $recipient->is_local() || 'public' !== $recipient->get_status()
+		|| $sender->get_identity_id() === $recipient_id ) {
+		return new WP_Error( 'ax_bridge_inbox_no_target', 'Local delivery requires a local sender and distinct local recipient.' );
+	}
+	$payload = $activity->get_payload();
+	$targets = axismundi_activitypub_bridge_receipt_targets( $payload );
+	$addresses = array_merge( ...array_values( $activity->get_audience() ) );
+	$followers = function_exists( 'axismundi_op_actor_followers_url' ) ? axismundi_op_actor_followers_url( $sender ) : '';
+	$expands_followers = ! axismundi_activitypub_bridge_is_direct_group_submission( $activity )
+		&& ( in_array( 'https://www.w3.org/ns/activitystreams#Public', $addresses, true ) || in_array( 'as:Public', $addresses, true ) || ( '' !== $followers && in_array( $followers, $addresses, true ) ) );
+	$follow = $expands_followers ? axismundi_act_get_relation( 'follow', $recipient->get_uri(), $sender->get_uri() ) : null;
+	$accepted_follower = is_array( $follow ) && 'accepted' === $follow['state'];
+	if ( ! isset( $targets[ $recipient_id ] ) && ! $accepted_follower && ! axismundi_activitypub_bridge_is_block_control( $payload, $recipient ) ) {
+		return new WP_Error( 'ax_bridge_inbox_no_target', 'The stored Activity does not address this recipient.' );
+	}
+	$permitted = axismundi_activitypub_bridge_inbox_permitted( $payload, $recipient );
+	if ( is_wp_error( $permitted ) ) {
+		return $permitted;
+	}
+	return $permitted ? axismundi_act_receive_local_activity( $activity->get_uri(), $recipient_id )
+		: new WP_Error( 'ax_bridge_inbox_blocked', 'This delivery is not permitted.' );
+}
+
 /** Retain upstream site/user rules and add the recipient Account's own Block relation. */
 function axismundi_activitypub_bridge_inbox_permitted( array $payload, Axismundi_Actor $recipient ) {
 	if ( ! class_exists( 'Activitypub\\Moderation' ) || ! function_exists( 'axismundi_act_actor_blocks' ) ) {
@@ -16,6 +64,9 @@ function axismundi_activitypub_bridge_inbox_permitted( array $payload, Axismundi
 		return false;
 	}
 	$sender = axismundi_act_member_uri( $payload['actor'] ?? '' );
+	if ( axismundi_activitypub_bridge_is_block_control( $payload, $recipient ) ) {
+		return true;
+	}
 	$blocked = axismundi_act_actor_blocks( $recipient->get_uri(), $sender );
 	return is_wp_error( $blocked ) ? $blocked : ! $blocked;
 }

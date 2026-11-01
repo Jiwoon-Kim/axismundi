@@ -211,13 +211,20 @@ function axismundi_activitypub_bridge_is_direct_group_submission( Axismundi_Acti
 }
 
 /** Derive explicit remote Inbox recipients from one outbound Activity. */
-function axismundi_activitypub_bridge_activity_inboxes( Axismundi_Activity $activity ) : array {
+function axismundi_activitypub_bridge_activity_inboxes( Axismundi_Activity $activity, bool $deliver_local = false ) : array {
 	$candidates = array();
 	foreach ( $activity->get_audience() as $members ) {
 		$candidates = array_merge( $candidates, $members );
 	}
 	if ( in_array( $activity->get_type(), array( 'Follow', 'Block' ), true ) && $activity->get_object_uri() ) {
 		$candidates[] = $activity->get_object_uri();
+	}
+	if ( 'Undo' === $activity->get_type() && $activity->get_object_uri() ) {
+		$block = axismundi_act_get( $activity->get_object_uri() );
+		if ( $block instanceof Axismundi_Activity && 'Block' === $block->get_type()
+			&& $block->get_actor_uri() === $activity->get_actor_uri() && $block->get_object_uri() ) {
+			$candidates[] = $block->get_object_uri();
+		}
 	}
 	$actor         = axismundi_actors_get_by_uri( $activity->get_actor_uri() );
 	$followers_uri = $actor instanceof Axismundi_Actor && $actor->is_local() && function_exists( 'axismundi_op_actor_followers_url' )
@@ -252,6 +259,12 @@ function axismundi_activitypub_bridge_activity_inboxes( Axismundi_Activity $acti
 			$entry = $resolved[ $actor_uri ] ?? null;
 			$actor = is_array( $entry ) ? ( $entry['actor'] ?? null ) : null;
 			if ( $actor instanceof Axismundi_Actor && $actor->is_local() ) {
+				if ( $deliver_local ) {
+					$result = axismundi_activitypub_bridge_receive_local_activity( $activity->get_uri(), $actor->get_identity_id() );
+					if ( is_wp_error( $result ) ) {
+						axismundi_activitypub_bridge_record_inbox_diagnostic( 'local', $activity->get_payload(), $result );
+					}
+				}
 				continue;
 			}
 			$endpoints = is_array( $entry ) ? (array) ( $entry['endpoints'] ?? array() ) : array();
@@ -282,7 +295,7 @@ function axismundi_activitypub_bridge_queue_outbound( Axismundi_Activity $activi
 	if ( ! $actor instanceof Axismundi_Actor || ! $actor->is_local() || 'public' !== $actor->get_status() ) {
 		return;
 	}
-	$inboxes = axismundi_activitypub_bridge_activity_inboxes( $activity );
+	$inboxes = axismundi_activitypub_bridge_activity_inboxes( $activity, true );
 	if ( empty( $inboxes ) ) {
 		return;
 	}

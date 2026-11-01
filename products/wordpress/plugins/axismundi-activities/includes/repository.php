@@ -7,7 +7,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACT_DB_VERSION        = '14';
+const AXISMUNDI_ACT_DB_VERSION        = '15';
 const AXISMUNDI_ACT_DB_VERSION_OPTION = 'axismundi_activities_db_version';
 const AXISMUNDI_ACT_PAYLOAD_MAX       = 1048576;
 
@@ -144,10 +144,26 @@ function axismundi_act_install() : bool {
 	if ( $valid && version_compare( $previous_version, '9', '<' ) ) {
 		$valid = axismundi_act_backfill_public_audience();
 	}
+	if ( $valid ) { $valid = axismundi_act_migrate_legacy_directions(); }
+	if ( $valid ) { $valid = axismundi_act_backfill_active_person_blocks(); }
 	if ( $valid ) {
 		update_option( AXISMUNDI_ACT_DB_VERSION_OPTION, AXISMUNDI_ACT_DB_VERSION, false );
 	}
 	return $valid;
+}
+
+/** Metadata-only migration: local authorship is outbound, independently of Inbox receipts. */
+function axismundi_act_migrate_legacy_directions() : bool {
+	global $wpdb;
+	if ( false === $wpdb->query( 'START TRANSACTION' ) ) { return false; }
+	foreach ( array( axismundi_act_activities_table(), axismundi_act_relations_table() ) as $table ) {
+		if ( false === $wpdb->query( $wpdb->prepare( "UPDATE %i SET direction='outbound' WHERE direction='local'", $table ) ) ) {
+			$wpdb->query( 'ROLLBACK' );
+			return false;
+		}
+	}
+	if ( false === $wpdb->query( 'COMMIT' ) ) { $wpdb->query( 'ROLLBACK' ); return false; }
+	return true;
 }
 
 /** Upgrade without requiring reactivation. */
@@ -1102,6 +1118,9 @@ function axismundi_act_get_by_reference( string $field, string $uri, int $limit 
 /** Validate and normalize an Activity before database mutation. */
 function axismundi_act_normalize( array $payload, string $direction = 'local' ) {
 	$direction = sanitize_key( $direction );
+	if ( 'local' === $direction ) {
+		$direction = 'outbound';
+	}
 	if ( ! in_array( $direction, array( 'inbound', 'outbound', 'local' ), true ) ) {
 		return new WP_Error( 'ax_act_direction', __( 'The Activity direction is invalid.', 'axismundi-activities' ) );
 	}
@@ -1344,7 +1363,7 @@ function axismundi_act_record_source_activity( array $payload, string $direction
 				return new WP_Error( 'ax_act_source_collision', __( 'A source event hash collision was detected.', 'axismundi-activities' ) );
 			}
 			if ( (string) $source_row['activity_type'] !== (string) $normalized['activity_type']
-				|| (string) $source_row['direction'] !== (string) $normalized['direction']
+				|| ( 'local' === $source_row['direction'] ? 'outbound' : (string) $source_row['direction'] ) !== (string) $normalized['direction']
 				|| ! hash_equals( (string) $source_row['actor_uri'], (string) $normalized['actor_uri'] )
 				|| ! hash_equals( (string) ( $source_row['object_uri'] ?? '' ), (string) ( $normalized['object_uri'] ?? '' ) )
 				|| ! hash_equals( (string) ( $source_row['target_uri'] ?? '' ), (string) ( $normalized['target_uri'] ?? '' ) )
@@ -1405,7 +1424,7 @@ function axismundi_act_record_source_activity( array $payload, string $direction
 			$winner = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE source_event_hash = %s", $normalized['source_event_hash'] ), ARRAY_A );
 			if ( is_array( $winner ) && hash_equals( (string) $winner['source_event_key'], $source_event_key ) ) {
 				if ( (string) $winner['activity_type'] !== (string) $normalized['activity_type']
-					|| (string) $winner['direction'] !== (string) $normalized['direction']
+					|| ( 'local' === $winner['direction'] ? 'outbound' : (string) $winner['direction'] ) !== (string) $normalized['direction']
 					|| ! hash_equals( (string) $winner['actor_uri'], (string) $normalized['actor_uri'] )
 					|| ! hash_equals( (string) ( $winner['object_uri'] ?? '' ), (string) ( $normalized['object_uri'] ?? '' ) )
 					|| ! hash_equals( (string) ( $winner['target_uri'] ?? '' ), (string) ( $normalized['target_uri'] ?? '' ) )

@@ -319,5 +319,5 @@ try {
 
 $ax_fv_failed = count( array_filter( $ax_fv_results, static fn( $result ) => ! $result ) );
 // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI test output.
-printf( "\n%d/%d passed\n", count( $ax_fv_results ) - $ax_fv_failed, count( $ax_fv_results ) );
+printf( "\n== %d checks, %d failed ==\n", count( $ax_fv_results ), $ax_fv_failed );
 exit( $ax_fv_failed > 0 ? 1 : 0 );

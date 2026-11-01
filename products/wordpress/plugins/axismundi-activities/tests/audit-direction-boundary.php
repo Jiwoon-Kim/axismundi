@@ -12,4 +12,4 @@ if ( null === $count || '' !== $wpdb->last_error ) {
 if ( 0 !== (int) $count ) {
 	throw new RuntimeException( 'Public local Activities require the direction/authorship migration; current outbox queries omit them.' );
 }
-echo "PASS: No public local Activities are hidden by the current outbox direction filter\n";
+echo "PASS: 1 direction boundary checks\n";

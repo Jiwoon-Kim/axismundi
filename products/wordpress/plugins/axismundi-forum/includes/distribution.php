@@ -516,7 +516,7 @@ function axismundi_forum_remote_community_for_submitted_object( string $object_u
  * their redistribution.
  */
 function axismundi_forum_distribute_community_vote( Axismundi_Activity $activity ) : void {
-	if ( ! in_array( $activity->get_direction(), array( 'inbound', 'local' ), true ) || ! $activity->is_effective() ) {
+	if ( ! in_array( $activity->get_direction(), array( 'inbound', 'outbound', 'local' ), true ) || ! $activity->is_effective() ) {
 		return;
 	}
 	$vote = $activity;

@@ -911,7 +911,35 @@ Add Local Actor 에서 Group 을 고르면 `attributedTo` 를 함께 정한다. 
 귀속되는지 정하는 순간이기도 하다. 나중에 Update 로 바꿀 수 있어야 하는 것과는
 별개로, 비워 둔 채 만들면 어느 관행도 따르지 않는 문서가 먼저 나간다.
 
-기본값은 **대상 생태계를 따른다.** 기록된 로드맵이 Lemmy 포럼 → S2S Group join
-증명이므로, Forum 에 바인딩할 Group 의 기본값은 Lemmy 모양(모더레이터 Collection)
-이 안전하다. 이것은 Forum 결정이 아니라 **무엇을 내보낼지의 결정**이고, 구현
-자리는 Actors 의 생성 폼과 OP 의 actor transform 이다.
+### Actors 는 Forum 에 의존하지 않는다
+
+위에서 "Forum 에 바인딩할 Group 의 기본값" 이라고 쓴 것은 **층을 거꾸로 세운
+것이었다.** 철회한다. Actors 는 코어 엔진이고 **Group Actor 생성은 Actors 만으로
+가능해야 한다.** Forum 이 없어도 Group 을 만들고 발행할 수 있어야 한다.
+
+해석의 방향은 반대다. Actors 는 운영자가 고른 대로 Group 문서를 내보내고,
+**제품 플러그인이 그것을 읽는다.**
+
+```txt
+Forum          attributedTo 가 Collection 이면 → topic CPT 의 audience 에 목록으로 표시
+Channel (미래)  attributedTo 에 Person 이 있으면 → 그 Actor 로 채널에 발행 가능
+Actors         둘 중 무엇이 읽을지 알지 못한다. 알 필요도 없다
+```
+
+그러므로 **기본값을 제품 로드맵으로 정하지 않는다.** Actors 자신의 기준으로
+정해야 하고, 제품은 자기가 해석할 수 있는 모양을 요구할 뿐이다.
+
+### Collection 선택지는 누가 서빙하나 (실측 2026-11-01)
+
+```txt
+있음   managers 테이블과 has_principals() — Actors 는 누가 Group 을 관리하는지 안다
+       repository.php:83 · 932
+없음   그 목록을 AS2 컬렉션 URI 로 서빙하는 것
+       local-endpoints.php 와 OP 의 actor transform 에 moderators·managers 0 건
+```
+
+데이터는 Actors 에 있고 표면이 없다. 그러므로 Collection 선택지를 제공하려면 그
+엔드포인트를 만들어야 하고, **그것은 Actors 의 것이다** — managers 를 소유한 쪽이
+Actors 이므로. 표현은 기록된 층대로 OP 가 렌더한다. Forum 의 것이 아니다.
+
+Forum 이 그 컬렉션을 읽어 audience 로 쓰는 것과, 그 컬렉션을 소유하는 것은 다르다.

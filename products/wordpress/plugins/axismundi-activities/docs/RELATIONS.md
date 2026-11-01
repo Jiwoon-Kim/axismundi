@@ -146,20 +146,54 @@ Misskey 의 와이어 동작과 같다. 그 경우 새 메커니즘이 필요 �
 받아들이고, `undone` 은 Follow 의 `effective_status` 에서 온다. 그러므로 새로
 만드는 것은 **Block 을 원인으로 하는 전이 하나뿐**이다.
 
-### Accept 를 취소하지 않는다
+### Accept 를 취소하지 않는다 — 이유를 정확히
 
-메뉴얼 승인으로 accepted 가 된 Follow 에 inbound Block 이 와도, 그 Accept 를
-Undo 하거나 Reject 로 바꾸지 않는다. SPEC.md 3 이 기록된 Activity payload 는
-불변이라고 못박는다. **수락은 그때 실제로 일어났고 나중에 차단이 왔을 뿐이다.**
-원장은 둘 다 보존하고 현재 상태만 바뀐다.
+메뉴얼 승인으로 accepted 가 된 Follow 에 inbound Block 이 와도 `Undo(Accept)` 를
+쓰지 않는다. **다만 "불변 원장 위반이라서" 가 아니다.** SPEC.md 3 이 금지하는
+것은 기록된 payload 를 수정하는 일이고, 별도의 Undo 를 기록하는 것은 과거를
+고쳐 쓰는 일이 아니다. 진짜 이유는 둘이다.
+
+```txt
+중복 표현   관계 종료는 Block 이 이미 표현한다. Undo(Accept) 를 더하면
+            같은 사건을 두 번 적는다
+저자        Accept 의 저자는 대상이다. 원격 대상이 우리를 차단한 경우
+            그 Undo(Accept) 를 우리가 만들면 원격 Actor 사칭이다
+```
+
+수락은 그때 실제로 일어났고 차단이 나중에 왔다. 원장은 둘 다 보존하고 현재
+상태만 바뀐다.
+
+### 구현 전제 — "전이 하나 추가" 보다 크다 (실측 2026-11-01)
+
+합의한 정책을 지키려면 아래 기반이 먼저다.
+
+```txt
+local 방향이 살아 있다
+  relations.php:130-131    두 Actor 가 모두 로컬이면 'local' 을 반환한다
+  repository.php:1314      inbox receipt 는 'inbound' === $direction 를 요구하므로
+                           local Activity 는 수신 영수증을 만들 수 없다
+  transport.php:254        전달 경로가 $actor->is_local() 이면 건너뛴다
+  → 로컬 대상에게 Block 을 전달하려면 이 셋을 먼저 정리해야 한다
+
+reconcile_follow() 가 종료를 되돌린다
+  relations.php:183-184    $live = ['pending','accepted'] 이므로 rejected 는
+                           live 가 아니다 → start_relation 이 pending 으로 되돌린다
+  relations.php:274-278    이어서 옛 Accept 행을 다시 적용해 accepted 가 된다
+  → Block 으로 종료된 Follow 사이클은 종료 원인을 유지해야 하고,
+    늦은 Accept · 재조정 · Undo(Block) 뒤에도 살아나면 안 된다
+```
+
+그러므로 구현 순서는 **방향·로컬 inbox 기반 → Block 원인 전이와 재조정 보호 →
+권한 있는 Undo/Reject 발행 → UI·전달·변이 검증** 이다.
 
 전달 정책:
 
 ```txt
 원격 대상     원격 inbox
 로컬 대상     로컬 inbox 처리 경로로 전달한다.
-              **`local` 방향 구분을 되살리지 않는다** — 없앤 결정은 유지되고,
-              목적지 해소와 전달 방식만 달라진다
+              **`local` 방향은 아직 코드에 남아 있다 (실측 2026-11-01).**
+              없애기로 한 결정은 유지되지만 구현이 안 됐다 — 아래 참조.
+              목적지 해소와 전달 방식만 달라져야 한다
 전달 ≠ 집행   로컬 차단은 즉시 집행한다. 전달 성공이나 상대 서버의 협조에
               의존하지 않는다
 inbound 검사  유지한다. Block 을 받은 서버가 실제로 전송을 중단한다는 보장이 없다

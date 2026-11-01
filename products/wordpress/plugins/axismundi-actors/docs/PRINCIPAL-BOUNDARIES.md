@@ -275,3 +275,39 @@ Lemmy 와 PeerTube 는 **Actor ↔ Actor 관계와 운영 정책의 선례**이�
 소유권·권한 모델이 정의되지 않음을 보여 준다. (구현 세부는 2026-11-01 codex 의 소스 독해이고
 이 문서의 실측이 아니다. Lemmy 가 모더레이터 컬렉션을 `attributedTo` 로 쓰는 것은 FEP-1b12 와
 일치한다.)
+
+## 제품은 Actor 가 아니라 Account 를 통해 붙는다 (방향, 2026-11-01)
+
+Actors 는 코어 엔진이고 제품에 의존하지 않는다. 그런데 반대 방향도 정리가 필요하다 —
+**제품이 Actor 에 직접 매달리는 것**과 **Account 를 통해 붙는 것**은 다르다.
+
+```txt
+지금    Calendar 가 Actor URI 에 직접 키잉한다
+        axismundi_cal_calendars_table() 의 authority_actor_uri_hash
+목표    Calendar 는 JMAP 의 Account 컨테이너에 붙는다
+        Contacts(addressbook) · Todo(todolist) · Mail(mailbox) 과 같은 자리
+```
+
+기록된 모델과 같다 — 정체성은 컨테이너이고, JMAP 이 Account 면을 소유하며
+(`ax_jmap_accounts`), Actor 면이 그 위에 얹힌다. 그러므로 Account 의 컬렉션을
+다루는 제품은 **Account 를 보면 되고 Actor 를 볼 이유가 없다.**
+
+Actors 가 직접 답해야 하는 것은 좁다.
+
+```txt
+Actors    정체성 · 핸들 · 타입 · 귀속 · ActivityPub curated collection
+JMAP      Account 컨테이너와 그 컬렉션 — addressbook · calendar · todolist · mailbox
+제품      자기 도메인. Account 를 통해 붙는다
+```
+
+### 증상은 픽스처 정리에서 드러났다
+
+`axismundi-actors/tests/audit-vocabulary.php` 의 정리 코드가 Actor 하나를 지우려고
+Calendar 와 Activities 와 Forum 테이블까지 지우고 있었다. 액터를 만들면 다른
+플러그인이 행을 만들고, 그 행들이 Actor URI 로 키잉돼 있어서 Actors 가 치울 수밖에
+없는 구조였다.
+
+당장은 각 테이블 접근을 `function_exists` 로 감싸 **하드 의존만 끊었다.** 제품
+플러그인이 꺼져 있어도 Actors 자기 감사는 돌아야 하기 때문이다. 구조적 해결은
+따로다 — **Actor 삭제에 반응해 자기 행을 치우는 것은 각 제품의 책임**이고,
+Calendar 가 Account 를 통해 붙으면 그 키잉 자체가 사라진다.

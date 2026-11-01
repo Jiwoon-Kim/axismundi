@@ -42,9 +42,28 @@ function axismundi_contacts_save_profile_document( int $actor_id, array $documen
 		if ( is_wp_error( $valid ) ) { return $valid; }
 		$existing = $id ? axismundi_contacts_get_profile_document_row( $id ) : array();
 		if ( $id && ( ! $existing || (int) $existing['owner_actor_id'] !== $actor_id ) ) { return new WP_Error( 'ax_contacts_profile_missing', 'Profile not found.', array( 'status' => 404 ) ); }
+		$adopt = false;
 		if ( ! $id ) {
 			$owned = axismundi_contacts_profile_document_row_for_owner( $actor_id );
-			if ( $owned ) { return new WP_Error( 'ax_contacts_profile_exists', 'This Actor already has a profile.', array( 'status' => 409, 'id' => (int) $owned['id'] ) ); }
+			/*
+			 * A document with no binding is not a profile this Actor has; it is one it lost. The
+			 * maintenance sweep clears a binding pointing at no document and has no counterpart for
+			 * the other direction, so the screens disagreed -- the reader looked at the binding and
+			 * said no card yet while the writer looked at the document and refused as a duplicate,
+			 * leaving no way to get one.
+			 *
+			 * Adopt it rather than inserting beside it or deleting it. The uid is the one identifier
+			 * here that other people hold copies of, so minting a second would split one card in two
+			 * and discarding this one would strip the identity from a card already in circulation.
+			 */
+			if ( $owned ) {
+				$bound = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE actor_id=%d', axismundi_contacts_profiles_table(), $actor_id ) );
+				if ( $bound > 0 ) { return new WP_Error( 'ax_contacts_profile_exists', 'This Actor already has a profile.', array( 'status' => 409, 'id' => (int) $owned['id'] ) ); }
+				$id       = (int) $owned['id'];
+				$existing = $owned;
+				$adopt    = true;
+				unset( $document['uid'] );
+			}
 		}
 		if ( $existing && null !== $revision && (int) $existing['revision'] !== $revision ) { return new WP_Error( 'ax_contacts_profile_conflict', 'Profile changed.', array( 'status' => 409 ) ); }
 		if ( $existing && isset( $document['uid'] ) && $existing['uid'] !== $document['uid'] ) { return new WP_Error( 'ax_contacts_profile_uid', 'Profile UID is immutable.', array( 'status' => 409 ) ); }
@@ -54,6 +73,9 @@ function axismundi_contacts_save_profile_document( int $actor_id, array $documen
 		if ( $id ) {
 			$ok = $wpdb->update( axismundi_contacts_profile_documents_table(), $data, array( 'id' => $id, 'revision' => (int) $existing['revision'] ) );
 			if ( 1 !== $ok ) { return new WP_Error( 'ax_contacts_profile_conflict', 'Profile could not be updated.', array( 'status' => 409 ) ); }
+			if ( $adopt && false === $wpdb->insert( axismundi_contacts_profiles_table(), array( 'actor_id' => $actor_id, 'card_id' => $id, 'sharing_enabled' => 0, 'audience' => 'public', 'created_at' => $now, 'updated_at' => $now ) ) ) {
+				return new WP_Error( 'ax_contacts_profile_bind', 'The recovered profile could not be bound.' );
+			}
 		} else {
 			$data['created_at'] = $now;
 			if ( false === $wpdb->insert( axismundi_contacts_profile_documents_table(), $data ) ) { return new WP_Error( 'ax_contacts_profile_save', 'Profile could not be created.' ); }

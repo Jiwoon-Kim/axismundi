@@ -866,19 +866,40 @@ fedi.video/c/music         attributedTo: ["…/accounts/fedivideomusic"]
 **같은 속성을 두 구현이 다른 뜻으로, 다른 모양으로 쓴다.** 하나는 모더레이터
 컬렉션, 하나는 소유 계정 목록이다.
 
-### 섞는 것은 유효하지만 어느 쪽 관행도 아니다
+### 고르는 것은 값이 아니라 관행이다
 
-owners 를 Person URI 로, moderators 를 Collection 으로 한 배열에 함께 넣는 것은
-AS2 로는 맞다. 다만 그 결과는 **두 관행의 합집합이고 어느 쪽도 아니다.**
+`attributedTo` 에 무엇을 넣느냐가 아니라 **이 Group 이 어느 플랫폼 관행을 따르느냐**
+가 선택 대상이다. Account 를 Group Actor 로 쓸 때 **Lemmy 식 커뮤니티**인지
+**PeerTube 식 채널**인지를 표현할 수 있어야 하고, 그것은 그쪽 관행에 맞춰
+상호운용성을 만들어 주겠다는 뜻이다. `attributedTo` 는 그 선택의 **결과 하나**다.
+
+그리고 관행은 속성 하나가 아니라 묶음이다. 두 Group 문서의 키를 비교한 실측:
 
 ```txt
-Lemmy 소비자    attributedTo 를 모더레이터로 역참조한다.
-                배열과 혼합 값을 어떻게 다루는지 우리가 재지 않았다
-PeerTube 소비자  계정을 기대한다. Collection URI 는 계정으로 해소되지 않는다
+공통              attributedTo · postingRestrictedToMods · followers · outbox ·
+                  inbox · endpoints · publicKey · preferredUsername · name · published
+PeerTube 채널만    playlists · support · playerSettings · discoverable · indexable ·
+                  email · following · icon · url · summary        (pt: 네임스페이스)
+Lemmy 커뮤니티만   featured · language · sensitive
 ```
 
-연합해 보기 전에는 둘 다 **추측**이다. 그러므로 섞어 보내기로 정한다면 그 사실을
-NON-STANDARD 로 적고, 상호운용 검증 전까지 기본값으로 삼지 않는다.
+`postingRestrictedToMods` 는 **양쪽에 다 있다** — PeerTube 가 Lemmy 의 IRI 를 인라인
+용어로 채택했기 때문이고(BRIEF-VOCABULARY-REGISTRY 참조), 그러므로 구별자가 아니다.
+
+### "둘 다" 는 배열보다 큰 주장이다
+
+`attributedTo` 가 다중값이므로 **그 속성 하나는** owners(Person URI)와
+moderators(Collection)를 함께 담아 양쪽을 만족시킬 수 있다. 그건 맞다.
+
+다만 나머지 묶음은 속성 하나가 아니다. 진짜로 둘 다 표현하려면 `featured`·
+`language`·`sensitive` 와 `playlists`·`support`·`playerSettings` 를 함께 내보내야
+하고, 그건 **어느 쪽에서도 본 적 없는 문서**가 된다. 그러므로:
+
+```txt
+attributedTo    배열로 양쪽을 만족시킬 수 있다. 다만 Lemmy·PeerTube 파서가
+                혼합 배열을 어떻게 다루는지는 재지 않았다 — 연합 전에는 추측이다
+나머지 묶음      관행을 하나 골라야 한다. 둘 다 내보내는 것은 기본값이 아니다
+```
 
 ### 생성 시점에 고르게 한다
 

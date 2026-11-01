@@ -72,3 +72,76 @@ from_json    apub.ordered_items 를 handle_community_moderators 로 넘기고
 
 범용 curated 원장은 **패턴이 충분히 드러난 뒤에** 합치는 것을 검토한다.
 `moderators` 는 Lemmy 모양을, `featured` 는 Mastodon 모양을 각각 가져온다.
+
+## 5. Mastodon featured — 와이어와 서빙 (독립 확인, 커밋 147bfc1)
+
+이식 대상이므로 업스트림 계약을 직접 읽었다. 위 2 절의 수신(fetch) 쪽과 달리
+여기는 **발신·수신 Activity 와 컬렉션 서빙** 쪽이다.
+
+### Add 수신은 target 으로 세 갈래다
+
+`app/lib/activitypub/activity/add.rb` — `target` 이 비면 즉시 반환하고,
+`value_or_id` 로 정규화한 뒤 갈린다.
+
+```txt
+featured_collection_url    object.type == 'Hashtag' → add_featured_tags
+                           그 외 → add_featured
+collections_url            add_collection → ProcessFeaturedCollectionService
+그 밖의 target             @account.collections 에서 URI 로 찾아
+                           add_collection_item → ProcessFeaturedItemService
+```
+
+**세 번째 갈래가 중요하다.** Mastodon 에는 `featured` 밖에도 일반화된 collections
+개념이 이미 있고, 임의 컬렉션의 항목 추가를 그 경로로 처리한다. 우리 curated
+collection 타입 체계에 업스트림 유사물이 있다는 뜻이다.
+
+### 고정글 추가의 검증은 셋뿐이다
+
+```txt
+add_featured   status 가 존재할 것
+               status.account_id === @account.id      ← 자기 글만 고정 가능
+               @account.pinned?(status) 가 거짓일 것   ← 중복 방지
+               → StatusPin.create!
+add_featured_tags   object['name'] 에서 앞의 '#' 를 떼고 FeaturedTag.create!
+                    **소유권 검사가 없다** — actor 가 그 계정이라는 것 외에는
+```
+
+### 서빙은 페이지를 나누지 않는다
+
+`app/controllers/activitypub/collections_controller.rb`
+
+```txt
+SUPPORTED_COLLECTIONS = %w(featured tags)
+                        라우트 id 는 'tags' 다. Actor 속성 이름(featuredTags)과 다르다
+featured   @type = :ordered     → OrderedCollection
+tags       :unordered
+항목       전체를 한 응답에 인라인한다. size = @items.size.
+           이 파일에 페이지 파라미터 처리가 없다
+비공개 항목 distributable? 가 아니면 **버리지 않고 URI 로 치환**한다
+           → 공개 불가한 고정글이 맨 URI 로 노출된다
+캐시       expires_in 3.minutes, public: public_fetch_mode?
+           authorized fetch 모드면 vary_by 에 Signature 를 더한다
+```
+
+### 차단된 조회자에게는 빈 목록을 준다
+
+`check_authorization` 이 요청자가 그 계정에게 차단됐거나 도메인이 차단됐으면
+`@unauthorized` 를 세우고, `for_signed_account` 가 고정글 대신 **빈 목록**을
+돌려준다. 거부가 아니라 빈 컬렉션이다. 그리고 public fetch 모드에서는 이 검사를
+건너뛴다 — 주석이 이유를 적어 둔다: 역프록시가 어차피 차단된 계정에도 캐시된
+응답을 줄 것이기 때문이다.
+
+우리 Block 결정과 이어지는 지점이다. **차단이 컬렉션에서는 403 이 아니라 빈 목록으로
+나타난다**는 것, 그리고 그 보호가 캐시 앞에서 무력해진다는 것을 업스트림이 스스로
+인정하고 있다는 것. 복제할지는 우리 정책이되, 복제한다면 그 한계까지 알고 해야 한다.
+
+### 이식에 쓸 때
+
+```txt
+가져온다    Add/Remove 로 멤버십을 표현하는 것 — target 이 featured 컬렉션 URI
+            자기 글만 고정 가능한 검증 (Person 에 한해)
+            ordered vs unordered 구분
+재판정한다  Group 은 Announce 가 후보 근거이므로 "저자 일치" 검증을 그대로 쓸 수 없다
+            원격 조회 실패를 빈 목록으로 보아 기존 핀을 지우는 동작
+            비공개 항목을 URI 로 치환해 노출하는 선택
+```

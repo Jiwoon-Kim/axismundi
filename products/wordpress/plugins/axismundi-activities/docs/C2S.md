@@ -410,7 +410,17 @@ Not yet true, and this file is the target rather than a description:
 - The trigger is still OP's `axismundi_op_object_publish_candidate` hook, so publication is
   still started by a projection observing a save rather than by a submitted intent. The
   adapter therefore reads the principal and the offered identity from the ambient request.
-- There is no outbox `POST` endpoint.
+- ~~There is no outbox `POST` endpoint.~~ **2026-11-01 정정: 있다.**
+  `includes/c2s-outbox.php:115` 가 `POST axismundi/v1/actors/{uuid}/outbox` 를
+  `rest_api_init` 에 등록한다. 쿠키+nonce 또는 application password 로 인증하고,
+  `can_act_as()` 와 활성 로컬 Actor 를 서비스 경계에서 재검증하며,
+  `Idempotency-Key` 와 intent 비교로 재시도를 흡수한다. 받는 것은
+  Like · Undo(Like) · Create(Note) · bare Note · Delete(local Object) 이고,
+  Create(Note) 는 `c2s-local-object.php` 가 로컬 Object 로 저장한다.
+  감사: `audit-c2s-outbox-http.php` · `audit-c2s-outbox-mutations.php`.
+  그러므로 위의 "트리거가 저장을 관찰한 투영에서 시작된다" 도 이 경로에는
+  해당하지 않는다 — 제출된 의도가 트리거다. 남은 것은 Follow 미수용,
+  Update 미구현, IntransitiveActivity 미지원, 그리고 UI 부재다.
 - No Update is recorded for local posts. The service refuses the operation rather than
   pretending to accept it, which is why the attribution rule above is exercised only by tests.
 - Nothing stops a local Activity from claiming a past `published`. `axismundi_act_datetime()`

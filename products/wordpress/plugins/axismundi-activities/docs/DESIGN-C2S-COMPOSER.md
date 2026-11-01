@@ -4,27 +4,36 @@ Todo PoC 가 관리자 페이지에서 JMAP 을 증명한 것처럼, ActivityPub
 관리자 페이지에서 증명한다. 목적은 제품이 아니라 **제출 경로의 증명**이고,
 나중에 프론트앱에 작성기를 올릴 때 설계를 다시 하지 않는 것이다.
 
-## 1. 왜 이 슬라이스가 의미 있나 — C2S.md §9 의 빈칸을 친다
+## 1. 전제 정정 — 엔드포인트는 이미 있다 (실측 2026-11-01)
 
-현재 제출 경로의 실측 상태:
+이 문서는 처음에 "outbox POST 엔드포인트를 만드는 것이 이 슬라이스" 라고 썼다.
+**틀렸다.** C2S.md 9 의 "There is no outbox POST endpoint" 를 코드에 대보지 않고
+옮긴 결과였다. 실제로는 이렇다.
 
 ```txt
-있음   axismundi_act_submit_c2s()      principal · actor identity · expected version
-                                       can_act_as() 와 소스 권한과 버전을 검증
-                                       Create · Delete 만
-있음   유일한 어댑터 = 블록/클래식 에디터.  WP_Post 를 넘긴다
-없음   outbox POST 엔드포인트
-없음   Update
+c2s-outbox.php:115    POST axismundi/v1/actors/{uuid}/outbox   rest_api_init 등록
+인증                  쿠키 + nonce  또는  application password
+인가                  can_act_as() · 로컬 · public · handle locked 를
+                      서비스 경계에서 재검증 (브라우저 선택을 신뢰하지 않는다)
+멱등                  Idempotency-Key + intent 비교 (서버 생성 id·시각 제외)
+응답                  201 + Location: <activity uri> + Cache-Control: no-store
+수용 타입             Like · Undo(Like) · Create(Note) · bare Note · Delete(local Object)
+저장                  c2s-local-object.php 가 Create(Note) 를 로컬 Object 로 저장
+감사                  audit-c2s-outbox-http.php · audit-c2s-outbox-mutations.php
 ```
 
-그리고 C2S.md §9 가 스스로 적어 둔 결함:
+그러므로 **이 슬라이스는 UI 다.** 백엔드 왕복은 이미 서 있고 감사도 붙어 있다.
 
-> 트리거가 아직 OP 의 `axismundi_op_object_publish_candidate` 훅이라, 발행이
-> **제출된 의도가 아니라 저장을 관찰한 투영**에서 시작된다.
+### 남은 간극
 
-컴포저는 **두 번째 어댑터이자 첫 번째 진짜 의도**다. 사람이 "이걸 이 Actor 로
-발행한다" 고 누른 것이 제출이 되는 경로를 처음으로 만든다. 그래서 이 슬라이스는
-UI 작업처럼 보이지만 실제로는 §9 의 가장 큰 빈칸을 친다.
+```txt
+UI 없음        컴포저도 Outbox 활동 로그도 없다 — 이 슬라이스의 본체
+Follow 미수용  outbox 가 받는 타입에 Follow 가 없다
+경로 분기      follow-block.php:278·296 과 like-block.php:76·99 가 자기 REST 경로를
+               따로 가진다. Like 는 outbox 로도 되고 블록 경로로도 된다
+Update 없음    c2s-local-object.php 는 Create · Delete 만 받는다
+Intransitive   미지원 (9 참조)
+```
 
 ## 2. 저작 경로가 둘이고, 이 슬라이스는 그중 하나다
 
@@ -122,33 +131,45 @@ acting Actor  클라이언트가 고른다
 ## 6. 범위
 
 ```txt
-안에   actor outbox 의 POST 엔드포인트          공개 C2S 표면. 이것이 기반이다
-       Create(Note) 저작 → 로컬 Object 저장
-       Actor 전환 · 인증(관리자 경로)
-       컴포저 UI · Outbox 뷰                    증명의 본체. 빼면 증명이 없다
-밖에   첨부                                     코어 미디어 API 연동이 필요하다
-       Article · 답글
-       Update · Like · Announce
+안에   컴포저 UI · Outbox 활동 로그 UI          이 슬라이스의 본체
+       Follow 를 outbox 수용 타입에 추가        Like 는 이미 된다
+밖에   Update · 답글 · Article
+       첨부                                     코어 미디어 API 연동이 필요하다
+       IntransitiveActivity (Arrive · Travel)   Contacts 뒤 — 9 참조
        예약 발행 UI
-       프론트앱 작성기 자체
+       블록 경로 통합                           아래 참조
 ```
 
-성공 기준은 하나다. **Create(Note) 를 제출하면 로컬 Object 로 저장되고
-Outbox 에서 보인다.**
+성공 기준: **컴포저에서 Create(Note) 를 제출하면 로컬 Object 로 저장되고
+Outbox 에서 보인다.** 그리고 같은 화면에서 Like 와 Follow 를 보낼 수 있다.
 
-**Todo PoC 의 함정을 여기서는 피한다.** Todo 는 관리자 전용 프록시 경로로
-JMAP 을 증명했고, 표준 발견 경로(`.well-known/jmap`)는 비어 있는 채로 남았다.
-재어 보고서야 바깥 클라이언트가 우리를 찾을 수 없다는 걸 알았다. 컴포저는
-같은 길을 가지 않는다 — **관리자 화면이 공개 outbox 의 첫 번째 클라이언트일
-뿐**이고, 편의용 우회 경로를 따로 두지 않는다.
+### 범용 모듈 + UI 차별화 — 이미 그 모양이다
 
-### 첨부를 나중에 붙일 때 — 이미 정해진 것
+`axismundi_act_submit_outbox()` 가 타입으로 분기하는 단일 진입점이다. 그러므로
+"범용 기능 모듈" 은 새로 만들 것이 아니라 **있는 것에 Follow 를 더하는 일**이다.
+UI 가 달라지는 축은 `object` 가 무엇이냐다.
 
-첨부는 `object.attachment` 에 둔다. Activity 에 두지 않는다. `Create` 는
-"누가 무엇을 만들었다" 는 행위의 래퍼이고, 본문과 미디어는 그 행위의 대상인
-`Note` 에 속한다. Activity 에 두면 수신 측이 본문과 미디어의 관계를 해석할
-근거가 사라진다. C2S.md §13 의 "attachment 은 파일 참조이지 발행물 참조가
-아니다" 와도 이어진다.
+```txt
+저작된 object    Create(Note)      본문 작성기.  OP 가 로컬 Object 로 저장
+참조된 object    Like · Follow     대상 선택기.  이미 있는 것을 가리킨다
+                                   Like 대상은 Object → OP 가 해소
+                                   Follow 대상은 Actor → Actors 가 해소
+object 없음      Arrive · Travel   장소 선택기 (9)
+```
+
+세 번째 줄 때문에 **제출 계약을 Create 전용으로 못 박지 않는다.**
+
+### 블록 경로 분기는 이 슬라이스에서 정리하지 않는다
+
+```txt
+follow-block.php:278 · 296    자기 REST 경로
+like-block.php:76 · 99        자기 REST 경로 — Like 는 outbox 로도 된다
+```
+
+같은 조작에 진입점이 둘이다. 합치는 것이 옳아 보이지만 **블록은 공개 프론트엔드
+표면이고 outbox 는 인증된 C2S 표면이라 권한·캐시·응답 모양이 다르다.** 합치려면
+그 차이를 먼저 재야 하고, 컴포저가 동작하는 데 필요한 일은 아니다. 별도 슬라이스로
+남긴다.
 
 ## 7. Update 는 왜 뒤인가 — Note 로 제한하는 진짜 이유
 
@@ -334,12 +355,10 @@ object 없는 Activity 가 나중에 들어올 자리를 남긴다. 구현하지
 ## 10. 순서
 
 ```txt
-1  로컬 Object 저작·저장          OP 로컬 Object 층
-2  actor outbox POST 엔드포인트    인증 포함. 제출된 의도가 트리거다 (§9 의 빈칸)
-                                   검증·원장·전달은 기존 경로에 연결
-3  컴포저 UI                       그 엔드포인트의 첫 클라이언트
-4  Outbox 뷰                       ledger 투영 + 수신처별 전달 상태
+1  Follow 를 outbox 수용 타입에 추가       기존 submit_outbox 분기에 한 줄
+2  컴포저 UI                               Create(Note) · Like · Follow
+3  Outbox 활동 로그 UI                     이종 Activity · 수신처별 전달 상태
 ```
 
-3 이 2 보다 뒤인 것이 핵심이다. 엔드포인트가 먼저 서야 컴포저가 **클라이언트**가
-되고, 그래야 프론트앱이 같은 자리에 들어올 수 있다.
+엔드포인트가 이미 서 있으므로 UI 가 처음부터 **진짜 경로**를 친다. 프론트앱은
+같은 엔드포인트에 인증 수단만 바꿔 들어온다.

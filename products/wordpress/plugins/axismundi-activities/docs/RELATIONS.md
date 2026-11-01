@@ -209,9 +209,20 @@ delivery succeeded and must not be used as a delivery status.
 
 ## 3. Direction
 
-- `outbound`: subject is local and object is non-local.
-- `inbound`: subject is non-local and object is local.
-- `local`: both Actors are local.
+- `outbound`: Activity/관계의 subject가 로컬이다. 수신자가 같은 사이트여도 동일하다.
+- `inbound`: subject가 원격이고 이 사이트의 Account가 수신한다.
+
+`local`은 신규 저장값이 아니다. 기존 호출부의 입력은 `outbound`로 정규화한다.
+schema 15 설치 시 기존 Activity와 관계 행의 `local` 메타데이터도 `outbound`로
+이관한다. Activity ID·payload는 바꾸지 않는다. 과거 inbox receipt는 실제 수신을
+확인할 수 없으므로 추측해서 만들지 않는다. 이전 행을 읽는 호환 처리는 남긴다.
+
+로컬 전달은 공개 HTTP로 자기 자신에게 요청하는 대신, 검증된 저장 Activity를 대상
+Account의 inbox receipt에 추가한다. 원본 outbound 행은 하나이고 수신 이력은
+방향이 아니라 Account별 membership으로 표현한다. 수신 정책을 적용하되, 대상에게
+보내는 Block과 같은 저자의 Undo(Block)은 수신자의 개인 Block 게이트를 통과한다.
+기존 Forum의 로컬 가입·투표 소비자도 이 방향 변경을 받도록 조건만 조정한다.
+로컬 Group 바인딩 검증은 유지하며 Forum 정책이나 기능을 추가하지 않는다.
 
 Remote-remote relations are not materialized merely because they appeared in an unrelated
 payload. Locality is resolved through Actors when available; canonical Actor URIs remain the
@@ -238,9 +249,9 @@ for local and cached remote Actors. Local product actions require the Contributo
 on the core Users table. Activities records transport-neutral outbound Activities; a transport
 adapter decides whether and how remote inboxes receive them.
 
-## 6. Open — Person Follow transitions
+## 6. Person Follow transitions — 구현 및 검증
 
-다음 슬라이스의 범위다. 아래 전이는 구현되어 있고, 빈칸만 정하면 된다.
+2026-11-01 구현. 아래 전이는 Activity 이력을 유지하면서 현재 관계를 갱신한다.
 
 ```txt
 Follow 도착      axismundi_act_start_relation()        → pending
@@ -250,12 +261,12 @@ Undo             → undone
 Block            별도 관계. active / undone
 ```
 
-정할 것 셋.
+이번 슬라이스의 동작:
 
 ```txt
-거절 후 재-Follow          rejected 상태에서 새 Follow 를 받는가
-Block 과 기존 Follow       accepted 상태에서 Block 하면 follow 관계는 어떻게 되는가
-정책 변경과 기존 pending   승인제를 끈 뒤 대기 중이던 요청을 소급 수락하는가
+거절 후 재-Follow          새 Activity URI로 새 사이클을 시작한다. 과거 응답은 새 사이클을 바꾸지 않는다
+Block 과 기존 Follow       양방향 accepted/pending을 종료한다. 차단 중 새 Follow는 관계를 만들지 않는다
+정책 변경과 기존 pending   기존 pending은 유지한다. Follows 화면에서 수동으로 처리할 수 있다
 ```
 
 세 번째의 측정값과 권고:
@@ -264,7 +275,7 @@ Block 과 기존 Follow       accepted 상태에서 Block 하면 follow 관계�
 측정   axismundi_actors_set_local_policy() 은 훅을 발화하지 않는다.
        auto-accept 핸들러는 axismundi_act_relation_changed 에만 걸려 있다.
        따라서 승인제를 켜 둔 동안 들어온 Follow 는 끈 뒤에도 pending 으로 남는다.
-권고   소급 수락하지 않는다. 승인제 동안의 요청은 사람이 본 적 없는 요청이고,
+동작   소급 수락하지 않는다. 승인제 동안의 요청은 사람이 본 적 없는 요청이고,
        정책을 끄는 행위가 그것들의 일괄 수락으로 읽히면 안 된다.
        대신 대기 중인 요청이 있다는 것이 Follows 화면에서 확인·처리 가능해야 한다.
 ```
@@ -275,3 +286,41 @@ Block 과 기존 Follow       accepted 상태에서 Block 하면 follow 관계�
 상태가 아니다. 그러므로 자동 수락으로 바꾼 뒤 예전 요청이 pending 으로 남아 있는
 것은 그 자체로 광고 불일치가 **아니다**. 합격선은 "각 전이 후 광고값이 그 시점의
 **새 Follow 에 대한 처리**와 일치하는가" 이다.
+
+### Block 종료 원인과 순서 역전
+
+schema 15의 `termination_activity_uri`는 해당 Follow 사이클을 끝낸 Block을 보존한다.
+`state_activity_uri`는 이후 실제 Undo/Reject를 가리킬 수 있지만, 종료 원인은 같은
+사이클에서 지워지지 않는다. 이미 rejected/undone인 사이클에도 원인을 남겨 나중에
+Undo(Reject)나 Undo(Undo(Follow))가 와도 차단 전 관계를 복원하지 못한다. 새 Follow
+URI를 명시적으로 만들 때만 이 표식을 초기화한다. Activity payload는 변경하지 않는다.
+
+설치 시 현재 active이며 원인 Activity와 정확한 Person 쌍을 검증할 수 있는 Block만
+보정한다. accepted/pending을 종료하고 이미 종료된 사이클에도 원인을 남긴다.
+비활성 과거 Block·target이 있는 운영 제재·원인 Activity 없는 추정값은 소급 적용하지
+않는다. 이 보정은 새 Activity나 전달 작업을 만들지 않으며 반복 실행해도 결과가 같다.
+
+원격 저자의 Block은 원격 Actor를 사칭하는 Undo/Reject를 만들지 않고 관계를 종료한다.
+로컬 저자가 Block하면 그 저자 자신의 outgoing Follow에는 Undo, incoming Follow에는
+Reject를 별도 Activity로 기록한다. 이는 정책에 의한 후속 처리이며 원래 Accept를
+수정하지 않는다. 새 Block이 소유한 관계를 오래된 Block의 Undo로 해제하지 않는다.
+Group/Site `target`을 가진 운영 제재는 개인 Block 관계로 만들지 않는다.
+
+로컬 전달 실패는 inbox 진단에 남는다. 로컬 receipt의 별도 자동 재시도 큐와 과거 receipt
+백필은 구현하지 않았다. 원격 전달은 기존 Bridge 큐·재시도를 사용한다. 어느 경우든
+차단 집행은 전달 결과에 의존하지 않는다. 이 슬라이스가 댓글·Like·기존 전달 큐·알림
+전체의 차단 정책을 완성했다는 뜻은 아니다. FEP 동기화/차단 컬렉션도 범위 밖이다.
+
+### 검증 명령
+
+```sh
+python tools/wp-env/run_audits.py run --audit audit-person-block.php --audit audit-relations.php --audit audit-actor-inbox.php --audit audit-outbound-delivery.php
+python tools/wp-env/run_audits.py run --audit audit-person-block-mutations.php
+node products/wordpress/plugins/axismundi-activities/tests/person-block-browser.cjs
+python tools/wp-env/run_audits.py run --audit audit-forum-memberships.php --audit audit-forum-votes.php
+```
+
+변이는 제품 파일 대신 현재 함수의 메모리 복사본을 수정한다. 정상 복사본의 통과를 먼저
+확인하고, 종료 제거·Follow 거부 제거·해제 시 복원·재조정 보호 제거가 각각 예상 단언을
+깨뜨리는지 검사한다. 브라우저 검사는 임시 사용자·Actor를 생성해 실제 nonce POST,
+Block/Unblock UI, 로컬 inbox receipt와 Follow 미복원을 확인한 뒤 정리한다.

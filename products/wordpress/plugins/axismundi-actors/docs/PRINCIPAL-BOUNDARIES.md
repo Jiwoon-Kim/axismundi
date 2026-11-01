@@ -311,3 +311,42 @@ Calendar 와 Activities 와 Forum 테이블까지 지우고 있었다. 액터를
 플러그인이 꺼져 있어도 Actors 자기 감사는 돌아야 하기 때문이다. 구조적 해결은
 따로다 — **Actor 삭제에 반응해 자기 행을 치우는 것은 각 제품의 책임**이고,
 Calendar 가 Account 를 통해 붙으면 그 키잉 자체가 사라진다.
+
+## 컬렉션 권한 — 두 프로토콜을 섞지 않는다 (2026-11-01)
+
+addressbook 과 followers·moderators 는 컬렉션으로서 닮았지만 **권한 모델이 다르다.**
+구현할 때 섞으면 한쪽 어휘로 다른 쪽을 제어하게 된다.
+
+```txt
+JMAP   주체 = principal (인증으로 확정).  Account 는 행위자가 아니다
+       권리 = 객체가 들고 다니는 뷰어별 myRights
+       컬렉션을 직접 읽고 쓴다
+AP     주체 = actor
+       뷰어별 권리라는 개념이 없다 — 가시성 + Activity 제출의 부작용
+       "당신 팔로워에 나를 추가" 같은 연산이 존재하지 않는다
+```
+
+실측: `myRights` 는 JMAP 쪽에만 있고 OP·Activities·Actors 에 0 건이다. 코드는
+이미 갈라져 있으므로 지켜야 할 것은 개념이다.
+
+```txt
+금지   curated collection 에 myRights 를 만드는 것
+       필요한 것은 "누가 큐레이션하는가" 하나이고 append_policy 가 표현한다
+주의   curated 만 직접 쓰는 유일한 AP 컬렉션이라 JMAP 처럼 보인다.
+       가장 혼동되기 쉬운 자리다
+```
+
+### 왜 Contacts 는 자기 컬렉션을 갖고 Forum 은 못 갖나
+
+**Actor 는 subject 이고 contact card 는 object 다.** 카드는 결코 행위 주체가 되지
+않으므로 제품 저장소에 있어도 되고, Actor 의 컬렉션은 **행위하는 정체성의 일부**라
+정체성과 함께 있어야 한다.
+
+```txt
+addressbook   Account 안의 내용물. 바깥에서 역참조할 일이 없다
+moderators    Actor 문서에 attributedTo 로 나가고 원격이 역참조한다
+```
+
+시험은 비활성화다. Contacts 를 끄면 addressbook 이 사라지고 Actor 문서는 멀쩡하다.
+Forum 이 moderators 를 쥔 채 꺼지면 **여전히 존재하는 정체성의 Actor 문서가
+attributedTo 를 잃는다.** 그래서 Forum 것일 수 없다.

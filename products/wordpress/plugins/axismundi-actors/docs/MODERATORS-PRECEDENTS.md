@@ -39,13 +39,34 @@ impl AttributedTo { fn url(self) -> Option<DbUrl> {
 우리 규칙은 방향으로 적는다.
 
 ```
+원격 발신자의 플랫폼     추측하지 않는다
+로컬 수신 Group 프로필   명시적으로 저장된 정책을 적용한다
+```
+
+```
 로컬 Group   프로필은 생성 시 우리가 고른 상태다.  추측이 개입하지 않는다
-             그 프로필이 어떤 attributedTo 를 내보낼지 결정한다      프로필 → 직렬화
+             발신 계약(무엇을 내보내는가)과 수신·집행 정책을 함께 결정한다
+             — 게시 자격 · 그룹 귀속 · 승인 · Announce 정책이 전부 여기 속한다
 원격 Group   플랫폼을 추측하지 않는다
-             attributedTo 가 컬렉션 URL 을 내놓는가만 본다
-             내놓으면 가져오고, 아니면 moderators 컬렉션이 없는 것    문서 → 그 문서의 내용
+             문서의 구조와 명시된 관계만 해소한다                   문서 → 그 문서의 내용
              문서 → 보낸 쪽의 정체 · 능력 으로는 절대 가지 않는다
 ```
+
+**프로필을 발신 전용으로 축소하면 안 된다.** 우리 Group 이 받은 제출을 어떻게 다룰지가 프로필에
+달려 있다. 상대 플랫폼은 몰라도 되지만, **명령을 받는 우리 Group 의 운영 계약은 알아야 한다.**
+
+그리고 `attributedTo` 가 컬렉션 URI 라는 것만으로 moderators 라고 확정하면 안 된다. 역참조해서
+Collection 임을 확인해도 알 수 있는 것은 **귀속 대상으로 컬렉션을 참조했다는 사실까지**다.
+세 가지를 분리한다.
+
+```
+구조 확인     attributedTo 가 가리키는 것이 Collection 인가, 같은 도메인인가
+역할 해석     그 구성원이 moderator 라는 의미 — 별개의 판단이다
+변경 권한     누가 그 목록을 바꿀 수 있는가 — 또 별개다 (§5)
+```
+
+미확정이면 **원본 참조와 구조만 보존**하고 역할로 읽지 않는다. 기록해 둔
+`type ≠ relation` · `grant ≠ access` · `declared willingness ≠ consent` 와 같은 족속이다.
 
 PeerTube 와의 상호운용이 필요해지면 그건 **우리가 Channel 프로필을 골라 배열을 내보내는 일**이지,
 상대가 PeerTube 라고 판정하는 일이 아니다. 받는 쪽에서 플랫폼을 알아야 하는 자리는 지금 없다 —
@@ -145,10 +166,37 @@ if mod_id.inner().domain() == community.actor_id.domain() { return Ok(()); }
 Err(NotAModerator)
 ```
 
-같은 도메인 통과는 **설계된 규칙이 아니라 TODO 가 달린 추정**이다. instance admin 지위가
-연합되지 않아서 생긴 임시방편이고 주석이 "presumably" 라고 자인한다. 그리고 0.19.21 의 서명은
-3인자인데 `main` 은 `object` 를 추가했다(순위 검사). **업스트림에서 지금 고쳐지고 있는 검사**라
-0.19.21 판을 이식하면 알려진 약점을 같이 들여온다.
+같은 도메인 통과는 여기서 **설계된 규칙이 아니라 TODO 가 달린 추정**이다. instance admin 지위가
+연합되지 않아서 생긴 임시방편이고 주석이 "presumably" 라고 자인한다.
+
+`main` 은 이것을 **조인 게 아니라 넓혔다.** `crates/apub/objects/src/utils/functions.rs:310`
+
+```rust
+// Mod action comes from the same instance as the community, or same instance as the object
+// creator. We trust that the origin instance performed necessary permission checks.
+// https://codeberg.org/fediverse/fep/src/branch/main/fep/fe34/fep-fe34.md
+if mod_id.inner().domain() == community.ap_id.domain()
+  || mod_id.inner().domain() == object_id.domain() { return Ok(()); }
+let mod_ = mod_id.dereference(context).await?;
+check_is_mod_or_admin(&mut context.pool(), mod_.id, community.id).await?;
+CommunityPersonBanView::check(&mut context.pool(), mod_.id, community.id).await?;
+```
+
+추가된 `object_id` 는 순위 검사 인자가 아니라 **도메인 신뢰 예외를 하나 더 넣는 인자**이고,
+그 예외가 이제 맨 앞에서 돈다. TODO 자리에는 **FEP-fe34 를 근거로 단 선언**이 들어갔다
+(ban 검사가 붙은 것은 조여진 쪽이다).
+
+**FEP-fe34 "Origin-based security model" 은 DRAFT 다**(2024-11-15 접수). 우리 분류에서 draft 는
+*채택한 정책* 칸이므로, 받아들이면 그건 기록해야 할 선택이지 준수가 아니다. 그리고 FEP 는
+**cross-origin 모더레이터에 대해 양쪽 origin 의 상호 주장을 요구한다** — 원격 origin 의 말
+하나로는 부족하다고 명시한다. 레미 구현에는 그 상호 확인이 없으니 **부분 채택**이다.
+
+따라서 레미의 검사를 베끼면 **스펙의 안전성도 FEP 의 규칙도 아닌 중간**을 얻는다.
+우리가 할 일은 FEP-fe34 를 채택할지를 따로 판단하는 것이고, 채택한다면 상호 주장까지 포함해야 한다.
+
+그 상호 주장이 마침 §1 의 분리와 같은 것이다. "이 Person 이 여기 모더레이터다" 가 검증 가능해지려면
+**우리 Group 의 `attributedTo` 가 그 컬렉션을 지목하고, 그 컬렉션이 그 Person 을 싣는** 양쪽이
+필요하다. 한쪽만으로는 주장이지 사실이 아니다.
 
 로컬 API 쪽에는 상위 모더레이터 검사와 마지막 모더레이터의 자진 해임 방지가 있고
 (`crates/api/src/community/add_mod.rs`), 연합 수신 쪽에는 위 예외가 있다. 원격 Community 해임에서는

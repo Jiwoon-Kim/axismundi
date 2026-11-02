@@ -148,6 +148,13 @@ function axismundi_activitypub_bridge_receive_actor_inbox( WP_REST_Request $requ
 	$result = axismundi_activitypub_bridge_record_inbox( $payload, array(), false, $actor );
 	axismundi_activitypub_bridge_record_inbox_diagnostic( 'actor-uuid', $payload, $result );
 	if ( is_wp_error( $result ) ) {
+		if ( str_starts_with( $result->get_error_code(), 'ax_bridge_control_' ) ) {
+			$data = $result->get_error_data();
+			$data = is_array( $data ) ? $data : array();
+			$data['status'] = $data['status'] ?? ( in_array( $result->get_error_code(), array( 'ax_bridge_control_store', 'ax_bridge_control_busy' ), true ) ? 503 : 400 );
+			$result->add_data( $data );
+			return $result;
+		}
 		return new WP_Error( 'ax_bridge_inbox_store', 'The Activity could not be received.', array( 'status' => 503 ) );
 	}
 	$response = new WP_REST_Response( null, 202 );

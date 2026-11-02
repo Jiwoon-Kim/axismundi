@@ -286,7 +286,7 @@ function axismundi_activitypub_bridge_record_inbox( array $activity, array $reci
 	}
 	if ( in_array( $activity['type'] ?? '', array( 'Add', 'Remove' ), true ) && 'Person' === $actor->get_type() ) {
 		$control_group = axismundi_actors_get_by_uri( axismundi_act_member_uri( $activity['audience'] ?? '' ) );
-		if ( $control_group instanceof Axismundi_Actor && 'Group' === $control_group->get_type() ) {
+		if ( $control_group instanceof Axismundi_Actor && ! $control_group->is_local() && 'Group' === $control_group->get_type() ) {
 			return axismundi_activitypub_bridge_receive_collection_control( $activity, $actor, array_keys( $admitted ) );
 		}
 	}

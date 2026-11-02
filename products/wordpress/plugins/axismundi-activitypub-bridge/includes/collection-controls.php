@@ -63,6 +63,8 @@ function axismundi_activitypub_bridge_group_advertises_collection( Axismundi_Act
 function axismundi_activitypub_bridge_receive_collection_control( array $payload, Axismundi_Actor $sender, array $recipients ) {
 	global $wpdb;
 	if ( $sender->is_local() || $sender->get_uri() !== axismundi_act_member_uri( $payload['actor'] ?? '' ) ) { return new WP_Error( 'ax_bridge_control_sender', 'The payload does not identify its verified sender.' ); }
+	$envelope_json = wp_json_encode( $payload );
+	if ( ! is_string( $envelope_json ) || strlen( $envelope_json ) > 1024 * 1024 ) { return new WP_Error( 'ax_bridge_control_size', 'Collection envelope exceeds one MiB.' ); }
 	$announced = 'Announce' === ( $payload['type'] ?? '' );
 	$inner = $announced ? ( $payload['object'] ?? null ) : $payload;
 	if ( ! is_array( $inner ) || ! in_array( $inner['type'] ?? '', array( 'Add', 'Remove' ), true ) ) {
@@ -83,23 +85,26 @@ function axismundi_activitypub_bridge_receive_collection_control( array $payload
 	}
 	if ( isset( $inner['audience'] ) && $group->get_uri() !== axismundi_act_member_uri( $inner['audience'] ) ) { return new WP_Error( 'ax_bridge_control_audience', 'The control audience contradicts its Group.' ); }
 	if ( isset( $inner['id'] ) && ( ! is_string( $inner['id'] ) || '' === axismundi_act_member_uri( $inner['id'] ) ) ) { return new WP_Error( 'ax_bridge_control_id', 'Invalid inner Activity identity.' ); }
-	$ledger_inner = $inner;
-	// The Group signature attests the envelope, not a cross-origin Person payload.
+	// A Group attests its announcement, not the Person's authorship. Never fetch the
+	// private original as an admission gate, or manufacture an independent Person receipt.
+	$author_verified = ! $announced;
 	if ( $announced && isset( $inner['id'] ) ) {
-		if ( wp_parse_url( $inner['id'], PHP_URL_HOST ) !== wp_parse_url( $person->get_uri(), PHP_URL_HOST ) ) { return new WP_Error( 'ax_bridge_control_origin', 'The inner Activity does not originate at its author.' ); }
-		$original = axismundi_actors_remote_get_json( $inner['id'], array( 'application/activity+json', 'application/ld+json', 'application/json' ) );
-		if ( is_wp_error( $original ) ) { return $original; }
-		$ledger_inner = $original;
-		$compare = $inner;
-		unset( $original['@context'], $compare['@context'] );
-		if ( axismundi_activitypub_bridge_control_json( $original ) !== axismundi_activitypub_bridge_control_json( $compare ) ) { return new WP_Error( 'ax_bridge_control_original', 'The nested Activity differs from its authoritative representation.' ); }
+		$known = axismundi_act_get( $inner['id'] );
+		if ( $known instanceof Axismundi_Activity && $known->get_actor_uri() === $person->get_uri() ) {
+			$original = $known->get_payload(); $compare = $inner;
+			unset( $original['@context'], $compare['@context'] );
+			$author_verified = axismundi_activitypub_bridge_control_json( $original ) === axismundi_activitypub_bridge_control_json( $compare );
+		}
 	}
 	$json = axismundi_activitypub_bridge_control_json( $inner );
 	if ( '' === $json || strlen( $json ) > 1024 * 1024 ) { return new WP_Error( 'ax_bridge_control_size', 'Collection control is too large.' ); }
 	$intent = $inner;
 	unset( $intent['@context'] );
 	$intent_json = axismundi_activitypub_bridge_control_json( $intent );
-	$key = hash( 'sha256', isset( $inner['id'] ) ? 'id:' . $inner['id'] : 'intent:' . $group->get_uri() . ':' . ( $announced ? ( $payload['id'] ?? '' ) : '' ) . ':' . $intent_json );
+	// An unverified nested claim must not reserve an author's global Activity ID.
+	// Scope observations by Group and exact intent; conflicting direct deliveries
+	// are still rejected by the independently authenticated immutable ledger below.
+	$key = hash( 'sha256', $group->get_uri() . ':' . ( $inner['id'] ?? ( $announced ? ( $payload['id'] ?? '' ) : '' ) ) . ':' . $intent_json );
 	$lock = 'ax-control-' . substr( $key, 0, 48 );
 	if ( '1' !== (string) $wpdb->get_var( $wpdb->prepare( 'SELECT GET_LOCK(%s,5)', $lock ) ) ) { return new WP_Error( 'ax_bridge_control_busy', 'Collection control is busy.' ); }
 	try {
@@ -112,19 +117,19 @@ function axismundi_activitypub_bridge_receive_collection_control( array $payload
 			$outer = axismundi_act_record_activity( $payload, 'inbound', $recipients );
 			if ( is_wp_error( $outer ) ) { return $outer; }
 		}
-		if ( isset( $inner['id'] ) ) {
-			$stored = axismundi_act_record_activity( $ledger_inner, 'inbound', $recipients );
+		if ( ! $announced && isset( $inner['id'] ) ) {
+			$stored = axismundi_act_record_activity( $inner, 'inbound', $recipients );
 			if ( is_wp_error( $stored ) ) { return $stored; }
 		}
 		if ( ! $row ) {
 			if ( false === $wpdb->insert( $table, array( 'operation_key' => $key, 'group_uri' => $group->get_uri(), 'target_uri' => $inner['target'], 'remote_activity_uri' => $inner['id'] ?? null,
-				'envelope_uri' => $announced ? ( $payload['id'] ?? null ) : null, 'envelope_json' => wp_json_encode( $payload ), 'payload_json' => $json, 'payload_hash' => hash( 'sha256', $intent_json ), 'outcome' => 'unclaimed', 'received_at' => current_time( 'mysql', true ) ) ) ) { return new WP_Error( 'ax_bridge_control_store', 'Could not store collection receipt.' ); }
+				'envelope_uri' => $announced ? ( $payload['id'] ?? null ) : null, 'envelope_json' => $envelope_json, 'payload_json' => $json, 'payload_hash' => hash( 'sha256', $intent_json ), 'outcome' => 'unclaimed', 'received_at' => current_time( 'mysql', true ) ) ) ) { return new WP_Error( 'ax_bridge_control_store', 'Could not store collection receipt.' ); }
 			$row = array( 'id' => (int) $wpdb->insert_id, 'outcome' => 'unclaimed' );
 		}
 		// No handlers are registered by this slice. A handler must authorize the Person separately.
 		$handler = apply_filters( 'axismundi_activitypub_bridge_collection_control_handler', null, $inner['target'], $group );
 		if ( 'handled' !== $row['outcome'] && is_callable( $handler ) ) {
-			$result = $handler( $inner, array( 'operation_key' => $key, 'group' => $group, 'person' => $person, 'announced' => $announced, 'author_verified' => ! $announced || isset( $inner['id'] ) ) );
+			$result = $handler( $inner, array( 'operation_key' => $key, 'group' => $group, 'person' => $person, 'announced' => $announced, 'author_verified' => $author_verified ) );
 			if ( is_wp_error( $result ) ) { return $result; }
 			if ( true === $result ) {
 				if ( false === $wpdb->update( $table, array( 'outcome' => 'handled' ), array( 'id' => $row['id'] ) ) ) { return new WP_Error( 'ax_bridge_control_store', 'Could not finish collection receipt.' ); }

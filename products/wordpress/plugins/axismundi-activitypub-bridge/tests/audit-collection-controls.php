@@ -5,11 +5,12 @@ $receive_control = $receive_control ?? 'axismundi_activitypub_bridge_receive_col
 global $wpdb;
 $checks = 0;
 $assert = static function ( bool $ok, string $label ) use ( &$checks ) { ++$checks; if ( ! $ok ) { throw new RuntimeException( $label ); } echo "PASS $label\n"; };
-$actors = array(); $uris = array(); $documents = array(); $uid = 0;
+$actors = array(); $uris = array(); $documents = array(); $uid = 0; $original_requests = 0;
 $previous = get_current_user_id();
+$previous_diagnostics = get_option( 'ax_activitypub_bridge_inbox_diagnostics', null );
 $prefix = 'https://example.com/ax-controls-' . wp_generate_uuid4();
-$http = static function ( $pre, $args, $url ) use ( &$documents ) {
-	if ( isset( $documents[$url] ) ) { return array( 'headers' => array( 'content-type' => 'application/activity+json' ), 'body' => wp_json_encode( $documents[$url] ), 'response' => array( 'code' => 200 ) ); }
+$http = static function ( $pre, $args, $url ) use ( &$documents, &$original_requests ) {
+	if ( isset( $documents[$url] ) ) { ++$original_requests; return new WP_Error( 'ax_op_remote_signed_fetch_required', 'The original Activity is not accessible to this server.' ); }
 	return $pre;
 };
 $key_lookup = null;
@@ -36,9 +37,10 @@ try {
 	$result = $receive_control( $outer, $group, array( $local->get_identity_id() ) );
 	$assert( is_array( $result ) && 'unclaimed' === $result['outcome'], 'Unregistered target remains unclaimed' );
 	$first = $result['collection_control_receipt'];
-	$assert( axismundi_act_get( $outer['id'] ) instanceof Axismundi_Activity && axismundi_act_get( $inner['id'] )->get_actor_uri() === $person->get_uri(), 'Envelope and Person Activity retain distinct authors' );
+	$assert( axismundi_act_get( $outer['id'] ) instanceof Axismundi_Activity && null === axismundi_act_get( $inner['id'] ), 'Group announcement creates no independent Person Activity' );
 	$again = $receive_control( $inner, $person, array( $local->get_identity_id() ) );
 	$assert( is_array( $again ) && $first === $again['collection_control_receipt'], 'Direct and announced delivery share one inner identity' );
+	$assert( axismundi_act_get( $inner['id'] ) instanceof Axismundi_Activity && $person->get_uri() === axismundi_act_get( $inner['id'] )->get_actor_uri(), 'Direct Person delivery records its own Activity' );
 	$wrong = $outer; $wrong['id'] = $prefix . '/wrong-owner'; $wrong['actor'] = $remote['other']->get_uri();
 	$wrong['object']['id'] = $prefix . '/wrong-owner-inner'; $wrong['object']['audience'] = $remote['other']->get_uri();
 	$documents[$wrong['object']['id']] = $wrong['object']; $uris[] = $wrong['id']; $uris[] = $wrong['object']['id'];
@@ -52,11 +54,14 @@ try {
 	$wrong = $outer; $wrong['object']['type'] = 'Move';
 	$bad = $receive_control( $wrong, $group, array( $local->get_identity_id() ) );
 	$assert( is_wp_error( $bad ) && 'ax_bridge_control_unsupported' === $bad->get_error_code(), 'Unsupported is not unclaimed' );
-	$wrong = $outer; $wrong['object']['object'] = $prefix . '/forged-person';
-	$assert( is_wp_error( $receive_control( $wrong, $group, array( $local->get_identity_id() ) ) ), 'Group signature cannot forge Person original' );
+	$wrong = $outer; $wrong['id'] = $prefix . '/changed-claim'; $wrong['object']['object'] = $prefix . '/forged-person'; $uris[] = $wrong['id'];
+	$claim = $receive_control( $wrong, $group, array( $local->get_identity_id() ) );
+	$assert( is_array( $claim ) && $first !== $claim['collection_control_receipt'] && $inner === axismundi_act_get( $inner['id'] )->get_payload(), 'Conflicting Group claim cannot overwrite verified Person history' );
 	$idless = $outer; $idless['id'] = $prefix . '/idless'; unset( $idless['object']['id'] ); $uris[] = $idless['id'];
 	$anonymous = $receive_control( $idless, $group, array( $local->get_identity_id() ) );
 	$assert( is_array( $anonymous ) && 'unclaimed' === $anonymous['outcome'], 'Idless inner Activity records an observation' );
+	$oversized = $idless; $oversized['summary'] = str_repeat( 'x', 1024 * 1024 );
+	$assert( is_wp_error( $receive_control( $oversized, $group, array( $local->get_identity_id() ) ) ), 'Anonymous inner object cannot bypass the envelope size bound' );
 	$row = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM %i WHERE id=%d', axismundi_activitypub_bridge_collection_controls_table(), $anonymous['collection_control_receipt'] ), ARRAY_A );
 	$assert( null === $row['remote_activity_uri'] && ! isset( json_decode( $row['payload_json'], true )['id'] ), 'No remote identity is invented' );
 	$remove = $outer; $remove['id'] = $prefix . '/announce-remove'; $remove['object']['id'] = $prefix . '/remove'; $remove['object']['type'] = 'Remove';
@@ -70,6 +75,20 @@ try {
 	$handled = $receive_control( $outer, $group, array( $local->get_identity_id() ) );
 	$receive_control( $outer, $group, array( $local->get_identity_id() ) );
 	$assert( 'handled' === $handled['outcome'] && 1 === $hits, 'Owner callback receives verified context once' );
+	remove_filter( 'axismundi_activitypub_bridge_collection_control_handler', $handler, 10 ); $handler = null;
+	$observed_context = null;
+	$handler = static function ( $callback, $target, $owner ) use ( &$observed_context ) {
+		return static function ( $control, $context ) use ( &$observed_context ) { $observed_context = $context; return false; };
+	};
+	add_filter( 'axismundi_activitypub_bridge_collection_control_handler', $handler, 10, 3 );
+	$receive_control( $remove, $group, array( $local->get_identity_id() ) );
+	$assert( is_array( $observed_context ) && false === $observed_context['author_verified'] && null === axismundi_act_get( $remove['object']['id'] ), 'Group-only evidence never authenticates the Person' );
+	$local_control = axismundi_act_record_activity( array( 'type' => 'Add', 'actor' => $local->get_uri(), 'object' => $person->get_uri(), 'target' => $inner['target'], 'audience' => $group->get_uri() ), 'outbound' );
+	if ( is_wp_error( $local_control ) ) { throw new RuntimeException( $local_control->get_error_message() ); }
+	$uris[] = $local_control->get_uri();
+	$local_announcement = $outer; $local_announcement['id'] = $prefix . '/local-author'; $local_announcement['object'] = $local_control->get_payload(); $uris[] = $local_announcement['id'];
+	$local_received = $receive_control( $local_announcement, $group, array( $local->get_identity_id() ) );
+	$assert( is_array( $local_received ) && true === $observed_context['author_verified'] && 'outbound' === axismundi_act_get( $local_control->get_uri() )->get_direction(), 'Local author evidence is reused without an inbound shadow Activity' );
 	remove_filter( 'axismundi_activitypub_bridge_collection_control_handler', $handler, 10 ); $handler = null;
 	// Actual transport verification, with a test RSA key served through the upstream key-fetch seam.
 	$key = openssl_pkey_new( array( 'private_key_bits' => 2048, 'private_key_type' => OPENSSL_KEYTYPE_RSA ) );
@@ -86,9 +105,22 @@ try {
 	$assert( 202 === rest_do_request( $request )->get_status(), 'Signed Group nested control passes actual ingress' );
 	$request->set_body( $body . ' ' );
 	$assert( 401 === rest_do_request( $request )->get_status(), 'Tampering invalidates the outer signature' );
+	foreach ( array( 'wrong-target' => 403, 'unsupported' => 400 ) as $case => $status ) {
+		$invalid = $outer; $invalid['id'] = $prefix . '/' . $case; $uris[] = $invalid['id'];
+		if ( 'wrong-target' === $case ) { $invalid['object']['target'] = $remote['other']->get_uri() . '/moderators'; }
+		else { $invalid['object']['type'] = 'Move'; }
+		$invalid_body = wp_json_encode( $invalid );
+		$invalid_signed = ( new Activitypub\Signature\Http_Signature_Draft() )->sign( array( 'method' => 'POST', 'body' => $invalid_body, 'key_id' => $key_id, 'private_key' => $private, 'headers' => array( 'Date' => gmdate( 'D, d M Y H:i:s' ) . ' GMT' ) ), axismundi_activitypub_bridge_actor_inbox_url( $local ) );
+		$request->set_body( $invalid_body );
+		foreach ( $invalid_signed['headers'] as $name => $value ) { $request->set_header( $name, $value ); }
+		$assert( $status === rest_do_request( $request )->get_status() && ! axismundi_act_get( $invalid['id'] ), 'Signed invalid control does not become a transient storage error: ' . $case );
+	}
+	$assert( 0 === $original_requests, 'An inaccessible inner Activity is never fetched as an admission gate' );
 	$assert( $principals === $wpdb->get_results( 'SELECT * FROM ' . axismundi_actors_managers_table() . ' ORDER BY identity_id,principal_kind,principal_id', ARRAY_A ), 'No principal grants are created' );
 	$assert( $relations === $wpdb->get_results( 'SELECT * FROM ' . axismundi_act_relations_table() . ' ORDER BY id', ARRAY_A ), 'No relation membership changes' );
 } finally {
+	if ( null === $previous_diagnostics ) { delete_option( 'ax_activitypub_bridge_inbox_diagnostics' ); }
+	else { update_option( 'ax_activitypub_bridge_inbox_diagnostics', $previous_diagnostics, false ); }
 	remove_filter( 'pre_http_request', $http, 999 );
 	if ( $key_lookup ) { remove_filter( 'activitypub_pre_http_get_remote_object', $key_lookup, 10 ); }
 	if ( $handler ) { remove_filter( 'axismundi_activitypub_bridge_collection_control_handler', $handler, 10 ); }

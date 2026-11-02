@@ -282,3 +282,51 @@ AS2 에서 속성 없음은 false 가 아니라 "주장하지 않음" 이고, �
 마스토돈 수용    Group 에 대해 manuallyApprovesFollowers 를 존중하는지 재지 않았다.
                  정합성 근거는 그와 무관하게 유지된다.
 ```
+
+## provenance 가 대신하지 않는 것 (2026-11-02)
+
+세 축이고, `provenance` 는 그중 하나만 답한다.
+
+```txt
+어휘 출처       용어가 어디서 왔는가                 provenance (이 레지스트리)
+                PropertyValue -> schema.org (vendor:schema)
+상호운용 계약   그 용어를 어떤 관행으로 쓰는가         레지스트리 밖
+                PropertyValue 를 프로필 attachment 로 쓰고 HTML·rel=me 를 해석하는 것
+코드 소유       그 일을 누가 하는가                   Actors 저장 / OP 표현 / Bridge 수신 적응
+```
+
+**출처가 달라도 동작은 한 계열로 묶인다.** Mastodon 계열 상호운용 동작에는 `vendor:schema` 인
+`PropertyValue`, `vendor:toot` 인 `featured`, `cg-final:apmisc` 인 `movedTo` 가 함께 들어간다.
+각 용어의 `provenance` 는 그대로 유지하면서다 -- 묶는 축이 다르기 때문이다.
+
+그리고 `provenance` 는 **권위·문서 상태·우리의 채택 결정을 대신하지 않는다.** `vendor:toot` 는
+그것이 DRAFT 인지, 우리가 골라서 채택한 것인지 말하지 않는다. 권위 층은
+`actors/docs/PRINCIPAL-BOUNDARIES.md` 쪽에 따로 적는다.
+
+### 그래서 격리의 모양
+
+```txt
+저장 · UI       도메인 이름을 쓴다 -- "프로필 링크" 이지 PropertyValue 가 아니다
+                (도메인 데이터는 라벨 붙은 링크 쌍이다)
+원격 독해 · 와이어 표현   각 소유 모듈 안에서 **식별 가능한 어댑터**로 격리
+주석 표시       보조 수단일 뿐이다.  주석 규약만으로 분리 가능성이 확보됐다고 보지 않는다
+                (AGENTS.md: 규칙은 의도를 설명하고, 검증기·테스트가 집행한다)
+```
+
+PropertyValue 정리는 **독립 슬라이스로 남긴다.** 다른 변경과 섞으면 회귀 원인을 가릴 수 없다.
+`movedTo` 등록과 이주 구현은 그 정리에 끌어오지 않는다.
+
+측정된 현재 사용처(2026-11-02):
+
+```txt
+표현    actors/includes/profile-fields.php:361-367   PropertyValue 와이어 조립 (rel=me)
+        actors/includes/profile-fields.php:83-119    원격 PropertyValue 독해
+        actors/includes/local-endpoints.php:34-41    어휘 등록 (provenance + group)
+엔진    actors/includes/repository.php:36            ax_actor_profile_fields (라벨+URL)
+        actors/includes/profile-fields.php:121-      저작 표면 검증
+        actors/includes/admin.php:1096-              저작 폼
+명명    repository.php:35 주석 · admin.php:1103 설명문이 저장·UI 를 PropertyValue 라 부른다
+```
+
+`profile-fields.php:122-123` 주석이 이미 정답을 적고 있다 --
+`The protocol projection owns the HTML representation.`

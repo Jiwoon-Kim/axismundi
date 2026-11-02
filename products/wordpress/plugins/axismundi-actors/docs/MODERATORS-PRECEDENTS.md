@@ -26,8 +26,35 @@ impl AttributedTo { fn url(self) -> Option<DbUrl> {
 레미는 그걸 관용적으로 읽되 moderators 로 해석하지 않는다.
 
 따라서 "owners 는 Person URI, moderators 는 컬렉션" 을 **한 배열에 섞는 것은 어느 생태계의
-형태도 아니다** — 우리 발명이 된다. 대신 `attributedTo` 의 직렬화 형태가 곧 연합 프로필의
-판별자이므로, Community/Channel 을 생성 시 고정하는 설계가 와이어에 실재하는 분기와 맞는다.
+형태도 아니다** — 우리 발명이 된다.
+
+### 형태로 상대 플랫폼을 추측하지 않는다
+
+레미의 enum 변형 이름(`Lemmy`, `Peertube`)은 **형태밖에 없는 자리에 플랫폼 이름을 붙인 것**이다.
+`attributedTo` 가 one-or-many 인 것은 그냥 AS2 이므로, "배열이면 PeerTube" 는 스펙이 허용하는
+형태에 벤더 정체를 읽어 넣는 것이고 건전하지 않다 — 우리 Group 도 정당하게 배열을 낼 수 있다.
+다만 레미의 *동작*은 멀쩡하다. `url()` 은 URL 형태면 Some, 배열이면 None 을 줄 뿐 플랫폼 능력을
+추론하지 않는다. 이름이 출처 기록을 정체 판정처럼 입고 있을 뿐이다.
+
+우리 규칙은 방향으로 적는다.
+
+```
+로컬 Group   프로필은 생성 시 우리가 고른 상태다.  추측이 개입하지 않는다
+             그 프로필이 어떤 attributedTo 를 내보낼지 결정한다      프로필 → 직렬화
+원격 Group   플랫폼을 추측하지 않는다
+             attributedTo 가 컬렉션 URL 을 내놓는가만 본다
+             내놓으면 가져오고, 아니면 moderators 컬렉션이 없는 것    문서 → 그 문서의 내용
+             문서 → 보낸 쪽의 정체 · 능력 으로는 절대 가지 않는다
+```
+
+PeerTube 와의 상호운용이 필요해지면 그건 **우리가 Channel 프로필을 골라 배열을 내보내는 일**이지,
+상대가 PeerTube 라고 판정하는 일이 아니다. 받는 쪽에서 플랫폼을 알아야 하는 자리는 지금 없다 —
+moderators 는 컬렉션 URL 유무로 충분하고, `Create(Page)` 수용도 타입으로 판정한다
+(Forum `inbound-topics.php:38` 이 이미 그렇게 한다).
+
+현재 우리 코드에 플랫폼 분기는 없다(2026-11-02 실측). 벤더 네임스페이스 속성 IRI 로 분기하는 것은
+여기 해당하지 않는다 — `https://misskey-hub.net/ns/#_misskey_quote` 는 **그 속성의 이름**이지
+상대의 정체가 아니다.
 
 Group 은 `featured: Option<Url>` 도 가진다. 레미에 커뮤니티 고정글이 있다는 뜻이다(§6).
 

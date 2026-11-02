@@ -48,7 +48,8 @@ function axismundi_activitypub_bridge_control_json( array $payload ) : string {
 
 /** A declared reference is not a moderator role or an operating grant. */
 function axismundi_activitypub_bridge_group_advertises_collection( Axismundi_Actor $group, string $target ) : bool {
-	if ( $group->is_local() || 'Group' !== $group->get_type() ) { return false; }
+	if ( 'Group' !== $group->get_type() ) { return false; }
+	if ( $group->is_local() ) { return (bool) apply_filters( 'axismundi_activitypub_bridge_local_collection_owned', false, $group, $target ); }
 	$document = axismundi_actors_get_remote_payload( $group->get_identity_id() );
 	$references = array_merge(
 		axismundi_activitypub_bridge_member_uris( $document['attributedTo'] ?? array() ),
@@ -79,6 +80,7 @@ function axismundi_activitypub_bridge_receive_collection_control( array $payload
 		return new WP_Error( 'ax_bridge_control_actor', 'The inner author must resolve to a Person.', array( 'status' => 403 ) );
 	}
 	$group = $announced ? $sender : axismundi_actors_get_by_uri( axismundi_act_member_uri( $inner['audience'] ?? '' ) );
+	if ( ! $group && ! $announced ) { $group = apply_filters( 'axismundi_activitypub_bridge_local_collection_group', null, $inner['target'] ); }
 	if ( ! $group instanceof Axismundi_Actor || ! axismundi_activitypub_bridge_group_advertises_collection( $group, $inner['target'] )
 		|| ( ! $announced && $sender->get_uri() !== $person->get_uri() ) ) {
 		return new WP_Error( 'ax_bridge_control_owner', 'The announcement does not identify the advertised collection owner.', array( 'status' => 403 ) );

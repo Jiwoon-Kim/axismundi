@@ -148,7 +148,7 @@ function axismundi_activitypub_bridge_receive_actor_inbox( WP_REST_Request $requ
 	$result = axismundi_activitypub_bridge_record_inbox( $payload, array(), false, $actor );
 	axismundi_activitypub_bridge_record_inbox_diagnostic( 'actor-uuid', $payload, $result );
 	if ( is_wp_error( $result ) ) {
-		if ( str_starts_with( $result->get_error_code(), 'ax_bridge_control_' ) ) {
+		if ( str_starts_with( $result->get_error_code(), 'ax_bridge_control_' ) || str_starts_with( $result->get_error_code(), 'ax_mod_' ) ) {
 			$data = $result->get_error_data();
 			$data = is_array( $data ) ? $data : array();
 			$data['status'] = $data['status'] ?? ( in_array( $result->get_error_code(), array( 'ax_bridge_control_store', 'ax_bridge_control_busy' ), true ) ? 503 : 400 );

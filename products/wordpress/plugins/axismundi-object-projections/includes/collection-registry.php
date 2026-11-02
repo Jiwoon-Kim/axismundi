@@ -35,7 +35,7 @@ function axismundi_op_normalize_collection_contract( string $id, array $args ) {
 		return new WP_Error( 'ax_op_collection_contract_id', __( 'Collection contract IDs must be non-empty lowercase slugs.', 'axismundi-object-projections' ) );
 	}
 	$member_models = array_values( array_unique( array_map( 'strval', (array) ( $args['member_models'] ?? array() ) ) ) );
-	if ( empty( $member_models ) || array_diff( $member_models, array( 'Activity', 'Object', 'mixed' ) ) ) {
+	if ( empty( $member_models ) || array_diff( $member_models, array( 'Actor', 'Activity', 'Object', 'mixed' ) ) ) {
 		return new WP_Error( 'ax_op_collection_contract_members', __( 'A collection contract requires supported member models.', 'axismundi-object-projections' ) );
 	}
 	$presentation = (string) ( $args['presentation'] ?? '' );

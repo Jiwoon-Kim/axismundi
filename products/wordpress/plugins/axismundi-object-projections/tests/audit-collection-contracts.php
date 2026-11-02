@@ -18,7 +18,7 @@ $expected = array( 'ap-outbox', 'ap-inbox', 'ap-followers', 'ap-following', 'ap-
 if ( function_exists( 'axismundi_actors_read_featured' ) ) {
 	$expected[] = 'ap-featured';
 }
-if ( function_exists( 'axismundi_forum_read_moderator_collection' ) ) {
+if ( function_exists( 'axismundi_actors_read_moderators' ) || function_exists( 'axismundi_forum_read_moderator_collection' ) ) {
 	$expected[] = 'ap-moderators';
 }
 ax_contracts_assert( $ax_contracts_results, 'every current implicit collection has one registered contract and folders are not modeled as collections', array() === array_diff( $expected, array_keys( $contracts ) ) && array() === array_diff( array_keys( $contracts ), $expected ) );

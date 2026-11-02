@@ -66,6 +66,7 @@ require_once __DIR__ . '/includes/quote-authorizations.php';
 require_once __DIR__ . '/includes/lifecycle.php';
 require_once __DIR__ . '/includes/integrations/actors.php';
 require_once __DIR__ . '/includes/integrations/featured.php';
+require_once __DIR__ . '/includes/integrations/moderators.php';
 require_once __DIR__ . '/includes/integrations/liked.php';
 require_once __DIR__ . '/includes/integrations/media-library.php';
 require_once __DIR__ . '/includes/integrations/retired-media-folders.php';

@@ -126,6 +126,13 @@ try {
 	if ( $handler ) { remove_filter( 'axismundi_activitypub_bridge_collection_control_handler', $handler, 10 ); }
 	foreach ( $uris as $uri ) { $activity = axismundi_act_get( $uri ); if ( $activity ) { $wpdb->delete( axismundi_act_inbox_table(), array( 'activity_id' => $activity->get_id() ) ); $wpdb->delete( axismundi_act_activities_table(), array( 'id' => $activity->get_id() ) ); } }
 	foreach ( $actors as $actor ) { if ( ! $actor instanceof Axismundi_Actor ) { continue; } $wpdb->delete( axismundi_activitypub_bridge_collection_controls_table(), array( 'group_uri' => $actor->get_uri() ) ); }
+	if ( function_exists( 'axismundi_actors_moderators_state_table' ) ) {
+		foreach ( $actors as $actor ) {
+			if ( ! $actor instanceof Axismundi_Actor ) { continue; }
+			$wpdb->delete( axismundi_actors_moderators_state_table(), array( 'group_id' => $actor->get_identity_id() ) );
+			wp_clear_scheduled_hook( 'axismundi_actors_sync_moderators', array( $actor->get_identity_id() ) );
+		}
+	}
 	require_once ABSPATH . 'wp-admin/includes/user.php'; if ( is_int( $uid ) && $uid > 0 ) { wp_delete_user( $uid ); }
 	foreach ( $actors as $actor ) {
 		if ( ! $actor instanceof Axismundi_Actor ) { continue; } $id = $actor->get_identity_id();

@@ -44,6 +44,8 @@ function axismundi_act_submit_outbox( int $user_id, Axismundi_Actor $actor, arra
 	if ( is_wp_error( $allowed ) ) { return $allowed; }
 	$type = $payload['type'] ?? null;
 	if ( in_array( $type, array( 'Add', 'Remove', 'https://www.w3.org/ns/activitystreams#Add', 'https://www.w3.org/ns/activitystreams#Remove' ), true ) ) {
+		$group = is_string( $payload['target'] ?? null ) ? axismundi_actors_moderators_group_for_uri( $payload['target'] ) : null;
+		if ( $group ) { $payload['type'] = axismundi_act_type( $type ); return axismundi_act_submit_moderators( $user_id, $actor, $group, $payload, $retry_key ); }
 		return axismundi_act_submit_featured( $user_id, $actor, $payload, $retry_key );
 	}
 	if ( in_array( $type, array( 'Note', 'Create', 'Delete' ), true ) ) {

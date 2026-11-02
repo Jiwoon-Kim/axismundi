@@ -408,7 +408,8 @@ function axismundi_act_apply_relation_activity( array $normalized ) {
 	if ( ! is_array( $root ) || ! in_array( (string) $root['activity_type'], array( 'Follow', 'Block' ), true ) ) {
 		return array();
 	}
-	// Lemmy-style target-scoped bans are not personal Block relations.
+	// Conservatively leave target-scoped Block semantics to an explicit interoperability policy;
+	// do not silently interpret them as personal Block relations.
 	if ( 'Block' === $root['activity_type'] && ! empty( $root['target_uri'] ) ) { return array(); }
 	if ( 'Follow' === $type ) {
 		$blocked = axismundi_act_follow_pair_blocked( $root['actor_uri'], $root['object_uri'] );

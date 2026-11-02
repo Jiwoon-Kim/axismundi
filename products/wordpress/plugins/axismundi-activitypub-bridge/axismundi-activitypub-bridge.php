@@ -41,6 +41,7 @@ require_once __DIR__ . '/includes/transport.php';
 require_once __DIR__ . '/includes/actor-inbox.php';
 require_once __DIR__ . '/includes/featured.php';
 require_once __DIR__ . '/includes/collection-controls.php';
+require_once __DIR__ . '/includes/moderators.php';
 require_once __DIR__ . '/includes/delivery.php';
 require_once __DIR__ . '/includes/composition.php';
 require_once __DIR__ . '/includes/migration-scan.php';
@@ -286,7 +287,8 @@ function axismundi_activitypub_bridge_record_inbox( array $activity, array $reci
 	}
 	if ( in_array( $activity['type'] ?? '', array( 'Add', 'Remove' ), true ) && 'Person' === $actor->get_type() ) {
 		$control_group = axismundi_actors_get_by_uri( axismundi_act_member_uri( $activity['audience'] ?? '' ) );
-		if ( $control_group instanceof Axismundi_Actor && ! $control_group->is_local() && 'Group' === $control_group->get_type() ) {
+		if ( ! $control_group ) { $control_group = apply_filters( 'axismundi_activitypub_bridge_local_collection_group', null, axismundi_act_member_uri( $activity['target'] ?? '' ) ); }
+		if ( $control_group instanceof Axismundi_Actor && 'Group' === $control_group->get_type() && ( ! $control_group->is_local() || axismundi_activitypub_bridge_group_advertises_collection( $control_group, axismundi_act_member_uri( $activity['target'] ?? '' ) ) ) ) {
 			return axismundi_activitypub_bridge_receive_collection_control( $activity, $actor, array_keys( $admitted ) );
 		}
 	}

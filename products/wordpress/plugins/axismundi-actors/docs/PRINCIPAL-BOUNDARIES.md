@@ -464,6 +464,27 @@ moderators      스펙에 없다.  Lemmy 의 verify_mod_action 은 서버 정책
 
 ## 계정 양도와 이주는 다른 질문이다 (2026-11-02)
 
+> **정정(2026-11-02, 더 나중):** 아래에서 `Move` 를 계정 이사로 읽은 것부터가 틀렸다.
+> AS2 의 `Move` 는 **컬렉션 연산**이다 -- "the actor has moved object from origin to target",
+> 예제가 List A -> List B 이고 `Add`/`Remove` 와 같은 가족이다. 우리 원장이 이미 그렇게 모델링돼
+> 있다(`axismundi-activities/includes/repository.php:1174` 이 `Add|Remove|Move` 에 target 을
+> 요구한다 -- 부수적 검증이 아니라 올바른 가족 모델링이었다).
+>
+> 계정 이주는 `movedTo` 쪽이고 출처 문서가 다르다. **ActivityPub Miscellaneous Terms**
+> (Final Community Group Report, 2026-08-28, Social Web Incubator CG;
+> `https://www.w3.org/community/reports/socialcg/CG-FINAL-apmisc-20260828/`) 가 정의하며
+> 상태 문구는 `It is not a W3C Standard nor is it on the W3C Standards Track` 이다.
+> 정의하는 속성은 `manuallyApprovesFollowers` · `movedTo` · `sensitive` 셋이고, `movedTo` 는
+> domain/range 가 Actor 이며 functional, 별도 네임스페이스 없이 AS2 네임스페이스로 떨어지고
+> 컨텍스트는 `https://purl.archive.org/miscellany` 다.
+>
+> **`alsoKnownAs` 는 그 보고서에 없다.** AS2 에도 AP 에도 없고 Mastodon 이 자기 컨텍스트에서
+> `as:alsoKnownAs` 로 선언해 쓰는 것이다 -- 아래 "맞물림" 절에서 Move 의 상호 확인 근거로 든
+> 것은 합의 문서 없는 용어에 기댄 셈이고, 분류에서 de-facto wire 칸이다.
+>
+> 따라서 작업 항목도 둘로 쪼개야 한다. **AS2 Move** 는 컬렉션 연산이라 (2)(3) 슬라이스에 바로
+> 붙고, **계정 이주**는 별개 항목이다. "Move 를 스펙 타입 중 먼저" 라고 한 권고는 그 둘을 뭉친 것이다.
+
 거울상이 아니라 **독립된 두 차원**이다. AP 에는 사람이 없다 -- `Move` 는 `object` 와 `target`
 이 둘 다 actor URI 이고 사람은 등장하지 않는다. 즉 Move 는 **한 계정이 두 URI 에 걸쳐 연속임을
 말하는 진술**이지 사람에 대한 진술이 아니다.
@@ -510,3 +531,23 @@ Move          Move 는 힌트이고, 양쪽 문서의 alsoKnownAs 가 서로를 
 
 **한쪽만 있으면 주장이고, 맞물려야 사실이다.** 기록해 둔 `activity = hint, fetch = authority` 와
 `declared willingness != consent` 의 같은 가족이며, 집행자를 쓸 때 기본값으로 삼을 것.
+
+## 권위 층 (2026-11-02)
+
+누가 우리를 구속하는가로 가른다. 같은 주제라도 출처 문서에 따라 칸이 다르다.
+
+```txt
+spec (AS2/AP)      규정                위반은 NON-STANDARD 주석으로 명시
+                                       Move = 컬렉션 연산 (origin -> target)
+FEP final          표준합의
+CG-FINAL 보고서    인용 가능한 정의, 의무 아님
+                   "not a W3C Standard nor on the W3C Standards Track"
+                   movedTo · manuallyApprovesFollowers · sensitive
+FEP draft          채택한 정책          FEP-fe34 · FEP-7aa9.  채택은 기록할 선택
+de-facto wire      피어가 구속          문서가 없으니 예고 없이 바뀐다
+                   alsoKnownAs · Mastodon featured 의 id 누락
+차용                아무도 구속 안 함     분리할 대상이 아니라 그냥 우리 구현
+```
+
+**CG-FINAL 은 인용할 정의를 주지 의무를 주지 않는다.** 그리고 **정책을 실은 속성도 여전히
+정책이다** -- `posting_restricted_to_mods` 가 와이어에 있다고 제한이 표준이 되지 않는다.

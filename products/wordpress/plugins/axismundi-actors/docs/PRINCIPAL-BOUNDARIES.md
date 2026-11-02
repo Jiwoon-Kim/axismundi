@@ -464,12 +464,23 @@ moderators      스펙에 없다.  Lemmy 의 verify_mod_action 은 서버 정책
 
 ## 계정 양도와 이주는 다른 질문이다 (2026-11-02)
 
+거울상이 아니라 **독립된 두 차원**이다. AP 에는 사람이 없다 -- `Move` 는 `object` 와 `target`
+이 둘 다 actor URI 이고 사람은 등장하지 않는다. 즉 Move 는 **한 계정이 두 URI 에 걸쳐 연속임을
+말하는 진술**이지 사람에 대한 진술이 아니다.
+
 ```txt
-양도   actor 를 두고 사람을 바꾼다      personal_owner_user_id 재배정
-이주   사람을 두고 actor 를 바꾼다      Move + movedTo / alsoKnownAs (미구현)
+              URI 가 바뀐다    소유 user 가 바뀐다
+Move          예               관여하지 않음
+양도           아니다            예
 ```
 
-사람이 사는 곳을 옮기는 것에 대한 답은 **양도가 아니라 Move** 다.
+둘 다 일어날 수 있고 순서도 자유다. 계정이 호스트를 옮긴 뒤 나중에 소유자가 바뀔 수 있고,
+`personal_owner_user_id` 재배정은 `movedTo` 에 대해 할 말이 없다.
+
+> 철회(2026-11-02): "Move 가 없으면 이사를 표현할 유일한 수단이 양도뿐" 이라고 적었던 것은
+> 틀렸다. 양도는 URI 를 바꾸지 않으므로 애초에 이사를 표현할 수 없고, 아무도 그 용도로 양도를
+> 집지 않는다. Move 의 근거는 원래 것 하나다 -- 팔로우한 원격 계정이 이사하면 relation 이 죽은
+> actor 를 가리킨다(재현 미확인).
 
 양도를 어디까지 허용할지는 **정책**이고, 모델은 양도 가능한 채로 두어야 한다. "primary account 는
 user 에 귀속" 을 엔진에 박으면 한 관할의 정책을 엔진에 굽는 것이고, Mastodon 의 고정글 상한을
@@ -485,3 +496,17 @@ Person 양도  actor_uri 는 불변이고 outbox 가 거기에 귀속되므로
 
 권고: Group/managed 양도는 통상대로 되게 하고, Person/personal 양도는 **기본 불허하되
 하드코딩된 불가능이 아니라 서버 규칙으로** 둔다.
+
+## 한쪽 주장은 사실이 아니다 -- 맞물림이 검증을 만든다 (2026-11-02)
+
+같은 모양이 하루에 세 번 나왔다.
+
+```txt
+FEP-fe34      cross-origin 모더레이터는 양쪽 origin 의 상호 주장을 요구한다
+moderators    Group 의 attributedTo 가 컬렉션을 지목하고
+              그 컬렉션이 그 Person 을 싣는 양쪽이 있어야 "모더레이터" 가 검증된다
+Move          Move 는 힌트이고, 양쪽 문서의 alsoKnownAs 가 서로를 가리켜야 확인된다
+```
+
+**한쪽만 있으면 주장이고, 맞물려야 사실이다.** 기록해 둔 `activity = hint, fetch = authority` 와
+`declared willingness != consent` 의 같은 가족이며, 집행자를 쓸 때 기본값으로 삼을 것.

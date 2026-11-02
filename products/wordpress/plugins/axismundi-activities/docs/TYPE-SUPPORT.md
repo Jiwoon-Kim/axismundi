@@ -70,29 +70,57 @@ Question             -          -     레지스트리상 Activity 하위지만 �
 Activity 로 분류하는데, 우리 구현에서는 **투표의 object type** 이다. 그러므로 위 표의 "집행 없음"
 은 활동으로서 집행하지 않는다는 뜻이고, object 로서는 쓰이고 있다.
 
-## Move 와 계정 이주는 두 행이다
+## Move 와 계정 이주 -- 같은 어휘, 두 운영 계약
 
-하나의 "Move 지원" 항목으로 뭉치면 무관한 두 작업이 섞인다.
+> **정정(2026-11-02):** 처음에 Move 를 계정 이주로만 읽었고, 그걸 고치다가 이번에는 컬렉션
+> 전용으로 좁히는 반대 오류를 냈다. 아래가 정정된 서술이다.
+
+AS2 의 `Move` 는 **일반적인 이동 행위**다. "Indicates that the actor has moved object from origin
+to target. If the origin or target are not specified, either can be determined by context." --
+List A -> List B 는 예제일 뿐이고 `origin`/`target` 을 Collection 으로 제한하지 않으며 생략도 된다.
+
+**계정 이주도 같은 `Move` 액티비티를 쓴다.** 그러므로 "활동이 아니라 속성이라 별개" 는 틀렸다.
+구분은 타입이 아니라 **무엇을 옮기는가**, 즉 운영 계약이다.
 
 ```txt
-AS2 Move       컬렉션 연산.  "the actor has moved object from origin to target"
-               예제가 List A -> List B 이고 Add/Remove 와 한 가족
-               원장이 이미 가족으로 다룬다: repository.php:1174 이 Add|Remove|Move 에 target 요구
-               → 집행은 컬렉션 슬라이스(Announce 중첩 · moderators)와 같은 이음매로 들어온다
-               → 레미의 커뮤니티 이전(모더레이터를 맨 앞으로)과 미디어컬렉션의 origin 사용이 이 모양
-계정 이주       Activity 타입이 아니라 **속성**이다.  movedTo
-               출처: ActivityPub Miscellaneous Terms
-               (Final Community Group Report, 2026-08-28, Social Web Incubator CG)
-               상태: "It is not a W3C Standard nor is it on the W3C Standards Track"
-               정의하는 속성 셋: manuallyApprovesFollowers · movedTo · sensitive
-               movedTo 는 domain/range 가 Actor 이고 functional, 컨텍스트는
-               https://purl.archive.org/miscellany
-               alsoKnownAs 는 그 보고서에 없다 -- AS2 에도 AP 에도 없고
-               Mastodon 이 자기 컨텍스트에서 as:alsoKnownAs 로 선언해 쓴다 (de-facto)
-               → 별개 작업 항목.  권위 층이 다르다 (→ actors/docs/PRINCIPAL-BOUNDARIES.md)
+object 가 콘텐츠    컬렉션 멤버십 이동.  Add/Remove 와 같은 자리로 들어온다
+object 가 actor     계정 이주.  actor = object = 옛 actor, target = 새 actor
 ```
 
-같은 표에 들어갈 수 없다는 것이 요점이다. 하나는 활동 타입이고 하나는 액터 문서의 속성이다.
+### 우리 원장의 target 요구는 우리 제약이다
+
+`includes/repository.php:1174` 가 `Add|Remove|Move` 에 target 을 요구하고 오류 메시지가
+`This collection Activity requires a target URI` 다. **AS2 는 `Add` 에도 target 을 요구하지 않는다**
+("If the target property is not explicitly specified, the target would need to be determined
+implicitly by context"). 그러므로 이 규칙은 **표준 준수의 증거가 아니라 우리 제약**이고,
+메시지의 "collection Activity" 라는 명명도 계정 이주 Move 에는 맞지 않는다.
+
+> NON-STANDARD: 우리는 세 타입에 명시적 target 을 요구한다. 문맥 추론으로 target 을 생략한
+> spec-legal 한 Move/Add/Remove 는 거부된다. 원장 행이 무엇에 대한 연산인지 추론 없이
+> 확정되기를 원해서다. 제거하지 말고 이 의도로 읽을 것.
+
+### 계정 이주 절차의 출처와 상태
+
+```txt
+Move 타입 자체        AS2 표준 어휘
+이주 절차             Mastodon 계열 상호운용 관행
+movedTo               ActivityPub Miscellaneous Terms (Final CG Report, 2026-08-28)
+                      "It is not a W3C Standard nor is it on the W3C Standards Track"
+                      domain/range 가 Actor, functional, 컨텍스트 purl.archive.org/miscellany
+절차 문서             swicg.github.io/activitypub-data-portability -- 향후 SocialCG 보고서를
+                      위한 **초안**.  FEP-7628 이 retro-specify, FEP-8965 가 약간 확장
+alsoKnownAs           위 CG-FINAL 보고서에 없고 AS2·AP 에도 없다 (de-facto)
+```
+
+맞물림의 방향은 **비대칭**이다 -- 양쪽이 `alsoKnownAs` 를 드는 것이 아니다.
+
+```txt
+새 actor   alsoKnownAs -> 옛 actor     이동을 받아들인다는 표시
+옛 actor   movedTo     -> 새 actor     이동했다는 표시
+Move       actor = object = 옛 actor, target = 새 actor.  옛 actor 가 팔로워에게 보낸다
+```
+
+따라서 계정 이주는 **AP 본체의 요구사항이 아니라 따로 채택할 상호운용 계약**이다.
 
 ## 그래서 남는 일
 

@@ -526,7 +526,8 @@ Person 양도  actor_uri 는 불변이고 outbox 가 거기에 귀속되므로
 FEP-fe34      cross-origin 모더레이터는 양쪽 origin 의 상호 주장을 요구한다
 moderators    Group 의 attributedTo 가 컬렉션을 지목하고
               그 컬렉션이 그 Person 을 싣는 양쪽이 있어야 "모더레이터" 가 검증된다
-Move          Move 는 힌트이고, 양쪽 문서의 alsoKnownAs 가 서로를 가리켜야 확인된다
+Move          새 actor 의 alsoKnownAs 가 옆 actor 를, 옆 actor 의 movedTo 가 새 actor 를
+              가리켜야 확인된다 -- 같은 속성을 양쪽이 드는 게 아니라 비대칭이다
 ```
 
 **한쪽만 있으면 주장이고, 맞물려야 사실이다.** 기록해 둔 `activity = hint, fetch = authority` 와

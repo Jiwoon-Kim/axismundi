@@ -125,7 +125,8 @@ function axismundi_activitypub_bridge_verify_actor_inbox( WP_REST_Request $reque
 	}
 	$payload = $request->get_json_params();
 	if ( ! is_array( $payload ) || array_is_list( $payload )
-		|| array_diff( array( 'id', 'type', 'actor', 'object' ), array_keys( $payload ) ) ) {
+		|| array_diff( array( 'type', 'actor', 'object' ), array_keys( $payload ) )
+		|| ( ! isset( $payload['id'] ) && ! axismundi_activitypub_bridge_featured_control( $payload ) ) ) {
 		return new WP_Error( 'ax_bridge_inbox_body', 'An Activity JSON object is required.', array( 'status' => 400 ) );
 	}
 	return ( new Activitypub\Rest\Inbox_Controller() )->verify_signature( $request, true );
@@ -203,6 +204,8 @@ function axismundi_activitypub_bridge_register_actor_inbox() : void {
 	if ( ! is_array( $post_args ) ) {
 		return;
 	}
+	// The permission callback still requires id for every non-featured Activity.
+	$post_args['id']['required'] = false;
 	register_rest_route( 'axismundi/v1', '/actors/(?P<uuid>[0-9a-f-]{36})/inbox', array(
 		'args' => array( 'uuid' => array( 'required' => true, 'type' => 'string', 'pattern' => '^[0-9a-f-]{36}$' ) ),
 		array( 'methods' => WP_REST_Server::READABLE, 'callback' => 'axismundi_activitypub_bridge_read_actor_inbox', 'permission_callback' => '__return_true',

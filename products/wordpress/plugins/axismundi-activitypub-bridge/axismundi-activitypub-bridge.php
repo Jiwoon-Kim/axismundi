@@ -39,6 +39,7 @@ const AXISMUNDI_ACTIVITYPUB_BRIDGE_INBOX_RETRY_AFTER = 60;
 
 require_once __DIR__ . '/includes/transport.php';
 require_once __DIR__ . '/includes/actor-inbox.php';
+require_once __DIR__ . '/includes/featured.php';
 require_once __DIR__ . '/includes/delivery.php';
 require_once __DIR__ . '/includes/composition.php';
 require_once __DIR__ . '/includes/migration-scan.php';
@@ -279,6 +280,14 @@ function axismundi_activitypub_bridge_record_inbox( array $activity, array $reci
 	}
 
 	$object      = is_array( $activity['object'] ?? null ) ? $activity['object'] : array();
+	if ( in_array( $activity['type'] ?? '', array( 'Add', 'Remove' ), true ) && function_exists( 'axismundi_actors_featured_uri' )
+		&& ( ! isset( $activity['id'] ) || axismundi_actors_featured_uri( $actor ) === axismundi_act_member_uri( $activity['target'] ?? '' ) ) ) {
+		if ( isset( $activity['id'] ) ) {
+			$stored = axismundi_act_record_activity( $activity, 'inbound', array_keys( $admitted ) );
+			if ( is_wp_error( $stored ) ) { return $stored; }
+		}
+		return axismundi_activitypub_bridge_receive_featured( $activity, $actor );
+	}
 	$object_type = (string) ( $object['type'] ?? '' );
 	if ( 'Update' === (string) ( $activity['type'] ?? '' )
 		&& in_array( $object_type, array( 'Person', 'Organization', 'Application', 'Service', 'Group' ), true )
@@ -298,7 +307,7 @@ function axismundi_activitypub_bridge_record_inbox( array $activity, array $reci
 /** Store one bounded, content-free Inbox outcome for administrator diagnostics. */
 function axismundi_activitypub_bridge_record_inbox_diagnostic( string $route, array $activity, $result ) : void {
 	$activity_uri = function_exists( 'axismundi_act_member_uri' ) ? axismundi_act_member_uri( $activity['id'] ?? '' ) : '';
-	$outcome      = $result instanceof Axismundi_Activity ? 'recorded' : ( is_wp_error( $result ) ? 'unclaimed' : 'unknown' );
+	$outcome      = $result instanceof Axismundi_Activity || ( is_array( $result ) && isset( $result['featured_receipt'] ) ) ? 'recorded' : ( is_wp_error( $result ) ? 'unclaimed' : 'unknown' );
 	$entries      = get_option( 'ax_activitypub_bridge_inbox_diagnostics', array() );
 	$entries      = is_array( $entries ) ? $entries : array();
 	array_unshift(
@@ -369,7 +378,7 @@ function axismundi_activitypub_bridge_actor_inbox( array $activity, $user_id, st
 		$recorded = axismundi_activitypub_bridge_record_inbox( $activity, array( (int) $user_id ) );
 		axismundi_activitypub_bridge_inbox_outcome( $activity, $recorded );
 		axismundi_activitypub_bridge_record_inbox_diagnostic( 'actor', $activity, $recorded );
-		if ( $recorded instanceof Axismundi_Activity ) {
+		if ( $recorded instanceof Axismundi_Activity || ( is_array( $recorded ) && isset( $recorded['featured_receipt'] ) ) ) {
 			axismundi_activitypub_bridge_inbox_claimed( $activity, true );
 		}
 	}
@@ -382,7 +391,7 @@ function axismundi_activitypub_bridge_shared_inbox( array $activity, array $user
 	$recorded = axismundi_activitypub_bridge_record_inbox( $activity, array_map( 'intval', $user_ids ), true );
 	axismundi_activitypub_bridge_inbox_outcome( $activity, $recorded );
 	axismundi_activitypub_bridge_record_inbox_diagnostic( 'shared', $activity, $recorded );
-	if ( $recorded instanceof Axismundi_Activity ) {
+	if ( $recorded instanceof Axismundi_Activity || ( is_array( $recorded ) && isset( $recorded['featured_receipt'] ) ) ) {
 		axismundi_activitypub_bridge_inbox_claimed( $activity, true );
 	}
 }

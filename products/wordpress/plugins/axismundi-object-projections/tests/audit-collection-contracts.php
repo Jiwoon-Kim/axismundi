@@ -15,10 +15,17 @@ foreach ( axismundi_op_collection_contracts() as $contract ) {
 	$contracts[ $contract['id'] ] = $contract;
 }
 $expected = array( 'ap-outbox', 'ap-inbox', 'ap-followers', 'ap-following', 'ap-liked', 'ap-likes', 'ap-shares', 'replies', 'used-in' );
+if ( function_exists( 'axismundi_actors_read_featured' ) ) {
+	$expected[] = 'ap-featured';
+}
 if ( function_exists( 'axismundi_forum_read_moderator_collection' ) ) {
 	$expected[] = 'ap-moderators';
 }
 ax_contracts_assert( $ax_contracts_results, 'every current implicit collection has one registered contract and folders are not modeled as collections', array() === array_diff( $expected, array_keys( $contracts ) ) && array() === array_diff( array_keys( $contracts ), $expected ) );
+if ( isset( $contracts['ap-featured'] ) ) {
+	$featured = $contracts['ap-featured'];
+	ax_contracts_assert( $ax_contracts_results, 'Person featured is an Actors-owned ordered explicit Object membership contract', 'axismundi-actors' === $featured['owner'] && 'OrderedCollection' === $featured['collection_type'] && 'membership-row' === $featured['membership_authority'] && 'owner-only' === $featured['append_policy'] && array( 'Object' ) === $featured['member_models'] && 'exact' === $featured['total_capability'] );
+}
 
 foreach ( array( 'ap-outbox', 'ap-inbox', 'ap-liked', 'replies' ) as $id ) {
 	$contract = $contracts[ $id ] ?? array();

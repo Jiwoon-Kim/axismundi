@@ -41,6 +41,15 @@ has been given out keeps working.
   entered.
 * A **JSContact Card** at `/@handle.jscontact` for a local public Actor.
 
+= Person featured =
+
+Person Actors can curate up to five publicly readable Objects of their own in a
+`featured` OrderedCollection. Membership belongs to this plugin; Activities owns
+authenticated Add/Remove submission and immutable history, and Object Projections
+owns the public representation. Remote Person featured lists are observations,
+reconciled from complete bounded snapshots rather than guessed from delivery order.
+Group featured, featured tags and moderator collections are not implemented here.
+
 = What this version does not do =
 
 Nothing here sends anything to anybody. There is no activity ledger, no likes, no

@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Axismundi Actors
  * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi/tree/main/products/wordpress/plugins/axismundi-actors
- * Description:       Identity registry for Axismundi. Gives every local person and every remote actor this site has cached one immutable identity URI and one human profile hub, and wires each domain plugin's archive in as a projection. Identity only — it owns no content, likes, collections, or activity.
+ * Description:       Identity registry and Actor-owned Person featured membership for Axismundi. Gives each local and cached remote actor one immutable identity URI and one human profile hub. Content bodies and Activity history remain with their owning plugins.
  * Version:           0.1.5-dev
  * Requires at least: 6.7
  * Requires PHP:      8.1
@@ -50,6 +50,7 @@ require_once __DIR__ . '/includes/account-operations.php';
 require_once __DIR__ . '/includes/account-selection.php';
 require_once __DIR__ . '/includes/integrations/wordpress/account-selection.php';
 require_once __DIR__ . '/includes/local-endpoints.php';
+require_once __DIR__ . '/includes/featured.php';
 require_once __DIR__ . '/includes/system-actor.php';
 require_once __DIR__ . '/includes/admin-navigation.php';
 require_once __DIR__ . '/includes/admin-account-directory.php';
@@ -83,6 +84,7 @@ register_activation_hook( __FILE__, 'axismundi_actors_activate' );
 /** @return void */
 function axismundi_actors_deactivate() : void {
 	axismundi_actors_remove_rewrite_rules();
+	wp_unschedule_hook( 'axismundi_actors_sync_featured' );
 	wp_clear_scheduled_hook( 'axismundi_actors_process_asset_batch' );
 	wp_clear_scheduled_hook( 'axismundi_actors_asset_backfill_batch' );
 	wp_clear_scheduled_hook( 'axismundi_actors_cache_remote_instance' );

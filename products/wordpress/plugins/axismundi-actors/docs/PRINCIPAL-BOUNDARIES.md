@@ -367,3 +367,121 @@ addressbook    Account 의 것이므로 JMAP Account 에 의존한다
 Contacts 를 끄면 `describedby` 링크만 사라지고 Actor 문서는 멀쩡하다. 그것은
 허용된다 — 프로필은 **정체성의 선택적 상세**이지 정체성 자체가 아니다. Group 의
 `attributedTo` 가 사라지는 것과는 성질이 다르다.
+
+## 세션과 소유권 (2026-11-02)
+
+위 "세 관계를 분리한다" 에 빠져 있던 네 번째가 **세션**이다. 이미 구현돼 있다 --
+`includes/acting-actor.php` 의 `axismundi_actors_acting_actor()` 와 전환기(`3e8c90b`).
+없던 것은 코드가 아니라 개념이었다.
+
+```txt
+user → actor   personal   personal_owner_user_id ∧ role='owner'
+                          그 액터가 그 user 자신.  양도 가능
+user → actor   operated   role = owner|manager|editor
+                          그 액터를 그 user 가 운영.  managed Group 이 전형
+actor → actor  귀속       attributedTo.  공개·연합.  로컬 능력을 주지 않는다
+session        발화 주체   acting_actor = (personal ∪ operated) 에서 고른 런타임 선택
+—              출처       initial_owner_user_id.  권한에 읽지 않는다
+```
+
+### 소유는 별도 축이 아니라 비공개 축의 한 양태다
+
+`includes/account-access.php` 가 이미 그렇게 돼 있다(2026-11-02 실측).
+
+```php
+function axismundi_actors_account_is_personal( Axismundi_Actor $actor, int $user_id ) : bool {
+	return $user_id > 0 && $actor->is_local()
+		&& $user_id === $actor->get_personal_owner_user_id()
+		&& 'owner' === axismundi_actors_account_role( $actor->get_identity_id(), $user_id );
+}
+```
+
+**personal 은 소유 사실과 owner 역할의 논리곱**이다. 소유만으로 권한이 따라오지 않는다.
+주석이 `never inferred from Actor type or manager role alone` 이라고 적고 있다.
+
+필드가 셋으로 갈라져 있고 역할이 다르다.
+
+```txt
+personal_owner_user_id   현재 개인 소유.  양도 가능.  권한 판정의 한쪽 항
+initial_owner_user_id    생성 시 기록.    쓰기만 있고 권한에 읽히지 않음 (실측)
+local_user_id            레거시 upstream 호환 링크
+```
+
+출처를 `owner_user_id` 하나로 뭉쳐 말하면 **양도 가능한 현재 배정과 불변 출처가 섞인다.**
+양도 가능한 필드는 정의상 출처가 아니다.
+
+### 양방향 규칙 -- 방향이 반대다
+
+```txt
+귀속은 권한을 넓히지 않는다    원격 커뮤니티가 우리 Person 을 moderators 에 실어도
+                               로컬 능력은 생기지 않는다
+권한은 와이어에 나가지 않는다   managed accounts 를 공개하면 운영 권한이 샌다
+```
+
+하나는 **비공개 전용**, 하나는 **공개 전용**이다. 같은 테이블에 있으면 반드시 둘 중 하나가 샌다.
+FEP-fe34 의 상호 주장 요구가 같은 이야기다 -- 원격 origin 의 "이 사람은 우리 mod 다" 는 귀속
+주장이고, 그것을 로컬 권한으로 번역하면 남의 서버가 우리 권한을 발급하게 된다.
+
+### 왜 개념화가 어려웠는가, 그리고 moderators 이식의 성패 기준
+
+현재 코드에서 그 둘이 **한 행**이기 때문이다. `axismundi-forum/includes/moderators.php:123` 이
+moderators 를 Forum memberships 테이블의 role 컬럼에 쓰고, `:147` 이 같은 사람에게 principal
+`manager` 를 부여한다. 귀속과 권한이 같은 쓰기 경로에 있으니 갈라질 자리가 없었다.
+
+> **성패 기준:** moderators 를 썼는데 principal 행이 같이 생기면 이식은 실패한 것이다.
+
+### 미결 -- owner 의도와 현재 불변식이 어긋난다
+
+소유자 의도: "is personal 이라도 관리자가 principal 일부를 제한하는 조치를 취할 수 있다."
+
+그런데 `account-access.php:50-57` 의 마이그레이션 불변식은 **personal owner 인데
+`role <> 'owner'` 이면 inconsistent** 로 세고, 주석이
+`A conflicting pre-existing role needs repair, not silent promotion` 이다. 즉 personal owner 는
+반드시 owner 역할이어야 한다. 역할을 낮추는 방식으로 제한하면 그 계정은 정의상 personal 이
+아니게 되고 수리 대상이 된다. 그 제한을 하려면 **역할 아래 층위**가 필요한데 지금은 없다.
+
+런타임 검사가 아니라 마이그레이션 불변식이라 오늘의 버그는 아니다. 의도가 들어갈 자리가 없다는
+것이 미결이다.
+
+## 불이익은 코어 스펙이 아니라 서버 규칙이다 (오너 결정, 2026-11-02)
+
+AP/AS2 는 **무슨 일이 일어났는지 말할 어휘**를 준다. **누가 그 일을 해도 되는지는 주지 않는다.**
+권한·제한·차단·정원·금지는 전부 서버 규칙 쪽이다. 확인된 사례:
+
+```txt
+Block           AP 는 전달 대상에서 빼라는 정도.  집행은 전적으로 서버 정책
+                우리는 NON-STANDARD 로 표시하고 FEP-070c 를 근거로 삼았다
+moderators      스펙에 없다.  Lemmy 의 verify_mod_action 은 서버 정책이고
+                인용된 FEP-fe34 조차 DRAFT
+```
+
+**정책을 실은 속성도 여전히 정책이다.** `posting_restricted_to_mods` 가 와이어에 있다고 그
+제한이 표준이 되지는 않는다 -- 우리 정책이 피어에게 읽히게 될 뿐이다. 기록해 둔
+`declared willingness ≠ consent`(FEP-7aa9) 와 같은 족속이다.
+
+그래서 우리 서버 규칙은 **우리 것으로 기록**해야지 준수인 척하면 안 된다.
+5층 분류에서 FEP draft 는 *채택한 정책* 칸이고, 우리만의 규칙은 칸이 아예 없다 -- 그게 정상이다.
+
+## 계정 양도와 이주는 다른 질문이다 (2026-11-02)
+
+```txt
+양도   actor 를 두고 사람을 바꾼다      personal_owner_user_id 재배정
+이주   사람을 두고 actor 를 바꾼다      Move + movedTo / alsoKnownAs (미구현)
+```
+
+사람이 사는 곳을 옮기는 것에 대한 답은 **양도가 아니라 Move** 다.
+
+양도를 어디까지 허용할지는 **정책**이고, 모델은 양도 가능한 채로 두어야 한다. "primary account 는
+user 에 귀속" 을 엔진에 박으면 한 관할의 정책을 엔진에 굽는 것이고, Mastodon 의 고정글 상한을
+Actors 의 const 로 박은 것과 같은 실수가 된다.
+
+다만 Person 양도와 Group 양도는 **행위의 성격이 다르다**. 법적 우려는 이 차이의 하류다.
+
+```txt
+Group 양도   공동의 것의 관리권이 넘어간다.  글은 애초에 커뮤니티의 것이었다
+Person 양도  actor_uri 는 불변이고 outbox 가 거기에 귀속되므로
+             한 사람이 쓴 글의 저자가 조용히 바뀐다
+```
+
+권고: Group/managed 양도는 통상대로 되게 하고, Person/personal 양도는 **기본 불허하되
+하드코딩된 불가능이 아니라 서버 규칙으로** 둔다.

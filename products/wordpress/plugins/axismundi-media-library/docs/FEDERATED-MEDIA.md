@@ -333,3 +333,109 @@ Phase 5  MediaContainer (folders + collections) + membership; dev-seed shared fo
 Phase 6  Storage Browser (local replica files are a distinct, read-only projection)
 Phase 7  Federation: replica, shadow attachment, Invite/Accept, capability discovery
 ```
+
+## 범위 밖 — 논의 기록 (2026-11-02)
+
+**이 절은 구현 범위가 아니다.** 선행 작업이 끝나기 전에는 결정으로 집행하지 않는다.
+§3 이 이미 답한 것(폴더=단일 location, 컬렉션=다중 bookmark, `Save = Add`, `license_at_save`,
+preview cache)은 다시 정하지 않는다. 아래는 그 위에 새로 드러난 것만 적는다.
+
+### 1. Actor 됨은 라이브러리가 아니라 보드에 있다
+
+모델을 "Openverse + Pinterest" 로 읽으면 자리가 정해진다 -- Openverse 는 호스팅이 아니라 색인이고
+라이선스·창작자 귀속이 1급 데이터이며, Pinterest 는 **보드가 큐레이션 단위이고 팔로우 대상**이다.
+
+Actor 인지 Collection 인지는 세 질문으로 가른다. 레미 커뮤니티가 Group-프록시로 성립한 이유가
+셋 다 예였기 때문이다.
+
+```txt
+팔로워가 있는가 / inbox 로 받는가 / 말하는가(Announce)
+  보드 · 공유폴더       예      → Group actor 가 될 만한 것
+  미디어라이브러리      아니오   → 인스턴스의 색인.  Collection
+```
+
+셋 다 아니면 Actor 됨이 사는 것 없이 inbox·outbox·followers·키·핸들·WebFinger·상태 수명주기·
+tombstone 을 다 떠안는다. 라이브러리의 `attributedTo` 가 site scope Application actor 를 가리키는
+것은 그대로 맞다(`actor_scope = 'site'` 가 스키마에 있다. 기본 생성 여부는 미확인).
+
+> 미디어라이브러리 플러그인은 현재 **어떤 actor 도 등록하지 않는다**(2026-11-02 실측).
+
+### 2. 보드는 저자 불일치를 허용하는 첫 curated collection 이다
+
+Pinterest 의 저장은 **남의 항목을 내 보드에 담는 것**이다. §3 의 `Save = Add` 가 그 말이고,
+Person `featured` 와 갈리는 지점이 여기다.
+
+```txt
+featured   member_authorship: 'self-only'   자기 객체만 (ax_featured_author 게이트)
+보드        member_authorship: 'any'         남의 객체를 담는 게 본질
+```
+
+`member_authorship` 공통 계약 필드를 미룬 것은 옳았다 -- **그것을 실제로 필요로 하는 두 번째
+사용자가 여기서 처음 보인다.** featured 하나뿐일 때 올렸으면 미래를 예상한 확장이었을 것이다.
+→ `actors/docs/MODERATORS-PRECEDENTS.md`, `actors/docs/CURATED-COLLECTION-PRECEDENTS.md`
+
+### 3. Channel 프로필의 attributedTo 는 타입 배열이다
+
+레미의 호환 코드에서 읽은 것이다(PeerTube 를 직접 읽은 것이 아니다).
+
+```rust
+pub enum AttributedTo {
+  Lemmy(PersonOrGroupModerators),      // moderators 컬렉션 URL 하나
+  Peertube(Vec<AttributedToPeertube>), // {kind: Person|Group, id} 배열
+}
+```
+
+PeerTube 는 `attributedTo` 에 계정(Person)과 채널(Group)을 **함께** 싣는다. 그러므로
+"배열로 둘 다 표현" 이라는 초기 직관은 **Channel 프로필에서는 맞다** -- Community 기준으로
+"어느 생태계의 형태도 아니다" 라고 적었던 것은 Community 한정이다.
+→ `actors/docs/DECISION-GROUP-FEDERATION-PROFILE.md`
+
+P2P(WebTorrent)는 **페이로드 전달**이라 AP 모델을 바꾸지 않는다. 다만 PeerTube 객체는 `url` 에
+magnet 과 HTTP 를 배열로 싣는다 -- Misskey 의 `embedded url = scalar` 함정과 같은 부류의
+인접 위험이다.
+
+### 4. 핫링크가 기본, "later increment" 는 전량 캐싱이 아니다
+
+현재 상태는 의도된 핫링크다.
+
+```txt
+object-blocks.php:934      "Remote media is hot-linked on purpose: binary caching is a later increment."
+remote-collections.php:7   "no shadow attachment or binary cache exists"
+admin.php:376              객체 프로브는 메타데이터만 -- 핫링크도 다운로드도 안 한다
+```
+
+**오너 판단: 전량 push + 바이너리 캐싱은 지속 가능하지 않다.** 그러므로 저 주석의 "later
+increment" 를 전량 캐싱으로 구현하면 안 된다. 적어두지 않으면 주석만 보고 그렇게 구현된다.
+
+릴레이 비유는 프로토콜 용어로 정확하다 -- AP 릴레이는 activity 를 전달하지 페이로드를 전달하지
+않고 미디어를 캐시하지도 않는다. 색인은 **참조를 중계하고 바이트를 옮기지 않는다.**
+
+순수 핫링크의 비용은 대역폭이 아니다.
+
+```txt
+프라이버시   뷰어 요청이 원본으로 가므로 원본이 "누가 무엇을 보는지" 를 알게 된다
+가용성       원본이 죽으면 보드가 깨진 이미지로 찬다.  큐레이션 제품에서는 타임라인보다 치명적
+가변성       원본이 그 URL 의 바이트를 바꿀 수 있다.  무결성 결속이 없다
+차단         referrer 핫링크 차단은 조용히 실패한다
+```
+
+Openverse 자신의 답이 중간이다 -- **원본 자산은 핫링크, 썸네일만 캐시.** 저장은 항목 수에
+비례하고 바이트 크기에 비례하지 않으며, 전체 저작물의 호스트가 되지 않고, 원본이 죽어도 보드는
+읽히고, **대부분의 조회가 일어나는 지점(보드 둘러보기)에서 원본에 전화하지 않는다.** 마지막이
+가장 강한 논거이고 저장 용량 이야기가 아니다.
+
+우리에게 렌디션 어휘는 있으나(virtual 렌디션 수용) 그건 우리 미디어 기준이라 **원격 썸네일
+계층은 신규**다. 재사용은 어휘 수준이지 구현 수준이 아니다.
+
+### 선행 작업 (이것들 전에는 범위 밖)
+
+```txt
+라이선스 메타데이터   미디어라이브러리가 제대로 다룰 수 있어야 한다
+                      색인이 제품이면 media-rights creator 해석이 뒤에 있을 자리가 아니다
+FEP 선행              해당 FEP 조사·채택 결정이 먼저
+타입별 캐시 정책       Note 의 attachment 는 바이너리 캐시 안 함
+                      image / video 만 썸네일 캐시
+라이선스별 연합 제한   라이선스가 있으면 연합을 제한하는 정책이 필요하다
+미결                  썸네일이 파생물이면 캐시 계층이 **항목의 라이선스**를 따라야 하는가
+                      (전역 설정이 아니라)
+```

@@ -23,7 +23,7 @@ function axismundi_actors_create_account( array $args ) {
 	if ( ! axismundi_actors_account_access_ready() ) {
 		return new WP_Error( 'ax_actors_account_not_ready', __( 'Account access is not ready.', 'axismundi-actors' ) );
 	}
-	if ( array() !== array_diff( array_keys( $args ), array( 'actor_type', 'display_name', 'personal' ) ) ) {
+	if ( array() !== array_diff( array_keys( $args ), array( 'actor_type', 'display_name', 'personal', 'federation_profile' ) ) ) {
 		return new WP_Error( 'ax_actors_account_arguments', __( 'Unsupported account creation arguments.', 'axismundi-actors' ) );
 	}
 	$type = $args['actor_type'] ?? 'Person';
@@ -43,6 +43,7 @@ function axismundi_actors_create_account( array $args ) {
 	}
 	return axismundi_actors_create_local( array(
 		'actor_type' => $type,
+		...( array_key_exists( 'federation_profile', $args ) ? array( 'federation_profile' => $args['federation_profile'] ) : array() ),
 		'actor_scope' => $personal ? 'user' : 'managed',
 		'personal_owner_user_id' => $personal ? $user_id : null,
 		'initial_owner_user_id' => $user_id,

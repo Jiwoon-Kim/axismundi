@@ -12,6 +12,7 @@ defined( 'ABSPATH' ) || exit;
 const AXISMUNDI_ACTORS_DB_VERSION = '39.0';
 
 require_once __DIR__ . '/actor-body.php';
+require_once __DIR__ . '/group-profile.php';
 
 /** Historical table accessor; after cutover this is the Actor body itself. */
 function axismundi_actors_identities_table() : string {
@@ -1043,6 +1044,8 @@ function axismundi_actors_create_local( array $args ) {
 		return new WP_Error( 'ax_actors_schema_pending', 'Account schema migration must complete before creation.' );
 	}
 	$type  = (string) ( $args['actor_type'] ?? 'Person' );
+	$profile_check = axismundi_actors_validate_group_profile( $type, $args );
+	if ( is_wp_error( $profile_check ) ) { return $profile_check; }
 	$status = (string) ( $args['status'] ?? 'public' );
 	if ( ! in_array( $status, array( 'public', 'disabled' ), true ) ) {
 		return new WP_Error( 'ax_actors_actor_status', __( 'New Actors must be public or disabled.', 'axismundi-actors' ) );
@@ -1149,6 +1152,13 @@ function axismundi_actors_create_local( array $args ) {
 		return new WP_Error( 'ax_actors_actor_insert', __( 'Could not create the actor.', 'axismundi-actors' ) );
 	}
 
+	if ( array_key_exists( 'federation_profile', $args ) && false === $wpdb->insert(
+		axismundi_actors_meta_table(),
+		array( 'actor_id' => $identity_id, 'meta_key' => 'policy:federation_profile', 'meta_value' => $args['federation_profile'] )
+	) ) {
+		$wpdb->query( 'ROLLBACK' );
+		return new WP_Error( 'ax_actors_profile_write', 'Could not store the Group federation profile.' );
+	}
 	if ( null !== $initial_owner && is_wp_error( axismundi_actors_seed_account_owner( $identity_id, $initial_owner ) ) ) {
 		$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- account and initial access are atomic.
 		return new WP_Error( 'ax_actors_account_access', __( 'Could not create the personal account access relation.', 'axismundi-actors' ) );

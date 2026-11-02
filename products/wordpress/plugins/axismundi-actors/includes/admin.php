@@ -393,6 +393,7 @@ function axismundi_actors_render_managed_actors_page() : void {
 							<p class="description"><?php esc_html_e( 'Cannot be changed later, because peers cache what this actor is.', 'axismundi-actors' ); ?></p>
 						</td>
 					</tr>
+					<?php axismundi_actors_render_group_profile_field(); ?>
 					<tr><th scope="row"><label for="ax-managed-group-handle"><?php esc_html_e( 'Handle', 'axismundi-actors' ); ?></label></th><td><span>@</span><input id="ax-managed-group-handle" name="handle" type="text" class="regular-text" required><p class="description"><?php esc_html_e( 'Permanent federated address. Lowercase letters, numbers, and underscores only.', 'axismundi-actors' ); ?></p></td></tr>
 					<tr><th scope="row"><label for="ax-managed-group-name"><?php esc_html_e( 'Name', 'axismundi-actors' ); ?></label></th><td><input id="ax-managed-group-name" name="name" type="text" class="regular-text" required></td></tr>
 					<tr><th scope="row"><label for="ax-managed-group-summary"><?php esc_html_e( 'Summary', 'axismundi-actors' ); ?></label></th><td><textarea id="ax-managed-group-summary" name="summary" rows="4" class="large-text"></textarea></td></tr>
@@ -1351,8 +1352,11 @@ function axismundi_actors_handle_create_managed_actor() : void {
 	 * not silently start producing a different kind of actor.
 	 */
 	$type = isset( $_POST['actor_type'] ) ? sanitize_text_field( wp_unslash( $_POST['actor_type'] ) ) : 'Group';
+	$profile_args = isset( $_POST['federation_profile'] ) ? array( 'federation_profile' => sanitize_text_field( wp_unslash( $_POST['federation_profile'] ) ) ) : array();
+	if ( 'Group' === $type && ! $profile_args ) { axismundi_actors_redirect_result( axismundi_actors_managed_actors_admin_url(), new WP_Error( 'ax_actors_profile_required', 'Choose a Group federation profile.' ) ); }
 	$actor = axismundi_actors_create_managed_actor(
 		array(
+			...$profile_args,
 			'owner_user_id'      => get_current_user_id(),
 			'preferred_username' => $handle,
 			'actor_type'         => $type,

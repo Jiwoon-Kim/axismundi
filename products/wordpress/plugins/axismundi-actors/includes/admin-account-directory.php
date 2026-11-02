@@ -56,6 +56,7 @@ function axismundi_actors_render_add_local_actor() : void {
 	echo '<table class="form-table"><tr><th><label for="ax-new-type">Type</label></th><td><select id="ax-new-type" name="actor_type">';
 	foreach ( axismundi_actors_kinds() as $type ) { echo '<option>' . esc_html( $type ) . '</option>'; }
 	echo '</select></td></tr>';
+	axismundi_actors_render_group_profile_field();
 	foreach ( array( 'handle' => 'Handle', 'name' => 'Name' ) as $key => $label ) {
 		echo '<tr><th><label for="ax-new-' . esc_attr( $key ) . '">' . esc_html( $label ) . '</label></th><td><input class="regular-text" id="ax-new-' . esc_attr( $key ) . '" name="' . esc_attr( $key ) . '" required></td></tr>';
 	}
@@ -74,7 +75,10 @@ function axismundi_actors_handle_add_local_actor() : void {
 	if ( ! in_array( $type, axismundi_actors_kinds(), true ) || '' === trim( $name ) || '' === trim( $handle ) ) {
 		axismundi_actors_redirect_result( $back, new WP_Error( 'ax_actor_input', 'Type, handle and name are required.' ) );
 	}
-	$actor = axismundi_actors_create_principal_account( array( 'actor_type' => $type, 'preferred_username' => $handle, 'status' => 'disabled' === ( $_POST['status'] ?? '' ) ? 'disabled' : 'public' ), 'wp_user', get_current_user_id() );
+	$args = array( 'actor_type' => $type, 'preferred_username' => $handle, 'status' => 'disabled' === ( $_POST['status'] ?? '' ) ? 'disabled' : 'public' );
+	if ( isset( $_POST['federation_profile'] ) ) { $args['federation_profile'] = sanitize_text_field( wp_unslash( $_POST['federation_profile'] ) ); }
+	if ( 'Group' === $type && ! isset( $args['federation_profile'] ) ) { axismundi_actors_redirect_result( $back, new WP_Error( 'ax_actors_profile_required', 'Choose a Group federation profile.' ) ); }
+	$actor = axismundi_actors_create_principal_account( $args, 'wp_user', get_current_user_id() );
 	if ( is_wp_error( $actor ) ) { axismundi_actors_redirect_result( $back, $actor ); }
 	$language = axismundi_actors_site_language();
 	foreach ( array( 'name' => $name, 'summary' => wp_kses_post( wp_unslash( $_POST['summary'] ?? '' ) ) ) as $property => $value ) {

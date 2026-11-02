@@ -67,6 +67,7 @@ function axismundi_actors_create_managed_actor( array $args ) {
 	return axismundi_actors_create_principal_account(
 		array(
 			'actor_type'         => $type,
+			...( array_key_exists( 'federation_profile', $args ) ? array( 'federation_profile' => $args['federation_profile'] ) : array() ),
 			'actor_scope'        => 'managed',
 			'preferred_username' => (string) ( $args['preferred_username'] ?? '' ),
 			'status'             => (string) ( $args['status'] ?? 'public' ),

@@ -255,7 +255,7 @@ function axismundi_forum_observe_remote_root( array $stored, Axismundi_Activity 
 	axismundi_forum_admit_remote_root( $stored, $activity );
 	axismundi_forum_admit_remote_reply( $stored, $activity );
 }
-add_action( 'axismundi_op_remote_object_observed', 'axismundi_forum_observe_remote_root', 20, 2 );
+// Remote Community submissions are owned by Actors/Activities; Forum binds local Topics only.
 
 /**
  * Reconsider an already-recorded inbound Create when its cached Object is refreshed.
@@ -275,4 +275,3 @@ function axismundi_forum_observe_fetched_remote_reply( array $stored ) : void {
 		}
 	}
 }
-add_action( 'axismundi_op_remote_object_fetched', 'axismundi_forum_observe_fetched_remote_reply', 20 );

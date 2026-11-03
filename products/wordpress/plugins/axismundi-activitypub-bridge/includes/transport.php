@@ -191,13 +191,14 @@ function axismundi_activitypub_bridge_follower_candidates( string $actor_uri ) :
 	return array_values( array_unique( array_map( 'strval', $candidates ) ) );
 }
 
-/** Whether a public Create or Update is submitted directly to a known public Group. */
+/** Whether a Create/Update or addressed Delete is a direct submission to a known Group. */
 function axismundi_activitypub_bridge_is_direct_group_submission( Axismundi_Activity $activity ) : bool {
-	if ( ! in_array( $activity->get_type(), array( 'Create', 'Update' ), true ) ) {
+	if ( ! in_array( $activity->get_type(), array( 'Create', 'Update', 'Delete' ), true ) ) {
 		return false;
 	}
 	$payload = $activity->get_payload();
 	$object  = $payload['object'] ?? null;
+	if ( 'Delete' === $activity->get_type() && is_string( $object ) ) { $object = array( 'audience' => $payload['audience'] ?? '' ); }
 	if ( ! is_array( $object ) ) {
 		return false;
 	}
@@ -207,7 +208,8 @@ function axismundi_activitypub_bridge_is_direct_group_submission( Axismundi_Acti
 		return false;
 	}
 	$group = axismundi_actors_get_by_uri( $group_uri );
-	return $group instanceof Axismundi_Actor && 'Group' === $group->get_type() && 'public' === $group->get_status();
+	// An unavailable Group must not turn a direct submission into personal follower fan-out.
+	return $group instanceof Axismundi_Actor && 'Group' === $group->get_type();
 }
 
 /** Derive explicit remote Inbox recipients from one outbound Activity. */
@@ -240,6 +242,12 @@ function axismundi_activitypub_bridge_activity_inboxes( Axismundi_Activity $acti
 	 */
 	if ( $addresses_followers && ! axismundi_activitypub_bridge_is_direct_group_submission( $activity ) ) {
 		$candidates = array_merge( $candidates, axismundi_activitypub_bridge_follower_candidates( $activity->get_actor_uri() ) );
+	}
+	if ( axismundi_activitypub_bridge_is_direct_group_submission( $activity ) ) {
+		// Preserve cc on the wire, but only the Community redistributes a direct submission.
+		$payload = $activity->get_payload();
+		$object = is_array( $payload['object'] ?? null ) ? $payload['object'] : array();
+		$candidates = array( axismundi_act_member_uri( $object['audience'] ?? $payload['audience'] ?? '' ) );
 	}
 	$candidates = array_values(
 		array_filter(

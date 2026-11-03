@@ -68,20 +68,51 @@ context는 이 발신 주소를 부모 저자 audience로 바꾸라는 규칙이
 Group cc를 입력으로 사용하지만, 발신 단언은 Group to/audience와 Public·부모 저자 cc다.
 ④ 인계문은 이 입력과 출력을 혼동했다. 기존 발신 코드를 변경하지 않는다.
 
-## 아직 완료하지 않은 ④b
+## ④b: C2S local Object 답글
 
-- 로컬 Person의 Note 발신 및 원격/로컬 Community 답글 심사 연결
-- 위 수신 주소 변형을 포함한 Forum thread context/배포 서비스 추출
-- Forum을 로컬 Topic CPT 바인딩으로 축소하고 기존 Forum 감사와 함께 검증
+답글은 `wp_posts`나 `wp_comments`가 아니라 OP local Objects의 Note다.
+Activities의 Community reply 정책이 기존 공개 부모의 `audience`/`to`/`cc`에서
+Group을 해소한다. 원격 소프트웨어 이름이나 NodeInfo로 플랫폼을 판정하지 않는다.
+로컬 Group은 Community 프로필이고 부모가 승인됐거나 유효한 Group Announce가
+있어야 한다. 부모 자신의 Group 주장은 로컬 게시 승인 근거가 아니다.
+
+공개 답글은 Group을 `to`와 Object `audience`에, Public과 부모 저자를 `cc`에 둔다.
+비공개 답글은 공개로 넓히지 않는다. 다중 Group 맥락은 임의로 하나를 고르지 않는다.
+원격 Group 제출에 Follow를 강제하지 않는다. 로컬 Community는 기존 승인된 Follow
+정책을 재사용하며, 답글도 pending 심사 후 moderator 승인으로 Announce한다.
+
+일반 C2S Note의 URI형 Create는 유지한다. Group 답글에 한해서 Create에 생성 당시
+Note를 인라인으로 보존하므로 Group이 원본 Person 저작을 그대로 감쌀 수 있다.
+본문 저장과 원장 기록은 기존 C2S 트랜잭션을 사용한다. 수신 receipt/admission은
+그 커밋 뒤 처리하며 동일 Idempotency-Key 재시도는 본문을 복제하지 않고 연결을 복구한다.
+로컬 receipt는 Bridge의 기존 recipient 차단·수신 정책을 통과해야 한다. 정책 구현이
+없거나 거부되면 심사 큐에 넣지 않는다. Activities가 transport 검사를 대신하지 않는다.
+
+Bridge는 wire의 `cc`를 보존하되 실제 직접 제출은 Community Inbox 하나로만 보낸다.
+부모 저자나 Person 팔로워에게 Create를 별도 배송하지 않는다. 배포는 Group Announce의
+책임이다. 개인 공개 Outbox에서도 Group 답글 Create를 제외한다.
+저장된 Group 답글의 Delete도 직접 Group 배송을 유지한다. 로컬 Group의 Delete
+재배포·철회 정책은 이번 Create/심사 이식과 별개다.
+
+Forum의 기존 Note 주소지정·객체 확장·답글 Announce·개인 Outbox 필터와 원격
+제출 관측 훅은 해제했다. 옛 함수와 감사는 참고 자료로 남기며 CPT-Note를 되살리지 않는다.
+Forum의 로컬 Topic 바인딩과 그 의존 코드는 유지한다. 기존 Forum 관리 UI·테이블을
+통째로 삭제하거나 마이그레이션한 것은 아니며 이 작업과 구분한다.
+
+## 남은 표면
+
 - 심사 목록·관리 UI 및 외부 심사 API
+- Forum 레거시 관리 표면·저장소 정리 (로컬 Topic 바인딩과 의존성을 별도 점검)
+- 기존 CPT-Note 감사는 컷오프 상태에서 실행 불가하므로 단언 계약을 새 저장소 감사에 이전
 
-따라서 이 슬라이스만으로 ④ 전체 또는 실제 Lemmy 왕복이 완료됐다고 하지 않는다.
-기존 Forum 코드와 감사는 삭제하거나 느슨하게 하지 않았다.
+따라서 이 슬라이스만으로 실제 Lemmy 왕복이 완료됐다고 하지 않는다.
+기존 Forum 감사는 삭제하거나 느슨하게 하지 않았다.
 
 ## 검증
 
 ```text
 python tools/wp-env/run_audits.py run --audit audit-community-posts.php --audit audit-community-posts-mutations.php --audit audit-actor-inbox.php --audit audit-collection-controls.php --audit audit-community-moderators.php
+python tools/wp-env/run_audits.py run --audit audit-community-replies.php --audit audit-community-replies-mutations.php --audit audit-c2s-create-note.php
 ```
 
 Forum 비활성에서 수행한다. 새 감사는 Forum 테이블 쿼리가 실행되면 실패하고,

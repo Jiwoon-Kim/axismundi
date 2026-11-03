@@ -23,6 +23,7 @@ $http = static function ( $pre, $args, $url ) use ( $parent, &$parent_calls, &$p
 };
 $no_forum = static function ( $query ) use ( $wpdb ) {
 	if ( str_contains( $query, $wpdb->prefix . 'ax_forum_' ) ) { throw new RuntimeException( 'Forum table access is forbidden' ); }
+	if ( preg_match( '/^(INSERT|REPLACE|UPDATE)\s.*`?' . preg_quote( $wpdb->comments, '/' ) . '`?/i', $query ) ) { throw new RuntimeException( 'WordPress comment writes are forbidden' ); }
 	return $query;
 };
 add_filter( 'query', $no_forum );
@@ -94,6 +95,7 @@ try {
 	$assert( 'approved' === axismundi_actors_get_community_post( $group->get_identity_id(), $payload['object']['id'] )['admission_state'], 'Approval and publication commit together' );
 	$assert( $approved->get_uri() === $review( $users[0], $people[0], $group, $payload['object']['id'], true )->get_uri(), 'Approval retries reuse one Announce' );
 	$assert( $cache_before === axismundi_op_get_remote_object( $payload['object']['id'], false ), 'Approval never changes the source cache' );
+	if ( isset( $community_reply_check ) ) { $checks += $community_reply_check( $group, $people, $users, $payload, $author, $prefix, $objects, $actors ); }
 	$fail_log = static function ( $query ) {
 		return str_starts_with( $query, 'INSERT INTO `' . axismundi_actors_moderators_log_table() . '`' ) ? str_replace( axismundi_actors_moderators_log_table(), axismundi_actors_moderators_log_table() . '_audit_missing', $query ) : $query;
 	};
@@ -105,7 +107,7 @@ try {
 	$assert( true === $review( $users[0], $people[0], $group, $article['object']['id'], false ), 'Moderator can reject a pending root' );
 	$assert( is_wp_error( $review( $users[0], $people[0], $group, $article['object']['id'], true ) ), 'Rejected submissions cannot silently become approved' );
 	$assert( array() === axismundi_act_get_by_object( $article_create->get_uri() ), 'Rejection emits no Announce' );
-	$assert( 2 === (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM %i WHERE group_id=%d AND verb IN ('ApprovePost','RejectPost')", axismundi_actors_moderators_log_table(), $group->get_identity_id() ) ), 'Approval and rejection use the existing moderation log' );
+	$assert( ( isset( $community_reply_check ) ? 3 : 2 ) === (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM %i WHERE group_id=%d AND verb IN ('ApprovePost','RejectPost')", axismundi_actors_moderators_log_table(), $group->get_identity_id() ) ), 'Approval and rejection use the existing moderation log' );
 	update_option( AXISMUNDI_OP_BACKGROUND_ACQUISITION_OPTION, '1' );
 	$reply_payload = $make( 'reply', 'Note', $parent );
 	$reply = axismundi_activitypub_bridge_record_inbox( $reply_payload, array(), false, $people[0] );
@@ -137,6 +139,7 @@ try {
 	foreach ( $activity_uris as $uri ) { for ( $i = 0; $i <= 2; ++$i ) { wp_clear_scheduled_hook( 'axismundi_op_fetch_reply_parent', array( $uri, $i ) ); } }
 	wp_clear_scheduled_hook( 'axismundi_op_discover_remote_actor', array( $parent . '/author' ) );
 	foreach ( $objects as $uri ) {
+		foreach ( array( axismundi_op_local_objects_table() => 'object_uri', axismundi_op_object_relations_table() => 'source_object_uri', axismundi_op_object_mentions_table() => 'source_object_uri', axismundi_op_tag_references_table() => 'source_uri', axismundi_op_term_usage_table() => 'source_uri' ) as $table => $column ) { $wpdb->delete( $table, array( $column => $uri ) ); }
 		axismundi_op_delete_remote_object( $uri );
 		$index = axismundi_op_get_object_by_uri( $uri );
 		if ( $index ) { $wpdb->delete( axismundi_op_objects_table(), array( 'id' => $index['id'] ) ); }

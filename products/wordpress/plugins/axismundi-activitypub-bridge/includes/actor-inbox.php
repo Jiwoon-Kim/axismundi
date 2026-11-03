@@ -50,6 +50,11 @@ function axismundi_activitypub_bridge_receive_local_activity( string $activity_u
 		: new WP_Error( 'ax_bridge_inbox_blocked', 'This delivery is not permitted.' );
 }
 
+/** Local C2S retries use the same recipient moderation gate as queued local delivery. */
+add_filter( 'axismundi_act_community_reply_receipt', static function ( $result, Axismundi_Activity $create, Axismundi_Actor $group ) {
+	return axismundi_activitypub_bridge_receive_local_activity( $create->get_uri(), $group->get_identity_id() );
+}, 10, 3 );
+
 /** Retain upstream site/user rules and add the recipient Account's own Block relation. */
 function axismundi_activitypub_bridge_inbox_permitted( array $payload, Axismundi_Actor $recipient ) {
 	if ( ! class_exists( 'Activitypub\\Moderation' ) || ! function_exists( 'axismundi_act_actor_blocks' ) ) {

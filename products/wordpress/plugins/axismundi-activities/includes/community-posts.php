@@ -63,7 +63,7 @@ function axismundi_act_review_community_post( int $user, Axismundi_Actor $modera
 			} finally { if ( ! $committed ) { $wpdb->query( 'ROLLBACK' ); } }
 		}
 		// Revalidate the immutable submission and current source; review never repairs or refetches it.
-		$eligible = axismundi_act_admit_community_root( $create, $group );
+		$eligible = ! empty( $create->get_payload()['object']['inReplyTo'] ) ? axismundi_act_admit_community_reply( $create, $group ) : axismundi_act_admit_community_root( $create, $group );
 		if ( is_wp_error( $eligible ) ) { return $eligible; }
 		if ( ! $group->is_handle_locked() ) { return new WP_Error( 'ax_community_group', 'The Group has no federatable handle.' ); }
 		return axismundi_act_record_source_activity(

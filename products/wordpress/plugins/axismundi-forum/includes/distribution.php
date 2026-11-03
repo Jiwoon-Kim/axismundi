@@ -407,7 +407,7 @@ function axismundi_forum_note_reply_audience( array $audience, Axismundi_Note_So
 	}
 	return array( 'public' => true, 'to' => array( $group->get_uri() ), 'cc' => array_values( array_unique( $recipients ) ) );
 }
-add_filter( 'axismundi_note_source_audience', 'axismundi_forum_note_reply_audience', 10, 2 );
+// Retired CPT-Note adapter. C2S local Objects use Activities' Community reply policy.
 
 /** Name the community on a threaded Note so peers can navigate reply → Topic → Group. */
 function axismundi_forum_note_reply_object( array $object, Axismundi_Note_Source $source ) : array {
@@ -418,7 +418,6 @@ function axismundi_forum_note_reply_object( array $object, Axismundi_Note_Source
 	}
 	return $object;
 }
-add_filter( 'axismundi_note_project_object', 'axismundi_forum_note_reply_object', 10, 2 );
 
 /** Redistribute a local Group-addressed Note lifecycle through that Group's followers. */
 function axismundi_forum_distribute_group_reply_activity( Axismundi_Activity $activity ) : void {
@@ -454,7 +453,6 @@ function axismundi_forum_distribute_group_reply_activity( Axismundi_Activity $ac
 		'forum-group-reply-announce:' . $group->get_identity_id() . ':' . $activity->get_uri()
 	);
 }
-add_action( 'axismundi_act_activity_recorded', 'axismundi_forum_distribute_group_reply_activity', 30 );
 
 /**
  * Resolve the exact local or remote Group one local Object submission directly addressed.
@@ -579,7 +577,6 @@ function axismundi_forum_is_direct_group_reply_activity( Axismundi_Activity $act
 function axismundi_forum_group_reply_public_outbox_payload( $payload, Axismundi_Activity $activity ) {
 	return axismundi_forum_is_direct_group_reply_activity( $activity ) ? null : $payload;
 }
-add_filter( 'axismundi_act_public_outbox_payload', 'axismundi_forum_group_reply_public_outbox_payload', 30, 2 );
 
 /**
  * Withdraw an approved Topic from this community without deleting the author's Object.

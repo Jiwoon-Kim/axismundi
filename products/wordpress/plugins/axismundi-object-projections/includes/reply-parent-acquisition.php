@@ -6,6 +6,10 @@ defined( 'ABSPATH' ) || exit;
 function axismundi_op_reply_parent_candidate( Axismundi_Activity $activity ) : string {
 	if ( 'Create' !== $activity->get_type() || ! $activity->is_effective() || ! axismundi_act_is_publicly_renderable( $activity ) ) { return ''; }
 	$object = $activity->get_payload()['object'] ?? null;
+	if ( is_string( $object ) && 'outbound' === $activity->get_direction() ) {
+		$row = axismundi_op_get_local_object( $object );
+		$object = $row && $row['attributed_to_uri'] === $activity->get_actor_uri() ? $row['document'] : null;
+	}
 	if ( ! is_array( $object ) || 'Note' !== ( $object['type'] ?? '' ) ) { return ''; }
 	$parent = axismundi_op_remote_member_uri( $object['inReplyTo'] ?? '' );
 	if ( '' === $parent || $parent === ( $object['id'] ?? '' ) || 'https' !== wp_parse_url( $parent, PHP_URL_SCHEME ) ) { return ''; }

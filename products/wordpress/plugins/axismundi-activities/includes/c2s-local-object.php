@@ -22,6 +22,8 @@ function axismundi_act_submit_local_object( int $user, Axismundi_Actor $actor, a
 		}
 		$note = axismundi_op_prepare_local_note( $note, $actor, $user );
 		if ( is_wp_error( $note ) ) { return $note; }
+		$note = axismundi_act_prepare_community_reply( $note, $actor );
+		if ( is_wp_error( $note ) ) { return $note; }
 	} else {
 		if ( ! is_string( $input['object'] ?? null ) ) { return new WP_Error( 'ax_c2s_delete_object', 'Delete requires a local Object URI.', array( 'status' => 400 ) ); }
 		$delete_row = axismundi_op_get_local_object( $input['object'] );
@@ -31,7 +33,7 @@ function axismundi_act_submit_local_object( int $user, Axismundi_Actor $actor, a
 	$intent = array( 'type' => $type, 'actor' => $actor->get_uri(), 'object' => $note ?? $input['object'] );
 	$sort = static function ( $value ) use ( &$sort ) { if ( is_array( $value ) ) { if ( ! array_is_list( $value ) ) { ksort( $value ); } $value = array_map( $sort, $value ); } return $value; };
 	$intent_hash = hash( 'sha256', wp_json_encode( $sort( $intent ) ) );
-	return axismundi_act_submission_lock( array( 'source_owner' => 'axismundi-activities', 'source_kind' => 'outbox', 'source_ref' => $actor->get_identity_id() ), static function () use ( $user, $actor, $type, $note, $delete_row, $key, $intent_hash ) {
+	$result = axismundi_act_submission_lock( array( 'source_owner' => 'axismundi-activities', 'source_kind' => 'outbox', 'source_ref' => $actor->get_identity_id() ), static function () use ( $user, $actor, $type, $note, $delete_row, $key, $intent_hash ) {
 		global $wpdb;
 		$permission = axismundi_act_outbox_authorize( $user, $actor );
 		if ( is_wp_error( $permission ) ) { return $permission; }
@@ -53,6 +55,9 @@ function axismundi_act_submit_local_object( int $user, Axismundi_Actor $actor, a
 			$document['url'] = $uri;
 			$document['published'] = gmdate( 'c' );
 			foreach ( array( 'to', 'cc', 'bto', 'bcc', 'audience' ) as $field ) { if ( isset( $document[ $field ] ) ) { $activity[ $field ] = $document[ $field ]; } }
+			// Group forwarding must preserve a creation snapshot, including after local deletion.
+			$group = ! empty( $document['inReplyTo'] ) && ! empty( $document['audience'] ) ? axismundi_actors_get_by_uri( axismundi_act_member_uri( $document['audience'] ) ) : null;
+			if ( $group && 'Group' === $group->get_type() ) { $activity['object'] = $document; }
 		} else {
 			foreach ( array( 'to', 'cc', 'bto', 'bcc', 'audience' ) as $field ) { if ( isset( $delete_row['document'][ $field ] ) ) { $activity[ $field ] = $delete_row['document'][ $field ]; } }
 		}
@@ -79,4 +84,5 @@ function axismundi_act_submit_local_object( int $user, Axismundi_Actor $actor, a
 		}
 		return $result;
 	} );
+	return is_wp_error( $result ) ? $result : axismundi_act_receive_community_reply( $result );
 }

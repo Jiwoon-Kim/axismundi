@@ -88,4 +88,4 @@ try {
 	}
 }
 $assert( $before === $wpdb->get_results( 'SELECT * FROM ' . axismundi_act_activities_table() . ' ORDER BY id', ARRAY_A ), 'Existing ledger rows preserved' );
-printf( "PASS: %d Create(Note) storage checks\n", $checks );
+printf( "== %d checks, 0 failed ==\n", $checks );

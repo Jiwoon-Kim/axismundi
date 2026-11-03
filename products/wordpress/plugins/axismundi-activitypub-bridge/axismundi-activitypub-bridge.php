@@ -313,7 +313,15 @@ function axismundi_activitypub_bridge_record_inbox( array $activity, array $reci
 		}
 	}
 
-	return axismundi_act_record_activity( $activity, 'inbound', array_keys( $admitted ) );
+	$result = axismundi_act_record_activity( $activity, 'inbound', array_keys( $admitted ) );
+	if ( $result instanceof Axismundi_Activity && 'Create' === $result->get_type() && empty( $object['inReplyTo'] ) ) {
+		foreach ( $admitted as $recipient ) {
+			if ( 'Group' !== $recipient->get_type() || '' === axismundi_actors_group_profile( $recipient ) ) { continue; }
+			$entry = axismundi_act_admit_community_root( $result, $recipient );
+			if ( is_wp_error( $entry ) ) { return $entry; }
+		}
+	}
+	return $result;
 }
 
 /** Store one bounded, content-free Inbox outcome for administrator diagnostics. */

@@ -45,6 +45,7 @@ require_once __DIR__ . '/includes/replies-block.php';
 require_once __DIR__ . '/includes/leases.php';
 require_once __DIR__ . '/includes/remote-fetch.php';
 require_once __DIR__ . '/includes/inbox-observations.php';
+require_once __DIR__ . '/includes/reply-parent-acquisition.php';
 require_once __DIR__ . '/includes/remote-collections.php';
 require_once __DIR__ . '/includes/registry.php';
 require_once __DIR__ . '/includes/collection-registry.php';
@@ -106,5 +107,6 @@ function axismundi_op_deactivate() : void {
 	wp_clear_scheduled_hook( 'axismundi_op_remote_objects_daily' );
 	wp_clear_scheduled_hook( 'axismundi_op_discover_remote_actor' );
 	wp_clear_scheduled_hook( 'axismundi_op_fetch_announced_object' );
+	wp_clear_scheduled_hook( 'axismundi_op_fetch_reply_parent' );
 }
 register_deactivation_hook( __FILE__, 'axismundi_op_deactivate' );

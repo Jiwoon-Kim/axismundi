@@ -67,6 +67,7 @@ require_once __DIR__ . '/includes/c2s.php';
 require_once __DIR__ . '/includes/c2s-outbox.php';
 require_once __DIR__ . '/includes/featured.php';
 require_once __DIR__ . '/includes/moderators.php';
+require_once __DIR__ . '/includes/community-posts.php';
 require_once __DIR__ . '/includes/c2s-local-object.php';
 require_once __DIR__ . '/includes/post-lifecycle.php';
 require_once __DIR__ . '/includes/scheduled-publication.php';

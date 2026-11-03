@@ -310,21 +310,17 @@ function axismundi_actors_render_managed_actors_page() : void {
 	}
 	$user_id = get_current_user_id();
 	$is_site_admin = current_user_can( 'manage_options' );
-	$moderated_groups = function_exists( 'axismundi_forum_moderated_communities' )
-		? axismundi_forum_moderated_communities( $user_id )
-		: array_values( array_filter( axismundi_actors_accounts_for_principal( 'wp_user', $user_id ),
+	$managed_actors = array_values( array_filter( axismundi_actors_accounts_for_principal( 'wp_user', $user_id ),
 			static fn( Axismundi_Actor $actor ) : bool => $actor->has_principals()
 		) );
 	$all_groups       = $is_site_admin ? axismundi_actors_list_all_managed_actors() : array();
 	$selected_id = isset( $_GET['group_id'] ) ? absint( $_GET['group_id'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only selection.
 	$selected = $selected_id > 0 ? axismundi_actors_get_by_identity( $selected_id ) : null;
 	$selected_is_manager = $selected instanceof Axismundi_Actor && axismundi_actors_can_manage( $selected, $user_id );
-	$selected_is_moderator = $selected instanceof Axismundi_Actor && function_exists( 'axismundi_forum_user_can_moderate' ) && axismundi_forum_user_can_moderate( $selected->get_identity_id(), $user_id );
-	if ( ! $selected instanceof Axismundi_Actor || ! $selected->has_principals() || ( ! $is_site_admin && ! $selected_is_manager && ! $selected_is_moderator ) ) {
+	if ( ! $selected instanceof Axismundi_Actor || ! $selected->has_principals() || ( ! $is_site_admin && ! $selected_is_manager ) ) {
 		$selected = null;
 	}
 	$selected_is_manager = $selected instanceof Axismundi_Actor && axismundi_actors_can_manage( $selected, $user_id );
-	$selected_is_moderator = $selected instanceof Axismundi_Actor && function_exists( 'axismundi_forum_user_can_moderate' ) && axismundi_forum_user_can_moderate( $selected->get_identity_id(), $user_id );
 	$is_selected_public = $selected instanceof Axismundi_Actor && axismundi_actors_is_public_profile( $selected );
 	?>
 	<div class="wrap">
@@ -356,8 +352,6 @@ function axismundi_actors_render_managed_actors_page() : void {
 			<?php axismundi_actors_text_form( $selected ); ?>
 			<?php axismundi_actors_profile_fields_form( $selected ); ?>
 			<?php axismundi_actors_managers_form( $selected ); ?>
-			<?php do_action( 'axismundi_actors_managed_group_admin_sections', $selected ); ?>
-			<?php elseif ( $selected_is_moderator ) : ?>
 			<?php do_action( 'axismundi_actors_managed_group_admin_sections', $selected ); ?>
 			<?php endif; ?>
 		<?php else : ?>
@@ -402,12 +396,12 @@ function axismundi_actors_render_managed_actors_page() : void {
 				<?php submit_button( __( 'Create actor', 'axismundi-actors' ) ); ?>
 			</form>
 			<?php endif; ?>
-			<h2><?php esc_html_e( 'Groups I moderate', 'axismundi-actors' ); ?></h2>
-			<?php if ( empty( $moderated_groups ) ) : ?>
-				<p class="description"><?php esc_html_e( 'You do not moderate any communities yet.', 'axismundi-actors' ); ?></p>
+			<h2><?php esc_html_e( 'My managed accounts', 'axismundi-actors' ); ?></h2>
+			<?php if ( empty( $managed_actors ) ) : ?>
+				<p class="description"><?php esc_html_e( 'No managed accounts.', 'axismundi-actors' ); ?></p>
 			<?php else : ?>
 				<table class="widefat striped"><thead><tr><th><?php esc_html_e( 'Name', 'axismundi-actors' ); ?></th><th><?php esc_html_e( 'Handle', 'axismundi-actors' ); ?></th><th><?php esc_html_e( 'Status', 'axismundi-actors' ); ?></th></tr></thead><tbody>
-				<?php foreach ( $moderated_groups as $group ) : ?><tr><td><a href="<?php echo esc_url( axismundi_actors_managed_actors_admin_url( $group->get_identity_id() ) ); ?>"><?php echo esc_html( $group->get_display_name() ?: __( 'Untitled Group', 'axismundi-actors' ) ); ?></a></td><td><code>@<?php echo esc_html( $group->get_preferred_username() ); ?></code></td><td><?php echo esc_html( axismundi_actors_status_label( $group ) ); ?></td></tr><?php endforeach; ?>
+				<?php foreach ( $managed_actors as $group ) : ?><tr><td><a href="<?php echo esc_url( axismundi_actors_managed_actors_admin_url( $group->get_identity_id() ) ); ?>"><?php echo esc_html( $group->get_display_name() ?: __( 'Untitled Group', 'axismundi-actors' ) ); ?></a></td><td><code>@<?php echo esc_html( $group->get_preferred_username() ); ?></code></td><td><?php echo esc_html( axismundi_actors_status_label( $group ) ); ?></td></tr><?php endforeach; ?>
 				</tbody></table>
 			<?php endif; ?>
 			<?php if ( $is_site_admin && ! empty( $all_groups ) ) : ?>

@@ -70,6 +70,7 @@ require_once __DIR__ . '/includes/moderators.php';
 require_once __DIR__ . '/includes/community-posts.php';
 require_once __DIR__ . '/includes/community-replies.php';
 require_once __DIR__ . '/includes/c2s-local-object.php';
+require_once __DIR__ . '/includes/admin-workflows.php';
 require_once __DIR__ . '/includes/post-lifecycle.php';
 require_once __DIR__ . '/includes/scheduled-publication.php';
 require_once __DIR__ . '/includes/local-social-ui.php';

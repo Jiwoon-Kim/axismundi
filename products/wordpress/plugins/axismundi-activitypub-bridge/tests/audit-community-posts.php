@@ -104,7 +104,7 @@ try {
 	try { $failed = $review( $users[0], $people[0], $group, $article['object']['id'], true ); }
 	finally { remove_filter( 'query', $fail_log, 999 ); $wpdb->suppress_errors( $old_suppress ); }
 	$assert( is_wp_error( $failed ) && 'pending' === axismundi_actors_get_community_post( $group->get_identity_id(), $article['object']['id'] )['admission_state'] && array() === axismundi_act_get_by_object( $article_create->get_uri() ), 'Log failure rolls back both decision and Announce' );
-	$assert( true === $review( $users[0], $people[0], $group, $article['object']['id'], false ), 'Moderator can reject a pending root' );
+	$assert( true === $review( $users[0], $people[0], $group, $article['object']['id'], false, 'Not appropriate for this Community.' ), 'Moderator can reject a pending root' );
 	$assert( is_wp_error( $review( $users[0], $people[0], $group, $article['object']['id'], true ) ), 'Rejected submissions cannot silently become approved' );
 	$assert( array() === axismundi_act_get_by_object( $article_create->get_uri() ), 'Rejection emits no Announce' );
 	$assert( ( isset( $community_reply_check ) ? 3 : 2 ) === (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM %i WHERE group_id=%d AND verb IN ('ApprovePost','RejectPost')", axismundi_actors_moderators_log_table(), $group->get_identity_id() ) ), 'Approval and rejection use the existing moderation log' );

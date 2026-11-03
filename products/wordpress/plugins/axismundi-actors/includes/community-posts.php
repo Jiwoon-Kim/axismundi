@@ -19,17 +19,18 @@ function axismundi_actors_install_community_posts() : bool {
 		admission_state varchar(16) NOT NULL DEFAULT 'pending',
 		created_at datetime NOT NULL,
 		reviewed_at datetime DEFAULT NULL,
+		review_reason text DEFAULT NULL,
 		PRIMARY KEY  (id),
 		UNIQUE KEY group_object (group_id,object_hash)
 	) ENGINE=InnoDB {$charset};" );
 	$columns = $wpdb->get_col( $wpdb->prepare( 'SHOW COLUMNS FROM %i', $table ) );
 	$engine = $wpdb->get_var( $wpdb->prepare( 'SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s', $table ) );
-	if ( array_diff( array( 'id', 'group_id', 'object_uri', 'create_uri', 'author_uri', 'admission_state', 'reviewed_at' ), $columns ) || 'InnoDB' !== $engine ) { return false; }
-	update_option( 'ax_community_posts_schema', '1', false );
+	if ( array_diff( array( 'id', 'group_id', 'object_uri', 'create_uri', 'author_uri', 'admission_state', 'reviewed_at', 'review_reason' ), $columns ) || 'InnoDB' !== $engine ) { return false; }
+	update_option( 'ax_community_posts_schema', '2', false );
 	return true;
 }
 add_action( 'plugins_loaded', static function () : void {
-	if ( '1' !== get_option( 'ax_community_posts_schema' ) ) { axismundi_actors_install_community_posts(); }
+	if ( '2' !== get_option( 'ax_community_posts_schema' ) ) { axismundi_actors_install_community_posts(); }
 } );
 
 function axismundi_actors_get_community_post( int $group_id, string $uri ) : ?array {
@@ -51,8 +52,12 @@ function axismundi_actors_admit_community_post( Axismundi_Actor $group, string $
 }
 
 /** SQL participant: the caller owns the transaction with any Group Activity. */
-function axismundi_actors_decide_community_post( Axismundi_Actor $group, Axismundi_Actor $moderator, string $uri, bool $approve ) {
+function axismundi_actors_decide_community_post( Axismundi_Actor $group, Axismundi_Actor $moderator, string $uri, bool $approve, string $reason = '' ) {
 	global $wpdb;
+	$reason = trim( sanitize_textarea_field( $reason ) );
+	if ( strlen( $reason ) > 4096 || ( ! $approve && '' === $reason ) ) {
+		return new WP_Error( 'ax_community_reason', 'A rejection reason is required (maximum 4096 bytes).', array( 'status' => 400 ) );
+	}
 	if ( ! axismundi_actors_is_community( $group ) || 'public' !== $group->get_status() || 'Person' !== $moderator->get_type() || 'public' !== $moderator->get_status() ) {
 		return new WP_Error( 'ax_community_profile', 'A Community and active Person moderator are required.', array( 'status' => 403 ) );
 	}
@@ -70,10 +75,10 @@ function axismundi_actors_decide_community_post( Axismundi_Actor $group, Axismun
 	$operation = hash( 'sha256', 'community-review:' . $row['id'] );
 	$log = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM %i WHERE operation_key=%s', axismundi_actors_moderators_log_table(), $operation ), ARRAY_A );
 	if ( 'pending' !== $row['admission_state'] ) {
-		return $row['admission_state'] === $state && $log && $log['actor_uri'] === $moderator->get_uri() ? true : new WP_Error( 'ax_community_decided', 'The submission already has a different decision.', array( 'status' => 409 ) );
+		return $row['admission_state'] === $state && $log && $log['actor_uri'] === $moderator->get_uri() && (string) ( $row['review_reason'] ?? '' ) === $reason ? true : new WP_Error( 'ax_community_decided', 'The submission already has a different decision.', array( 'status' => 409 ) );
 	}
 	$now = current_time( 'mysql', true );
-	if ( false === $wpdb->update( axismundi_actors_community_posts_table(), array( 'admission_state' => $state, 'reviewed_at' => $now ), array( 'id' => $row['id'] ) )
+	if ( false === $wpdb->update( axismundi_actors_community_posts_table(), array( 'admission_state' => $state, 'reviewed_at' => $now, 'review_reason' => $reason ), array( 'id' => $row['id'] ) )
 		|| false === $wpdb->insert( axismundi_actors_moderators_log_table(), array( 'group_id' => $group->get_identity_id(), 'actor_uri' => $moderator->get_uri(), 'person_uri' => $row['author_uri'], 'verb' => $approve ? 'ApprovePost' : 'RejectPost', 'operation_key' => $operation, 'activity_uri' => $row['create_uri'], 'created_at' => $now ) ) ) {
 		return new WP_Error( 'ax_community_write', 'The submission decision and audit log could not be written.' );
 	}

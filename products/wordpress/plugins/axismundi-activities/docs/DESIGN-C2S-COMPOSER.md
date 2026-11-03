@@ -1,5 +1,8 @@
 # DESIGN — 관리자 C2S 컴포저와 Outbox
 
+현재의 좁은 관리자 답글/심사 슬라이스는 [ADMIN-WORKFLOWS.md](ADMIN-WORKFLOWS.md)를 따른다.
+아래는 더 넓은 계획이며 Like/Follow/활동 로그 UI까지 구현됐다는 뜻이 아니다.
+
 Todo PoC 가 관리자 페이지에서 JMAP 을 증명한 것처럼, ActivityPub C2S 도
 관리자 페이지에서 증명한다. 목적은 제품이 아니라 **제출 경로의 증명**이고,
 나중에 프론트앱에 작성기를 올릴 때 설계를 다시 하지 않는 것이다.

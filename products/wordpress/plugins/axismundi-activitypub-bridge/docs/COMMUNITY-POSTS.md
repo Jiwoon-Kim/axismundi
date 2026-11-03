@@ -101,7 +101,8 @@ Forum의 로컬 Topic 바인딩과 그 의존 코드는 유지한다. 기존 For
 
 ## 남은 표면
 
-- 심사 목록·관리 UI 및 외부 심사 API
+- 심사 목록·관리 UI는 Activities의 Community Moderation으로 제공한다
+  (`docs/ADMIN-WORKFLOWS.md`). 외부 심사 API와 승인 후 철회는 별도 범위다.
 - Forum 레거시 관리 표면·저장소 정리 (로컬 Topic 바인딩과 의존성을 별도 점검)
 - 기존 CPT-Note 감사는 컷오프 상태에서 실행 불가하므로 단언 계약을 새 저장소 감사에 이전
 

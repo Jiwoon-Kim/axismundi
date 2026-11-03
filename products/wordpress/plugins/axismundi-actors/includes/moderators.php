@@ -106,6 +106,18 @@ function axismundi_actors_read_moderators( Axismundi_Actor $group ) {
 	return array( 'items' => $items );
 }
 
+/** Reverse membership lookup, independent of the operating WP User or any UI. */
+function axismundi_actors_local_communities_moderated_by( Axismundi_Actor $person ) : array {
+	if ( 'Person' !== $person->get_type() || 'public' !== $person->get_status() ) { return array(); }
+	$groups = array();
+	foreach ( axismundi_actors_list_local_actors( 'public' ) as $group ) {
+		if ( ! axismundi_actors_is_community( $group ) ) { continue; }
+		$members = axismundi_actors_read_moderators( $group );
+		if ( ! is_wp_error( $members ) && in_array( $person->get_uri(), $members['items'], true ) ) { $groups[] = $group; }
+	}
+	return $groups;
+}
+
 /** SQL participant only. The Activity service owns the surrounding transaction. */
 function axismundi_actors_write_moderators( Axismundi_Actor $group, Axismundi_Actor $actor, Axismundi_Actor $member, bool $add, string $operation, string $activity_uri, bool $bootstrap = false, int $user = 0 ) {
 	global $wpdb;

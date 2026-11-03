@@ -39,18 +39,18 @@ function axismundi_act_admit_community_root( Axismundi_Activity $create, Axismun
 }
 
 /** Authenticate the operator as a Person, then authorize review through current moderator membership. */
-function axismundi_act_review_community_post( int $user, Axismundi_Actor $moderator, Axismundi_Actor $group, string $uri, bool $approve ) {
+function axismundi_act_review_community_post( int $user, Axismundi_Actor $moderator, Axismundi_Actor $group, string $uri, bool $approve, string $reason = '' ) {
 	$permission = axismundi_act_outbox_authorize( $user, $moderator );
 	if ( is_wp_error( $permission ) ) { return $permission; }
 	$row = axismundi_actors_get_community_post( $group->get_identity_id(), $uri );
 	$create = $row ? axismundi_act_get( $row['create_uri'] ) : null;
 	if ( ! $row || ! $create ) { return new WP_Error( 'ax_community_missing', 'The original submission was not found.', array( 'status' => 404 ) ); }
-	return axismundi_act_submission_lock( array( 'source_owner' => 'axismundi-activities', 'source_kind' => 'community-review', 'source_ref' => $row['id'] ), static function () use ( $user, $moderator, $group, $uri, $approve, $row, $create ) {
+	return axismundi_act_submission_lock( array( 'source_owner' => 'axismundi-activities', 'source_kind' => 'community-review', 'source_ref' => $row['id'] ), static function () use ( $user, $moderator, $group, $uri, $approve, $reason, $row, $create ) {
 		global $wpdb;
-		$decide = static function () use ( $user, $moderator, $group, $uri, $approve ) {
+		$decide = static function () use ( $user, $moderator, $group, $uri, $approve, $reason ) {
 			$permission = axismundi_act_outbox_authorize( $user, $moderator );
 			$fresh = axismundi_actors_get_by_identity( $group->get_identity_id() );
-			return is_wp_error( $permission ) ? $permission : ( $fresh ? axismundi_actors_decide_community_post( $fresh, $moderator, $uri, $approve ) : new WP_Error( 'ax_community_missing', 'The Group is unavailable.' ) );
+			return is_wp_error( $permission ) ? $permission : ( $fresh ? axismundi_actors_decide_community_post( $fresh, $moderator, $uri, $approve, $reason ) : new WP_Error( 'ax_community_missing', 'The Group is unavailable.' ) );
 		};
 		if ( ! $approve ) {
 			if ( false === $wpdb->query( 'START TRANSACTION' ) ) { return new WP_Error( 'ax_community_write', 'Review transaction failed.' ); }

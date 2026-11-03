@@ -62,6 +62,37 @@ AS2 attributedTo 자체가 moderator 권한을 정의한다는 뜻도, FEP-fe34 
 
 ## Wire And Boundaries
 
+### Community moderation removal (decision, not implemented)
+
+다른 Actor가 저작한 커뮤니티 게시물도 해당 커뮤니티 moderator가 내릴 수 있다는 정책을
+채택한다. 일반 Object 삭제 권한으로 올리지 않으며 Community 상호운용 계약에 격리한다.
+Channel이나 audience 없는 개인 게시물로 이 권한이 확장되지 않는다.
+
+후속 구현의 조건은 다음과 같다. 현재 이 조건들을 집행하는 removal 경로는 없다.
+
+- 대상 Object의 확인된 표현에 `audience`가 있어야 하고, 그 값들에 해당 Group URI가
+  포함되어야 한다. Delete/Announce 자체에 새로 적힌 audience로 대상의 소속을 만들지 않는다.
+  audience가 없거나 다른 Group만 가리키면 거부한다. `cc`나 같은 origin으로 대체하지 않는다.
+- 내부 행위자는 그 Group의 확인된 현재 moderator여야 한다. Group 포장과 내부 Person의
+  저작 증거를 구별하며, 검증되지 않은 Person Activity를 만들어내지 않는다.
+- 대상이나 역할이 미해소 상태라면 삭제 권한이 확인된 것이 아니다. 조회 실패로 삭제하거나
+  멤버십을 지우지 않으며, audience 부재가 확인된 경우와 미확정을 구별한다.
+- 기존 저자 자신의 Delete 경로와 이 추가 moderation 권한을 구별한다.
+
+**소스 독해 정정:** Lemmy moderator removal은 와이어에서 `Announce(Delete)`를 사용하지만
+저자 Delete와 같은 저장 효과가 아니다. `Delete.summary`가 `Some`이면
+`receive_remove_action()`으로 가서 `removed=true`를 기록한다. summary가 없으면
+`receive_delete_action()`에서 `deleted=true`를 기록한다. 사유 없는 moderator removal도
+빈 문자열 summary를 사용해 구분할 수 있다. 따라서 "moderator Delete가 항상 deleted를
+쓴다"는 이전 대화의 결론은 채택하지 않는다. Undo 역시 summary 유무로 removal 복구와
+저자 삭제 복구를 나눈다. 로컬 원본 파괴나 저자 Tombstone 생성을 이 결정에서 도출하지 않는다.
+
+확인한 Lemmy revision: `f400a88017203b8f942c4e3d3e0680a9deb5b806`.
+[Delete 처리](https://github.com/LemmyNet/lemmy/blob/f400a88017203b8f942c4e3d3e0680a9deb5b806/crates/apub/activities/src/deletion/delete.rs),
+[저자 삭제 처리](https://github.com/LemmyNet/lemmy/blob/f400a88017203b8f942c4e3d3e0680a9deb5b806/crates/apub/activities/src/deletion/mod.rs),
+[Undo 처리](https://github.com/LemmyNet/lemmy/blob/f400a88017203b8f942c4e3d3e0680a9deb5b806/crates/apub/activities/src/deletion/undo_delete.rs).
+실제 상대 Lemmy의 배포 버전 및 왕복 효과는 여전히 미검증이다.
+
 GET `/wp-json/axismundi/v1/actors/{group-uuid}/moderators`는 Community만 공개한다.
 `OrderedCollection`의 orderedItems에 Person URI를 싣고 페이지·totalItems는 내보내지 않는다.
 Actor 문서의 attributedTo 송출은 여전히 별도 판단이며 이번에는 추가하지 않았다.

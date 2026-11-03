@@ -439,3 +439,65 @@ FEP 선행              해당 FEP 조사·채택 결정이 먼저
 미결                  썸네일이 파생물이면 캐시 계층이 **항목의 라이선스**를 따라야 하는가
                       (전역 설정이 아니라)
 ```
+
+## unlisted 는 멤버십에서 빠질 뿐이다 (오너 결정, 2026-11-03)
+
+AS2 피드가 생기면 atom 에 없던 질문이 하나 열린다. atom 은 목록에서 빼면 끝이지만, AS2 항목은
+`id` 를 갖고 **역참조 대상**이 되므로 "목록에 없는데 URI 로는 열린다" 가 가능해진다.
+
+```txt
+unlisted   컬렉션 멤버십에서 제외.  **객체 URI 는 여전히 해소된다**
+private    멤버십 제외 + 역참조도 막는다
+```
+
+**unlisted 가 역참조까지 막으면 `private` 과 같은 뜻이 되어 티어 하나가 사라진다.** 티어 목록에
+`inherit · public · unlisted · private` 넷이 이미 있으므로, unlisted 는 보통의 unlisted 다.
+
+featured·replies 에서 쓴 **멤버십 ≠ 도달 가능성** 과 같은 구분이다. 컬렉션에 실리지 않는 것과
+그 객체가 없는 것은 다르다.
+
+### 공개 판정을 다시 유도하지 말 것
+
+이미 구현돼 있고 원본이 하나다(2026-11-03 실측).
+
+```txt
+includes/feeds.php:7      "public + listed + ungated media; unlisted/private/password-gated
+                           items and folders" 가 피드에서 빠진다
+             :21 · :132   폴더 피드는 기본 ON (카테고리처럼), 폴더별 opt-out 가능
+             :155         "No current-user bypass (a feed is anonymous)"
+             :626         비공개 · opt-out 폴더는 피드 자체가 없다
+edit-fields.php:143·157   항목의 'inherit' = 폴더 가시성 사용
+                          "Folder visibility can only narrow this setting"
+folder-rest.php:86        enum: inherit · public · unlisted · private
+admin-folders.php:246     관리화면에 "Effective visibility" 열
+```
+
+`/media/feed/as2` 가 자체 쿼리를 짜면 **공개 판정이 두 개가 되고, 갈라지는 순간 한쪽이 샌다.**
+`feeds.php` 의 게이트를 호출할 것. 폴더가 좁히기만 한다는 성질과 피드가 익명이라는 성질도
+거기 들어 있다.
+
+### 소유 경계
+
+```txt
+미디어라이브러리   라우트 등록 · 공개 아카이브 쿼리 · 라이선스/creator 원본
+                   includes/archive.php 의 rewrite 와 ax_media_archive 가 이미 그 자리
+OP                 AS2 표현.  목록/상세 표현 축을 그대로 재사용한다
+```
+
+미디어라이브러리가 자체 직렬화를 하면 `content` 생략 규칙이 두 군데 생겨 갈라진다.
+`media-library.php:347-353` 의 `as:image|featured → image` / `as:attachment → attachments`
+서술자도 그대로 재사용한다.
+
+### 아직 안 정한 것
+
+```txt
+폴더 단위 as2 피드   atom 쪽은 폴더마다 있고 기본 ON 이다.  as2 변형도 열지는 별도 결정
+                     (라우트가 늘어난다)
+타입별 생략          /media/feed/as2 는 Image · Video · Audio · Document 가 섞인다
+                     목록 표현에서 뺄 것이 타입마다 다른가 (예: Document 의 content)
+creator 폴백         Phase 5 로 미뤄둔 규칙.  색인이 제품이면 당겨올지
+```
+
+> 참고: 라이선스는 이미 저장 · 입력 · 폴더 기본값 · `media-rights` 블록까지 구현돼 있다
+> (`edit-fields.php:37·209`, `admin-folders.php:99-169`, `archive.php:461`). 빠진 것은 그것들의
+> AS2 투영이고, `dcterms` 네임스페이스가 어휘 레지스트리에 이미 등록돼 있어 용어 출처도 있다.

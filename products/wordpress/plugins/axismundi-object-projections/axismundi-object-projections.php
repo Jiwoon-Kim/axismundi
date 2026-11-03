@@ -3,7 +3,7 @@
  * Plugin Name:       Axismundi Object Projections
  * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi/tree/main/products/wordpress/plugins/axismundi-object-projections
  * Description:       Projects WordPress objects, Actors, and collections into ActivityStreams JSON-LD through a transformer registry and a single renderer. Requires Axismundi Actors. It owns representation and public read routes, not Activity state, Inbox writes, signatures, or delivery.
- * Version:           0.1.5-dev
+ * Version:           0.1.6-dev
  * Requires at least: 6.7
  * Requires PHP:      8.1
  * Requires Plugins:  axismundi-actors

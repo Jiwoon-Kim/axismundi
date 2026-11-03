@@ -7,6 +7,8 @@
 제출을 보여준다. Topic 저작, moderator 명단 편집, 승인 후 철회는 포함하지 않는다.
 
 기존 Community Review를 흡수하며 `tools.php?page=axismundi-community-review` URL은 유지한다.
+관리자에게는 프로필 미지정 Group의 [일회성 Community 전환](../../axismundi-actors/docs/COMMUNITY-MIGRATION.md)도
+제공한다. 명시적으로 선택한 자기 Person을 최초 moderator로 지정하는 예외이며 일반 명단 편집 UI는 아니다.
 메뉴는 `read` 권한으로 항상 등록한다. 선택 누락/불가, 비-Person 선택, 중재 커뮤니티 없음,
 선택한 Community에 권한 없음은 내용을 유출하지 않는 별도 상태로 렌더한다.
 비로그인 사용자의 인증을 우회하거나 없는 moderator 권한을 부여한다는 뜻은 아니다.

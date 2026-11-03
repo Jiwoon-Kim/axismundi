@@ -17,6 +17,7 @@ if ( 'cleanup' === $mode ) {
 		$actor = axismundi_actors_get_by_identity( $id );
 		if ( ! $actor ) { continue; }
 		$state['activities'] = array_merge( $state['activities'], $wpdb->get_col( $wpdb->prepare( 'SELECT activity_uri FROM %i WHERE actor_uri=%s', axismundi_act_activities_table(), $actor->get_uri() ) ) );
+		$state['activities'] = array_merge( $state['activities'], $wpdb->get_col( $wpdb->prepare( 'SELECT activity_uri FROM %i WHERE group_id=%d AND activity_uri IS NOT NULL', axismundi_actors_moderators_log_table(), $id ) ) );
 		$wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE subject_actor_uri=%s OR object_actor_uri=%s', axismundi_act_relations_table(), $actor->get_uri(), $actor->get_uri() ) );
 		foreach ( array( axismundi_actors_community_posts_table(), axismundi_actors_moderators_table(), axismundi_actors_moderators_state_table(), axismundi_actors_moderators_log_table() ) as $table ) { $wpdb->delete( $table, array( 'group_id' => $id ) ); }
 		// Exact fixture IDs only; do not deactivate Actors or invalidate the operator's sessions.
@@ -42,9 +43,13 @@ $state = array( 'actors' => array(), 'objects' => array(), 'activities' => array
 update_option( $key, $state, false );
 remove_action( 'axismundi_act_activity_recorded', 'axismundi_activitypub_bridge_queue_outbound', 10 );
 add_action( 'axismundi_act_activity_recorded', static function ( $activity ) use ( &$state, $key ) { $state['activities'][] = $activity->get_uri(); update_option( $key, $state, false ); }, 999 );
-$group = axismundi_actors_create_managed_actor( array( 'owner_user_id' => $user, 'actor_type' => 'Group', 'preferred_username' => 'axmodui' . strtolower( wp_generate_password( 8, false, false ) ), 'federation_profile' => 'community' ) );
+$legacy = '1' === getenv( 'AX_MOD_UI_LEGACY' );
+$args = array( 'owner_user_id' => $user, 'actor_type' => 'Group', 'preferred_username' => 'axmodui' . strtolower( wp_generate_password( 8, false, false ) ) );
+if ( ! $legacy ) { $args['federation_profile'] = 'community'; }
+$group = axismundi_actors_create_managed_actor( $args );
 if ( ! $group instanceof Axismundi_Actor ) { throw new RuntimeException( 'Group fixture creation failed' ); }
 $state['actors'][] = $group->get_identity_id(); update_option( $key, $state, false );
+if ( $legacy ) { echo wp_json_encode( array( 'group_id' => $group->get_identity_id(), 'group_uri' => $group->get_uri(), 'handle' => $group->get_preferred_username(), 'moderator_uri' => $person->get_uri() ) ) . "\n"; return; }
 $initialized = axismundi_act_initialize_moderators( $group, $person, $user );
 if ( is_wp_error( $initialized ) ) { throw new RuntimeException( $initialized->get_error_message() ); }
 $base = 'https://example.com/moderation-ui-' . wp_generate_uuid4();

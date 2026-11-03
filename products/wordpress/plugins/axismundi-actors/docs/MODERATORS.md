@@ -95,7 +95,9 @@ Channel이나 audience 없는 개인 게시물로 이 권한이 확장되지 않
 
 GET `/wp-json/axismundi/v1/actors/{group-uuid}/moderators`는 Community만 공개한다.
 `OrderedCollection`의 orderedItems에 Person URI를 싣고 페이지·totalItems는 내보내지 않는다.
-Actor 문서의 attributedTo 송출은 여전히 별도 판단이며 이번에는 추가하지 않았다.
+공개 Community Actor 문서는 Actors 소유 moderators 컬렉션 URI를 attributedTo로 송출한다.
+빈 컬렉션도 유효하다. Channel과 프로필 미지정 Group에는 적용하지 않는다.
+기존 Group의 명시적 전환과 Forum URL 하드 전환은 [COMMUNITY-MIGRATION.md](COMMUNITY-MIGRATION.md)를 따른다.
 OP 계약은 Actors 소유, `member_models=['Actor']`다.
 
 Ban 해석·집행·알림 UI는 이 슬라이스가 아니다. moderators 목록이 없어도 Group의

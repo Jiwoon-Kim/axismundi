@@ -53,6 +53,7 @@ require_once __DIR__ . '/includes/local-endpoints.php';
 require_once __DIR__ . '/includes/featured.php';
 require_once __DIR__ . '/includes/group-inventory.php';
 require_once __DIR__ . '/includes/moderators.php';
+require_once __DIR__ . '/includes/community-migration.php';
 require_once __DIR__ . '/includes/community-posts.php';
 require_once __DIR__ . '/includes/system-actor.php';
 require_once __DIR__ . '/includes/admin-navigation.php';

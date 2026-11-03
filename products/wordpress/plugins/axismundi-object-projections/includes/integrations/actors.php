@@ -240,7 +240,7 @@ function axismundi_op_actor_transform( Axismundi_Actor $actor ) : array {
 	/**
 	 * Let an Actor domain add public representation fields without owning the Actor document.
 	 *
-	 * Forum uses this for a Group's FEP-1b12 attributedTo moderator collection. The projection
+	 * Community policy uses this for a Group's attributedTo moderator collection. The projection
 	 * layer still owns visibility, base identifiers, JSON-LD context, and transport fields.
 	 *
 	 * @param array<string,mixed> $object Public Actor representation so far.

@@ -20,7 +20,7 @@ function axismundi_actors_validate_group_profile( string $type, array $args ) {
 	return true;
 }
 
-/** Existing Actors, including unconfigured Groups, cannot acquire a new contract. */
+/** Ordinary edits cannot assign contracts; explicit legacy migration is a separate command. */
 function axismundi_actors_check_group_profile_update( array $args ) {
 	return array_key_exists( 'federation_profile', $args )
 		? new WP_Error( 'ax_actors_profile_immutable', 'Federation profiles cannot be changed after Actor creation.', array( 'status' => 400 ) )

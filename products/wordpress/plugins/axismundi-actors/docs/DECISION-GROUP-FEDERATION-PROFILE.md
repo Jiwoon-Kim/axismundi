@@ -15,6 +15,10 @@ channel             PeerTube 계열 — 채널 소유 관계 + Object 대상 Ann
 변경하지 않는다.** URI 를 유지한 채 프로필을 바꾸면 원격이 같은 Actor 를 다른
 의미로 해석한다.
 
+프로필 도입 전 Group만 예외적으로 [명시적 일회성 마이그레이션](COMMUNITY-MIGRATION.md)으로
+미지정 상태에서 Community 계약을 부여할 수 있다. 자동 변환이나 일반 편집 허용이 아니다.
+이미 지정된 프로필은 바꾸지 않으며 전환 후에도 같은 불변 가드를 적용한다.
+
 표현은 별개다. `presentation_layout` 은 언제든 바꿀 수 있고, community 프로필을
 영상 중심으로 보여주거나 channel 프로필을 게시판으로 보여줘도 된다.
 

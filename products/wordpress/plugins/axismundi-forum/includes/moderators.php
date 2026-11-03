@@ -212,7 +212,7 @@ function axismundi_forum_project_group_moderators( array $object, Axismundi_Acto
 	}
 	return $object;
 }
-add_filter( 'axismundi_op_actor_projection_fields', 'axismundi_forum_project_group_moderators', 20, 2 );
+// Retired wire projection: Community discovery is owned by Actors and OP.
 
 /** Serve the public Actor collection FEP-1b12 uses to identify Group moderators. */
 function axismundi_forum_read_moderator_collection( int $group_identity_id ) : array {
@@ -240,7 +240,7 @@ function axismundi_forum_register_moderator_contract() : void {
 		'reader' => 'axismundi_forum_read_moderator_collection',
 	) );
 }
-add_action( 'axismundi_op_register_collection_contracts', 'axismundi_forum_register_moderator_contract' );
+// Retired wire contract; do not replace Actors' ap-moderators contract.
 
 function axismundi_forum_get_moderator_collection( WP_REST_Request $request ) {
 	$group = function_exists( 'axismundi_actors_get_by_uuid' ) ? axismundi_actors_get_by_uuid( strtolower( (string) $request['uuid'] ) ) : null;
@@ -280,7 +280,7 @@ function axismundi_forum_register_moderator_collection_route() : void {
 		)
 	);
 }
-add_action( 'rest_api_init', 'axismundi_forum_register_moderator_collection_route' );
+// Hard cut: the old Forum moderator URL has no alias or redirect.
 
 /**
  * Mark the Actors in a Group's subscriber list who run it.

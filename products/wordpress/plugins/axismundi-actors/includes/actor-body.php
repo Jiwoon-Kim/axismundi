@@ -23,7 +23,7 @@ function axismundi_actors_get_meta( int $actor_id, string $key ) : ?string {
 }
 
 function axismundi_actors_store_meta( int $actor_id, string $key, string $value ) : bool {
-	// Federation profiles are written only inside the Actor creation transaction.
+	// Creation and the explicit legacy migration own profile writes, never generic metadata.
 	if ( 'policy:federation_profile' === $key ) { return false; }
 	global $wpdb;
 	return false !== $wpdb->query( $wpdb->prepare( 'INSERT INTO %i (actor_id,meta_key,meta_value) VALUES (%d,%s,%s) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value)', axismundi_actors_meta_table(), $actor_id, $key, $value ) );

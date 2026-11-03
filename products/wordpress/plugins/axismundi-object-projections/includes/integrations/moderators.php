@@ -1,10 +1,19 @@
 <?php
-/** Community moderator representation. Does not add attributedTo to Actor documents. */
+/** Community moderator collection and its Actor-owned discovery reference. */
 defined( 'ABSPATH' ) || exit;
 
 final class Axismundi_OP_Community_Moderators {
 	public function __construct( public readonly Axismundi_Actor $actor ) {}
 }
+
+/** A collection may be empty; emptiness is not a discovery or initialization signal. */
+function axismundi_op_project_community_moderators( array $object, Axismundi_Actor $actor ) : array {
+	if ( function_exists( 'axismundi_actors_is_community' ) && axismundi_actors_is_community( $actor ) && axismundi_op_actor_visible( $actor ) ) {
+		$object['attributedTo'] = axismundi_actors_moderators_uri( $actor );
+	}
+	return $object;
+}
+add_filter( 'axismundi_op_actor_projection_fields', 'axismundi_op_project_community_moderators', 20, 2 );
 
 function axismundi_op_register_moderators_contract() : void {
 	if ( ! function_exists( 'axismundi_actors_read_moderators' ) ) { return; }

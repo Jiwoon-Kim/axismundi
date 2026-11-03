@@ -97,7 +97,7 @@ try {
 	$response = rest_do_request( $request ); $wire = $response->get_data();
 	if ( 200 !== $response->get_status() ) { throw new RuntimeException( 'Moderator route: ' . wp_json_encode( $wire ) ); }
 	$assert( 200 === $response->get_status() && 'OrderedCollection' === $wire['type'] && array( $people[0]->get_uri(), $people[1]->get_uri() ) === $wire['orderedItems'] && ! isset( $wire['first'], $wire['next'], $wire['totalItems'] ) && ! array_key_exists( 'totalItems', $wire ), 'Serving preserves Person URI order without pages or totals' );
-	$assert( ! isset( axismundi_op_actor_transform( $group )['attributedTo'] ), 'Actor attributedTo is not emitted by this slice' );
+	$assert( axismundi_actors_moderators_uri( $group ) === ( axismundi_op_actor_transform( $group )['attributedTo'] ?? '' ), 'Community Actor advertises the Actors moderator collection' );
 	$assert( array( 'Actor' ) === axismundi_op_collection_contract( 'ap-moderators' )['member_models'], 'Collection registry distinguishes Actor members' );
 	$promoted = axismundi_act_submit_outbox( $users[0], $people[0], $command( 'Add', $remote['a']->get_uri() ) );
 	$assert( $promoted instanceof Axismundi_Activity, 'A remote Person can be explicitly appointed without principal access' );

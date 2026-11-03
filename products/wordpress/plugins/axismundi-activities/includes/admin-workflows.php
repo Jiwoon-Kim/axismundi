@@ -115,6 +115,8 @@ function axismundi_act_render_community_review() : void {
 	if ( 'Person' !== $moderator->get_type() ) {
 		echo '<div class="notice notice-info"><p>' . esc_html__( 'Select a Person Account for Community moderation.', 'axismundi-activities' ) . '</p></div></div>'; return;
 	}
+	if ( isset( $_GET['migrated'] ) && '1' === $_GET['migrated'] ) { echo '<div class="notice notice-success"><p>' . esc_html__( 'Community migration completed.', 'axismundi-activities' ) . '</p></div>'; }
+	axismundi_act_render_community_migrations( $moderator );
 	if ( ! $groups ) { echo '<p>' . esc_html__( 'You do not moderate any Communities as this Person.', 'axismundi-activities' ) . '</p></div>'; return; }
 	$selected = isset( $_GET['group_id'] ) && is_string( $_GET['group_id'] ) ? absint( $_GET['group_id'] ) : $groups[0]->get_identity_id();
 	$group = axismundi_actors_get_by_identity( $selected );

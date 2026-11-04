@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.1.5-dev
+Stable tag: 0.1.5
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, federation, social
@@ -110,17 +110,19 @@ Nothing else here reaches outside this site.
 
 == Changelog ==
 
-= 0.1.3 =
-* Accept Like, Undo, Create(Note) and a bare Note on the ActivityPub client-to-server
-  outbox, and project the liked collection from the ledger rather than storing membership.
-* Read the Activity types the outbox accepts from the shared vocabulary instead of a
-  local list.
-* Advertise server-owned replies, likes, shares and emoji reaction collections on local
-  objects, taking the addresses from the server rather than from the submitted document.
-* Separate a post's local availability from federation deletion: draft, private and trash
-  publish nothing, and only permanent removal records a Delete.
-* Filter extension-supplied HTML through the post allowlist at every output boundary, and
-  sanitize the visitor address before it reaches the rate-limit filter.
-* Follow the Actor profile and Follows screens to their new place under Accounts.
+= 0.1.5 =
+* Serve and observe a Person's featured collection, holding an unresolved member's
+  position instead of publishing a partial replacement.
+* Give a Community its moderators as an observed collection, without turning moderation
+  into a grant over the Group's own account.
+* Let a Community review what a remote Person submits to it, recording the decision as a
+  further Activity rather than as an edit.
+* Record a reply addressed to a Group here rather than in a product plugin, and give a
+  Community's moderators one screen to work from.
+* Carry an existing group across to the Community contract only when an administrator
+  asks for it, never on activation.
+* End a Follow by Block without letting the accepted inverse edge return.
+* Sanitize the publication-selection nonce before verification, and name the escaping
+  authority at every output boundary that defers to core.
 
 Earlier releases are recorded in changelog.txt.

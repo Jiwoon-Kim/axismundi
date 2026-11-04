@@ -18,8 +18,8 @@ if (Test-Path $stageRoot) {
 New-Item -ItemType Directory -Path $stagePlugin | Out-Null
 New-Item -ItemType Directory -Path $distRoot -Force | Out-Null
 
-$excludeDirs = @('scripts', 'tests', 'node_modules', '.git', '.github')
-$excludeFiles = @('.distignore')
+$excludeDirs = @('scripts', 'tests', 'docs', 'node_modules', '.git', '.github')
+$excludeFiles = @('.distignore', 'package.json', 'package-lock.json', 'npm-shrinkwrap.json')
 
 Get-ChildItem -LiteralPath $pluginRoot -Force | ForEach-Object {
 	if ($_.PSIsContainer -and $excludeDirs -contains $_.Name) {

@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.43
+Stable tag: 0.0.44
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: media, attachments
@@ -40,6 +40,10 @@ dedicated attachment.html template.
    import a FileBird CSV export without overwriting existing Axismundi assignments.
 
 == Changelog ==
+
+= 0.0.44 =
+* Retire legacy folder federation identity metadata while preserving User-owned folders, media and feeds.
+* Exclude internal documentation and package manifests from distributable ZIP files.
 
 = 0.0.43 =
 * Read folder attribution from recorded publication, not the storage owner's User.

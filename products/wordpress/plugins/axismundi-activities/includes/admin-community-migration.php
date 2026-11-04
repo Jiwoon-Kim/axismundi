@@ -10,7 +10,7 @@ function axismundi_act_community_migration_request( array $input ) {
 	foreach ( array( 'group_uri', 'person_uri', '_wpnonce', 'confirm_migration' ) as $key ) {
 		if ( ! isset( $input[$key] ) || ! is_string( $input[$key] ) ) { return new WP_Error( 'ax_migration_input', 'Explicit Group, Person and confirmation are required.', array( 'status' => 400 ) ); }
 	}
-	if ( '1' !== $input['confirm_migration'] || ! wp_verify_nonce( $input['_wpnonce'], axismundi_act_community_migration_nonce( $input['group_uri'], $input['person_uri'] ) ) ) {
+	if ( '1' !== $input['confirm_migration'] || ! wp_verify_nonce( sanitize_text_field( $input['_wpnonce'] ), axismundi_act_community_migration_nonce( $input['group_uri'], $input['person_uri'] ) ) ) {
 		return new WP_Error( 'ax_migration_nonce', 'Confirm this Group and Person with a current migration form.', array( 'status' => 403 ) );
 	}
 	$group = axismundi_actors_get_by_uri( $input['group_uri'] );
@@ -22,7 +22,7 @@ function axismundi_act_community_migration_request( array $input ) {
 function axismundi_act_handle_community_migration() : void {
 	if ( 'POST' !== ( $_SERVER['REQUEST_METHOD'] ?? '' ) ) { wp_die( 'A POST request is required.', '', array( 'response' => 405 ) ); }
 	$result = axismundi_act_community_migration_request( wp_unslash( $_POST ) );
-	if ( is_wp_error( $result ) ) { wp_die( esc_html( $result->get_error_message() ), '', array( 'response' => $result->get_error_data()['status'] ?? 400 ) ); }
+	if ( is_wp_error( $result ) ) { wp_die( esc_html( $result->get_error_message() ), '', array( 'response' => (int) ( $result->get_error_data()['status'] ?? 400 ) ) ); }
 	$group = axismundi_actors_moderators_group_for_uri( $result->get_target_uri() );
 	wp_safe_redirect( add_query_arg( array( 'page' => 'axismundi-community-review', 'group_id' => $group ? $group->get_identity_id() : 0, 'migrated' => '1' ), admin_url( 'tools.php' ) ), 303 );
 	exit;

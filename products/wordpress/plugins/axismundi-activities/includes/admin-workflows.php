@@ -57,7 +57,7 @@ function axismundi_act_admin_review_request( array $input ) {
 	$moderator_id = absint( $input['moderator_id'] );
 	$group_id = absint( $input['group_id'] );
 	$uri = $input['object_uri'];
-	if ( ! wp_verify_nonce( $input['_wpnonce'], axismundi_act_admin_review_nonce_action( $moderator_id, $group_id, $uri ) ) ) {
+	if ( ! wp_verify_nonce( sanitize_text_field( $input['_wpnonce'] ), axismundi_act_admin_review_nonce_action( $moderator_id, $group_id, $uri ) ) ) {
 		return new WP_Error( 'ax_review_nonce', 'The review request has expired.', array( 'status' => 403 ) );
 	}
 	$moderator = axismundi_actors_get_by_identity( $moderator_id );
@@ -80,7 +80,7 @@ function axismundi_act_handle_admin_review() : void {
 	if ( 'POST' !== ( $_SERVER['REQUEST_METHOD'] ?? '' ) ) { wp_die( 'A POST request is required.', '', array( 'response' => 405 ) ); }
 	$result = axismundi_act_admin_review_request( wp_unslash( $_POST ) );
 	if ( is_wp_error( $result ) ) {
-		wp_die( esc_html( $result->get_error_message() ), '', array( 'response' => $result->get_error_data()['status'] ?? 400 ) );
+		wp_die( esc_html( $result->get_error_message() ), '', array( 'response' => (int) ( $result->get_error_data()['status'] ?? 400 ) ) );
 	}
 	wp_safe_redirect( add_query_arg( array( 'page' => 'axismundi-community-review', 'group_id' => absint( $_POST['group_id'] ), 'reviewed' => '1' ), admin_url( 'tools.php' ) ), 303 );
 	exit;

@@ -7,7 +7,8 @@ function axismundi_act_outbox_permission( WP_REST_Request $request ) {
 	if ( get_current_user_id() <= 0 ) {
 		return new WP_Error( 'ax_c2s_authentication', 'Authentication is required.', array( 'status' => 401 ) );
 	}
-	if ( ! rest_get_authenticated_app_password() && ! wp_verify_nonce( (string) $request->get_header( 'X-WP-Nonce' ), 'wp_rest' ) ) {
+	if ( ! rest_get_authenticated_app_password()
+		&& ! wp_verify_nonce( sanitize_text_field( (string) $request->get_header( 'X-WP-Nonce' ) ), 'wp_rest' ) ) {
 		return new WP_Error( 'ax_c2s_nonce', 'Cookie authentication requires a REST nonce.', array( 'status' => 403 ) );
 	}
 	$actor = axismundi_actors_get_by_uuid( (string) $request->get_url_params()['uuid'] );

@@ -329,6 +329,15 @@ function axismundi_act_prepare_follow_button_cache_policy() : void {
 }
 add_action( 'template_redirect', 'axismundi_act_prepare_follow_button_cache_policy', 1 );
 
+/** Local rendered-form policy; never extend the site's post-content allowlist. */
+function axismundi_act_follow_modal_allowed_html() : array {
+	$allowed = wp_kses_allowed_html( 'post' );
+	$allowed['form'] = array( 'class' => true, 'data-*' => true );
+	$allowed['input'] = array_fill_keys( array( 'id', 'type', 'value', 'readonly', 'required', 'placeholder', 'autocomplete', 'data-*' ), true );
+	$allowed['span']['translate'] = true;
+	return $allowed;
+}
+
 /** Render the anonymous remote-follow modal when Dialogs exposes its native surface. */
 function axismundi_act_render_remote_follow_modal( Axismundi_Actor $target, string $modal_id, string $profile_url ) : string {
 	if ( ! function_exists( 'axismundi_dialogs_render_interaction_dialog' ) ) {
@@ -404,13 +413,13 @@ function axismundi_act_render_follow_button( array $attributes, string $content,
 			);
 			ob_start();
 			?>
-			<div <?php echo get_block_wrapper_attributes( array( 'class' => 'axismundi-follow-button is-anonymous' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?> data-wp-interactive="axismundi/follow-button" <?php echo wp_interactivity_data_wp_context( $context ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>><div class="wp-block-button"><button type="button" class="wp-block-button__link wp-element-button axismundi-follow-button__button" aria-haspopup="dialog" aria-controls="<?php echo esc_attr( $modal_id ); ?>" data-wp-on--click="actions.openRemoteFollowDialog"><?php echo esc_html( (string) $words['verb'] ); ?></button></div><?php echo $modal; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Dialog helper renders escaped chrome and this function renders the escaped body. ?></div>
+			<div <?php echo get_block_wrapper_attributes( array( 'class' => 'axismundi-follow-button is-anonymous' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Core-generated block wrapper attributes are already escaped by core. ?> data-wp-interactive="axismundi/follow-button" <?php echo wp_interactivity_data_wp_context( $context ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Core serializes and escapes the Interactivity API context attribute. ?>><div class="wp-block-button"><button type="button" class="wp-block-button__link wp-element-button axismundi-follow-button__button" aria-haspopup="dialog" aria-controls="<?php echo esc_attr( $modal_id ); ?>" data-wp-on--click="actions.openRemoteFollowDialog"><?php echo esc_html( (string) $words['verb'] ); ?></button></div><?php echo wp_kses( $modal, axismundi_act_follow_modal_allowed_html() ); ?></div>
 			<?php
 			return (string) ob_get_clean();
 		}
 		ob_start();
 		?>
-		<div <?php echo get_block_wrapper_attributes( array( 'class' => 'axismundi-follow-button is-anonymous' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>><a class="wp-element-button axismundi-follow-button__button" href="<?php echo esc_url( wp_login_url( $profile_url ) ); ?>"><?php echo esc_html( (string) $words['sign_in'] ); ?></a><a class="axismundi-follow-button__remote" href="https://joinmastodon.org/servers/" rel="external noopener noreferrer" target="_blank"><?php esc_html_e( 'Use another Fediverse server', 'axismundi-activities' ); ?></a></div>
+		<div <?php echo get_block_wrapper_attributes( array( 'class' => 'axismundi-follow-button is-anonymous' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Core-generated block wrapper attributes are already escaped by core. ?>><a class="wp-element-button axismundi-follow-button__button" href="<?php echo esc_url( wp_login_url( $profile_url ) ); ?>"><?php echo esc_html( (string) $words['sign_in'] ); ?></a><a class="axismundi-follow-button__remote" href="https://joinmastodon.org/servers/" rel="external noopener noreferrer" target="_blank"><?php esc_html_e( 'Use another Fediverse server', 'axismundi-activities' ); ?></a></div>
 		<?php
 		return (string) ob_get_clean();
 	}
@@ -460,7 +469,7 @@ function axismundi_act_render_follow_button( array $attributes, string $content,
 	);
 	ob_start();
 	?>
-	<div <?php echo get_block_wrapper_attributes( array( 'class' => 'axismundi-follow-button' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?> data-wp-interactive="axismundi/follow-button" <?php echo wp_interactivity_data_wp_context( $context ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
+	<div <?php echo get_block_wrapper_attributes( array( 'class' => 'axismundi-follow-button' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Core-generated block wrapper attributes are already escaped by core. ?> data-wp-interactive="axismundi/follow-button" <?php echo wp_interactivity_data_wp_context( $context ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Core serializes and escapes the Interactivity API context attribute. ?>>
 		<button type="button" class="<?php echo esc_attr( $classes ); ?>" aria-pressed="<?php echo 'accepted' === (string) $state['state'] ? 'true' : 'false'; ?>" data-wp-on--click="actions.toggleFollow" data-wp-bind--disabled="state.isDisabled" data-wp-bind--aria-pressed="context.isFollowing" data-wp-bind--aria-label="state.actionLabel" data-wp-bind--title="state.actionLabel" data-wp-class--is-following="context.isFollowing" data-wp-class--is-mutual="context.isMutual"><span data-wp-text="state.label"><?php echo esc_html( $state['label'] ); ?></span></button>
 		<span class="axismundi-follow-button__status" data-wp-text="context.error" aria-live="polite"></span>
 	</div>

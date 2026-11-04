@@ -252,9 +252,9 @@ function axismundi_act_render_reaction_bar( array $attributes, string $content, 
 	ob_start();
 	?>
 	<div
-		<?php echo get_block_wrapper_attributes( array( 'class' => 'axismundi-reaction-bar' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+		<?php echo get_block_wrapper_attributes( array( 'class' => 'axismundi-reaction-bar' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Core-generated block wrapper attributes are already escaped by core. ?>
 		data-wp-interactive="axismundi/reactions"
-		<?php echo wp_interactivity_data_wp_context( $context ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+		<?php echo wp_interactivity_data_wp_context( $context ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Core serializes and escapes the Interactivity API context attribute. ?>
 		data-wp-watch="callbacks.syncFromStore"
 	>
 		<?php

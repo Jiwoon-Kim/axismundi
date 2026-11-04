@@ -6,7 +6,7 @@ function axismundi_act_register_vocabulary() : void {
 	if ( null === axismundi_op_namespace( 'litepub' ) ) {
 		$result = axismundi_op_register_namespace( 'litepub', array( 'base_iri' => 'http://litepub.social/ns#', 'reference' => 'https://w3id.org/fep/c0e0' ) );
 		if ( is_wp_error( $result ) ) {
-			throw new LogicException( $result->get_error_message() );
+			throw new LogicException( esc_html( $result->get_error_message() ) );
 		}
 	}
 	$types = array(
@@ -21,7 +21,7 @@ function axismundi_act_register_vocabulary() : void {
 			'provenance' => 'fep:' . $settings[2], 'source' => array( 'specification' => $source ),
 		) );
 		if ( is_wp_error( $result ) ) {
-			throw new LogicException( $result->get_error_message() );
+			throw new LogicException( esc_html( $result->get_error_message() ) );
 		}
 		axismundi_op_register_vocabulary_group( array( $term => $settings[0] ), array(
 			'kind' => 'type', 'provenance' => 'fep:' . $settings[2], 'source' => $source,

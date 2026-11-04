@@ -1384,11 +1384,11 @@ function axismundi_act_record_source_activity( array $payload, string $direction
 	$existing = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE activity_uri_hash = %s FOR UPDATE", $normalized['activity_uri_hash'] ), ARRAY_A );
 	if ( is_array( $existing ) ) {
 		if ( ! hash_equals( (string) $existing['activity_uri'], (string) $normalized['activity_uri'] ) ) {
-			$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Literal transaction control statement; no user input and nothing to cache.
 			return new WP_Error( 'ax_act_hash_collision', __( 'An Activity URI hash collision was detected.', 'axismundi-activities' ) );
 		}
 		if ( ! hash_equals( (string) $existing['payload_hash'], (string) $normalized['payload_hash'] ) ) {
-			$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Literal transaction control statement; no user input and nothing to cache.
 			return new WP_Error( 'ax_act_identity_conflict', __( 'That Activity URI already identifies a different immutable payload.', 'axismundi-activities' ) );
 		}
 		if ( ! empty( $inbox_actor_ids ) && ( 'inbound' !== $existing['direction']
@@ -1407,7 +1407,7 @@ function axismundi_act_record_source_activity( array $payload, string $direction
 	if ( 'Undo' === $normalized['activity_type'] && ! empty( $normalized['object_uri'] ) ) {
 		$target = axismundi_act_transaction_row( (string) $normalized['object_uri'] );
 		if ( is_array( $target ) && ! hash_equals( (string) $target['actor_uri'], (string) $normalized['actor_uri'] ) ) {
-			$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Literal transaction control statement; no user input and nothing to cache.
 			return new WP_Error( 'ax_act_undo_actor', __( 'Undo must be authored by the Actor that authored its target Activity.', 'axismundi-activities' ) );
 		}
 	}
@@ -1417,7 +1417,7 @@ function axismundi_act_record_source_activity( array $payload, string $direction
 		array_merge( $normalized, array( 'created_at' => $now, 'updated_at' => $now ) )
 	);
 	if ( false === $inserted ) {
-		$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Literal transaction control statement; no user input and nothing to cache.
 		if ( '' !== $source_event_key && ! $before_commit ) {
 			// A concurrent transaction may have won the unique source-event insert.
 			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- post-conflict source-event read.
@@ -1442,18 +1442,18 @@ function axismundi_act_record_source_activity( array $payload, string $direction
 		return new WP_Error( 'ax_act_inbox_write', 'The Inbox receipts could not be stored.' );
 	}
 	if ( 'Undo' === $normalized['activity_type'] && ! empty( $normalized['object_uri'] ) && ! axismundi_act_recompute_effectiveness( (string) $normalized['object_uri'] ) ) {
-		$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Literal transaction control statement; no user input and nothing to cache.
 		return new WP_Error( 'ax_act_transition', __( 'The Undo transition could not be applied.', 'axismundi-activities' ) );
 	}
 	if ( ! axismundi_act_recompute_effectiveness( (string) $normalized['activity_uri'] ) ) {
-		$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Literal transaction control statement; no user input and nothing to cache.
 		return new WP_Error( 'ax_act_transition', __( 'The Activity effective state could not be derived.', 'axismundi-activities' ) );
 	}
 	$relation_events = array();
 	if ( function_exists( 'axismundi_act_apply_relation_activity' ) ) {
 		$relation_events = axismundi_act_apply_relation_activity( $normalized );
 		if ( is_wp_error( $relation_events ) ) {
-			$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Literal transaction control statement; no user input and nothing to cache.
 			return $relation_events;
 		}
 	}

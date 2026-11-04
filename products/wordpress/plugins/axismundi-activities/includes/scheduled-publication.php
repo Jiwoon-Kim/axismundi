@@ -60,6 +60,7 @@ function axismundi_act_migrate_pending_submissions( string $legacy, string $targ
 		 ON DUPLICATE KEY UPDATE source_owner = source_owner", $target, $legacy
 	) );
 	$equal = implode( ' AND ', array_map( static fn( string $field ) : string => "(BINARY n.{$field} <=> BINARY o.{$field})", $fields ) );
+	// phpcs:ignore PluginCheck.Security.DirectDB.UnescapedDBParameter -- The comparison uses only the fixed column-name literals in $fields above; both table identifiers use %i.
 	$bad = false !== $ok ? $wpdb->get_var( $wpdb->prepare(
 		"SELECT COUNT(*) FROM %i o LEFT JOIN %i n ON n.source_owner = 'wordpress-core'
 		 AND n.source_kind = 'post' AND n.source_ref = o.post_id

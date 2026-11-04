@@ -95,6 +95,7 @@ function axismundi_act_get_relation( string $type, string $subject_uri, string $
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- exact custom relation lookup.
 	$row = $wpdb->get_row(
 		$wpdb->prepare(
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Values are prepared; the boolean selects only a literal FOR UPDATE suffix.
 			"SELECT * FROM {$table} WHERE relation_type = %s AND subject_actor_uri_hash = %s AND object_actor_uri_hash = %s" . ( $lock ? ' FOR UPDATE' : '' ),
 			$type,
 			hash( 'sha256', $subject_uri ),
@@ -230,20 +231,20 @@ function axismundi_act_import_follow_snapshot( string $subject_uri, string $obje
 		return is_wp_error( $blocked ) ? $blocked : ( $existing ?? new WP_Error( 'ax_act_follow_blocked', 'A blocked pair cannot import a live Follow.' ) );
 	}
 	if ( is_array( $existing ) && 'activity' === (string) ( $existing['evidence_type'] ?? 'activity' ) ) {
-		$wpdb->query( 'COMMIT' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$wpdb->query( 'COMMIT' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Literal transaction control statement; no user input and nothing to cache.
 		return $existing;
 	}
 	if ( is_array( $existing ) && 'accepted' === (string) $existing['state'] && 'legacy_pending' === $state ) {
-		$wpdb->query( 'COMMIT' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$wpdb->query( 'COMMIT' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Literal transaction control statement; no user input and nothing to cache.
 		return $existing;
 	}
 	$resolved_state = is_array( $existing ) && 'accepted' === (string) $existing['state'] ? 'accepted' : $state;
 	$relation = axismundi_act_write_relation( 'follow', $subject_uri, $object_uri, $direction, $resolved_state, null, null, 'legacy_snapshot', $evidence_ref );
 	if ( is_wp_error( $relation ) ) {
-		$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Literal transaction control statement; no user input and nothing to cache.
 		return $relation;
 	}
-	$wpdb->query( 'COMMIT' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+	$wpdb->query( 'COMMIT' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Literal transaction control statement; no user input and nothing to cache.
 	return $relation;
 }
 

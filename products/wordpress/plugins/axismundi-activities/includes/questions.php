@@ -508,14 +508,14 @@ function axismundi_act_question_record_vote( array $candidate ) : void {
 	$wpdb->query( 'START TRANSACTION' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- serialize deduplication and local tally updates.
 	$question = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$questions} WHERE identity_id = %d FOR UPDATE", $question_id ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one locked durable Question.
 	if ( ! is_array( $question ) ) {
-		$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Literal transaction control statement; no user input and nothing to cache.
 		return;
 	}
 	$question['options'] = json_decode( (string) $question['options_json'], true );
 	$question['options'] = is_array( $question['options'] ) ? array_values( $question['options'] ) : array();
 	$existing = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$votes} WHERE vote_activity_uri_hash = %s AND vote_activity_uri = %s", hash( 'sha256', $activity_uri ), $activity_uri ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- exact immutable activity idempotency.
 	if ( null !== $existing ) {
-		$wpdb->query( 'COMMIT' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$wpdb->query( 'COMMIT' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Literal transaction control statement; no user input and nothing to cache.
 		return;
 	}
 	$status = empty( $candidate['ignore_reason'] ) ? 'active' : 'ignored';
@@ -575,14 +575,14 @@ function axismundi_act_question_mark_votes( string $field, string $uri, string $
 	foreach ( $rows as $row ) {
 		$question = axismundi_act_get_question( (int) $row['question_identity_id'] );
 		if ( is_array( $question ) && 'local' === (string) $question['authority_origin'] ) {
-			$wpdb->query( 'START TRANSACTION' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$wpdb->query( 'START TRANSACTION' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Literal transaction control statement; no user input and nothing to cache.
 			$locked = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM " . axismundi_act_questions_table() . " WHERE identity_id = %d FOR UPDATE", (int) $row['question_identity_id'] ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed table with an exact Question lock.
 			if ( is_array( $locked ) ) {
 				$locked['options'] = json_decode( (string) $locked['options_json'], true );
 				$locked['options'] = is_array( $locked['options'] ) ? array_values( $locked['options'] ) : array();
 				axismundi_act_question_recount_locked( $locked );
 			}
-			$wpdb->query( 'COMMIT' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$wpdb->query( 'COMMIT' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Literal transaction control statement; no user input and nothing to cache.
 		}
 	}
 }

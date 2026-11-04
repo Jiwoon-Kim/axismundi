@@ -26,7 +26,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACTORS_VERSION = '0.1.5-dev';
+const AXISMUNDI_ACTORS_VERSION = '0.1.6-dev';
 
 require_once __DIR__ . '/includes/activitystreams-uri.php';
 require_once __DIR__ . '/includes/repository.php';

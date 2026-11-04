@@ -27,7 +27,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_OP_VERSION = '0.1.5-dev';
+const AXISMUNDI_OP_VERSION = '0.1.6-dev';
 
 require_once __DIR__ . '/includes/hashtags.php';
 require_once __DIR__ . '/includes/tag-references.php';

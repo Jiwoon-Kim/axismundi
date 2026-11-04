@@ -438,8 +438,9 @@ function axismundi_op_finish_local_listing_projection_upgrade() : void {
 	if ( version_compare( $version, '12', '>=' ) ) {
 		return;
 	}
-	axismundi_op_backfill_local_object_listing_projection();
-	update_option( AXISMUNDI_OP_DB_VERSION_OPTION, AXISMUNDI_OP_DB_VERSION, false );
+	// A failed plugins_loaded install must not become complete via a partial rebuild.
+	// The full installer verifies storage and identifier migration before recording success.
+	axismundi_op_install();
 }
 add_action( 'init', 'axismundi_op_finish_local_listing_projection_upgrade', 100 );
 
@@ -488,7 +489,8 @@ function axismundi_op_remote_expiry( ?string $from = null ) : string {
 
 /** Upgrade without requiring plugin reactivation. */
 function axismundi_op_maybe_upgrade() : void {
-	if ( AXISMUNDI_OP_DB_VERSION !== (string) get_option( AXISMUNDI_OP_DB_VERSION_OPTION, '' ) ) {
+	if ( AXISMUNDI_OP_DB_VERSION !== (string) get_option( AXISMUNDI_OP_DB_VERSION_OPTION, '' )
+		|| '1' !== get_option( 'ax_op_object_identifiers_migrated' ) ) {
 		axismundi_op_install();
 	}
 }

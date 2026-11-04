@@ -1,12 +1,8 @@
 <?php
 /**
- * Phase 4c — use a local Person actor's avatar as their WordPress avatar.
+ * WordPress User avatars and Actor profile images are independent.
  *
- * When a user's actor has an `avatar_attachment_id`, WordPress avatars (comments,
- * admin, author blocks) show it instead of the Gravatar. Default on; a site can turn
- * it off with the `axismundi_actors_use_actor_avatar` filter. Only Person actors are
- * affected — the header image stays Actor-profile-only, and site / remote actors are
- * not WordPress users so `get_avatar` never resolves to them.
+ * The legacy adapter remains callable but never overrides WordPress avatars.
  *
  * @package AxismundiActors
  */
@@ -44,46 +40,12 @@ function axismundi_actors_resolve_avatar_user( $id_or_email ) : int {
 }
 
 /**
- * Swap in the actor avatar when the resolved user's actor carries one.
+ * Compatibility no-op. No WordPress avatar hook is registered by Actors.
  *
  * @param array $args        get_avatar_data arguments.
  * @param mixed $id_or_email Avatar subject.
  * @return array
  */
 function axismundi_actors_filter_avatar_data( array $args, $id_or_email ) : array {
-	/**
-	 * Whether an actor's avatar should override the WordPress avatar (default true).
-	 *
-	 * @param bool $enabled Enabled.
-	 */
-	if ( ! (bool) apply_filters( 'axismundi_actors_use_actor_avatar', true ) ) {
-		return $args;
-	}
-	if ( ! function_exists( 'axismundi_actors_get_for_user' ) ) {
-		return $args;
-	}
-	$user_id = axismundi_actors_resolve_avatar_user( $id_or_email );
-	if ( $user_id <= 0 ) {
-		return $args;
-	}
-	// D: WordPress User avatar lookup must not depend on the viewer's active Account.
-	$actor = axismundi_actors_get_for_user( $user_id );
-	if ( ! $actor instanceof Axismundi_Actor ) {
-		return $args;
-	}
-	$attachment_id = $actor->get_avatar_attachment_id();
-	if ( $attachment_id <= 0 ) {
-		return $args;
-	}
-	$size = isset( $args['size'] ) ? (int) $args['size'] : 96;
-	$url  = wp_get_attachment_image_url( $attachment_id, array( $size, $size ) );
-	if ( ! $url ) {
-		$url = wp_get_attachment_url( $attachment_id );
-	}
-	if ( $url ) {
-		$args['url']          = $url;
-		$args['found_avatar'] = true;
-	}
 	return $args;
 }
-add_filter( 'get_avatar_data', 'axismundi_actors_filter_avatar_data', 10, 2 );

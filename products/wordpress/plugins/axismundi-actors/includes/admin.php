@@ -962,7 +962,7 @@ function axismundi_actors_media_form( Axismundi_Actor $actor ) : void {
 		<table class="form-table" role="presentation">
 			<tr>
 				<th scope="row"><?php esc_html_e( 'Avatar', 'axismundi-actors' ); ?></th>
-				<td><?php axismundi_actors_media_field( 'avatar', $actor->get_avatar_attachment_id() ); ?><p class="description"><?php esc_html_e( 'Square image. Falls back to your Gravatar / site icon when empty.', 'axismundi-actors' ); ?></p></td>
+				<td><?php axismundi_actors_media_field( 'avatar', $actor->get_avatar_attachment_id() ); ?><p class="description"><?php esc_html_e( 'Square Actor profile image, independent of your WordPress User avatar.', 'axismundi-actors' ); ?></p></td>
 			</tr>
 			<tr>
 				<th scope="row"><?php esc_html_e( 'Header image', 'axismundi-actors' ); ?></th>

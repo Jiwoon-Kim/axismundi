@@ -100,8 +100,7 @@ function axismundi_actors_mention_avatar_url( Axismundi_Actor $actor ) : string 
 			return $url;
 		}
 	}
-	$user_id = $actor->get_local_user_id();
-	return $user_id ? (string) get_avatar_url( $user_id, array( 'size' => 48 ) ) : '';
+	return '';
 }
 
 /** Shape one resolved Actor for every editor mention control. */

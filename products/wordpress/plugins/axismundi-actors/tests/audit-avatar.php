@@ -1,101 +1,51 @@
 <?php
-/**
- * Phase 4c — actor avatar → WordPress avatar regression (dev-only; dist-excluded).
- *
- * @package AxismundiActors
- */
-
+/** User avatars and multiple Actor profile images must remain independent. */
 defined( 'ABSPATH' ) || exit( 1 );
-
-require_once dirname( __DIR__ ) . '/includes/repository.php';
-require_once dirname( __DIR__ ) . '/includes/avatar.php';
-require_once ABSPATH . 'wp-admin/includes/user.php';
-
 global $wpdb;
-$ax_av_results = array();
-$ax_av_ids     = array();
-$ax_av_users   = array();
-$ax_av_atts    = array();
-
-/**
- * @param array  $results Accumulator.
- * @param string $label Contract.
- * @param bool   $cond Holds.
- * @return void
- */
-function ax_av_assert( array &$results, string $label, bool $cond ) : void {
-	$results[] = $cond;
-	// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI test output.
-	printf( "[%s] %s\n", $cond ? 'PASS' : 'FAIL', $label );
-}
-
+$checks = 0;
+$assert = static function ( bool $ok, string $label ) use ( &$checks ) { ++$checks; if ( ! $ok ) { throw new RuntimeException( $label ); } echo "PASS {$label}\n"; };
+$original_user = get_current_user_id();
+$actors = array(); $attachments = array();
+$uid = wp_insert_user( array( 'user_login' => 'axavatar_' . strtolower( wp_generate_password( 12, false, false ) ), 'user_pass' => wp_generate_password(), 'role' => 'editor' ) );
+if ( is_wp_error( $uid ) ) { throw new RuntimeException( $uid->get_error_message() ); }
 try {
-	axismundi_actors_install();
-
-	$uid = (int) wp_insert_user( array( 'user_login' => 'ax_av_alice', 'user_pass' => wp_generate_password(), 'user_email' => 'ax-av-alice@example.test', 'role' => 'author' ) );
-	$ax_av_users[] = $uid;
-	$actor = axismundi_actors_ensure_for_user( $uid );
-	$ax_av_ids[] = $actor->get_identity_id();
-
-	// No avatar yet → get_avatar_data keeps the core (Gravatar) URL.
-	$before = get_avatar_data( $uid, array( 'size' => 96 ) );
-	ax_av_assert( $ax_av_results, 'with no actor avatar the WordPress avatar is unchanged', false !== strpos( (string) $before['url'], 'gravatar.com' ) );
-
-	// Give the actor an image avatar with a resolvable file.
-	$img = (int) wp_insert_attachment( array( 'post_title' => 'Ava', 'post_status' => 'inherit', 'post_mime_type' => 'image/jpeg', 'post_author' => $uid ) );
-	$ax_av_atts[] = $img;
-	update_post_meta( $img, '_wp_attached_file', '2026/01/ax-avatar.jpg' );
-	axismundi_actors_set_profile_media( $actor, 'avatar', $img, $uid );
-	$expected = wp_get_attachment_url( $img );
-
-	// get_avatar_data now returns the actor avatar for a user id.
-	$after = get_avatar_data( $uid, array( 'size' => 96 ) );
-	ax_av_assert( $ax_av_results, 'the actor avatar overrides the WordPress avatar (by user id)', $expected === $after['url'] && true === $after['found_avatar'] );
-
-	// It resolves through the same shapes get_avatar accepts.
-	$by_email = get_avatar_data( 'ax-av-alice@example.test', array() );
-	$post_id  = (int) wp_insert_post( array( 'post_title' => 'p', 'post_status' => 'publish', 'post_type' => 'post', 'post_author' => $uid ) );
-	$ax_av_atts[] = $post_id; // cleaned up as a post below via wp_delete_post through attachments loop? no — track separately.
-	$by_post  = get_avatar_data( get_post( $post_id ), array() );
-	ax_av_assert( $ax_av_results, 'the avatar resolves from an email and from a post author', $expected === $by_email['url'] && $expected === $by_post['url'] );
-	wp_delete_post( $post_id, true );
-	array_pop( $ax_av_atts );
-
-	// The site-wide filter can turn it off.
-	add_filter( 'axismundi_actors_use_actor_avatar', '__return_false' );
-	$disabled = get_avatar_data( $uid, array( 'size' => 96 ) );
-	remove_filter( 'axismundi_actors_use_actor_avatar', '__return_false' );
-	ax_av_assert( $ax_av_results, 'the axismundi_actors_use_actor_avatar filter can disable the override', false !== strpos( (string) $disabled['url'], 'gravatar.com' ) );
-
-	// A user without an actor is untouched.
-	$plain = (int) wp_insert_user( array( 'user_login' => 'ax_av_bob', 'user_pass' => wp_generate_password(), 'role' => 'subscriber' ) );
-	$ax_av_users[] = $plain;
-	$plain_data = get_avatar_data( $plain, array() );
-	ax_av_assert( $ax_av_results, 'a user with no actor keeps the default avatar', false !== strpos( (string) $plain_data['url'], 'gravatar.com' ) );
-
+	wp_set_current_user( $uid );
+	$assert( false === has_filter( 'get_avatar_data', 'axismundi_actors_filter_avatar_data' ), 'Actor override is not registered on WordPress avatars' );
+	$args = array( 'url' => 'https://avatar.example/user.png', 'found_avatar' => false );
+	$assert( $args === axismundi_actors_filter_avatar_data( $args, $uid ), 'Legacy avatar callable is inert' );
+	$before = get_avatar_url( $uid );
+	foreach ( array( 'a', 'b' ) as $key ) {
+		$actor = axismundi_actors_create_local( array( 'actor_type' => 'Person', 'initial_owner_user_id' => $uid, 'preferred_username' => 'av' . $key . strtolower( wp_generate_password( 10, false, false ) ) ) );
+		if ( is_wp_error( $actor ) ) { throw new RuntimeException( $actor->get_error_message() ); }
+		$actors[] = $actor;
+		$assert( '' === axismundi_actors_avatar_url( $actor ) && '' === axismundi_actors_avatar_html( $actor ) && '' === axismundi_actors_mention_avatar_url( $actor ), 'Empty Actor image does not fall back to User or Gravatar: ' . $key );
+		$wire = axismundi_op_actor_transform( $actor );
+		$assert( ! isset( $wire['icon'] ), 'Actor projection does not infer a User icon: ' . $key );
+		$image = wp_insert_attachment( array( 'post_title' => 'Avatar fixture', 'post_status' => 'inherit', 'post_mime_type' => 'image/jpeg', 'post_author' => $uid ) );
+		if ( is_wp_error( $image ) || ! $image ) { throw new RuntimeException( 'Could not create image fixture' ); }
+		$attachments[] = $image;
+		update_post_meta( $image, '_wp_attached_file', '2026/01/' . wp_generate_uuid4() . '.jpg' );
+		$result = axismundi_actors_set_profile_media( $actor, 'avatar', $image, $uid );
+		if ( is_wp_error( $result ) || false === $result ) { throw new RuntimeException( 'Could not set Actor image' ); }
+		$actor = axismundi_actors_get_by_identity( $actor->get_identity_id() );
+		$assert( wp_get_attachment_url( $image ) === axismundi_actors_avatar_url( $actor ), 'Explicit Actor image remains available: ' . $key );
+		$selected = axismundi_actors_set_acting_actor( $uid, $actor->get_identity_id() );
+		$acting = axismundi_actors_acting_actor( $uid );
+		$assert( ! is_wp_error( $selected ) && $acting && $actor->get_identity_id() === $acting->get_identity_id(), 'Fixture switches acting Actor: ' . $key );
+		$assert( $before === get_avatar_url( $uid ) && $before === get_avatar_url( get_userdata( $uid ) ), 'User avatar is unchanged after Actor image and selection: ' . $key );
+	}
+	wp_set_current_user( 0 );
+	$assert( $before === get_avatar_url( $uid ), 'Anonymous viewer receives the same User avatar' );
 } finally {
-	foreach ( $ax_av_atts as $att ) {
-		if ( $att && get_post( $att ) ) {
-			wp_delete_attachment( (int) $att, true );
-		}
+	foreach ( $actors as $actor ) {
+		$id = $actor->get_identity_id();
+		foreach ( array( axismundi_actors_managers_table(), axismundi_actors_texts_table(), axismundi_actors_keys_table(), axismundi_actors_signing_keys_table(), axismundi_actors_addresses_table(), axismundi_actors_endpoints_table(), axismundi_actors_fetch_state_table() ) as $table ) { $wpdb->delete( $table, array( 'identity_id' => $id ) ); }
+		$wpdb->delete( axismundi_actors_meta_table(), array( 'actor_id' => $id ) );
+		$wpdb->delete( axismundi_actors_actors_table(), array( 'id' => $id ) );
 	}
-	foreach ( array_unique( $ax_av_ids ) as $iid ) {
-		$wpdb->delete( axismundi_actors_addresses_table(), array( 'identity_id' => (int) $iid ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
-		$wpdb->delete( axismundi_actors_actors_table(), array( 'identity_id' => (int) $iid ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
-		$wpdb->delete( axismundi_actors_identities_table(), array( 'id' => (int) $iid ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
-	}
-	foreach ( $ax_av_users as $u ) {
-		if ( get_userdata( $u ) ) {
-			wp_delete_user( $u );
-		}
-	}
+	foreach ( $attachments as $image ) { wp_delete_attachment( $image, true ); }
+	require_once ABSPATH . 'wp-admin/includes/user.php';
+	wp_delete_user( $uid );
+	wp_set_current_user( $original_user );
 }
-
-$ax_av_failures = count( array_filter( $ax_av_results, static fn( bool $r ) : bool => ! $r ) );
-// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI test output.
-printf( "\n== %d checks, %d failed ==\n", count( $ax_av_results ), $ax_av_failures );
-
-if ( class_exists( 'WP_CLI' ) ) {
-	WP_CLI::halt( $ax_av_failures > 0 ? 1 : 0 );
-}
-exit( $ax_av_failures > 0 ? 1 : 0 );
+echo "== {$checks} checks, 0 failed ==\n";

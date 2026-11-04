@@ -6,7 +6,6 @@ $allowed = array(
 	'axismundi-actors/includes/admin.php::axismundi_actors_can_manage_user_actor' => 'E: legacy User activation adapter delegates existing Accounts to the Account gate',
 	'axismundi-actors/includes/admin.php::axismundi_actors_profile_panel' => 'D: edited WordPress User summary',
 	'axismundi-actors/includes/admin.php::axismundi_actors_users_column_content' => 'D: fixed Users-table row',
-	'axismundi-actors/includes/avatar.php::axismundi_actors_filter_avatar_data' => 'D: WordPress User avatar',
 	'axismundi-actors/includes/repository.php::axismundi_actors_ensure_for_user' => 'D: User-bound compatibility identity',
 	'axismundi-actors/includes/acting-actor.php::axismundi_actors_default_acting_actor' => 'E: disabled-rollout resolver',
 	'axismundi-actors/includes/account-operations.php::axismundi_actors_legacy_current_workspace' => 'E: disabled-rollout resolver',

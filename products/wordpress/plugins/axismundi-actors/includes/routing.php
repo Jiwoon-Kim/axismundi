@@ -663,8 +663,7 @@ function axismundi_actors_avatar_url( Axismundi_Actor $actor, int $size = 96 ) :
 	if ( $attachment_id > 0 ) {
 		return (string) wp_get_attachment_image_url( $attachment_id, array( $size, $size ) );
 	}
-	$user_id = $actor->get_local_user_id();
-	return $user_id ? (string) get_avatar_url( $user_id, array( 'size' => $size ) ) : '';
+	return '';
 }
 
 /**
@@ -859,8 +858,8 @@ function axismundi_actors_profile_data( Axismundi_Actor $actor ) : array {
 }
 
 /**
- * Avatar markup: the actor's avatar attachment (with srcset), else a core avatar
- * for a local Person, else the site icon for the site actor, else ''.
+ * Actor-owned avatar markup, with a site icon only for the system Actor.
+ * Never derive a Person image from its operating WordPress User.
  *
  * @param Axismundi_Actor $actor Actor.
  * @param int             $size  Square size in px.
@@ -884,8 +883,7 @@ function axismundi_actors_avatar_html( Axismundi_Actor $actor, int $size = 96 ) 
 	if ( $attachment_id > 0 ) {
 		return (string) wp_get_attachment_image( $attachment_id, array( $size, $size ), false, array( 'class' => 'ax-actor-profile__avatar', 'alt' => '' ) );
 	}
-	$user_id = $actor->get_local_user_id();
-	return $user_id ? (string) get_avatar( $user_id, $size, '', '', array( 'class' => 'ax-actor-profile__avatar' ) ) : '';
+	return '';
 }
 
 /**

@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.1.8-dev
+Stable tag: 0.1.8
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, identity, actor, federation
@@ -116,6 +116,13 @@ not done here. Where another plugin performs that federation, it discloses it it
 section covers only what this plugin's own code requests.
 
 == Changelog ==
+
+= 0.1.8 =
+* Separate Actor-owned identifiers and profile evidence from Object identifiers, preserving existing Actor IDs and URIs during migration.
+* Support multiple Accounts per WordPress User, explicit operating permissions and a separate system Application Actor.
+* Add Community federation profiles, ordered moderator collections, featured collections and explicit legacy Community migration.
+* Add administrator-only storage diagnostics and keep WordPress User avatars independent from Actor profile images.
+* Sanitize the Account selection nonce before verification.
 
 = 0.1.3 =
 * Extend the shared identity namespace for Object projections while keeping identity

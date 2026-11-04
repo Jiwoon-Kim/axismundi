@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.3.2-dev
+Stable tag: 0.3.2
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -58,6 +58,10 @@ The plugin's own Unicode fallback makes no external requests: the fonts and the 
 * Unicode Emoji 17.0 RGI catalogue, derived from Unicode's `emoji-test.txt`. Unicode License; see `assets/unicode/catalogue/rgi-17.0.LICENSE.txt`.
 
 == Changelog ==
+
+= 0.3.2 =
+* Correct custom emoji federation representation in outbound content.
+* Separate vocabulary namespace registration from term registration and declare only the emoji terms used by a document.
 
 = 0.3.1 =
 * The emoji picker now appears in the block editor with Axismundi Emoji alone. In 0.3.0 it appeared only where another Axismundi plugin asked for it.

@@ -72,6 +72,13 @@ try {
 	$assert( is_array( $view ) && 2 === count( get_object_vars( $view['accounts'] ) ) && '' === $view['current'], 'JMAP projects both Accounts without selecting the first' );
 	$assert( ! isset( $view['accounts']->{'a' . $first->get_identity_id()}->accountCapabilities ), 'Actor selector does not invent protocol capabilities' );
 	$error( apply_account_selection( 'select', 'a' . $first->get_identity_id(), '' ), 'ax_jmap_selection_nonce', 'Missing nonce rejected' );
+	$observed_nonce = null;
+	$observe_nonce = static function ( $value ) use ( &$observed_nonce ) { $observed_nonce = $value; };
+	add_action( 'wp_verify_nonce_failed', $observe_nonce );
+	try {
+		$error( apply_account_selection( 'select', 'a' . $first->get_identity_id(), '<b>invalid</b>' ), 'ax_jmap_selection_nonce', 'Sanitized invalid nonce remains rejected' );
+		$assert( 'invalid' === $observed_nonce, 'Nonce verifier receives sanitized text' );
+	} finally { remove_action( 'wp_verify_nonce_failed', $observe_nonce ); }
 	$error( apply_account_selection( 'select', 'a' . $foreign->get_identity_id(), $nonce ), 'ax_jmap_selection_account', 'Other User Account rejected' );
 	$error( apply_account_selection( 'select', 'a0' . $first->get_identity_id(), $nonce ), 'ax_jmap_selection_account', 'Malformed Account ID rejected without coercion' );
 	$error( apply_account_selection( 'unknown', '', $nonce ), 'ax_jmap_selection_operation', 'Unknown operation rejected' );

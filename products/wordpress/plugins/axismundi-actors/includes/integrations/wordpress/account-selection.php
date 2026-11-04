@@ -64,7 +64,7 @@ function apply_account_selection( string $operation, string $account_id, string 
 	if ( is_wp_error( $session ) ) {
 		return $session;
 	}
-	if ( ! wp_verify_nonce( $nonce, 'ax_jmap_account_selection' ) ) {
+	if ( ! wp_verify_nonce( sanitize_text_field( $nonce ), 'ax_jmap_account_selection' ) ) {
 		return new \WP_Error( 'ax_jmap_selection_nonce', __( 'The Account selection request has expired. Reload the page.', 'axismundi-jmap' ) );
 	}
 	if ( 'clear' === $operation ) {

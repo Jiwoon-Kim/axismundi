@@ -67,6 +67,15 @@ try {
 	$page_request->set_param( 'object', $wp_uri ); $page_request->set_param( 'page', 1 );
 	$page_response = rest_do_request( $page_request );
 	$assert( 200 === $root_response->get_status() && $wp_document['replies'] === ( $root_data['id'] ?? '' ) && 200 === $page_response->get_status() && in_array( $reply_uri, $page_response->get_data()['orderedItems'] ?? array(), true ), 'WordPress advertised replies root and page resolve to the C2S child' );
+	$patch = array( 'type' => 'Update', 'actor' => $actor->get_uri(), 'object' => array( 'id' => $uri, 'content' => '<p>Revised</p>', 'summary' => null ) );
+	$update = axismundi_act_submit_outbox( $user, $actor, $patch, 'update-note' );
+	$updated = axismundi_op_get_local_object( $uri );
+	$assert( $update instanceof Axismundi_Activity && 'Update' === $update->get_type() && $uri === $updated['document']['id'] && '<p>Revised</p>' === $updated['document']['content'] && ! array_key_exists( 'summary', $updated['document'] ), 'Partial Update preserves identity and removes explicit null' );
+	$assert( $updated['document']['to'] === $row['document']['to'] && $updated['document']['tag'] === $row['document']['tag'] && $updated['document']['contentMap'] === $row['document']['contentMap'], 'Partial Update preserves omitted audience, tags and translations' );
+	$retry = axismundi_act_submit_outbox( $user, $actor, $patch, 'update-note' );
+	$assert( $retry instanceof Axismundi_Activity && $update->get_uri() === $retry->get_uri() && $updated['version'] === axismundi_op_get_local_object( $uri )['version'], 'Update retry does not write a second version' );
+	$patch['object']['to'] = array();
+	$assert( is_wp_error( axismundi_act_submit_outbox( $user, $actor, $patch ) ), 'Update rejects audience edits' );
 	$deleted = axismundi_act_submit_outbox( $user, $actor, array( 'type' => 'Delete', 'actor' => $actor->get_uri(), 'object' => $uri ) );
 	$tombstone = axismundi_op_get_local_object( $uri );
 	$assert( $deleted instanceof Axismundi_Activity && 'tombstone' === $tombstone['object_status'] && 4 === count( $tombstone['document'] ), 'Delete leaves only the minimal Tombstone body' );

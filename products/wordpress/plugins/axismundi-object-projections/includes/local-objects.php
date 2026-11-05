@@ -119,6 +119,23 @@ function axismundi_op_write_local_object( array $document, string $uuid ) {
 	return axismundi_op_project_local_object( $row ) ? $row : new WP_Error( 'ax_op_local_projection', 'Local Object projection failed.' );
 }
 
+/** Replace the current body inside the caller's ledger transaction. */
+function axismundi_op_update_local_object( array $row, array $document ) {
+	global $wpdb;
+	$json = wp_json_encode( $document, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
+	if ( ! is_string( $json ) || strlen( $json ) > 900000 ) { return new WP_Error( 'ax_op_local_size', 'Object exceeds the local body limit.', array( 'status' => 413 ) ); }
+	$updated = $wpdb->update( axismundi_op_local_objects_table(), array(
+		'document_json' => $json,
+		'document_hash' => hash( 'sha256', $json ),
+		'version' => (int) $row['version'] + 1,
+		'updated_at' => current_time( 'mysql', true ),
+	), array( 'id' => $row['id'], 'version' => $row['version'], 'object_status' => 'active' ) );
+	if ( false === $updated ) { return new WP_Error( 'ax_op_local_write', 'Local Object update failed.', array( 'status' => 500 ) ); }
+	if ( 1 !== $updated ) { return new WP_Error( 'ax_op_local_version', 'Object version changed.', array( 'status' => 409 ) ); }
+	$row['document'] = $document;
+	return axismundi_op_project_local_object( $row ) ? true : new WP_Error( 'ax_op_local_projection', 'Local Object projection failed.', array( 'status' => 500 ) );
+}
+
 /** All mandatory projections participate in the caller's transaction. */
 function axismundi_op_project_local_object( array $row ) : bool {
 	global $wpdb;

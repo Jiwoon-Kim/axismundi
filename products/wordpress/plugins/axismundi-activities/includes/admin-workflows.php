@@ -161,10 +161,15 @@ function axismundi_act_render_composer() : void {
 	if ( is_wp_error( $actor ) || 'Person' !== $actor->get_type() ) {
 		echo '<div class="notice notice-warning"><p>' . esc_html( is_wp_error( $actor ) ? $actor->get_error_message() : __( 'Select an active Person Account.', 'axismundi-activities' ) ) . '</p></div></div>'; return;
 	}
+	$edit_uuid = isset( $_GET['edit_note'] ) && is_string( $_GET['edit_note'] ) ? sanitize_text_field( wp_unslash( $_GET['edit_note'] ) ) : '';
+	$edit = preg_match( '/^[a-f0-9-]{36}$/D', $edit_uuid ) ? axismundi_op_get_local_object( axismundi_op_local_object_uri( $edit_uuid ) ) : null;
+	if ( $edit && ( 'active' !== $edit['object_status'] || 'Note' !== $edit['object_type'] || true !== axismundi_act_outbox_authorize( get_current_user_id(), $author = axismundi_actors_get_by_uri( $edit['attributed_to_uri'] ) ) ) ) { $edit = null; }
+	if ( $edit ) { $actor = $author; }
 	echo '<p><strong>' . esc_html( $actor->get_display_name() ) . '</strong> <code>' . esc_html( $actor->get_uri() ) . '</code></p>';
-	echo '<label for="ax-c2s-activity">' . esc_html__( 'Activity', 'axismundi-activities' ) . '</label> <select id="ax-c2s-activity"><option value="Create">Create</option></select> ';
+	echo '<label for="ax-c2s-activity">' . esc_html__( 'Activity', 'axismundi-activities' ) . '</label> <select id="ax-c2s-activity"><option value="Create">Create</option><option value="Update"' . selected( (bool) $edit, true, false ) . '>Update</option></select> ';
 	echo '<label for="ax-c2s-object-type">' . esc_html__( 'Object type', 'axismundi-activities' ) . '</label> <select id="ax-c2s-object-type"><option value="Note">Note</option></select>';
 	echo '<form id="ax-c2s-composer"><table class="form-table"><tr><th><label for="ax-c2s-parent">' . esc_html__( 'Parent Object URI (optional)', 'axismundi-activities' ) . '</label></th><td><input class="large-text" type="url" id="ax-c2s-parent"></td></tr><tr><th><label for="ax-c2s-content">' . esc_html__( 'Note', 'axismundi-activities' ) . '</label></th><td><textarea class="large-text" id="ax-c2s-content" rows="8" required></textarea></td></tr>';
+	echo '<tr hidden><th><label for="ax-c2s-target">' . esc_html__( 'Object URI', 'axismundi-activities' ) . '</label></th><td><input type="url" class="large-text" id="ax-c2s-target" value="' . esc_attr( $edit['object_uri'] ?? '' ) . '"' . ( $edit ? ' readonly' : '' ) . '></td></tr>';
 	echo '<tr><th><label for="ax-c2s-visibility">' . esc_html__( 'Audience', 'axismundi-activities' ) . '</label></th><td><select id="ax-c2s-visibility" required><option value="">' . esc_html__( 'Select audience', 'axismundi-activities' ) . '</option>';
 	foreach ( array( 'public' => __( 'Public', 'axismundi-activities' ), 'unlisted' => __( 'Quiet public', 'axismundi-activities' ), 'followers' => __( 'Followers', 'axismundi-activities' ), 'mentioned' => __( 'Mentioned only', 'axismundi-activities' ) ) as $value => $label ) {
 		echo '<option value="' . esc_attr( $value ) . '">' . esc_html( $label ) . '</option>';
@@ -182,6 +187,8 @@ function axismundi_act_render_composer() : void {
 	wp_enqueue_script( 'axismundi-c2s-composer', plugins_url( 'assets/c2s-composer.js', dirname( __DIR__ ) . '/axismundi-activities.php' ), array(), AXISMUNDI_ACTIVITIES_VERSION, true );
 	wp_localize_script( 'axismundi-c2s-composer', 'axismundiC2SMentions', array(
 		'actor' => $actor->get_uri(),
+		'editContent' => $edit['document']['content'] ?? '',
+		'updateLabel' => __( 'Update Note', 'axismundi-activities' ),
 		'activityLabel' => __( 'Activity URI:', 'axismundi-activities' ),
 		'objectLabel' => __( 'Object URI:', 'axismundi-activities' ),
 		'mentionRequired' => __( 'Mentioned only requires at least one mentioned Actor.', 'axismundi-activities' ),

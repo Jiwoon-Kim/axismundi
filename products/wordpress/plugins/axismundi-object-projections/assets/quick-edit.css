@@ -1,0 +1,35 @@
+.inline-edit-row fieldset.axismundi-op-quick-edit {
+	clear: both;
+	float: none;
+	width: auto;
+	padding: 8px 12px;
+}
+
+.axismundi-op-quick-edit legend {
+	font-weight: 600;
+}
+
+.inline-edit-row .axismundi-op-quick-edit .inline-edit-col {
+	display: grid;
+	gap: 8px;
+	max-width: 32rem;
+	padding: 0;
+}
+
+.inline-edit-row .axismundi-op-quick-edit .inline-edit-col > label {
+	float: none;
+	margin: 0;
+}
+
+.inline-edit-row .axismundi-op-quick-edit label > .title,
+.inline-edit-row .axismundi-op-quick-edit label > .input-text-wrap {
+	display: block;
+	float: none;
+	width: auto;
+	margin: 0;
+}
+
+.inline-edit-row .axismundi-op-quick-edit select,
+.inline-edit-row .axismundi-op-quick-edit textarea {
+	max-width: 100%;
+}

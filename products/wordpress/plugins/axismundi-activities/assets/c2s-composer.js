@@ -14,6 +14,28 @@
     const button = form.querySelector('button[type="submit"], input[type="submit"]');
     const preview = document.getElementById('ax-c2s-preview');
     const requestView = document.getElementById('ax-c2s-request');
+    const target = document.getElementById('ax-c2s-target');
+    const activityType = document.getElementById('ax-c2s-activity');
+    const createFields = [parent, visibility, mentions, extraTo, recipients];
+    const originalLabel = button.value;
+    function syncMode() {
+        if (!target) return;
+        const updating = activityType.value === 'Update';
+        target.closest('tr').hidden = !updating;
+        target.disabled = !updating;
+        target.required = updating;
+        createFields.forEach(field => {
+            field.disabled = updating;
+            field.closest('tr').hidden = updating;
+        });
+        button.value = updating ? window.axismundiC2SMentions.updateLabel : originalLabel;
+        if (requestView) requestView.hidden = true;
+    }
+    if (target) {
+        if (target.value) content.value = window.axismundiC2SMentions.editContent;
+        activityType.addEventListener('change', syncMode);
+        syncMode();
+    }
     let intent = '';
     let retryKey = '';
     let busy = false;
@@ -28,7 +50,12 @@
             if (!/^https?:$/.test(url.protocol) || url.username || url.password || value === publicUri) throw new Error();
             return value;
         });
-        let mentioned, to, cc;
+        const updating = activityType.value === 'Update';
+        let mentioned = [], note;
+        if (updating) {
+            note = {id: target.value.trim(), type: 'Note', content: content.value};
+        } else {
+        let to, cc;
         try {
             mentioned = [...new Set(mentions.value.split(',').map(value => value.trim().toLowerCase()).filter(Boolean))];
             to = readActors(extraTo);
@@ -53,15 +80,17 @@
         // Explicit To wins over the default Cc for Actors; keep the preset's Public placement.
         to = [...new Set([...presetTo, ...to.filter(uri => uri !== config.followers)])];
         cc = [...new Set([...presetCc, ...cc.filter(uri => uri !== config.followers)])].filter(uri => !to.includes(uri));
-        const note = {
+        note = {
             type: document.getElementById('ax-c2s-object-type').value,
             content: '<p>' + escaped.innerHTML.replace(/\r?\n/g, '<br>') + '</p>',
             to,
             cc
         };
         if (parent.value.trim()) note.inReplyTo = parent.value.trim();
+        }
         busy = true;
         button.disabled = true;
+        if (target) activityType.disabled = target.disabled = true;
         if (preview) preview.disabled = true;
         parent.readOnly = true;
         content.readOnly = true;
@@ -91,7 +120,7 @@
                     [actor.uri, {type: 'Mention', href: actor.uri, name: actor.mentionName}])).values()];
             }
             const body = JSON.stringify({
-                type: document.getElementById('ax-c2s-activity').value,
+                type: activityType.value,
                 actor: window.axismundiC2SMentions.actor,
                 object: note
             }, null, 2);
@@ -137,7 +166,7 @@
                     result.append(document.createElement('br'), link);
                 }
             }
-            form.reset();
+            if (!updating) form.reset();
             intent = '';
             retryKey = '';
         } catch (error) {
@@ -149,6 +178,12 @@
             parent.readOnly = false;
             content.readOnly = false;
             visibility.disabled = mentions.readOnly = recipients.readOnly = extraTo.readOnly = false;
+            if (target) {
+                activityType.disabled = false;
+                const wasHidden = requestView?.hidden;
+                syncMode();
+                if (requestView) requestView.hidden = wasHidden;
+            }
         }
     }
     form.addEventListener('submit', function (event) {

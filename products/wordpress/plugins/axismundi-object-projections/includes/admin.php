@@ -111,7 +111,7 @@ function axismundi_op_render_local_objects_admin() : void {
 		$status = 'mine' === $view ? '' : $view;
 		$actor = 'mine' === $view && function_exists( 'axismundi_actors_get_for_user' ) ? axismundi_actors_get_for_user( get_current_user_id() ) : null;
 		$author_hash = $actor ? hash( 'sha256', $actor->get_uri() ) : '';
-		$rows = $wpdb->get_results( $wpdb->prepare( 'SELECT id, local_uuid, object_uri, object_type, object_status, attributed_to_uri, publicly_readable, document_json, published_at, updated_at, deleted_at FROM %i WHERE (%d = 0 OR id < %d) AND (%s = \'\' OR object_status = %s) AND (%d = 0 OR attributed_to_uri_hash = %s) ORDER BY id DESC LIMIT 51', $table, $before, $before, $status, $status, (int) ( 'mine' === $view ), $author_hash ), ARRAY_A );
+		$rows = $wpdb->get_results( $wpdb->prepare( 'SELECT id, local_uuid, object_uri, object_type, object_status, attributed_to_uri, publicly_readable, document_json, version, published_at, updated_at, deleted_at FROM %i WHERE (%d = 0 OR id < %d) AND (%s = \'\' OR object_status = %s) AND (%d = 0 OR attributed_to_uri_hash = %s) ORDER BY id DESC LIMIT 51', $table, $before, $before, $status, $status, (int) ( 'mine' === $view ), $author_hash ), ARRAY_A );
 	}
 	$columns = axismundi_op_local_admin_columns();
 	$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
@@ -125,10 +125,16 @@ function axismundi_op_render_local_objects_admin() : void {
 		$doc = json_decode( $row['document_json'], true );
 		$values = array( 'actor' => $row['attributed_to_uri'], 'content' => wp_trim_words( wp_strip_all_tags( (string) ( $doc['content'] ?? '' ) ), 24 ), 'inreplyto' => implode( ', ', axismundi_op_application_recipient_uris( $doc['inReplyTo'] ?? null ) ), 'type' => $row['object_type'], 'status' => $row['object_status'], 'access' => $row['publicly_readable'] ? __( 'Publicly readable', 'axismundi-object-projections' ) : __( 'Restricted', 'axismundi-object-projections' ), 'published' => $row['published_at'], 'updated' => $row['updated_at'], 'deleted' => $row['deleted_at'] );
 		echo '<tr>';
+		$values['updated'] = (int) $row['version'] > 1 && ! empty( $doc['updated'] ) ? $row['updated_at'] : '';
 		foreach ( $values as $key => $value ) {
 			echo '<td style="overflow-wrap:anywhere" class="column-' . esc_attr( $key ) . ( in_array( $key, $hidden, true ) ? ' hidden' : '' ) . '">';
 			if ( 'content' === $key ) {
 				echo '<a href="' . esc_url( axismundi_op_local_admin_url( $row['local_uuid'] ) ) . '">' . esc_html( $value ?: $row['object_uri'] ) . '</a>';
+				if ( 'active' === $row['object_status'] && 'Note' === $row['object_type'] && function_exists( 'axismundi_act_outbox_authorize' )
+					&& true === axismundi_act_outbox_authorize( get_current_user_id(), axismundi_actors_get_by_uri( $row['attributed_to_uri'] ) ) ) {
+					$edit = add_query_arg( array( 'page' => 'axismundi-c2s-composer', 'edit_note' => $row['local_uuid'] ), admin_url( 'tools.php' ) );
+					echo '<div class="row-actions visible"><a href="' . esc_url( $edit ) . '">' . esc_html__( 'Edit', 'axismundi-object-projections' ) . '</a></div>';
+				}
 			} else { echo esc_html( $value ?: '-' ); }
 			echo '</td>';
 		}

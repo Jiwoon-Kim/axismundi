@@ -38,7 +38,7 @@ function axismundi_act_record_outbound_quote_request( array $args ) {
 	$author     = axismundi_act_uri( (string) ( $args['author_actor_uri'] ?? '' ) );
 	$target     = axismundi_act_uri( (string) ( $args['target_author_uri'] ?? '' ) );
 	$generation = max( 1, (int) ( $args['generation'] ?? 1 ) );
-	$direction  = in_array( ( $args['direction'] ?? '' ), array( 'outbound', 'local' ), true ) ? (string) $args['direction'] : 'outbound';
+	$direction  = in_array( ( $args['direction'] ?? '' ), array( 'outbound' ), true ) ? (string) $args['direction'] : 'outbound';
 	// The quoting Note must be inlined as a finalized object so a private, held Note
 	// can be reviewed without a signed dereference; a bare URI is refused here so the
 	// contract cannot be broken by a caller mistake.
@@ -102,7 +102,7 @@ function axismundi_act_get_outbound_quote_request( string $quoting_uri, string $
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed table and prepared values.
 		$rows = (array) $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT * FROM {$table} WHERE id < %d AND activity_type = 'QuoteRequest' AND direction IN ('outbound','local') AND actor_uri_hash = %s AND actor_uri = %s AND object_uri_hash = %s AND object_uri = %s AND instrument_uri_hash = %s AND instrument_uri = %s ORDER BY id DESC LIMIT {$page}",
+				"SELECT * FROM {$table} WHERE id < %d AND activity_type = 'QuoteRequest' AND direction = 'outbound' AND actor_uri_hash = %s AND actor_uri = %s AND object_uri_hash = %s AND object_uri = %s AND instrument_uri_hash = %s AND instrument_uri = %s ORDER BY id DESC LIMIT {$page}",
 				$cursor,
 				hash( 'sha256', $author ),
 				$author,
@@ -173,7 +173,7 @@ function axismundi_act_outbound_quote_decision( string $request_uri ) : ?array {
 	$request = axismundi_act_get( $request_uri );
 	if ( ! $request instanceof Axismundi_Activity
 		|| 'QuoteRequest' !== $request->get_type()
-		|| ! in_array( $request->get_direction(), array( 'outbound', 'local' ), true )
+		|| ! in_array( $request->get_direction(), array( 'outbound' ), true )
 	) {
 		return null;
 	}
@@ -203,7 +203,7 @@ function axismundi_act_outbound_quote_decision( string $request_uri ) : ?array {
 		foreach ( $rows as $row ) {
 			$cursor   = max( $cursor, (int) $row['id'] );
 			$activity = axismundi_act_hydrate( $row );
-			if ( ! in_array( $activity->get_direction(), array( 'inbound', 'outbound', 'local' ), true ) ) {
+			if ( ! in_array( $activity->get_direction(), array( 'inbound', 'outbound' ), true ) ) {
 				continue;
 			}
 			$decider   = $activity->get_actor_uri();
@@ -242,7 +242,7 @@ function axismundi_act_outbound_quote_decision( string $request_uri ) : ?array {
  */
 function axismundi_act_maybe_decide_outbound_quote( Axismundi_Activity $activity ) : void {
 	if ( ! in_array( $activity->get_type(), array( 'Accept', 'Reject' ), true )
-		|| ! in_array( $activity->get_direction(), array( 'inbound', 'outbound', 'local' ), true )
+		|| ! in_array( $activity->get_direction(), array( 'inbound', 'outbound' ), true )
 	) {
 		return;
 	}

@@ -201,7 +201,6 @@ function axismundi_act_vote_on_object( string $type, Axismundi_Actor $actor, str
 	if ( $recipient instanceof Axismundi_Actor && $recipient->get_uri() !== $actor->get_uri() ) {
 		$payload['to'] = array( $recipient->get_uri() );
 	}
-	$direction = $recipient instanceof Axismundi_Actor && ! $recipient->is_local() ? 'outbound' : 'local';
 	if ( $recipient instanceof Axismundi_Actor && $recipient->get_uri() === $actor->get_uri() ) {
 		/*
 		 * A self-vote still changes the public representation cached by the Actor's remote
@@ -212,12 +211,11 @@ function axismundi_act_vote_on_object( string $type, Axismundi_Actor $actor, str
 		$followers = (string) apply_filters( 'axismundi_act_actor_followers_uri', '', $actor );
 		if ( '' !== $followers ) {
 			$payload['cc'] = array( $followers );
-			$direction     = 'outbound';
 		}
 	}
 	$cycle  = axismundi_act_vote_cycle_count( $type, $actor->get_uri(), $object ) + 1;
 	$source = strtolower( $type ) . ':' . hash( 'sha256', $actor->get_uri() ) . ':' . hash( 'sha256', $object ) . ':' . $cycle;
-	return axismundi_act_record_source_activity( $payload, $direction, $source );
+	return axismundi_act_record_source_activity( $payload, 'outbound', $source );
 }
 
 /**

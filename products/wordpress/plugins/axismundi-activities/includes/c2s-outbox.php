@@ -49,7 +49,7 @@ function axismundi_act_submit_outbox( int $user_id, Axismundi_Actor $actor, arra
 		if ( $group ) { $payload['type'] = axismundi_act_type( $type ); return axismundi_act_submit_moderators( $user_id, $actor, $group, $payload, $retry_key ); }
 		return axismundi_act_submit_featured( $user_id, $actor, $payload, $retry_key );
 	}
-	if ( in_array( $type, array( 'Note', 'Create', 'Delete' ), true ) ) {
+	if ( in_array( $type, array( 'Note', 'Create', 'Update', 'Delete' ), true ) ) {
 		return axismundi_act_submit_local_object( $user_id, $actor, $payload, $retry_key );
 	}
 	$reaction_actor = axismundi_act_validate_reaction_actor( $actor );
@@ -114,7 +114,7 @@ function axismundi_act_post_actor_outbox( WP_REST_Request $request ) {
 	}
 	$activity = axismundi_act_submit_outbox( get_current_user_id(), $actor, $payload, (string) $request->get_header( 'Idempotency-Key' ) );
 	if ( is_wp_error( $activity ) ) { return $activity; }
-	$object_uri = 'Create' === $activity->get_type() ? axismundi_act_member_uri( $activity->get_payload()['object'] ?? null ) : '';
+	$object_uri = in_array( $activity->get_type(), array( 'Create', 'Update' ), true ) ? axismundi_act_member_uri( $activity->get_payload()['object'] ?? null ) : '';
 	return new WP_REST_Response( '' !== $object_uri ? array( 'object' => $object_uri ) : null, 201, array( 'Location' => $activity->get_uri(), 'Cache-Control' => 'no-store' ) );
 }
 
@@ -138,7 +138,7 @@ function axismundi_act_get_liked_collection_page( string $actor_uri, int $before
 	$rows = $wpdb->get_results( $wpdb->prepare(
 		"SELECT object_uri, MAX(id) AS page_id FROM %i WHERE actor_uri_hash=%s AND actor_uri=%s
 		AND activity_type='Like' AND reaction_key IS NULL AND effective_status='active'
-		AND direction IN ('outbound','local') AND object_uri IS NOT NULL
+		AND direction = 'outbound' AND object_uri IS NOT NULL
 		GROUP BY object_uri_hash,object_uri HAVING MAX(id)<%d ORDER BY page_id DESC LIMIT %d",
 		axismundi_act_activities_table(), hash( 'sha256', $actor_uri ), $actor_uri, $before, $limit + 1
 	), ARRAY_A );

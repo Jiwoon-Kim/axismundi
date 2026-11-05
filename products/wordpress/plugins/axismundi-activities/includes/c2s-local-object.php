@@ -7,7 +7,7 @@ function axismundi_act_submit_local_object( int $user, Axismundi_Actor $actor, a
 	if ( is_wp_error( $permission ) ) { return $permission; }
 	$bare = 'Note' === ( $input['type'] ?? '' );
 	$type = $bare ? 'Create' : ( $input['type'] ?? '' );
-	if ( ! in_array( $type, array( 'Create', 'Delete' ), true ) ) { return new WP_Error( 'ax_c2s_object_type', 'Unsupported Object command.', array( 'status' => 422 ) ); }
+	if ( ! in_array( $type, array( 'Create', 'Update', 'Delete' ), true ) ) { return new WP_Error( 'ax_c2s_object_type', 'Unsupported Object command.', array( 'status' => 422 ) ); }
 	if ( ! $bare && ( $input['actor'] ?? '' ) !== $actor->get_uri() ) { return new WP_Error( 'ax_c2s_actor_mismatch', 'Actor must match the outbox.', array( 'status' => 403 ) ); }
 	if ( '' !== $key && ! preg_match( '/^[\x21-\x7e]{1,128}$/D', $key ) ) { return new WP_Error( 'ax_c2s_retry_key', 'Invalid Idempotency-Key.', array( 'status' => 400 ) ); }
 	if ( '1' !== get_option( 'ax_op_local_objects_schema', '' ) ) { return new WP_Error( 'ax_c2s_store_unavailable', 'Local storage is unavailable.', array( 'status' => 503 ) ); }
@@ -24,6 +24,16 @@ function axismundi_act_submit_local_object( int $user, Axismundi_Actor $actor, a
 		if ( is_wp_error( $note ) ) { return $note; }
 		$note = axismundi_act_prepare_community_reply( $note, $actor );
 		if ( is_wp_error( $note ) ) { return $note; }
+	} elseif ( 'Update' === $type ) {
+		$note = $input['object'] ?? null;
+		$editable = array( 'content', 'contentMap', 'name', 'nameMap', 'summary', 'summaryMap', 'sensitive' );
+		if ( ! is_array( $note ) || ! is_string( $note['id'] ?? null ) || '' === $note['id']
+			|| ( array_key_exists( 'type', $note ) && 'Note' !== $note['type'] )
+			|| array_diff( array_keys( $note ), array_merge( array( 'id', 'type' ), $editable ) )
+			|| ! array_intersect( array_keys( $note ), $editable )
+			|| array_intersect( array_keys( $input ), array( 'to', 'cc', 'bto', 'bcc', 'audience' ) ) ) {
+			return new WP_Error( 'ax_c2s_update_patch', 'Update requires a Note ID and editable fields only.', array( 'status' => 422 ) );
+		}
 	} else {
 		if ( ! is_string( $input['object'] ?? null ) ) { return new WP_Error( 'ax_c2s_delete_object', 'Delete requires a local Object URI.', array( 'status' => 400 ) ); }
 		$delete_row = axismundi_op_get_local_object( $input['object'] );
@@ -49,6 +59,26 @@ function axismundi_act_submit_local_object( int $user, Axismundi_Actor $actor, a
 		$uuid = wp_generate_uuid4();
 		$document = $note;
 		$uri = $delete_row['object_uri'] ?? axismundi_op_local_object_uri( $uuid );
+		$update_row = null;
+		if ( 'Update' === $type ) {
+			$uri = $note['id'];
+			$update_row = axismundi_op_get_local_object( $uri );
+			if ( ! $update_row || $update_row['attributed_to_uri'] !== $actor->get_uri() ) {
+				return new WP_Error( 'ax_c2s_update_actor', 'Only the recorded author may update this Object.', array( 'status' => 403 ) );
+			}
+			if ( 'active' !== $update_row['object_status'] || 'Note' !== $update_row['object_type'] ) {
+				return new WP_Error( 'ax_c2s_update_state', 'Only active Notes may be updated.', array( 'status' => 409 ) );
+			}
+			$document = $update_row['document'];
+			$patch = array_diff_key( $note, array( 'id' => true, 'type' => true ) );
+			$clean = axismundi_op_prepare_local_note( array( 'type' => 'Note' ) + $patch, $actor, $user );
+			if ( is_wp_error( $clean ) ) { return $clean; }
+			foreach ( $patch as $field => $value ) {
+				if ( null === $value ) { unset( $document[ $field ] ); }
+				else { $document[ $field ] = $clean[ $field ]; }
+			}
+			$document['updated'] = gmdate( 'c' );
+		}
 		$activity = array( 'type' => $type, 'actor' => $actor->get_uri(), 'object' => $uri );
 		if ( 'Create' === $type ) {
 			$document['id'] = $uri;
@@ -58,13 +88,17 @@ function axismundi_act_submit_local_object( int $user, Axismundi_Actor $actor, a
 			// Group forwarding must preserve a creation snapshot, including after local deletion.
 			$group = ! empty( $document['inReplyTo'] ) && ! empty( $document['audience'] ) ? axismundi_actors_get_by_uri( axismundi_act_member_uri( $document['audience'] ) ) : null;
 			if ( $group && 'Group' === $group->get_type() ) { $activity['object'] = $document; }
+		} elseif ( 'Update' === $type ) {
+			foreach ( array( 'to', 'cc', 'bto', 'bcc', 'audience' ) as $field ) { if ( isset( $document[ $field ] ) ) { $activity[ $field ] = $document[ $field ]; } }
 		} else {
 			foreach ( array( 'to', 'cc', 'bto', 'bcc', 'audience' ) as $field ) { if ( isset( $delete_row['document'][ $field ] ) ) { $activity[ $field ] = $delete_row['document'][ $field ]; } }
 		}
-		$participant = static function () use ( $type, $document, $uuid, $uri, $actor ) {
+		$participant = static function () use ( $type, $document, $uuid, $uri, $actor, $update_row ) {
 			try {
 				if ( 'Create' === $type ) {
 					$result = axismundi_op_write_local_object( $document, $uuid );
+				} elseif ( 'Update' === $type ) {
+					$result = axismundi_op_update_local_object( $update_row, $document );
 				} else {
 					$result = axismundi_op_tombstone_local_object( axismundi_op_get_local_object( $uri ), $actor->get_uri() );
 				}

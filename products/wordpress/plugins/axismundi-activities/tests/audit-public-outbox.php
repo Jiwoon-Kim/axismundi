@@ -55,8 +55,8 @@ try {
 
 	$items = axismundi_act_get_public_outbox( $actor->get_uri() );
 	$ids   = array_column( $items, 'id' );
-	ax_outbox_assert( $ax_outbox_results, 'full and compact Public audience forms are included', 2 === count( $items ) && in_array( $ax_outbox_activities[0], $ids, true ) && in_array( $ax_outbox_activities[1], $ids, true ) );
-	ax_outbox_assert( $ax_outbox_results, 'followers-only and local-only activities are excluded', ! in_array( $ax_outbox_activities[2], $ids, true ) && ! in_array( $ax_outbox_activities[3], $ids, true ) );
+	ax_outbox_assert( $ax_outbox_results, 'full and compact Public audience forms are included', 3 === count( $items ) && in_array( $ax_outbox_activities[0], $ids, true ) && in_array( $ax_outbox_activities[1], $ids, true ) );
+	ax_outbox_assert( $ax_outbox_results, 'followers-only is excluded and legacy local input is normalized to outbound', ! in_array( $ax_outbox_activities[2], $ids, true ) && in_array( $ax_outbox_activities[3], $ids, true ) && 'outbound' === axismundi_act_get( $ax_outbox_activities[3] )?->get_direction() );
 	ax_outbox_assert( $ax_outbox_results, 'public payload copies never disclose bto or bcc', ! array_filter( $items, static fn( array $item ) : bool => isset( $item['bto'] ) || isset( $item['bcc'] ) ) );
 	$stored = axismundi_act_get( $ax_outbox_activities[0] );
 	ax_outbox_assert( $ax_outbox_results, 'the authoritative ledger remains lossless after projection', $stored instanceof Axismundi_Activity && isset( $stored->get_payload()['bto'], $stored->get_payload()['bcc'] ) );

@@ -335,7 +335,7 @@ function axismundi_cal_participation_activity( array $payload, string $source_ev
 	}
 	$activity = '' !== $source_event_key
 		? axismundi_act_record_source_activity( $payload, 'local', $source_event_key )
-		: axismundi_act_record_activity( $payload, 'local' );
+		: axismundi_act_record_activity( $payload, 'outbound' );
 	if ( is_wp_error( $activity ) ) {
 		return $activity;
 	}

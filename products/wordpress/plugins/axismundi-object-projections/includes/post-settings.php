@@ -430,8 +430,9 @@ function axismundi_op_render_post_column( string $column, int $post_id ) : void 
 		esc_attr( $quote_policy ),
 		esc_attr( $visibility ),
 		esc_attr( implode( "\n", $mentions ) ),
-		esc_html( $sensitive ? __( 'Sensitive', 'axismundi-object-projections' ) : __( 'Standard', 'axismundi-object-projections' ) )
+		esc_html( $sensitive ? __( 'Sensitive', 'axismundi-object-projections' ) : '' )
 	);
+	do_action( 'axismundi_op_post_federation_actions', $post );
 }
 add_action( 'manage_post_posts_custom_column', 'axismundi_op_render_post_column', 10, 2 );
 
@@ -442,11 +443,11 @@ function axismundi_op_quick_edit_fields( string $column, string $post_type ) : v
 	}
 	wp_nonce_field( 'axismundi_op_quick_edit', 'axismundi_op_quick_edit_nonce' );
 	?>
-	<fieldset class="inline-edit-col-right axismundi-op-quick-edit">
+	<fieldset class="axismundi-op-quick-edit">
+		<legend><?php esc_html_e( 'Federation', 'axismundi-object-projections' ); ?></legend>
 		<div class="inline-edit-col">
-			<span class="title"><?php esc_html_e( 'Federation', 'axismundi-object-projections' ); ?></span>
 			<input type="hidden" name="axismundi_op_quick_edit_present" value="1" />
-			<label class="alignleft">
+			<label>
 				<input type="checkbox" name="axismundi_op_sensitive" value="1" />
 				<span class="checkbox-title"><?php esc_html_e( 'Sensitive content', 'axismundi-object-projections' ); ?></span>
 			</label>
@@ -596,6 +597,12 @@ function axismundi_op_enqueue_quick_edit() : void {
 		array( 'inline-edit-post' ),
 		AXISMUNDI_OP_VERSION,
 		true
+	);
+	wp_enqueue_style(
+		'axismundi-op-quick-edit',
+		plugins_url( 'assets/quick-edit.css', dirname( __DIR__ ) . '/axismundi-object-projections.php' ),
+		array(),
+		AXISMUNDI_OP_VERSION
 	);
 }
 add_action( 'admin_enqueue_scripts', 'axismundi_op_enqueue_quick_edit' );

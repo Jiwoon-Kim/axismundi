@@ -54,7 +54,7 @@ function axismundi_act_get_quote_request_decision( string $request_uri ) : ?Axis
 	}
 	foreach ( axismundi_act_get_by_object( $request_uri, 50 ) as $activity ) {
 		if ( in_array( $activity->get_type(), array( 'Accept', 'Reject' ), true )
-			&& in_array( $activity->get_direction(), array( 'outbound', 'local' ), true )
+			&& in_array( $activity->get_direction(), array( 'outbound' ), true )
 		) {
 			return $activity;
 		}
@@ -114,7 +114,7 @@ function axismundi_act_quote_request_response_object( Axismundi_Activity $reques
  * @return Axismundi_Activity|WP_Error
  */
 function axismundi_act_process_quote_request( Axismundi_Activity $request ) {
-	if ( 'QuoteRequest' !== $request->get_type() || ! in_array( $request->get_direction(), array( 'inbound', 'outbound', 'local' ), true ) ) {
+	if ( 'QuoteRequest' !== $request->get_type() || ! in_array( $request->get_direction(), array( 'inbound', 'outbound' ), true ) ) {
 		return new WP_Error( 'ax_act_quote_request', __( 'Only a committed inbound or local QuoteRequest can be decided.', 'axismundi-activities' ) );
 	}
 	$request_uri = $request->get_uri();
@@ -183,7 +183,7 @@ function axismundi_act_process_quote_request( Axismundi_Activity $request ) {
 		}
 		$payload['result'] = (string) $authorization['authorization_uri'];
 	}
-	$direction = 'local' === $request->get_direction() ? 'local' : 'outbound';
+	$direction = 'outbound';
 	return axismundi_act_record_source_activity( $payload, $direction, 'quote-request-decision:' . hash( 'sha256', $request_uri ) );
 }
 

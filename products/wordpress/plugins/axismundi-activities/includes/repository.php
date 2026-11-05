@@ -533,7 +533,7 @@ function axismundi_act_is_publicly_renderable( Axismundi_Activity $activity ) : 
 		return false;
 	}
 	return $activity->is_effective()
-		&& in_array( $activity->get_direction(), array( 'inbound', 'outbound', 'local' ), true )
+		&& in_array( $activity->get_direction(), array( 'inbound', 'outbound' ), true )
 		&& axismundi_act_has_public_audience( $activity );
 }
 
@@ -591,7 +591,7 @@ function axismundi_act_get_public_outbox( string $actor_uri, int $limit = 200 ) 
  * @param string $cursor    Exclusive immutable ledger cursor, or '' for newest.
  * @return array{items:array<int,array<string,mixed>>,next_cursor:string,has_more:bool}|WP_Error
  */
-function axismundi_act_get_public_outbox_page( string $actor_uri, int $limit = 20, string $cursor = '' ) {
+function axismundi_act_get_public_outbox_page( string $actor_uri, int $limit = 20, string $cursor = '', ?callable $read_payload = null, bool $include_inactive = false, string $activity_type = '' ) {
 	$uri = axismundi_act_uri( $actor_uri );
 	if ( '' === $uri ) {
 		return new WP_Error( 'ax_act_outbox_actor', __( 'The Actor URI is invalid.', 'axismundi-activities' ) );
@@ -608,7 +608,7 @@ function axismundi_act_get_public_outbox_page( string $actor_uri, int $limit = 2
 	while ( true ) {
 		// The underlying query is bounded, but the collection is not.  Private rows
 		// cannot make an older public Activity unreachable simply by forming a long run.
-		$activities = axismundi_act_get_outbox_after( $uri, 50, $scan_cursor );
+		$activities = axismundi_act_get_outbox_after( $uri, 50, $scan_cursor, $include_inactive, $activity_type );
 		if ( empty( $activities ) ) {
 			break;
 		}
@@ -621,7 +621,7 @@ function axismundi_act_get_public_outbox_page( string $actor_uri, int $limit = 2
 				continue;
 			}
 			$scan_cursor = $activity_cursor;
-			$payload     = axismundi_act_public_payload( $activity );
+			$payload     = $read_payload ? $read_payload( $activity ) : axismundi_act_public_payload( $activity );
 			/**
 			 * An Actor-domain product may deliberately expose a non-Public Activity.
 			 * This is the same membership seam as the legacy Outbox reader; paging must
@@ -630,7 +630,7 @@ function axismundi_act_get_public_outbox_page( string $actor_uri, int $limit = 2
 			 * @param array<string,mixed>|null $payload Candidate public payload.
 			 * @param Axismundi_Activity        $activity Candidate outbound Activity.
 			 */
-			$payload = apply_filters( 'axismundi_act_public_outbox_payload', $payload, $activity );
+			if ( ! $read_payload ) { $payload = apply_filters( 'axismundi_act_public_outbox_payload', $payload, $activity ); }
 			if ( ! is_array( $payload ) ) {
 				continue;
 			}
@@ -810,7 +810,7 @@ function axismundi_act_get_actor_feed( string $actor_uri, int $limit = 20, int $
 	// Direction is a transport fact, not a feed policy. The repository rejects
 	// local Actors as inbound and remote Actors as outbound/local, so this keeps
 	// both profile kinds on the same API without mixing their activity origins.
-	$directions = $actor->is_local() ? array( 'outbound', 'local' ) : array( 'inbound' );
+	$directions = $actor->is_local() ? array( 'outbound' ) : array( 'inbound' );
 	$direction_sql = implode( ',', array_fill( 0, count( $directions ), '%s' ) );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- actor-keyed feed selection in the custom ledger; direction placeholders and every value are allowlisted/prepared.
 	$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE actor_uri_hash = %s AND actor_uri = %s AND direction IN ({$direction_sql}) AND activity_type IN ('Create','Announce') AND effective_status = 'active' ORDER BY feed_sort_at DESC, id DESC LIMIT %d OFFSET %d", array_merge( array( hash( 'sha256', $uri ), $uri ), $directions, array( $limit, $offset ) ) ), ARRAY_A );
@@ -880,7 +880,7 @@ function axismundi_act_get_actor_feed_after( string $actor_uri, int $limit = 20,
 	}
 	$table         = axismundi_act_activities_table();
 	$limit         = max( 1, min( 50, $limit ) );
-	$directions    = $actor->is_local() ? array( 'outbound', 'local' ) : array( 'inbound' );
+	$directions    = $actor->is_local() ? array( 'outbound' ) : array( 'inbound' );
 	$direction_sql = implode( ',', array_fill( 0, count( $directions ), '%s' ) );
 	$sort          = 'feed_sort_at';
 	$where         = '';
@@ -920,7 +920,7 @@ function axismundi_act_get_actor_feed_after( string $actor_uri, int $limit = 20,
  * @param string $cursor    Exclusive immutable ledger cursor, or '' for newest.
  * @return Axismundi_Activity[]
  */
-function axismundi_act_get_outbox_after( string $actor_uri, int $limit = 20, string $cursor = '' ) : array {
+function axismundi_act_get_outbox_after( string $actor_uri, int $limit = 20, string $cursor = '', bool $include_inactive = false, string $activity_type = '' ) : array {
 	global $wpdb;
 	$uri = axismundi_act_uri( $actor_uri );
 	if ( '' === $uri || AXISMUNDI_ACT_DB_VERSION !== (string) get_option( AXISMUNDI_ACT_DB_VERSION_OPTION, '' ) ) {
@@ -940,9 +940,14 @@ function axismundi_act_get_outbox_after( string $actor_uri, int $limit = 20, str
 		$args[] = $position['time'];
 		$args[] = $position['id'];
 	}
+	if ( '' !== $activity_type ) {
+		$where .= ' AND activity_type = %s';
+		$args[] = $activity_type;
+	}
 	$args[] = $limit;
+	$status = $include_inactive ? '' : " AND effective_status = 'active'";
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- actor-keyed effective outbound ledger selection; every dynamic value is prepared.
-	$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE actor_uri_hash = %s AND actor_uri = %s AND direction = 'outbound' AND effective_status = 'active'{$where} ORDER BY feed_sort_at DESC, id DESC LIMIT %d", $args ), ARRAY_A );
+	$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE actor_uri_hash = %s AND actor_uri = %s AND direction = 'outbound'{$status}{$where} ORDER BY feed_sort_at DESC, id DESC LIMIT %d", $args ), ARRAY_A );
 	return array_map( 'axismundi_act_hydrate', $rows );
 }
 
@@ -972,7 +977,7 @@ function axismundi_act_countable_actor_feed_candidate_sql( Axismundi_Actor $acto
 	if ( '' === $actor_uri ) {
 		return null;
 	}
-	$directions    = $actor->is_local() ? array( 'outbound', 'local' ) : array( 'inbound' );
+	$directions    = $actor->is_local() ? array( 'outbound' ) : array( 'inbound' );
 	$direction_sql = implode( ', ', array_fill( 0, count( $directions ), '%s' ) );
 	$table         = axismundi_act_activities_table();
 	$index         = axismundi_op_object_index_table();
@@ -1116,12 +1121,12 @@ function axismundi_act_get_by_reference( string $field, string $uri, int $limit 
 }
 
 /** Validate and normalize an Activity before database mutation. */
-function axismundi_act_normalize( array $payload, string $direction = 'local' ) {
+function axismundi_act_normalize( array $payload, string $direction = 'outbound' ) {
 	$direction = sanitize_key( $direction );
 	if ( 'local' === $direction ) {
 		$direction = 'outbound';
 	}
-	if ( ! in_array( $direction, array( 'inbound', 'outbound', 'local' ), true ) ) {
+	if ( ! in_array( $direction, array( 'inbound', 'outbound' ), true ) ) {
 		return new WP_Error( 'ax_act_direction', __( 'The Activity direction is invalid.', 'axismundi-activities' ) );
 	}
 	$type = axismundi_act_type( $payload['type'] ?? '' );
@@ -1312,7 +1317,7 @@ function axismundi_act_recompute_effectiveness( string $activity_uri, int $depth
  * @param int[]               $inbox_actor_ids Trusted local recipients of an inbound delivery.
  * @return Axismundi_Activity|WP_Error
  */
-function axismundi_act_record_activity( array $payload, string $direction = 'local', array $inbox_actor_ids = array() ) {
+function axismundi_act_record_activity( array $payload, string $direction = 'outbound', array $inbox_actor_ids = array() ) {
 	return axismundi_act_record_source_activity( $payload, $direction, '', $inbox_actor_ids );
 }
 
@@ -1363,7 +1368,7 @@ function axismundi_act_record_source_activity( array $payload, string $direction
 				return new WP_Error( 'ax_act_source_collision', __( 'A source event hash collision was detected.', 'axismundi-activities' ) );
 			}
 			if ( (string) $source_row['activity_type'] !== (string) $normalized['activity_type']
-				|| ( 'local' === $source_row['direction'] ? 'outbound' : (string) $source_row['direction'] ) !== (string) $normalized['direction']
+				|| (string) $source_row['direction'] !== (string) $normalized['direction']
 				|| ! hash_equals( (string) $source_row['actor_uri'], (string) $normalized['actor_uri'] )
 				|| ! hash_equals( (string) ( $source_row['object_uri'] ?? '' ), (string) ( $normalized['object_uri'] ?? '' ) )
 				|| ! hash_equals( (string) ( $source_row['target_uri'] ?? '' ), (string) ( $normalized['target_uri'] ?? '' ) )
@@ -1424,7 +1429,7 @@ function axismundi_act_record_source_activity( array $payload, string $direction
 			$winner = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE source_event_hash = %s", $normalized['source_event_hash'] ), ARRAY_A );
 			if ( is_array( $winner ) && hash_equals( (string) $winner['source_event_key'], $source_event_key ) ) {
 				if ( (string) $winner['activity_type'] !== (string) $normalized['activity_type']
-					|| ( 'local' === $winner['direction'] ? 'outbound' : (string) $winner['direction'] ) !== (string) $normalized['direction']
+					|| (string) $winner['direction'] !== (string) $normalized['direction']
 					|| ! hash_equals( (string) $winner['actor_uri'], (string) $normalized['actor_uri'] )
 					|| ! hash_equals( (string) ( $winner['object_uri'] ?? '' ), (string) ( $normalized['object_uri'] ?? '' ) )
 					|| ! hash_equals( (string) ( $winner['target_uri'] ?? '' ), (string) ( $normalized['target_uri'] ?? '' ) )

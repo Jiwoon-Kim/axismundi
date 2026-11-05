@@ -119,9 +119,8 @@ try {
 	$GLOBALS['axismundi_actors_profile_actor'] = $target;
 	$profile_html = axismundi_act_render_profile_follow_control( '<article>profile</article>' );
 	ax_local_assert( $ax_local_results, 'the public Actor profile control reflects accepted state as Unfollow', str_contains( $profile_html, 'Unfollow' ) && str_contains( $profile_html, 'target_uri' ) );
-	$columns = axismundi_act_users_follow_column( array( 'username' => 'Username' ) );
-	$cell    = axismundi_act_users_follow_column_content( '', 'ax_local_follow', (int) $target->get_local_user_id() );
-	ax_local_assert( $ax_local_results, 'administrative Users rows expose nonce-protected local Follow state and actions', isset( $columns['ax_local_follow'] ) && str_contains( $cell, '_wpnonce' ) && str_contains( $cell, 'Unfollow' ) );
+	$columns = apply_filters( 'manage_users_columns', array( 'username' => 'Username', 'activitypub' => 'ActivityPub' ) );
+	ax_local_assert( $ax_local_results, 'Users keeps ActivityPub without Axismundi Actor or Follow columns', isset( $columns['activitypub'] ) && ! isset( $columns['ax_actor'], $columns['ax_local_follow'] ) && ! isset( $columns['ax_actor'] ) && ! isset( $columns['ax_local_follow'] ) );
 
 	$remote = axismundi_actors_upsert_remote(
 		array(

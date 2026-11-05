@@ -20,42 +20,6 @@ function axismundi_act_register_follows_page() : void {
 }
 add_action( 'admin_menu', 'axismundi_act_register_follows_page' );
 
-/** Add local Follow state to the administrator Users table. */
-function axismundi_act_users_follow_column( array $columns ) : array {
-	if ( axismundi_act_current_local_actor() instanceof Axismundi_Actor ) {
-		$columns['ax_local_follow'] = __( 'Follow', 'axismundi-activities' );
-	}
-	return $columns;
-}
-add_filter( 'manage_users_columns', 'axismundi_act_users_follow_column', 20 );
-
-/** Render a nonce-protected local Follow action link for one Users row. */
-function axismundi_act_users_follow_column_content( string $output, string $column, int $user_id ) : string {
-	if ( 'ax_local_follow' !== $column ) {
-		return $output;
-	}
-	$subject = axismundi_act_current_local_actor();
-	// D: the target describes this fixed Users-table row; only the subject follows selection.
-	$target  = axismundi_actors_get_for_user( $user_id );
-	if ( ! $subject instanceof Axismundi_Actor || ! $target instanceof Axismundi_Actor || ! $target->is_local() || 'Person' !== $target->get_type() || 'public' !== $target->get_status() || ! $target->is_handle_locked() || $subject->get_uri() === $target->get_uri() ) {
-		return '—';
-	}
-	$relation = axismundi_act_get_relation( 'follow', $subject->get_uri(), $target->get_uri() );
-	$state    = is_array( $relation ) ? (string) $relation['state'] : '';
-	$intent   = in_array( $state, array( 'pending', 'accepted' ), true ) ? 'unfollow' : 'follow';
-	$label    = 'pending' === $state ? __( 'Cancel request', 'axismundi-activities' ) : ( 'accepted' === $state ? __( 'Unfollow', 'axismundi-activities' ) : __( 'Follow', 'axismundi-activities' ) );
-	$nonce = wp_create_nonce( 'axismundi_act_local_follow_' . hash( 'sha256', $target->get_uri() ) );
-	return ( '' !== $state ? '<span>' . esc_html( ucfirst( $state ) ) . '</span> · ' : '' )
-		. '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="display:inline">'
-		. '<input type="hidden" name="action" value="axismundi_act_local_follow">'
-		. '<input type="hidden" name="intent" value="' . esc_attr( $intent ) . '">'
-		. '<input type="hidden" name="target_uri" value="' . esc_attr( $target->get_uri() ) . '">'
-		. '<input type="hidden" name="return_to" value="users">'
-		. '<input type="hidden" name="_wpnonce" value="' . esc_attr( $nonce ) . '">'
-		. '<button type="submit" class="button-link">' . esc_html( $label ) . '</button></form>';
-}
-add_filter( 'manage_users_custom_column', 'axismundi_act_users_follow_column_content', 20, 3 );
-
 /** Whether the current local Actor may follow this target. */
 function axismundi_act_follow_target_available( Axismundi_Actor $subject, Axismundi_Actor $target ) : bool {
 	if ( $subject->get_uri() === $target->get_uri() || 'tombstone' === $target->get_status() ) {
@@ -230,8 +194,6 @@ function axismundi_act_handle_local_follow() : void {
 	$fallback = $target instanceof Axismundi_Actor && '' !== $target->get_profile_url() ? $target->get_profile_url() : home_url( '/' );
 	if ( 'follows' === $return_to ) {
 		$fallback = axismundi_act_follows_admin_url();
-	} elseif ( 'users' === $return_to && current_user_can( 'list_users' ) ) {
-		$fallback = admin_url( 'users.php' );
 	}
 	if ( ! $subject instanceof Axismundi_Actor || ! $target instanceof Axismundi_Actor || ! in_array( $intent, array( 'follow', 'unfollow', 'refollow' ), true ) ) {
 		axismundi_act_follow_redirect( $fallback, 'error' );

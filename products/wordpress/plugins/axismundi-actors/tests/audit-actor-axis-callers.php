@@ -5,12 +5,10 @@ $allowed = array(
 	'axismundi-actors/includes/admin.php::axismundi_actors_authorize_user_actor' => 'E: legacy User activation API',
 	'axismundi-actors/includes/admin.php::axismundi_actors_can_manage_user_actor' => 'E: legacy User activation adapter delegates existing Accounts to the Account gate',
 	'axismundi-actors/includes/admin.php::axismundi_actors_profile_panel' => 'D: edited WordPress User summary',
-	'axismundi-actors/includes/admin.php::axismundi_actors_users_column_content' => 'D: fixed Users-table row',
 	'axismundi-actors/includes/repository.php::axismundi_actors_ensure_for_user' => 'D: User-bound compatibility identity',
 	'axismundi-actors/includes/acting-actor.php::axismundi_actors_default_acting_actor' => 'E: disabled-rollout resolver',
 	'axismundi-actors/includes/account-operations.php::axismundi_actors_legacy_current_workspace' => 'E: disabled-rollout resolver',
 	'axismundi-actors/includes/routing.php::axismundi_actors_legacy_author_profile_redirect_url' => 'E: historical author redirect',
-	'axismundi-activities/includes/local-social-ui.php::axismundi_act_users_follow_column_content' => 'D: fixed Users-row target, not acting subject',
 	'axismundi-activitypub-bridge/includes/migration-scan.php::axismundi_activitypub_bridge_legacy_local_actor' => 'E: old official-plugin User identifiers',
 	'axismundi-contacts/includes/lifecycle.php::axismundi_contacts_purge_for_deleted_user' => 'D: WP User deletion lifecycle; Contacts redesign is separate',
 );

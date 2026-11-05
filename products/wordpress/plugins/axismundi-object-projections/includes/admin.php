@@ -9,7 +9,7 @@ defined( 'ABSPATH' ) || exit;
 
 /** Remote Objects admin URL. */
 function axismundi_op_remote_admin_url( string $object_uri = '' ) : string {
-	$url = add_query_arg( 'page', 'axismundi-remote-objects', admin_url( 'tools.php' ) );
+	$url = add_query_arg( 'page', 'axismundi-remote-objects', admin_url( 'admin.php' ) );
 	return '' === $object_uri ? $url : add_query_arg( 'object_uri', $object_uri, $url );
 }
 
@@ -39,7 +39,12 @@ add_action( 'admin_post_axismundi_op_background_acquisition', 'axismundi_op_save
 
 /** Register the admin-only inspector. */
 function axismundi_op_register_admin_page() : void {
-	add_management_page(
+	add_menu_page( __( 'Objects', 'axismundi-object-projections' ), __( 'Objects', 'axismundi-object-projections' ), 'manage_options', 'axismundi-local-objects', 'axismundi_op_render_local_objects_admin', 'dashicons-archive' );
+	$hook = add_submenu_page( 'axismundi-local-objects', __( 'Local Objects', 'axismundi-object-projections' ), __( 'Local Objects', 'axismundi-object-projections' ), 'manage_options', 'axismundi-local-objects', 'axismundi_op_render_local_objects_admin' );
+	if ( $hook ) { add_filter( "manage_{$hook}_columns", 'axismundi_op_local_admin_columns' ); }
+	add_submenu_page( 'axismundi-local-objects', __( 'Object', 'axismundi-object-projections' ), __( 'Object', 'axismundi-object-projections' ), 'manage_options', 'axismundi-object', 'axismundi_op_render_local_object_admin' );
+	add_submenu_page(
+		'axismundi-local-objects',
 		__( 'Remote Objects', 'axismundi-object-projections' ),
 		__( 'Remote Objects', 'axismundi-object-projections' ),
 		'manage_options',
@@ -48,6 +53,105 @@ function axismundi_op_register_admin_page() : void {
 	);
 }
 add_action( 'admin_menu', 'axismundi_op_register_admin_page' );
+add_action( 'admin_head', static function () : void {
+	remove_submenu_page( 'axismundi-local-objects', 'axismundi-object' );
+} );
+add_filter( 'submenu_file', static function ( $submenu_file ) {
+	return 'axismundi-object' === ( $GLOBALS['plugin_page'] ?? '' ) ? 'axismundi-local-objects' : $submenu_file;
+} );
+add_action( 'admin_init', static function () : void {
+	if ( 'tools.php' !== ( $GLOBALS['pagenow'] ?? '' ) || 'GET' !== ( $_SERVER['REQUEST_METHOD'] ?? '' ) ) { return; }
+	$page = $_GET['page'] ?? '';
+	if ( ! in_array( $page, array( 'axismundi-local-objects', 'axismundi-remote-objects', 'axismundi-object' ), true ) || ! current_user_can( 'manage_options' ) ) { return; }
+	$args = array( 'page' => $page );
+	foreach ( array( 'object', 'object_uri', 'view', 'before' ) as $key ) {
+		if ( isset( $_GET[ $key ] ) && is_string( $_GET[ $key ] ) ) {
+			$args[ $key ] = rawurlencode( wp_unslash( $_GET[ $key ] ) );
+		}
+	}
+	wp_safe_redirect( add_query_arg( $args, admin_url( 'admin.php' ) ) );
+	exit;
+} );
+
+function axismundi_op_local_admin_columns() : array {
+	return array(
+		'actor' => __( 'Actor', 'axismundi-object-projections' ),
+		'content' => __( 'Content', 'axismundi-object-projections' ),
+		'inreplyto' => __( 'In reply to', 'axismundi-object-projections' ),
+		'type' => __( 'Type', 'axismundi-object-projections' ),
+		'status' => __( 'Status', 'axismundi-object-projections' ),
+		'access' => __( 'Access', 'axismundi-object-projections' ),
+		'published' => __( 'Published (UTC)', 'axismundi-object-projections' ),
+		'updated' => __( 'Updated (UTC)', 'axismundi-object-projections' ),
+		'deleted' => __( 'Deleted (UTC)', 'axismundi-object-projections' ),
+	);
+}
+
+function axismundi_op_local_admin_url( string $uuid = '' ) : string {
+	return add_query_arg( '' === $uuid ? array( 'page' => 'axismundi-local-objects' ) : array( 'page' => 'axismundi-object', 'object' => $uuid ), admin_url( 'admin.php' ) );
+}
+
+function axismundi_op_render_local_objects_admin() : void {
+	global $wpdb;
+	if ( ! current_user_can( 'manage_options' ) ) { wp_die( '', '', array( 'response' => 403 ) ); }
+	echo '<div class="wrap"><h1>' . esc_html__( 'Local Objects', 'axismundi-object-projections' ) . '</h1>';
+	$before = isset( $_GET['before'] ) && is_string( $_GET['before'] ) ? absint( $_GET['before'] ) : 0;
+	$table = axismundi_op_local_objects_table();
+	$rows = array();
+	$view = isset( $_GET['view'] ) && is_string( $_GET['view'] ) ? sanitize_key( $_GET['view'] ) : '';
+	$views = array( '' => __( 'All', 'axismundi-object-projections' ), 'mine' => __( 'Mine', 'axismundi-object-projections' ), 'active' => __( 'Active', 'axismundi-object-projections' ), 'tombstone' => __( 'Tombstones', 'axismundi-object-projections' ) );
+	$view = isset( $views[ $view ] ) ? $view : '';
+	$url = add_query_arg( 'view', $view, axismundi_op_local_admin_url() );
+	echo '<ul class="subsubsub">';
+	foreach ( $views as $key => $label ) {
+		echo '<li><a' . ( $view === $key ? ' class="current" aria-current="page"' : '' ) . ' href="' . esc_url( add_query_arg( 'view', $key, axismundi_op_local_admin_url() ) ) . '">' . esc_html( $label ) . '</a> &nbsp;</li>';
+	}
+	echo '</ul><br class="clear">';
+	if ( '1' === get_option( 'ax_op_local_objects_schema', '' ) ) {
+		$status = 'mine' === $view ? '' : $view;
+		$actor = 'mine' === $view && function_exists( 'axismundi_actors_get_for_user' ) ? axismundi_actors_get_for_user( get_current_user_id() ) : null;
+		$author_hash = $actor ? hash( 'sha256', $actor->get_uri() ) : '';
+		$rows = $wpdb->get_results( $wpdb->prepare( 'SELECT id, local_uuid, object_uri, object_type, object_status, attributed_to_uri, publicly_readable, document_json, published_at, updated_at, deleted_at FROM %i WHERE (%d = 0 OR id < %d) AND (%s = \'\' OR object_status = %s) AND (%d = 0 OR attributed_to_uri_hash = %s) ORDER BY id DESC LIMIT 51', $table, $before, $before, $status, $status, (int) ( 'mine' === $view ), $author_hash ), ARRAY_A );
+	}
+	$columns = axismundi_op_local_admin_columns();
+	$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+	$hidden = $screen ? get_hidden_columns( $screen ) : array();
+	echo '<table class="wp-list-table widefat striped"><thead><tr>';
+	foreach ( $columns as $key => $label ) {
+		echo '<th scope="col" id="' . esc_attr( $key ) . '" class="manage-column column-' . esc_attr( $key ) . ( in_array( $key, $hidden, true ) ? ' hidden' : '' ) . '">' . esc_html( $label ) . '</th>';
+	}
+	echo '</tr></thead><tbody>';
+	foreach ( array_slice( $rows ?? array(), 0, 50 ) as $row ) {
+		$doc = json_decode( $row['document_json'], true );
+		$values = array( 'actor' => $row['attributed_to_uri'], 'content' => wp_trim_words( wp_strip_all_tags( (string) ( $doc['content'] ?? '' ) ), 24 ), 'inreplyto' => implode( ', ', axismundi_op_application_recipient_uris( $doc['inReplyTo'] ?? null ) ), 'type' => $row['object_type'], 'status' => $row['object_status'], 'access' => $row['publicly_readable'] ? __( 'Publicly readable', 'axismundi-object-projections' ) : __( 'Restricted', 'axismundi-object-projections' ), 'published' => $row['published_at'], 'updated' => $row['updated_at'], 'deleted' => $row['deleted_at'] );
+		echo '<tr>';
+		foreach ( $values as $key => $value ) {
+			echo '<td style="overflow-wrap:anywhere" class="column-' . esc_attr( $key ) . ( in_array( $key, $hidden, true ) ? ' hidden' : '' ) . '">';
+			if ( 'content' === $key ) {
+				echo '<a href="' . esc_url( axismundi_op_local_admin_url( $row['local_uuid'] ) ) . '">' . esc_html( $value ?: $row['object_uri'] ) . '</a>';
+			} else { echo esc_html( $value ?: '-' ); }
+			echo '</td>';
+		}
+		echo '</tr>';
+	}
+	if ( empty( $rows ) ) { echo '<tr><td colspan="9">' . esc_html__( 'No local objects found.', 'axismundi-object-projections' ) . '</td></tr>'; }
+	echo '</tbody></table><p>';
+	if ( $before ) { echo '<a class="button" href="' . esc_url( $url ) . '">' . esc_html__( 'Newest', 'axismundi-object-projections' ) . '</a> '; }
+	if ( isset( $rows[50] ) ) { echo '<a class="button" href="' . esc_url( add_query_arg( 'before', $rows[49]['id'], $url ) ) . '">' . esc_html__( 'Older', 'axismundi-object-projections' ) . '</a>'; }
+	echo '</p></div>';
+}
+
+function axismundi_op_render_local_object_admin() : void {
+	if ( ! current_user_can( 'manage_options' ) ) { wp_die( '', '', array( 'response' => 403 ) ); }
+	$uuid = isset( $_GET['object'] ) && is_string( $_GET['object'] ) ? wp_unslash( $_GET['object'] ) : '';
+	$row = preg_match( '/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/D', $uuid ) ? axismundi_op_get_local_object( axismundi_op_local_object_uri( $uuid ) ) : null;
+	if ( ! $row ) { wp_die( esc_html__( 'Local object not found.', 'axismundi-object-projections' ), '', array( 'response' => 404 ) ); }
+	echo '<div class="wrap"><h1>' . esc_html__( 'Object', 'axismundi-object-projections' ) . '</h1><p><a href="' . esc_url( axismundi_op_local_admin_url() ) . '">' . esc_html__( 'Local Objects', 'axismundi-object-projections' ) . '</a></p>';
+	echo '<p><code>' . esc_html( $row['object_uri'] ) . '</code></p>';
+	if ( $row['publicly_readable'] ) { echo '<p><a href="' . esc_url( $row['object_uri'] ) . '">' . esc_html__( 'View public object', 'axismundi-object-projections' ) . '</a></p>'; }
+	echo '<p>' . esc_html( sprintf( __( 'Status: %1$s | Version: %2$d', 'axismundi-object-projections' ), $row['object_status'], $row['version'] ) ) . '</p>';
+	echo '<pre style="white-space:pre-wrap;overflow-wrap:anywhere">' . esc_html( wp_json_encode( $row['document'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) ) . '</pre></div>';
+}
 
 /** Text-oriented HTML allowlist: deliberately excludes every media/embed element. */
 function axismundi_op_remote_preview_allowed_html() : array {

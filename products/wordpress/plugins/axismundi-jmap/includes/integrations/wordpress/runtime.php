@@ -3,6 +3,33 @@
 namespace Axismundi\Jmap;
 defined( 'ABSPATH' ) || exit;
 
+/** Inspect the edited user's account projection without provisioning or changing selection. */
+function render_account_session_panel( int $user_id ) : void {
+	if ( ! current_user_can( 'edit_user', $user_id ) ) { return; }
+	$projection = ( new SessionProjector( runtime_registry() ) )->accounts( $user_id );
+	$principal = '1' === get_option( 'ax_jmap_todo_poc_version' ) ? TodoPoc\principal_for_user( $user_id, false ) : null;
+	echo '<h3>JMAP</h3><p>' . esc_html__( 'Principal:', 'axismundi-jmap' ) . ' <code>' . esc_html( $principal ?? __( 'Not provisioned', 'axismundi-jmap' ) ) . '</code></p>';
+	if ( ! get_object_vars( $projection->accounts ) ) {
+		echo '<p>' . esc_html__( 'No accessible accounts.', 'axismundi-jmap' ) . '</p>';
+		return;
+	}
+	echo '<table class="widefat striped"><thead><tr>';
+	foreach ( array( __( 'Account ID', 'axismundi-jmap' ), __( 'Name', 'axismundi-jmap' ), 'isPersonal', 'isReadOnly', 'primaryAccounts' ) as $label ) {
+		echo '<th scope="col">' . esc_html( $label ) . '</th>';
+	}
+	echo '</tr></thead><tbody>';
+	foreach ( $projection->accounts as $id => $account ) {
+		$primary = array_keys( (array) $projection->primaryAccounts, (string) $id, true );
+		echo '<tr>';
+		foreach ( array( $id, $account->name, $account->isPersonal ? 'true' : 'false', $account->isReadOnly ? 'true' : 'false', implode( ', ', $primary ) ) as $value ) {
+			echo '<td>' . esc_html( $value ) . '</td>';
+		}
+		echo '</tr>';
+	}
+	echo '</tbody></table>';
+}
+add_action( 'axismundi_actors_account_session_panel', __NAMESPACE__ . '\\render_account_session_panel' );
+
 function runtime_registry() : Registry {
 	static $registry = null;
 	if ( null === $registry ) {

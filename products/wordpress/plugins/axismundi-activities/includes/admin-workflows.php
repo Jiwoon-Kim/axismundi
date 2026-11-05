@@ -162,10 +162,31 @@ function axismundi_act_render_composer() : void {
 		echo '<div class="notice notice-warning"><p>' . esc_html( is_wp_error( $actor ) ? $actor->get_error_message() : __( 'Select an active Person Account.', 'axismundi-activities' ) ) . '</p></div></div>'; return;
 	}
 	echo '<p><strong>' . esc_html( $actor->get_display_name() ) . '</strong> <code>' . esc_html( $actor->get_uri() ) . '</code></p>';
-	echo '<form id="ax-c2s-composer"><table class="form-table"><tr><th><label for="ax-c2s-parent">' . esc_html__( 'Parent Object URI', 'axismundi-activities' ) . '</label></th><td><input class="large-text" type="url" id="ax-c2s-parent" required></td></tr><tr><th><label for="ax-c2s-content">' . esc_html__( 'Reply', 'axismundi-activities' ) . '</label></th><td><textarea class="large-text" id="ax-c2s-content" rows="8" required></textarea></td></tr></table>';
-	echo '<p>' . esc_html__( 'Public', 'axismundi-activities' ) . '</p>';
-	submit_button( __( 'Publish reply', 'axismundi-activities' ) );
+	echo '<label for="ax-c2s-activity">' . esc_html__( 'Activity', 'axismundi-activities' ) . '</label> <select id="ax-c2s-activity"><option value="Create">Create</option></select> ';
+	echo '<label for="ax-c2s-object-type">' . esc_html__( 'Object type', 'axismundi-activities' ) . '</label> <select id="ax-c2s-object-type"><option value="Note">Note</option></select>';
+	echo '<form id="ax-c2s-composer"><table class="form-table"><tr><th><label for="ax-c2s-parent">' . esc_html__( 'Parent Object URI (optional)', 'axismundi-activities' ) . '</label></th><td><input class="large-text" type="url" id="ax-c2s-parent"></td></tr><tr><th><label for="ax-c2s-content">' . esc_html__( 'Note', 'axismundi-activities' ) . '</label></th><td><textarea class="large-text" id="ax-c2s-content" rows="8" required></textarea></td></tr>';
+	echo '<tr><th><label for="ax-c2s-visibility">' . esc_html__( 'Audience', 'axismundi-activities' ) . '</label></th><td><select id="ax-c2s-visibility" required><option value="">' . esc_html__( 'Select audience', 'axismundi-activities' ) . '</option>';
+	foreach ( array( 'public' => __( 'Public', 'axismundi-activities' ), 'unlisted' => __( 'Quiet public', 'axismundi-activities' ), 'followers' => __( 'Followers', 'axismundi-activities' ), 'mentioned' => __( 'Mentioned only', 'axismundi-activities' ) ) as $value => $label ) {
+		echo '<option value="' . esc_attr( $value ) . '">' . esc_html( $label ) . '</option>';
+	}
+	echo '</select></td></tr>';
+	foreach ( array( 'mentions' => __( 'Mention handles', 'axismundi-activities' ), 'to' => __( 'Additional To Actor URIs', 'axismundi-activities' ), 'recipients' => __( 'Additional Cc Actor URIs', 'axismundi-activities' ) ) as $field => $label ) {
+		$id = 'ax-c2s-' . $field;
+		echo '<tr><th><label for="' . esc_attr( $id ) . '">' . esc_html( $label ) . '</label></th><td><textarea class="large-text" id="' . esc_attr( $id ) . '" rows="2" aria-describedby="' . esc_attr( $id . '-help' ) . '"></textarea><p class="description" id="' . esc_attr( $id . '-help' ) . '">' . esc_html( 'mentions' === $field ? __( 'Separate handles with commas, for example @alice, @bob@example.social.', 'axismundi-activities' ) : __( 'One Actor URI per line.', 'axismundi-activities' ) ) . '</p></td></tr>';
+	}
+	echo '</table>';
+	submit_button( __( 'Publish Note', 'axismundi-activities' ) );
+	echo '<button type="button" class="button" id="ax-c2s-preview">' . esc_html__( 'Preview HTTP request', 'axismundi-activities' ) . '</button>';
+	echo '<pre id="ax-c2s-request" aria-live="polite" style="white-space:pre-wrap;overflow-wrap:anywhere" hidden></pre>';
 	echo '</form><div id="ax-c2s-result" role="status" aria-live="polite"></div></div>';
 	wp_enqueue_script( 'axismundi-c2s-composer', plugins_url( 'assets/c2s-composer.js', dirname( __DIR__ ) . '/axismundi-activities.php' ), array(), AXISMUNDI_ACTIVITIES_VERSION, true );
-	wp_add_inline_script( 'axismundi-c2s-composer', 'window.axismundiC2SComposer = ' . wp_json_encode( array( 'outbox' => axismundi_op_actor_outbox_url( $actor ), 'nonce' => wp_create_nonce( 'wp_rest' ), 'success' => __( 'Reply published.', 'axismundi-activities' ), 'failure' => __( 'Submission failed. Retry without changing the reply.', 'axismundi-activities' ), 'busy' => __( 'Publishing...', 'axismundi-activities' ) ) ) . ';', 'before' );
+	wp_localize_script( 'axismundi-c2s-composer', 'axismundiC2SMentions', array(
+		'actor' => $actor->get_uri(),
+		'activityLabel' => __( 'Activity URI:', 'axismundi-activities' ),
+		'objectLabel' => __( 'Object URI:', 'axismundi-activities' ),
+		'mentionRequired' => __( 'Mentioned only requires at least one mentioned Actor.', 'axismundi-activities' ),
+		'url' => rest_url( 'axismundi/v1/actors/mention-search' ),
+		'unresolved' => __( 'Could not resolve every mention. Use comma-separated handles of known Actors.', 'axismundi-activities' ),
+	) );
+	wp_add_inline_script( 'axismundi-c2s-composer', 'window.axismundiC2SComposer = ' . wp_json_encode( array( 'outbox' => axismundi_op_actor_outbox_url( $actor ), 'followers' => axismundi_op_actor_followers_url( $actor ), 'nonce' => wp_create_nonce( 'wp_rest' ), 'success' => __( 'Note published to the outbox.', 'axismundi-activities' ), 'failure' => __( 'Submission failed. Retry without changing the Note.', 'axismundi-activities' ), 'busy' => __( 'Publishing...', 'axismundi-activities' ), 'invalidActor' => __( 'Enter an absolute HTTP or HTTPS Actor URI on each line.', 'axismundi-activities' ) ) ) . ';', 'before' );
 }

@@ -114,7 +114,8 @@ function axismundi_act_post_actor_outbox( WP_REST_Request $request ) {
 	}
 	$activity = axismundi_act_submit_outbox( get_current_user_id(), $actor, $payload, (string) $request->get_header( 'Idempotency-Key' ) );
 	if ( is_wp_error( $activity ) ) { return $activity; }
-	return new WP_REST_Response( null, 201, array( 'Location' => $activity->get_uri(), 'Cache-Control' => 'no-store' ) );
+	$object_uri = 'Create' === $activity->get_type() ? axismundi_act_member_uri( $activity->get_payload()['object'] ?? null ) : '';
+	return new WP_REST_Response( '' !== $object_uri ? array( 'object' => $object_uri ) : null, 201, array( 'Location' => $activity->get_uri(), 'Cache-Control' => 'no-store' ) );
 }
 
 function axismundi_act_register_c2s_outbox() : void {

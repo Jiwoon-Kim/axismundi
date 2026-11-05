@@ -110,6 +110,7 @@ function axismundi_actors_mention_search_item( Axismundi_Actor $actor ) : array 
 		'name'   => $actor->get_display_name() ?: $actor->get_preferred_username(),
 		'handle' => axismundi_actors_mention_handle( $actor ),
 		'token'  => axismundi_actors_mention_token( $actor ),
+		'mentionName' => axismundi_actors_federated_mention_name( $actor ),
 		'avatar' => axismundi_actors_mention_avatar_url( $actor ),
 	);
 }

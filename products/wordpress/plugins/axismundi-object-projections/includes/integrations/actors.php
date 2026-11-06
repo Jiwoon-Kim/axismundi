@@ -292,8 +292,8 @@ function axismundi_op_actor_outbox_transform( Axismundi_OP_Actor_Outbox $source 
 	if ( '' !== $type ) {
 		$root = add_query_arg( 'activity_type', rawurlencode( $type ), $root );
 	}
-	$page  = function_exists( 'axismundi_act_get_public_outbox_page' ) && ( $source->get_reader() || '' !== $type )
-		? axismundi_act_get_public_outbox_page( $actor->get_uri(), axismundi_op_outbox_page_size(), $source->get_cursor(), $source->get_reader(), $source->owner_view, $type )
+	$page  = function_exists( 'axismundi_act_get_public_outbox_page' )
+		? axismundi_act_get_public_outbox_page( $actor->get_uri(), axismundi_op_outbox_page_size(), $source->get_cursor(), $source->get_reader(), true, $type )
 		: ( function_exists( 'axismundi_op_read_collection_contract' ) && is_array( axismundi_op_collection_contract( 'ap-outbox' ) )
 		? axismundi_op_read_collection_contract( 'ap-outbox', $actor->get_uri(), axismundi_op_outbox_page_size(), $source->get_cursor() )
 		: array( 'items' => array(), 'next_cursor' => '', 'has_more' => false ) );
@@ -301,6 +301,23 @@ function axismundi_op_actor_outbox_transform( Axismundi_OP_Actor_Outbox $source 
 		return $page;
 	}
 	if ( $source->is_page() ) {
+		foreach ( $page['items'] as &$activity ) {
+			if ( ! in_array( $activity['type'] ?? '', array( 'Create', 'Update' ), true ) || ! is_array( $activity['object'] ?? null ) ) {
+				continue;
+			}
+			$uri = $activity['object']['id'] ?? '';
+			if ( ! is_string( $uri ) || '' === $uri ) {
+				unset( $activity['object'] );
+				continue;
+			}
+			$row = axismundi_op_get_local_object( $uri );
+			if ( $row && 'tombstone' === $row['object_status'] ) {
+				$activity['object'] = ! empty( $row['publicly_readable'] ) ? $row['document'] : $uri;
+			} elseif ( ! $row || 'Update' === $activity['type'] || ( empty( $row['publicly_readable'] ) && ! $source->owner_view ) ) {
+				$activity['object'] = $uri;
+			}
+		}
+		unset( $activity );
 		$out = array(
 			'id'           => axismundi_op_actor_outbox_page_url( $actor, $source->get_cursor(), $type ),
 			'type'         => 'OrderedCollectionPage',
@@ -478,6 +495,138 @@ function axismundi_op_register_actor_outbox_route() : void {
 }
 add_action( 'rest_api_init', 'axismundi_op_register_actor_outbox_route' );
 
+add_action( 'rest_api_init', static function (): void {
+	if ( ! function_exists( 'axismundi_actors_get_by_uuid' ) || ! function_exists( 'axismundi_act_get_outbox_after' ) ) {
+		return;
+	}
+	register_rest_route( 'axismundi/v1', '/actors/(?P<uuid>[0-9a-f-]{36})/sent', array(
+		'methods'             => WP_REST_Server::READABLE,
+		'callback'            => 'axismundi_op_get_actor_sent',
+		'permission_callback' => '__return_true',
+		'args'                => array(
+			'page'        => array( 'type' => 'integer', 'enum' => array( 1 ) ),
+			'cursor'      => array( 'type' => 'string' ),
+			'object_type' => array( 'type' => 'string', 'pattern' => '^[A-Za-z][A-Za-z0-9]{0,63}$' ),
+			'in_reply_to' => array( 'type' => 'string', 'validate_callback' => static fn( $value ) => is_string( $value ) && ( in_array( $value, array( 'none', 'any', 'unknown' ), true ) || (bool) preg_match( '~^https?://[^\s]+$~i', $value ) ) ),
+			'audience'    => array( 'type' => 'string', 'validate_callback' => static fn( $value ) => is_string( $value ) && ( in_array( $value, array( 'none', 'any', 'unknown' ), true ) || (bool) preg_match( '~^https?://[^\s]+$~i', $value ) ) ),
+		),
+	) );
+} );
+
+/** Summarize the newest visible content-management event per Object. */
+function axismundi_op_get_actor_sent( WP_REST_Request $request ) {
+	$actor = axismundi_actors_get_by_uuid( (string) $request['uuid'] );
+	if ( ! $actor instanceof Axismundi_Actor || ! $actor->is_local() || ! axismundi_op_actor_visible( $actor ) ) {
+		return new WP_Error( 'ax_op_sent_not_found', __( 'The Actor Sent collection was not found.', 'axismundi-object-projections' ), array( 'status' => 404 ) );
+	}
+	$cursor = (string) $request['cursor'];
+	$position = '' === $cursor ? null : axismundi_act_parse_feed_cursor( $cursor );
+	if ( '' !== $cursor && null === $position ) {
+		return new WP_Error( 'ax_op_sent_cursor', __( 'The Sent cursor is invalid.', 'axismundi-object-projections' ), array( 'status' => 400 ) );
+	}
+	$type = (string) $request['object_type'];
+	$audience = (string) $request['audience'];
+	$reply = (string) $request['in_reply_to'];
+	$root = add_query_arg( array_filter( array( 'object_type' => rawurlencode( $type ), 'audience' => rawurlencode( $audience ), 'in_reply_to' => rawurlencode( $reply ) ) ), rest_url( 'axismundi/v1/actors/' . $actor->get_uuid() . '/sent' ) );
+	$first = add_query_arg( 'page', '1', $root );
+	$out = array( '@context' => 'https://www.w3.org/ns/activitystreams', 'id' => $root, 'type' => 'OrderedCollection', 'attributedTo' => $actor->get_uri(), 'first' => $first );
+	if ( ! $request['page'] && '' === $cursor ) {
+		return axismundi_op_actor_collection_response( $out );
+	}
+	list( $reader, $owner ) = axismundi_op_actor_collection_reader( $actor );
+	$out['type'] = 'OrderedCollectionPage';
+	$out['id'] = '' === $cursor ? $first : add_query_arg( 'cursor', rawurlencode( $cursor ), $first );
+	$out['partOf'] = $root;
+	unset( $out['first'] );
+	$out['orderedItems'] = array();
+	$seen = array();
+	$groups = array( axismundi_op_actor_followers_url( $actor ) => false );
+	$scan = '';
+	$last = '';
+	$limit = axismundi_op_outbox_page_size();
+	// Rebuild the visible prefix so older events for an Object cannot repeat on later pages.
+	while ( $batch = axismundi_act_get_outbox_after( $actor->get_uri(), 50, $scan, true, '', true ) ) {
+		foreach ( $batch as $activity ) {
+			$scan = axismundi_act_feed_cursor( $activity );
+			if ( '' === $scan ) {
+				break 2;
+			}
+			$uri = $activity->get_object_uri();
+			if ( ! $uri || isset( $seen[ $uri ] ) || ! in_array( $activity->get_type(), array( 'Create', 'Update', 'Delete' ), true ) ) {
+				continue;
+			}
+			$payload = $reader ? $reader( $activity ) : apply_filters( 'axismundi_act_public_outbox_payload', axismundi_act_public_payload( $activity ), $activity );
+			if ( ! is_array( $payload ) ) {
+				continue;
+			}
+			$seen[ $uri ] = true;
+			$key = axismundi_act_parse_feed_cursor( $scan );
+			if ( $position && array( $key['time'], $key['id'] ) >= array( $position['time'], $position['id'] ) ) {
+				continue;
+			}
+			if ( 'Delete' === $activity->get_type() && empty( $payload['origin'] ) ) {
+				continue;
+			}
+			if ( '' !== $audience && ! axismundi_op_sent_matches_audience( $payload, $audience, $groups ) ) {
+				continue;
+			}
+			$row = axismundi_op_get_local_object( $uri );
+			if ( $row && ( 'tombstone' === $row['object_status'] || ( ! $owner && empty( $row['publicly_readable'] ) ) ) ) {
+				continue;
+			}
+			$source = $row ? null : axismundi_op_resolve_source_by_uri( $uri );
+			$object = $row['document'] ?? ( null !== $source ? axismundi_op_transform_object( $source ) : null );
+			if ( ! $owner && is_wp_error( $object ) && 'ax_op_not_public' === $object->get_error_code() && ! ( $source instanceof WP_Post && 'trash' === $source->post_status ) ) {
+				continue;
+			}
+			$item = array( 'id' => $uri );
+			$parents = is_array( $object ) ? axismundi_op_application_recipient_uris( $object['inReplyTo'] ?? null ) : array();
+			$reply_state = ! is_array( $object ) ? 'unknown' : ( $parents ? 'any' : 'none' );
+			if ( '' !== $reply && $reply !== $reply_state && ! in_array( $reply, $parents, true ) ) {
+				continue;
+			}
+			if ( is_array( $object ) ) {
+				$item += array_intersect_key( $object, array_flip( array( 'type', 'published', 'updated', 'attributedTo' ) ) );
+				if ( $parents ) {
+					$item['inReplyTo'] = 1 === count( $parents ) ? reset( $parents ) : array_values( $parents );
+				}
+			}
+			if ( '' !== $type && ! in_array( $type, (array) ( $item['type'] ?? null ), true ) ) {
+				continue;
+			}
+			if ( count( $out['orderedItems'] ) >= $limit ) {
+				$out['next'] = add_query_arg( 'cursor', rawurlencode( $last ), $first );
+				break 2;
+			}
+			$out['orderedItems'][] = $item;
+			$last = $scan;
+		}
+	}
+	return axismundi_op_actor_collection_response( $out );
+}
+
+function axismundi_op_sent_matches_audience( array $payload, string $filter, array &$groups ) : bool {
+	$unknown = false;
+	$has_group = false;
+	foreach ( array( 'to', 'cc', 'audience' ) as $field ) {
+		foreach ( axismundi_op_application_recipient_uris( $payload[ $field ] ?? null ) as $uri ) {
+			if ( in_array( $uri, array( 'https://www.w3.org/ns/activitystreams#Public', 'as:Public', 'Public' ), true ) ) {
+				continue;
+			}
+			if ( ! array_key_exists( $uri, $groups ) ) {
+				$recipient = axismundi_actors_get_by_uri( $uri );
+				$groups[ $uri ] = $recipient ? 'Group' === $recipient->get_type() : null;
+			}
+			if ( true === $groups[ $uri ] && $filter === $uri ) {
+				return true;
+			}
+			$has_group = $has_group || true === $groups[ $uri ];
+			$unknown = $unknown || null === $groups[ $uri ];
+		}
+	}
+	return ( 'any' === $filter && $has_group ) || ( ! $has_group && ( $unknown ? 'unknown' : 'none' ) === $filter );
+}
+
 /** Register the representation-owned Followers route. */
 function axismundi_op_register_actor_followers_route() : void {
 	// Registered with Actors alone for the same reason as the Outbox: the document
@@ -508,14 +657,17 @@ function axismundi_op_get_actor_outbox( WP_REST_Request $request ) {
 	if ( ! $actor instanceof Axismundi_Actor || ! $actor->is_local() || ! axismundi_op_actor_visible( $actor ) ) {
 		return new WP_Error( 'ax_op_outbox_not_found', __( 'The Actor outbox was not found.', 'axismundi-object-projections' ), array( 'status' => 404 ) );
 	}
-	$page       = absint( $request['page'] ) > 0;
-	$cursor     = (string) $request['cursor'];
+	list( $reader, $owner ) = axismundi_op_actor_collection_reader( $actor );
+	return axismundi_op_actor_collection_response( axismundi_op_transform_collection( new Axismundi_OP_Actor_Outbox( $actor, absint( $request['page'] ) > 0, (string) $request['cursor'], $reader, $owner, (string) $request['activity_type'] ) ) );
+}
+
+function axismundi_op_actor_collection_reader( Axismundi_Actor $actor ) : array {
 	$reader = null;
 	$owner = false;
 	if ( get_current_user_id() && function_exists( 'axismundi_act_outbox_authorize' ) && function_exists( 'axismundi_act_get_public_outbox_page' ) ) {
-		$owner = true === axismundi_act_outbox_authorize( get_current_user_id(), $actor );
 		$viewer = axismundi_act_current_local_actor();
 		$viewer_uri = $viewer && axismundi_actors_can_act_as( $viewer, get_current_user_id() ) ? $viewer->get_uri() : '';
+		$owner = $viewer_uri === $actor->get_uri() && true === axismundi_act_outbox_authorize( get_current_user_id(), $actor );
 		$follow = '' !== $viewer_uri ? axismundi_act_get_relation( 'follow', $viewer_uri, $actor->get_uri() ) : null;
 		$followers = ( $follow['state'] ?? '' ) === 'accepted' ? axismundi_op_actor_followers_url( $actor ) : '';
 		if ( $owner || '' !== $viewer_uri ) {
@@ -535,7 +687,10 @@ function axismundi_op_get_actor_outbox( WP_REST_Request $request ) {
 			};
 		}
 	}
-	$collection = axismundi_op_transform_collection( new Axismundi_OP_Actor_Outbox( $actor, $page, $cursor, $reader, $owner, (string) $request['activity_type'] ) );
+	return array( $reader, $owner );
+}
+
+function axismundi_op_actor_collection_response( $collection ) {
 	if ( is_wp_error( $collection ) ) {
 		return $collection;
 	}

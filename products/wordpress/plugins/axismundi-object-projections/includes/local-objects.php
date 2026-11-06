@@ -124,9 +124,11 @@ function axismundi_op_update_local_object( array $row, array $document ) {
 	global $wpdb;
 	$json = wp_json_encode( $document, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
 	if ( ! is_string( $json ) || strlen( $json ) > 900000 ) { return new WP_Error( 'ax_op_local_size', 'Object exceeds the local body limit.', array( 'status' => 413 ) ); }
+	$row['publicly_readable'] = (int) axismundi_act_audience_is_public( axismundi_act_audience( $document ) );
 	$updated = $wpdb->update( axismundi_op_local_objects_table(), array(
 		'document_json' => $json,
 		'document_hash' => hash( 'sha256', $json ),
+		'publicly_readable' => $row['publicly_readable'],
 		'version' => (int) $row['version'] + 1,
 		'updated_at' => current_time( 'mysql', true ),
 	), array( 'id' => $row['id'], 'version' => $row['version'], 'object_status' => 'active' ) );

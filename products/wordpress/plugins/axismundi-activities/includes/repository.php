@@ -920,7 +920,7 @@ function axismundi_act_get_actor_feed_after( string $actor_uri, int $limit = 20,
  * @param string $cursor    Exclusive immutable ledger cursor, or '' for newest.
  * @return Axismundi_Activity[]
  */
-function axismundi_act_get_outbox_after( string $actor_uri, int $limit = 20, string $cursor = '', bool $include_inactive = false, string $activity_type = '' ) : array {
+function axismundi_act_get_outbox_after( string $actor_uri, int $limit = 20, string $cursor = '', bool $include_inactive = false, string $activity_type = '', bool $content_management = false ) : array {
 	global $wpdb;
 	$uri = axismundi_act_uri( $actor_uri );
 	if ( '' === $uri || AXISMUNDI_ACT_DB_VERSION !== (string) get_option( AXISMUNDI_ACT_DB_VERSION_OPTION, '' ) ) {
@@ -943,6 +943,9 @@ function axismundi_act_get_outbox_after( string $actor_uri, int $limit = 20, str
 	if ( '' !== $activity_type ) {
 		$where .= ' AND activity_type = %s';
 		$args[] = $activity_type;
+	}
+	if ( $content_management ) {
+		$where .= " AND activity_type IN ('Create','Update','Delete') AND object_uri IS NOT NULL";
 	}
 	$args[] = $limit;
 	$status = $include_inactive ? '' : " AND effective_status = 'active'";

@@ -7,6 +7,17 @@
 
 defined( 'ABSPATH' ) || exit;
 
+/** Only markup emitted by the local relationship controls. */
+function axismundi_act_social_control_allowed_html() : array {
+	return array(
+		'form' => array( 'method' => true, 'action' => true, 'style' => true ),
+		'input' => array( 'type' => true, 'name' => true, 'value' => true, 'id' => true ),
+		'button' => array( 'type' => true, 'class' => true, 'name' => true, 'value' => true ),
+		'div' => array( 'class' => true ), 'p' => array(), 'strong' => array(),
+		'span' => array( 'class' => true, 'role' => true ),
+	);
+}
+
 /** Current user's local relationship screen URL. */
 function axismundi_act_follows_admin_url() : string {
 	return function_exists( 'axismundi_actors_account_admin_url' )
@@ -156,7 +167,7 @@ function axismundi_act_render_profile_follow_control( string $content ) : string
 	?>
 	<div class="ax-local-follow">
 		<?php if ( isset( $messages[ $notice ] ) ) : ?><p class="ax-local-follow__notice" role="status"><?php echo esc_html( $messages[ $notice ] ); ?></p><?php endif; ?>
-		<?php echo axismundi_act_follow_control_html( $subject, $target, 'wp-element-button' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- helper returns escaped form markup. ?>
+		<?php echo wp_kses( axismundi_act_follow_control_html( $subject, $target, 'wp-element-button' ), axismundi_act_social_control_allowed_html() ); ?>
 	</div>
 	<?php
 	return $content . (string) ob_get_clean();
@@ -170,7 +181,7 @@ function axismundi_act_render_remote_admin_follow_control( Axismundi_Actor $targ
 		return;
 	}
 	echo '<h3>' . esc_html__( 'Relationship', 'axismundi-activities' ) . '</h3><div class="ax-local-follow">';
-	echo axismundi_act_follow_control_html( $subject, $target, 'button' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- helper returns escaped form markup.
+	echo wp_kses( axismundi_act_follow_control_html( $subject, $target, 'button' ), axismundi_act_social_control_allowed_html() );
 	echo '</div>';
 }
 add_action( 'axismundi_actors_remote_actor_actions', 'axismundi_act_render_remote_admin_follow_control' );
@@ -295,10 +306,10 @@ function axismundi_act_render_blocked_actors() : void {
 	} else {
 		echo '<ul>';
 		foreach ( array_slice( $rows, 0, $per_page ) as $target_uri ) {
-			echo '<li>' . axismundi_act_local_actor_label( (string) $target_uri ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- helper escapes label markup.
+			echo '<li>' . wp_kses( axismundi_act_local_actor_label( (string) $target_uri ), array( 'a' => array( 'href' => true ), 'code' => array() ) );
 			$target = axismundi_actors_get_by_uri( (string) $target_uri );
 			if ( $target instanceof Axismundi_Actor ) {
-				echo axismundi_act_block_control_html( $actor, $target, 'button', 'follows' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- helper escapes form markup and rechecks outgoing Block status.
+				echo wp_kses( axismundi_act_block_control_html( $actor, $target, 'button', 'follows' ), axismundi_act_social_control_allowed_html() );
 			}
 			echo '</li>';
 		}
@@ -354,7 +365,7 @@ function axismundi_act_render_follows_page() : void {
 		<h2><?php esc_html_e( 'Follow requests', 'axismundi-activities' ); ?></h2>
 		<table class="widefat striped"><tbody>
 		<?php if ( empty( $requests ) ) : ?><tr><td><?php esc_html_e( 'No pending requests.', 'axismundi-activities' ); ?></td></tr><?php else : foreach ( $requests as $request ) : ?>
-			<tr><td><?php echo axismundi_act_local_actor_label( (string) $request['subject_actor_uri'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- helper escapes complete markup. ?></td><td>
+			<tr><td><?php echo wp_kses( axismundi_act_local_actor_label( (string) $request['subject_actor_uri'] ), array( 'a' => array( 'href' => true ), 'code' => array() ) ); ?></td><td>
 				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 					<input type="hidden" name="action" value="axismundi_act_follow_decision"><input type="hidden" name="follow_uri" value="<?php echo esc_attr( (string) $request['initiating_activity_uri'] ); ?>">
 					<?php wp_nonce_field( 'axismundi_act_follow_decision_' . hash( 'sha256', (string) $request['initiating_activity_uri'] ) ); ?>
@@ -363,7 +374,7 @@ function axismundi_act_render_follows_page() : void {
 				<?php
 				$request_actor = axismundi_actors_get_by_uri( (string) $request['subject_actor_uri'] );
 				if ( $request_actor instanceof Axismundi_Actor ) {
-					echo axismundi_act_block_control_html( $actor, $request_actor, 'button', 'follows' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- helper escapes form markup.
+					echo wp_kses( axismundi_act_block_control_html( $actor, $request_actor, 'button', 'follows' ), axismundi_act_social_control_allowed_html() );
 				}
 				?>
 			</td></tr>
@@ -373,11 +384,11 @@ function axismundi_act_render_follows_page() : void {
 		<h2><?php esc_html_e( 'Sent requests', 'axismundi-activities' ); ?></h2>
 		<table class="widefat striped"><tbody>
 		<?php if ( empty( $sent_requests ) ) : ?><tr><td><?php esc_html_e( 'No pending sent requests.', 'axismundi-activities' ); ?></td></tr><?php else : foreach ( $sent_requests as $request ) : ?>
-			<tr><td><?php echo axismundi_act_local_actor_label( (string) $request['object_actor_uri'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- helper escapes complete markup. ?></td><td>
+			<tr><td><?php echo wp_kses( axismundi_act_local_actor_label( (string) $request['object_actor_uri'] ), array( 'a' => array( 'href' => true ), 'code' => array() ) ); ?></td><td>
 				<?php
 				$sent_target = axismundi_actors_get_by_uri( (string) $request['object_actor_uri'] );
 				if ( $sent_target instanceof Axismundi_Actor ) {
-					echo axismundi_act_follow_control_html( $actor, $sent_target, 'button', 'follows' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- helper returns escaped form markup.
+					echo wp_kses( axismundi_act_follow_control_html( $actor, $sent_target, 'button', 'follows' ), axismundi_act_social_control_allowed_html() );
 				}
 				?>
 			</td></tr>
@@ -390,14 +401,14 @@ function axismundi_act_render_follows_page() : void {
 				<ul>
 				<?php foreach ( $followers as $uri ) : ?>
 					<li style="margin-bottom:12px">
-						<?php echo axismundi_act_local_actor_label( $uri ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- helper escapes complete markup. ?>
+						<?php echo wp_kses( axismundi_act_local_actor_label( $uri ), array( 'a' => array( 'href' => true ), 'code' => array() ) ); ?>
 						<div style="display:flex;gap:8px;margin-top:4px">
 							<?php
 							$follower = axismundi_actors_get_by_uri( $uri );
 							if ( $follower instanceof Axismundi_Actor ) {
-								echo axismundi_act_follow_control_html( $actor, $follower, 'button', 'follows' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- helper returns escaped form markup.
+								echo wp_kses( axismundi_act_follow_control_html( $actor, $follower, 'button', 'follows' ), axismundi_act_social_control_allowed_html() );
 							}
-							echo axismundi_act_remove_follower_control_html( $actor, $uri ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- helper returns escaped form markup.
+							echo wp_kses( axismundi_act_remove_follower_control_html( $actor, $uri ), axismundi_act_social_control_allowed_html() );
 							?>
 						</div>
 					</li>
@@ -409,11 +420,11 @@ function axismundi_act_render_follows_page() : void {
 				<ul>
 				<?php foreach ( $following as $uri ) : ?>
 					<li style="margin-bottom:12px">
-						<?php echo axismundi_act_local_actor_label( $uri ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- helper escapes complete markup. ?>
+						<?php echo wp_kses( axismundi_act_local_actor_label( $uri ), array( 'a' => array( 'href' => true ), 'code' => array() ) ); ?>
 						<?php
 						$followed = axismundi_actors_get_by_uri( $uri );
 						if ( $followed instanceof Axismundi_Actor ) {
-							echo axismundi_act_follow_control_html( $actor, $followed, 'button', 'follows' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- helper returns escaped form markup.
+							echo wp_kses( axismundi_act_follow_control_html( $actor, $followed, 'button', 'follows' ), axismundi_act_social_control_allowed_html() );
 						}
 						?>
 					</li>

@@ -413,7 +413,7 @@ function axismundi_act_render_follow_button( array $attributes, string $content,
 			);
 			ob_start();
 			?>
-			<div <?php echo get_block_wrapper_attributes( array( 'class' => 'axismundi-follow-button is-anonymous' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Core-generated block wrapper attributes are already escaped by core. ?> data-wp-interactive="axismundi/follow-button" <?php echo wp_interactivity_data_wp_context( $context ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Core serializes and escapes the Interactivity API context attribute. ?>><div class="wp-block-button"><button type="button" class="wp-block-button__link wp-element-button axismundi-follow-button__button" aria-haspopup="dialog" aria-controls="<?php echo esc_attr( $modal_id ); ?>" data-wp-on--click="actions.openRemoteFollowDialog"><?php echo esc_html( (string) $words['verb'] ); ?></button></div><?php echo wp_kses( $modal, axismundi_act_follow_modal_allowed_html() ); ?></div>
+			<div <?php echo get_block_wrapper_attributes( array( 'class' => 'axismundi-follow-button is-anonymous', 'data-wp-context' => wp_json_encode( $context, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP ) ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Core-generated block wrapper attributes are already escaped by core. ?> data-wp-interactive="axismundi/follow-button"><div class="wp-block-button"><button type="button" class="wp-block-button__link wp-element-button axismundi-follow-button__button" aria-haspopup="dialog" aria-controls="<?php echo esc_attr( $modal_id ); ?>" data-wp-on--click="actions.openRemoteFollowDialog"><?php echo esc_html( (string) $words['verb'] ); ?></button></div><?php echo wp_kses( $modal, axismundi_act_follow_modal_allowed_html() ); ?></div>
 			<?php
 			return (string) ob_get_clean();
 		}
@@ -469,7 +469,7 @@ function axismundi_act_render_follow_button( array $attributes, string $content,
 	);
 	ob_start();
 	?>
-	<div <?php echo get_block_wrapper_attributes( array( 'class' => 'axismundi-follow-button' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Core-generated block wrapper attributes are already escaped by core. ?> data-wp-interactive="axismundi/follow-button" <?php echo wp_interactivity_data_wp_context( $context ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Core serializes and escapes the Interactivity API context attribute. ?>>
+	<div <?php echo get_block_wrapper_attributes( array( 'class' => 'axismundi-follow-button', 'data-wp-context' => wp_json_encode( $context, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP ) ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Core-generated block wrapper attributes are already escaped by core. ?> data-wp-interactive="axismundi/follow-button">
 		<button type="button" class="<?php echo esc_attr( $classes ); ?>" aria-pressed="<?php echo 'accepted' === (string) $state['state'] ? 'true' : 'false'; ?>" data-wp-on--click="actions.toggleFollow" data-wp-bind--disabled="state.isDisabled" data-wp-bind--aria-pressed="context.isFollowing" data-wp-bind--aria-label="state.actionLabel" data-wp-bind--title="state.actionLabel" data-wp-class--is-following="context.isFollowing" data-wp-class--is-mutual="context.isMutual"><span data-wp-text="state.label"><?php echo esc_html( $state['label'] ); ?></span></button>
 		<span class="axismundi-follow-button__status" data-wp-text="context.error" aria-live="polite"></span>
 	</div>

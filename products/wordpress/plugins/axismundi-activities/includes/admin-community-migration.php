@@ -21,7 +21,18 @@ function axismundi_act_community_migration_request( array $input ) {
 
 function axismundi_act_handle_community_migration() : void {
 	if ( 'POST' !== ( $_SERVER['REQUEST_METHOD'] ?? '' ) ) { wp_die( 'A POST request is required.', '', array( 'response' => 405 ) ); }
-	$result = axismundi_act_community_migration_request( wp_unslash( $_POST ) );
+	foreach ( array( 'group_uri', 'person_uri', '_wpnonce', 'confirm_migration' ) as $field ) {
+		if ( isset( $_POST[$field] ) && ! is_string( $_POST[$field] ) ) {
+			wp_die( esc_html__( 'Invalid migration request.', 'axismundi-activities' ), '', array( 'response' => 400 ) );
+		}
+	}
+	$input = array(
+		'group_uri' => isset( $_POST['group_uri'] ) && is_string( $_POST['group_uri'] ) ? esc_url_raw( wp_unslash( $_POST['group_uri'] ) ) : '',
+		'person_uri' => isset( $_POST['person_uri'] ) && is_string( $_POST['person_uri'] ) ? esc_url_raw( wp_unslash( $_POST['person_uri'] ) ) : '',
+		'_wpnonce' => isset( $_POST['_wpnonce'] ) && is_string( $_POST['_wpnonce'] ) ? sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ) : '',
+		'confirm_migration' => isset( $_POST['confirm_migration'] ) && is_string( $_POST['confirm_migration'] ) ? sanitize_text_field( wp_unslash( $_POST['confirm_migration'] ) ) : '',
+	);
+	$result = axismundi_act_community_migration_request( $input );
 	if ( is_wp_error( $result ) ) { wp_die( esc_html( $result->get_error_message() ), '', array( 'response' => (int) ( $result->get_error_data()['status'] ?? 400 ) ) ); }
 	$group = axismundi_actors_moderators_group_for_uri( $result->get_target_uri() );
 	wp_safe_redirect( add_query_arg( array( 'page' => 'axismundi-community-review', 'group_id' => $group ? $group->get_identity_id() : 0, 'migrated' => '1' ), admin_url( 'tools.php' ) ), 303 );

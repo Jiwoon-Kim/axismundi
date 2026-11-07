@@ -47,7 +47,7 @@ function axismundi_act_render_admin_detail( Axismundi_Activity $activity ) : voi
 	<h2><?php echo esc_html( $activity->get_type() ); ?></h2>
 	<table class="widefat striped" style="max-width:1000px"><tbody>
 		<tr><th scope="row"><?php esc_html_e( 'Activity URI', 'axismundi-activities' ); ?></th><td><code><?php echo esc_html( $activity->get_uri() ); ?></code></td></tr>
-		<tr><th scope="row"><?php esc_html_e( 'Actor', 'axismundi-activities' ); ?></th><td><?php echo axismundi_act_admin_actor_link( $activity->get_actor_uri() ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- helper escapes complete anchor. ?></td></tr>
+		<tr><th scope="row"><?php esc_html_e( 'Actor', 'axismundi-activities' ); ?></th><td><?php echo wp_kses( axismundi_act_admin_actor_link( $activity->get_actor_uri() ), array( 'a' => array( 'href' => true ), 'code' => array() ) ); ?></td></tr>
 		<tr><th scope="row"><?php esc_html_e( 'Object', 'axismundi-activities' ); ?></th><td><code><?php echo esc_html( $activity->get_object_uri() ?? '—' ); ?></code></td></tr>
 		<tr><th scope="row"><?php esc_html_e( 'Target', 'axismundi-activities' ); ?></th><td><code><?php echo esc_html( $activity->get_target_uri() ?? '—' ); ?></code></td></tr>
 		<tr><th scope="row"><?php esc_html_e( 'Direction / effective status', 'axismundi-activities' ); ?></th><td><?php echo esc_html( $activity->get_direction() . ' / ' . $activity->get_effective_status() ); ?></td></tr>
@@ -82,7 +82,7 @@ function axismundi_act_render_admin_page() : void {
 		<?php else : foreach ( $activities as $activity ) : ?>
 			<tr>
 				<td><a href="<?php echo esc_url( axismundi_act_admin_url( $activity->get_uri() ) ); ?>"><?php echo esc_html( $activity->get_type() ); ?></a><br><code><?php echo esc_html( $activity->get_uri() ); ?></code></td>
-				<td><?php echo axismundi_act_admin_actor_link( $activity->get_actor_uri() ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- helper escapes complete anchor. ?></td>
+				<td><?php echo wp_kses( axismundi_act_admin_actor_link( $activity->get_actor_uri() ), array( 'a' => array( 'href' => true ), 'code' => array() ) ); ?></td>
 				<td><code><?php echo esc_html( $activity->get_object_uri() ?? '—' ); ?></code></td>
 				<td><?php echo esc_html( $activity->get_direction() ); ?></td>
 				<td><?php echo esc_html( $activity->get_effective_status() ); ?></td>
@@ -95,7 +95,7 @@ function axismundi_act_render_admin_page() : void {
 		<?php if ( empty( $relations ) ) : ?>
 			<tr><td colspan="6"><?php esc_html_e( 'No social relations derived.', 'axismundi-activities' ); ?></td></tr>
 		<?php else : foreach ( $relations as $relation ) : ?>
-			<tr><td><?php echo esc_html( (string) $relation['relation_type'] ); ?></td><td><?php echo axismundi_act_admin_actor_link( (string) $relation['subject_actor_uri'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- helper escapes complete anchor. ?></td><td><?php echo axismundi_act_admin_actor_link( (string) $relation['object_actor_uri'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- helper escapes complete anchor. ?></td><td><?php echo esc_html( (string) $relation['direction'] ); ?></td><td><?php echo esc_html( (string) $relation['state'] ); ?></td><td><code><?php echo esc_html( (string) ( $relation['evidence_type'] ?? 'activity' ) ); ?></code></td></tr>
+			<tr><td><?php echo esc_html( (string) $relation['relation_type'] ); ?></td><td><?php echo wp_kses( axismundi_act_admin_actor_link( (string) $relation['subject_actor_uri'] ), array( 'a' => array( 'href' => true ), 'code' => array() ) ); ?></td><td><?php echo wp_kses( axismundi_act_admin_actor_link( (string) $relation['object_actor_uri'] ), array( 'a' => array( 'href' => true ), 'code' => array() ) ); ?></td><td><?php echo esc_html( (string) $relation['direction'] ); ?></td><td><?php echo esc_html( (string) $relation['state'] ); ?></td><td><code><?php echo esc_html( (string) ( $relation['evidence_type'] ?? 'activity' ) ); ?></code></td></tr>
 		<?php endforeach; endif; ?>
 		</tbody></table>
 	</div>

@@ -1,0 +1,5 @@
+Draft only. Do not send until release-package and clean-install testing is complete.
+
+Thank you for the review. I replaced the two whole-POST adapters with explicit, individually sanitized fields and reused the sanitized group ID for the redirect. Generated Actor labels and relationship controls now pass through local wp_kses allowlists at output, including matching occurrences beyond the examples listed.
+
+The directly echoed Interactivity contexts now go through get_block_wrapper_attributes(). The publication nonce was already sanitized before verification; I also moved that sanitization to the original POST read so there is no intermediate raw nonce assignment.

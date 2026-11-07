@@ -78,11 +78,24 @@ function axismundi_act_admin_review_request( array $input ) {
 
 function axismundi_act_handle_admin_review() : void {
 	if ( 'POST' !== ( $_SERVER['REQUEST_METHOD'] ?? '' ) ) { wp_die( 'A POST request is required.', '', array( 'response' => 405 ) ); }
-	$result = axismundi_act_admin_review_request( wp_unslash( $_POST ) );
+	foreach ( array( 'moderator_id', 'group_id', 'object_uri', 'decision', '_wpnonce', 'reason' ) as $field ) {
+		if ( isset( $_POST[$field] ) && ! is_string( $_POST[$field] ) ) {
+			wp_die( esc_html__( 'Invalid review request.', 'axismundi-activities' ), '', array( 'response' => 400 ) );
+		}
+	}
+	$input = array(
+		'moderator_id' => isset( $_POST['moderator_id'] ) && is_string( $_POST['moderator_id'] ) ? (string) absint( wp_unslash( $_POST['moderator_id'] ) ) : '',
+		'group_id' => isset( $_POST['group_id'] ) && is_string( $_POST['group_id'] ) ? (string) absint( wp_unslash( $_POST['group_id'] ) ) : '',
+		'object_uri' => isset( $_POST['object_uri'] ) && is_string( $_POST['object_uri'] ) ? esc_url_raw( wp_unslash( $_POST['object_uri'] ) ) : '',
+		'decision' => isset( $_POST['decision'] ) && is_string( $_POST['decision'] ) ? sanitize_key( wp_unslash( $_POST['decision'] ) ) : '',
+		'_wpnonce' => isset( $_POST['_wpnonce'] ) && is_string( $_POST['_wpnonce'] ) ? sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ) : '',
+		'reason' => isset( $_POST['reason'] ) && is_string( $_POST['reason'] ) ? sanitize_textarea_field( wp_unslash( $_POST['reason'] ) ) : '',
+	);
+	$result = axismundi_act_admin_review_request( $input );
 	if ( is_wp_error( $result ) ) {
 		wp_die( esc_html( $result->get_error_message() ), '', array( 'response' => (int) ( $result->get_error_data()['status'] ?? 400 ) ) );
 	}
-	wp_safe_redirect( add_query_arg( array( 'page' => 'axismundi-community-review', 'group_id' => absint( $_POST['group_id'] ), 'reviewed' => '1' ), admin_url( 'tools.php' ) ), 303 );
+	wp_safe_redirect( add_query_arg( array( 'page' => 'axismundi-community-review', 'group_id' => absint( $input['group_id'] ), 'reviewed' => '1' ), admin_url( 'tools.php' ) ), 303 );
 	exit;
 }
 add_action( 'admin_post_axismundi_community_review', 'axismundi_act_handle_admin_review' );

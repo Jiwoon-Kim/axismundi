@@ -29,8 +29,9 @@ function axismundi_act_request_publish_actor( WP_Post $post, int $user_id ) {
 		return new WP_Error( 'ax_act_selection_expected', __( 'Reload the editor and choose an Account before federating this post.', 'axismundi-activities' ) );
 	}
 	if ( ! isset( $_SERVER['HTTP_X_AXISMUNDI_ACCOUNT'] ) ) {
-		$nonce = $_POST['ax_publish_account_nonce'] ?? '';
-		if ( ! is_string( $nonce ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $nonce ) ), 'ax_publish_account_' . $post->ID . '_' . $expected ) ) {
+		$nonce = isset( $_POST['ax_publish_account_nonce'] ) && is_string( $_POST['ax_publish_account_nonce'] )
+			? sanitize_text_field( wp_unslash( $_POST['ax_publish_account_nonce'] ) ) : '';
+		if ( ! wp_verify_nonce( $nonce, 'ax_publish_account_' . $post->ID . '_' . $expected ) ) {
 			return new WP_Error( 'ax_act_selection_nonce', __( 'The publication selection has expired. Reload the editor.', 'axismundi-activities' ) );
 		}
 	}

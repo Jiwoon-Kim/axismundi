@@ -13,8 +13,98 @@ $GLOBALS['axismundi_op_object_html_route'] = null;
 /** Stable local human-view URL for one cached remote Object URI. */
 function axismundi_op_cached_object_view_url( string $object_uri ) : string {
 	$valid = axismundi_op_remote_object_uri( $object_uri );
-	return is_wp_error( $valid ) ? '' : add_query_arg( 'ax_object', hash( 'sha256', $valid ), home_url( '/' ) );
+	return is_wp_error( $valid ) ? '' : home_url( '/remote-objects/' . hash( 'sha256', $valid ) );
 }
+
+/** Path relative to the site, without decoding Object identity bytes. */
+function axismundi_op_remote_view_path() : ?string {
+	$path = wp_parse_url( wp_unslash( $_SERVER['REQUEST_URI'] ?? '' ), PHP_URL_PATH );
+	$base = untrailingslashit( (string) wp_parse_url( home_url(), PHP_URL_PATH ) ) . '/remote-objects';
+	return is_string( $path ) && ( $path === $base || str_starts_with( $path, $base . '/' ) )
+		? substr( $path, strlen( $base ) ) : null;
+}
+
+/** Redirect compatibility and URI-entry requests without fetching remote content. */
+function axismundi_op_remote_view_redirect() : void {
+	if ( is_admin() || wp_doing_ajax() ) {
+		return;
+	}
+	$path = axismundi_op_remote_view_path();
+	$entry = in_array( $path, array( '', '/' ), true );
+	$legacy = null === $path && isset( $_GET['ax_object'] );
+	if ( ! $entry && ! $legacy ) {
+		return;
+	}
+	$method = strtoupper( $_SERVER['REQUEST_METHOD'] ?? 'GET' );
+	if ( ! in_array( $method, array( 'GET', 'HEAD' ), true ) ) {
+		status_header( 405 );
+		header( 'Allow: GET, HEAD' );
+		exit;
+	}
+	$url = '';
+	if ( $entry && 1 === count( $_GET ) && isset( $_GET['uri'] ) && is_string( $_GET['uri'] ) ) {
+		$url = axismundi_op_cached_object_view_url( wp_unslash( $_GET['uri'] ) );
+	} elseif ( $legacy ) {
+		$hash = axismundi_op_requested_object_hash();
+		$url = $hash ? home_url( '/remote-objects/' . $hash ) : '';
+	}
+	if ( '' === $url ) {
+		axismundi_op_emit_error( 404 );
+	}
+	wp_safe_redirect( $url, 302, 'Axismundi Object Projections' );
+	exit;
+}
+add_action( 'template_redirect', 'axismundi_op_remote_view_redirect', -20 );
+
+/** Use the same cached identity for negotiated and HTML representations. */
+function axismundi_op_remote_view_source( $source ) {
+	if ( null === axismundi_op_remote_view_path() ) {
+		return $source;
+	}
+	$hash = axismundi_op_requested_object_hash();
+	$row = $hash ? axismundi_op_get_remote_object_by_hash( $hash, true ) : null;
+	return is_array( $row ) && axismundi_op_cached_object_publicly_viewable( $row )
+		? new Axismundi_Op_Remote_Source( $row )
+		: new WP_Error( 'ax_op_not_found', 'Object not found.' );
+}
+add_filter( 'axismundi_op_current_source', 'axismundi_op_remote_view_source', 20 );
+
+/** This OP-owned namespace negotiates independently of canonical WP post routing. */
+function axismundi_op_remote_view_negotiate() : void {
+	if ( null === axismundi_op_remote_view_path() || is_admin() ) {
+		return;
+	}
+	$method = strtoupper( $_SERVER['REQUEST_METHOD'] ?? 'GET' );
+	if ( ! in_array( $method, array( 'GET', 'HEAD' ), true ) ) {
+		status_header( 405 );
+		header( 'Allow: GET, HEAD' );
+		exit;
+	}
+	header( 'Vary: Accept', false );
+	if ( ! axismundi_op_accepts_activitystreams( (string) ( $_SERVER['HTTP_ACCEPT'] ?? '' ) ) && ! axismundi_op_explicit_activitypub_requested() ) {
+		return;
+	}
+	$source = axismundi_op_remote_view_source( null );
+	if ( is_wp_error( $source ) ) {
+		axismundi_op_emit_error( 404 );
+	}
+	$row = $source->get_row();
+	$object = $row['payload'] ?? null;
+	if ( ! is_array( $object ) || ( $object['id'] ?? '' ) !== $row['object_uri'] ) {
+		axismundi_op_emit_error( 500 );
+	}
+	unset( $object['bto'], $object['bcc'] );
+	$object['@context'] = $object['@context'] ?? 'https://www.w3.org/ns/activitystreams';
+	status_header( axismundi_op_object_http_status( $object ) );
+	nocache_headers();
+	header( 'Content-Type: application/activity+json; charset=' . get_option( 'blog_charset' ) );
+	header( 'X-Content-Type-Options: nosniff' );
+	if ( 'HEAD' !== $method ) {
+		echo wp_json_encode( $object, JSON_HEX_TAG | JSON_HEX_AMP );
+	}
+	exit;
+}
+add_action( 'template_redirect', 'axismundi_op_remote_view_negotiate', -15 );
 
 /** Whether one cached observation may have an anonymous standalone human view. */
 function axismundi_op_cached_object_publicly_viewable( array $row ) : bool {
@@ -46,6 +136,18 @@ function axismundi_op_object_view_query_vars( array $vars ) : array {
 	return array_values( array_unique( $vars ) );
 }
 add_filter( 'query_vars', 'axismundi_op_object_view_query_vars' );
+
+/** Core has no singular WP_Post to canonicalize in this namespace. */
+function axismundi_op_remote_view_canonical_redirect( $redirect ) {
+	return null !== axismundi_op_remote_view_path() ? false : $redirect;
+}
+add_filter( 'redirect_canonical', 'axismundi_op_remote_view_canonical_redirect' );
+add_action( 'template_redirect', static function (): void {
+	if ( null !== axismundi_op_remote_view_path() ) {
+		remove_action( 'template_redirect', 'redirect_canonical' );
+		remove_action( 'template_redirect', 'wp_old_slug_redirect' );
+	}
+}, -21 );
 
 /** Current claimed cached-Object route, or null outside that namespace. */
 function axismundi_op_object_html_route() : ?array {
@@ -93,6 +195,11 @@ function axismundi_op_is_object_html_request() : bool {
 
 /** Exact hash requested by the local cached-Object namespace. */
 function axismundi_op_requested_object_hash() : ?string {
+	$path = axismundi_op_remote_view_path();
+	if ( null !== $path ) {
+		$extra = array_diff_key( $_GET, array( 'activitypub' => true ) );
+		return ! $extra && 1 === preg_match( '~^/([a-f0-9]{64})/?$~D', $path, $matches ) ? $matches[1] : '';
+	}
 	if ( ! isset( $_GET['ax_object'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- public read route.
 		return null;
 	}

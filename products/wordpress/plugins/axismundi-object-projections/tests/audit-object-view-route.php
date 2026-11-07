@@ -29,7 +29,8 @@ function ax_ovr_assert( array &$results, string $label, bool $condition ) : void
 
 /** Run one synthetic cached-Object request through the route claim. */
 function ax_ovr_route( string $hash ) : array {
-	$_GET                      = array( 'ax_object' => $hash );
+	$_GET                      = array();
+	$_SERVER['REQUEST_URI'] = wp_parse_url( home_url( '/remote-objects/' . $hash ), PHP_URL_PATH );
 	$_SERVER['REQUEST_METHOD'] = 'GET';
 	unset( $_SERVER['HTTP_ACCEPT'] );
 	$GLOBALS['axismundi_op_object_html_route'] = null;
@@ -95,8 +96,13 @@ try {
 	$active_hash = hash( 'sha256', $active_uri );
 	$gone_hash   = hash( 'sha256', $gone_uri );
 
-	ax_ovr_assert( $ax_ovr_results, 'the local cached view uses a stable opaque hash while preserving the remote identity outside the URL', is_array( $active ) && is_array( $gone ) && axismundi_op_cached_object_view_url( $active_uri ) === add_query_arg( 'ax_object', $active_hash, home_url( '/' ) ) );
+	ax_ovr_assert( $ax_ovr_results, 'the local cached view uses a stable opaque hash while preserving the remote identity outside the URL', is_array( $active ) && is_array( $gone ) && axismundi_op_cached_object_view_url( $active_uri ) === home_url( '/remote-objects/' . $active_hash ) );
 	$active_route = ax_ovr_route( $active_hash );
+	ax_ovr_assert( $ax_ovr_results, 'path lookup resolves the same cached remote identity for negotiation', axismundi_op_remote_view_source( null ) instanceof Axismundi_Op_Remote_Source );
+	ax_ovr_assert( $ax_ovr_results, 'Core canonical redirect is suppressed for the owned path', false === axismundi_op_remote_view_canonical_redirect( home_url( '/' ) ) );
+	$_GET = array( 'extra' => '1' );
+	ax_ovr_assert( $ax_ovr_results, 'extra query parameters do not bypass the exact path gate', '' === axismundi_op_requested_object_hash() );
+	$_GET = array();
 	ax_ovr_assert( $ax_ovr_results, 'an active cached Object returns 200, binds the remote view model, and clears the fallback home loop', true === $active_route['handled'] && 200 === (int) $active_route['route']['status'] && $active_uri === (string) ( $active_route['model']['id'] ?? '' ) && array() === $active_route['query']->posts && ! $active_route['query']->is_home && ! $active_route['query']->is_singular && ! $active_route['query']->is_404 );
 	$active_pattern = axismundi_op_render_object_pattern();
 	$legacy_avatar  = WP_Block_Type_Registry::get_instance()->get_registered( 'axismundi/object-avatar' );

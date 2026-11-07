@@ -7,7 +7,7 @@ function axismundi_act_announce_moderator_control( Axismundi_Actor $group, Axism
 	global $wpdb;
 	if ( ! axismundi_actors_is_community( $group ) || 'public' !== $group->get_status() || ! $group->is_handle_locked()
 		|| ! in_array( $control->get_type(), array( 'Add', 'Remove' ), true )
-		|| $control->get_target_uri() !== axismundi_actors_moderators_uri( $group )
+		|| axismundi_actors_collection_target_uri( $control->get_target_uri() ) !== axismundi_actors_moderators_uri( $group )
 		|| ! $wpdb->get_var( $wpdb->prepare( 'SELECT id FROM %i WHERE group_id=%d AND activity_uri=%s', axismundi_actors_moderators_log_table(), $group->get_identity_id(), $control->get_uri() ) ) ) { return new WP_Error( 'ax_mod_announce', 'Only a committed Community moderation decision can be announced.' ); }
 	return axismundi_act_record_source_activity( array( 'type' => 'Announce', 'actor' => $group->get_uri(), 'object' => $control->get_payload(), 'to' => array( 'https://www.w3.org/ns/activitystreams#Public' ), 'cc' => array( axismundi_op_actor_followers_url( $group ) ) ), 'outbound', 'community-moderators:' . $group->get_identity_id() . ':' . $control->get_uri() );
 }
@@ -15,7 +15,7 @@ function axismundi_act_announce_moderator_control( Axismundi_Actor $group, Axism
 function axismundi_act_submit_moderators( int $user, Axismundi_Actor $actor, Axismundi_Actor $group, array $input, string $retry_key = '', bool $bootstrap = false ) {
 	$permission = axismundi_act_outbox_authorize( $user, $actor );
 	if ( is_wp_error( $permission ) ) { return $permission; }
-	if ( ! axismundi_actors_is_community( $group ) || ! $group->is_handle_locked() || 'Person' !== $actor->get_type() || $actor->get_uri() !== ( $input['actor'] ?? '' ) || axismundi_actors_moderators_uri( $group ) !== ( $input['target'] ?? '' ) || ! in_array( $input['type'] ?? '', array( 'Add', 'Remove' ), true ) ) { return new WP_Error( 'ax_mod_target', 'A Person must address a local Community moderator collection.', array( 'status' => 403 ) ); }
+	if ( ! axismundi_actors_is_community( $group ) || ! $group->is_handle_locked() || 'Person' !== $actor->get_type() || $actor->get_uri() !== ( $input['actor'] ?? '' ) || axismundi_actors_moderators_uri( $group ) !== axismundi_actors_collection_target_uri( $input['target'] ?? '' ) || ! in_array( $input['type'] ?? '', array( 'Add', 'Remove' ), true ) ) { return new WP_Error( 'ax_mod_target', 'A Person must address a local Community moderator collection.', array( 'status' => 403 ) ); }
 	if ( array_diff( array_keys( $input ), array( 'type', 'actor', 'object', 'target', 'audience', '@context' ) ) || ! is_string( $input['object'] ?? null ) || ( isset( $input['audience'] ) && $input['audience'] !== $group->get_uri() ) || ( '' !== $retry_key && ! preg_match( '/^[\x21-\x7e]{1,128}$/D', $retry_key ) ) ) { return new WP_Error( 'ax_mod_input', 'Invalid moderator command or Idempotency-Key.', array( 'status' => 400 ) ); }
 	$member = axismundi_actors_get_by_uri( $input['object'] );
 	if ( ! $member ) { $member = axismundi_actors_discover_remote_actor_uri( $input['object'] ); }

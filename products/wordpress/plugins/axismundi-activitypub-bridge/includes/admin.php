@@ -19,6 +19,12 @@ function axismundi_activitypub_bridge_register_admin_page() : void {
 }
 add_action( 'admin_menu', 'axismundi_activitypub_bridge_register_admin_page' );
 
+add_action( 'admin_init', static function (): void {
+	register_setting( 'ax_bridge_disclosure', 'ax_bridge_shared_inbox_public', array(
+		'type' => 'boolean', 'default' => true, 'sanitize_callback' => 'rest_sanitize_boolean',
+	) );
+} );
+
 /** Run the explicit read-only dry scan for this request only. */
 function axismundi_activitypub_bridge_requested_legacy_report() : ?array {
 	if ( ! isset( $_POST['ax_bridge_legacy_scan'] ) ) {
@@ -209,6 +215,12 @@ function axismundi_activitypub_bridge_render_admin_page() : void {
 	?>
 	<div class="wrap">
 		<h1><?php esc_html_e( 'ActivityPub Bridge', 'axismundi-activitypub-bridge' ); ?></h1>
+		<form method="post" action="options.php">
+			<?php settings_fields( 'ax_bridge_disclosure' ); ?>
+			<input type="hidden" name="ax_bridge_shared_inbox_public" value="0">
+			<label><input type="checkbox" name="ax_bridge_shared_inbox_public" value="1" <?php checked( (bool) get_option( 'ax_bridge_shared_inbox_public', true ) ); ?>> <?php esc_html_e( 'Public shared Inbox collection', 'axismundi-activitypub-bridge' ); ?></label>
+			<?php submit_button( __( 'Save', 'axismundi-activitypub-bridge' ), 'secondary', 'submit', false ); ?>
+		</form>
 		<p><?php esc_html_e( 'Axismundi owns Actor representations and Activity state. The Bridge owns this outbound queue and reuses the official ActivityPub plugin only for HTTP signature generation and Inbox verification.', 'axismundi-activitypub-bridge' ); ?></p>
 		<?php if ( true === $retry_result ) : ?>
 			<div class="notice notice-success inline"><p><?php esc_html_e( 'The failed delivery was queued for retry.', 'axismundi-activitypub-bridge' ); ?></p></div>

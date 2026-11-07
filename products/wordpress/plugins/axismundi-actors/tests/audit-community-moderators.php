@@ -93,7 +93,7 @@ try {
 	$assert( is_wp_error( axismundi_act_submit_outbox( $users[1], $people[1], $lower ) ), 'Lower moderator cannot remove a higher moderator' );
 	$assert( is_wp_error( axismundi_act_initialize_moderators( $group, $people[0], $users[1] ) ), 'Bootstrap never bypasses Account authority' );
 	$uri = axismundi_actors_moderators_uri( $group );
-	$request = new WP_REST_Request( 'GET', '/axismundi/v1/actors/' . $group->get_uuid() . '/moderators' );
+	$request = new WP_REST_Request( 'GET', '/axismundi/activitypub/actors/' . $group->get_uuid() . '/moderators' );
 	$response = rest_do_request( $request ); $wire = $response->get_data();
 	if ( 200 !== $response->get_status() ) { throw new RuntimeException( 'Moderator route: ' . wp_json_encode( $wire ) ); }
 	$assert( 200 === $response->get_status() && 'OrderedCollection' === $wire['type'] && array( $people[0]->get_uri(), $people[1]->get_uri() ) === $wire['orderedItems'] && ! isset( $wire['first'], $wire['next'], $wire['totalItems'] ) && ! array_key_exists( 'totalItems', $wire ), 'Serving preserves Person URI order without pages or totals' );

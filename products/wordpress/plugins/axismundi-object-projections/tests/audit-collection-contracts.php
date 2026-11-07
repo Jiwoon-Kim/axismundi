@@ -14,7 +14,7 @@ $contracts = array();
 foreach ( axismundi_op_collection_contracts() as $contract ) {
 	$contracts[ $contract['id'] ] = $contract;
 }
-$expected = array( 'ap-outbox', 'ap-inbox', 'ap-followers', 'ap-following', 'ap-liked', 'ap-likes', 'ap-shares', 'replies', 'used-in' );
+$expected = array( 'ap-outbox', 'ap-inbox', 'ap-shared-inbox', 'ap-followers', 'ap-following', 'ap-liked', 'ap-likes', 'ap-shares', 'replies', 'used-in' );
 if ( function_exists( 'axismundi_actors_read_featured' ) ) {
 	$expected[] = 'ap-featured';
 }
@@ -27,7 +27,7 @@ if ( isset( $contracts['ap-featured'] ) ) {
 	ax_contracts_assert( $ax_contracts_results, 'Person featured is an Actors-owned ordered explicit Object membership contract', 'axismundi-actors' === $featured['owner'] && 'OrderedCollection' === $featured['collection_type'] && 'membership-row' === $featured['membership_authority'] && 'owner-only' === $featured['append_policy'] && array( 'Object' ) === $featured['member_models'] && 'exact' === $featured['total_capability'] );
 }
 
-foreach ( array( 'ap-outbox', 'ap-inbox', 'ap-liked', 'replies' ) as $id ) {
+foreach ( array( 'ap-outbox', 'ap-inbox', 'ap-shared-inbox', 'ap-liked', 'replies' ) as $id ) {
 	$contract = $contracts[ $id ] ?? array();
 	ax_contracts_assert( $ax_contracts_results, $id . ' declares why it cannot publish an exact total', 'unavailable' === ( $contract['total_capability'] ?? '' ) && '' !== ( $contract['total_reason'] ?? '' ) );
 }
@@ -37,12 +37,14 @@ foreach ( array( 'ap-followers', 'ap-following', 'ap-likes', 'ap-shares', 'used-
 }
 
 $outbox = $contracts['ap-outbox'] ?? array();
-foreach ( array( 'ap-outbox', 'ap-inbox' ) as $id ) {
+foreach ( array( 'ap-outbox', 'ap-inbox', 'ap-shared-inbox' ) as $id ) {
 	ax_contracts_assert( $ax_contracts_results, '[spec AP 5.1/5.2] ' . $id . ' requires OrderedCollection', 'OrderedCollection' === ( $contracts[ $id ]['collection_type'] ?? '' ) );
 }
 ax_contracts_assert( $ax_contracts_results, 'the Outbox keeps its immutable ledger cursor and Activities-owned reader binding', 'immutable-cursor(feed_sort_at,id)' === ( $outbox['ordering'] ?? '' ) && 'activities' === ( $outbox['owner'] ?? '' ) && 'axismundi_act_get_public_outbox_page' === ( $outbox['reader'] ?? '' ) );
 
 $inbox = axismundi_op_read_collection_contract( 'ap-inbox', 'https://example.test/actors/owner' );
+$shared = $contracts['ap-shared-inbox'];
+ax_contracts_assert( $ax_contracts_results, 'shared Inbox membership stays in Activities with no disclosed total', 'activities' === $shared['owner'] && 'axismundi_act_get_shared_inbox_page' === $shared['reader'] && array( 'public' => 'never', 'owner' => 'never' ) === $shared['total_disclosure'] );
 ax_contracts_assert( $ax_contracts_results, 'the Inbox reader denies an unresolved Account instead of inventing an empty collection', is_wp_error( $inbox ) && 'ax_act_inbox_forbidden' === $inbox->get_error_code() );
 
 $failures = count( array_filter( $ax_contracts_results, static fn( bool $holds ) : bool => ! $holds ) );

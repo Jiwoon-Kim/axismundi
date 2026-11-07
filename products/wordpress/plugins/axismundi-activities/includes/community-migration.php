@@ -32,7 +32,7 @@ function axismundi_act_migrate_community_group( int $user, Axismundi_Actor $grou
 		if ( $old ) {
 			global $wpdb;
 			$log = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM %i WHERE group_id=%d AND actor_uri=%s AND person_uri=%s AND verb='Initialize' AND activity_uri=%s", axismundi_actors_moderators_log_table(), $group->get_identity_id(), $person->get_uri(), $person->get_uri(), $old->get_uri() ) );
-			return axismundi_actors_is_community( $group ) && $old->get_actor_uri() === $person->get_uri() && $old->get_object_uri() === $person->get_uri() && $old->get_target_uri() === axismundi_actors_moderators_uri( $group ) && $log
+			return axismundi_actors_is_community( $group ) && $old->get_actor_uri() === $person->get_uri() && $old->get_object_uri() === $person->get_uri() && axismundi_actors_collection_target_uri( $old->get_target_uri() ) === axismundi_actors_moderators_uri( $group ) && $log
 				? $old : new WP_Error( 'ax_migration_conflict', 'A different migration already owns this Group.', array( 'status' => 409 ) );
 		}
 		if ( null !== axismundi_actors_group_profile( $group ) ) { return new WP_Error( 'ax_migration_profile', 'Only an unconfigured Group can be migrated.', array( 'status' => 409 ) ); }

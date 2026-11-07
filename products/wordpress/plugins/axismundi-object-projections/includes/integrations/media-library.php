@@ -321,7 +321,7 @@ function axismundi_op_media_attachment_descriptor( WP_Post $attachment ) : ?arra
 
 /** Stable reverse-usage collection URI for one Attachment. */
 function axismundi_op_media_used_in_url( WP_Post $attachment ) : string {
-	return rest_url( 'axismundi/v1/media/' . (int) $attachment->ID . '/used-in' );
+	return rest_url( 'axismundi/activitypub/media/' . (int) $attachment->ID . '/used-in' );
 }
 
 /** Public embedded descriptors indexed for one local subject Post. */
@@ -566,8 +566,7 @@ function axismundi_op_register_media_used_in_route() : void {
 	if ( ! axismundi_op_media_library_available() || ! function_exists( 'axismundi_media_relations_used_in' ) ) {
 		return;
 	}
-	register_rest_route(
-		'axismundi/v1',
+	axismundi_op_register_activitypub_read_route(
 		'/media/(?P<id>\d+)/used-in',
 		array(
 			'methods'             => WP_REST_Server::READABLE,

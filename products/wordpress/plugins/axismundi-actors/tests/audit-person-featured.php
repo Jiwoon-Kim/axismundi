@@ -66,7 +66,7 @@ try {
 	$created_with_key = axismundi_act_submit_outbox( $users[0], $actor, array( 'type' => 'Note', 'content' => '<p>Cross-method retry fixture</p>', 'to' => $public ), $create_key );
 	$assert( $created_with_key instanceof Axismundi_Activity, 'Create retry fixture allocated' ); $objects[] = $created_with_key->get_object_uri();
 	$assert( is_wp_error( axismundi_act_submit_outbox( $users[0], $actor, $command( 'Add', $created_with_key->get_object_uri() ), $create_key ) ), 'A Create retry key cannot be reused for featured Add' );
-	$path = '/axismundi/v1/actors/' . $actor->get_uuid() . '/featured';
+	$path = '/axismundi/activitypub/actors/' . $actor->get_uuid() . '/featured';
 	$request = new WP_REST_Request( 'GET', $path );
 	$response = rest_do_request( $request ); $data = $response->get_data();
 	$assert( 200 === $response->get_status() && 'OrderedCollection' === ( $data['type'] ?? '' ) && array( $objects[1] ) === ( $data['orderedItems'] ?? null ), 'Public REST collection has exact ordered membership: ' . wp_json_encode( $data ) );

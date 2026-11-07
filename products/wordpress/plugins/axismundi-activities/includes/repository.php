@@ -7,7 +7,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACT_DB_VERSION        = '15';
+const AXISMUNDI_ACT_DB_VERSION        = '16';
 const AXISMUNDI_ACT_DB_VERSION_OPTION = 'axismundi_activities_db_version';
 const AXISMUNDI_ACT_PAYLOAD_MAX       = 1048576;
 
@@ -1320,8 +1320,8 @@ function axismundi_act_recompute_effectiveness( string $activity_uri, int $depth
  * @param int[]               $inbox_actor_ids Trusted local recipients of an inbound delivery.
  * @return Axismundi_Activity|WP_Error
  */
-function axismundi_act_record_activity( array $payload, string $direction = 'outbound', array $inbox_actor_ids = array() ) {
-	return axismundi_act_record_source_activity( $payload, $direction, '', $inbox_actor_ids );
+function axismundi_act_record_activity( array $payload, string $direction = 'outbound', array $inbox_actor_ids = array(), string $received_via = '' ) {
+	return axismundi_act_record_source_activity( $payload, $direction, '', $inbox_actor_ids, null, $received_via );
 }
 
 /**
@@ -1331,13 +1331,16 @@ function axismundi_act_record_activity( array $payload, string $direction = 'out
  * concurrent request minted a different candidate Activity URI.
  *
  * @param array<string,mixed> $payload          ActivityStreams payload.
- * @param string              $direction        inbound|outbound|local.
+ * @param string              $direction        inbound|outbound.
  * @param string              $source_event_key Stable local event identity, or empty.
  * @param callable|null       $before_commit    Trusted local SQL participant; WP_Error rolls back before public hooks.
  * @return Axismundi_Activity|WP_Error
  */
-function axismundi_act_record_source_activity( array $payload, string $direction, string $source_event_key, array $inbox_actor_ids = array(), ?callable $before_commit = null ) {
+function axismundi_act_record_source_activity( array $payload, string $direction, string $source_event_key, array $inbox_actor_ids = array(), ?callable $before_commit = null, string $received_via = '' ) {
 	global $wpdb;
+	if ( ! in_array( $received_via, array( '', 'actor', 'shared' ), true ) || ( '' !== $received_via && 'inbound' !== $direction ) ) {
+		return new WP_Error( 'ax_act_receipt_source', 'Invalid inbound receipt source.' );
+	}
 	if ( ! empty( $inbox_actor_ids ) && ( 'inbound' !== $direction || '' !== $source_event_key ) ) {
 		return new WP_Error( 'ax_act_inbox_direction', 'Receipts require an inbound Activity without a local source key.' );
 	}
@@ -1400,7 +1403,7 @@ function axismundi_act_record_source_activity( array $payload, string $direction
 			return new WP_Error( 'ax_act_identity_conflict', __( 'That Activity URI already identifies a different immutable payload.', 'axismundi-activities' ) );
 		}
 		if ( ! empty( $inbox_actor_ids ) && ( 'inbound' !== $existing['direction']
-			|| ! axismundi_act_write_inbox_memberships( (int) $existing['id'], $inbox_actor_ids, $now ) ) ) {
+			|| ! axismundi_act_write_inbox_memberships( (int) $existing['id'], $inbox_actor_ids, $now, $received_via ) ) ) {
 			$wpdb->query( 'ROLLBACK' );
 			return new WP_Error( 'ax_act_inbox_write', 'The Inbox receipts could not be stored.' );
 		}
@@ -1445,7 +1448,7 @@ function axismundi_act_record_source_activity( array $payload, string $direction
 		}
 		return new WP_Error( 'ax_act_write', __( 'The Activity could not be recorded.', 'axismundi-activities' ) );
 	}
-	if ( ! axismundi_act_write_inbox_memberships( (int) $wpdb->insert_id, $inbox_actor_ids, $now ) ) {
+	if ( ! axismundi_act_write_inbox_memberships( (int) $wpdb->insert_id, $inbox_actor_ids, $now, $received_via ) ) {
 		$wpdb->query( 'ROLLBACK' );
 		return new WP_Error( 'ax_act_inbox_write', 'The Inbox receipts could not be stored.' );
 	}

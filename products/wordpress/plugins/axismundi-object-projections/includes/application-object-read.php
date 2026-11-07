@@ -26,7 +26,7 @@ function axismundi_op_application_actor_can_read( array $document, string $autho
 	if ( in_array( $viewer_uri, $recipients, true ) ) { return true; }
 	$author = '' !== $author_uri ? axismundi_actors_get_by_uri( $author_uri ) : null;
 	$followers = $author ? axismundi_actors_get_endpoint( $author, 'followers' ) : '';
-	if ( '' === $followers || ! in_array( $followers, $recipients, true ) || ! function_exists( 'axismundi_act_get_relation' ) ) { return false; }
+	if ( '' === $followers || ! in_array( axismundi_actors_collection_target_uri( $followers ), array_map( 'axismundi_actors_collection_target_uri', $recipients ), true ) || ! function_exists( 'axismundi_act_get_relation' ) ) { return false; }
 	$relation = axismundi_act_get_relation( 'follow', $viewer_uri, $author_uri );
 	return is_array( $relation ) && 'accepted' === $relation['state'];
 }

@@ -3,7 +3,7 @@
 defined( 'ABSPATH' ) || exit;
 
 function axismundi_op_actor_liked_url( Axismundi_Actor $actor ) : string {
-	return rest_url( 'axismundi/v1/actors/' . rawurlencode( $actor->get_uuid() ) . '/liked' );
+	return rest_url( 'axismundi/activitypub/actors/' . rawurlencode( $actor->get_uuid() ) . '/liked' );
 }
 
 function axismundi_op_get_actor_liked( WP_REST_Request $request ) {
@@ -40,7 +40,7 @@ function axismundi_op_get_actor_liked( WP_REST_Request $request ) {
 
 function axismundi_op_register_actor_liked_route() : void {
 	if ( ! function_exists( 'axismundi_act_get_liked_collection_page' ) ) { return; }
-	register_rest_route( 'axismundi/v1', '/actors/(?P<uuid>[0-9a-f-]{36})/liked', array(
+	axismundi_op_register_activitypub_read_route( '/actors/(?P<uuid>[0-9a-f-]{36})/liked', array(
 		'methods' => WP_REST_Server::READABLE, 'callback' => 'axismundi_op_get_actor_liked', 'permission_callback' => '__return_true',
 		'args' => array( 'page' => array( 'type' => 'integer', 'minimum' => 1, 'maximum' => 1 ), 'before' => array( 'type' => 'integer', 'minimum' => 1 ) ),
 	) );

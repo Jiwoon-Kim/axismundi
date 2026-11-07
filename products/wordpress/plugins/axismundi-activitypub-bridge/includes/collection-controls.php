@@ -61,7 +61,7 @@ function axismundi_activitypub_bridge_group_advertises_collection( Axismundi_Act
 }
 
 /** Called only by verified ingress. The outer signer and inner author remain distinct. */
-function axismundi_activitypub_bridge_receive_collection_control( array $payload, Axismundi_Actor $sender, array $recipients ) {
+function axismundi_activitypub_bridge_receive_collection_control( array $payload, Axismundi_Actor $sender, array $recipients, string $received_via = '' ) {
 	global $wpdb;
 	if ( $sender->is_local() || $sender->get_uri() !== axismundi_act_member_uri( $payload['actor'] ?? '' ) ) { return new WP_Error( 'ax_bridge_control_sender', 'The payload does not identify its verified sender.' ); }
 	$envelope_json = wp_json_encode( $payload );
@@ -116,11 +116,11 @@ function axismundi_activitypub_bridge_receive_collection_control( array $payload
 		if ( $row && ( $row['payload_hash'] !== hash( 'sha256', $intent_json ) || $row['group_uri'] !== $group->get_uri() ) ) { return new WP_Error( 'ax_bridge_control_conflict', 'Conflicting collection Activity replay.' ); }
 		// The ledger cannot name an anonymous inner object. Retain that envelope as evidence only.
 		if ( $announced && isset( $inner['id'] ) ) {
-			$outer = axismundi_act_record_activity( $payload, 'inbound', $recipients );
+			$outer = axismundi_act_record_activity( $payload, 'inbound', $recipients, $received_via );
 			if ( is_wp_error( $outer ) ) { return $outer; }
 		}
 		if ( ! $announced && isset( $inner['id'] ) ) {
-			$stored = axismundi_act_record_activity( $inner, 'inbound', $recipients );
+			$stored = axismundi_act_record_activity( $inner, 'inbound', $recipients, $received_via );
 			if ( is_wp_error( $stored ) ) { return $stored; }
 		}
 		if ( ! $row ) {

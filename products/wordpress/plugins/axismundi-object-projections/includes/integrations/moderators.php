@@ -48,5 +48,5 @@ function axismundi_op_get_actor_moderators( WP_REST_Request $request ) {
 }
 add_action( 'rest_api_init', static function () : void {
 	if ( ! function_exists( 'axismundi_actors_read_moderators' ) ) { return; }
-	register_rest_route( 'axismundi/v1', '/actors/(?P<uuid>[a-f0-9-]{36})/moderators', array( 'methods' => 'GET', 'callback' => 'axismundi_op_get_actor_moderators', 'permission_callback' => '__return_true' ) );
+	axismundi_op_register_activitypub_read_route( '/actors/(?P<uuid>[a-f0-9-]{36})/moderators', array( 'methods' => 'GET', 'callback' => 'axismundi_op_get_actor_moderators', 'permission_callback' => '__return_true' ) );
 } );

@@ -171,7 +171,8 @@ function axismundi_act_audience_visibility( array $to, array $cc, string $follow
 	if ( '' === $followers_uri ) {
 		return 'limited';
 	}
-	return in_array( $followers_uri, $to, true ) || in_array( $followers_uri, $cc, true ) ? 'followers' : 'mentioned';
+	$followers_uri = axismundi_actors_collection_target_uri( $followers_uri );
+	return in_array( $followers_uri, array_map( 'axismundi_actors_collection_target_uri', $to ), true ) || in_array( $followers_uri, array_map( 'axismundi_actors_collection_target_uri', $cc ), true ) ? 'followers' : 'mentioned';
 }
 
 /**

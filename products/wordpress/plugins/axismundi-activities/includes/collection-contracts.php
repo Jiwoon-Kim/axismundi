@@ -44,6 +44,15 @@ function axismundi_act_register_collection_contracts() : void {
 			'total_disclosure' => array( 'public' => 'never', 'owner' => 'never' ),
 			'reader'           => 'axismundi_act_get_actor_inbox_page',
 		),
+		'ap-shared-inbox' => array(
+			'member_models' => array( 'Activity' ),
+			'presentation' => 'paged-members',
+			'ordering' => 'source-defined',
+			'total_capability' => 'unavailable',
+			'total_reason' => 'read-time-filter',
+			'total_disclosure' => array( 'public' => 'never', 'owner' => 'never' ),
+			'reader' => 'axismundi_act_get_shared_inbox_page',
+		),
 		'ap-followers' => array(
 			'member_models'    => array( 'Object' ),
 			'member_types'     => axismundi_actors_kinds(),
@@ -90,7 +99,7 @@ function axismundi_act_register_collection_contracts() : void {
 	foreach ( $contracts as $id => $contract ) {
 		$contract['collection_type'] = 'OrderedCollection';
 		$contract['owner'] = 'activities';
-		$source = array( 'ap-outbox' => 'publication', 'ap-inbox' => 'receipt', 'ap-followers' => 'Follow+Accept', 'ap-following' => 'Follow+Accept', 'ap-liked' => 'Like', 'ap-likes' => 'Like', 'ap-shares' => 'Announce' );
+		$source = array( 'ap-outbox' => 'publication', 'ap-inbox' => 'receipt', 'ap-shared-inbox' => 'shared-receipt', 'ap-followers' => 'Follow+Accept', 'ap-following' => 'Follow+Accept', 'ap-liked' => 'Like', 'ap-likes' => 'Like', 'ap-shares' => 'Announce' );
 		$contract['membership_source'] = 'side-effect:' . $source[ $id ];
 		$contract['membership_authority'] = in_array( $id, array( 'ap-followers', 'ap-following' ), true ) ? 'relation-row' : 'ledger-index';
 		$contract['append_policy'] = 'closed';

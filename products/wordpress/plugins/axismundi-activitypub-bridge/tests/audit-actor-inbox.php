@@ -18,6 +18,7 @@ $assert = static function ( bool $ok, string $label ) use ( &$checks ) : void {
 $fail = null;
 $defer = null;
 $key_lookup = null;
+$shared_public_before = get_option( 'ax_bridge_shared_inbox_public', null );
 try {
 	$assert( axismundi_act_install(), 'Receipt schema installs and verifies' );
 	for ( $i = 0; $i < 2; ++$i ) {
@@ -125,7 +126,7 @@ try {
 	$page = axismundi_act_get_actor_inbox_page( $group->get_uri(), 1 );
 	$next = axismundi_act_get_actor_inbox_page( $group->get_uri(), 1, $page['next_cursor'] );
 	$assert( $page['has_more'] && $page['items'][0]['id'] !== $next['items'][0]['id'], 'Receipt cursor pages have no duplicate members' );
-	$rest = '/axismundi/v1/actors/' . $group->get_uuid() . '/inbox';
+	$rest = '/axismundi/activitypub/actors/' . $group->get_uuid() . '/inbox';
 	$request = new WP_REST_Request( 'GET', $rest );
 	$request->set_param( 'page', 1 );
 	$response = rest_do_request( $request );
@@ -172,17 +173,26 @@ try {
 	$crypto_request->set_body( $crypto_body . ' ' );
 	$assert( 401 === rest_do_request( $crypto_request )->get_status() && null === axismundi_act_get( $crypto_payload['id'] ), 'Real verifier rejects a body changed after signing' );
 	$crypto_request->set_body( $crypto_body );
-	$crypto_request->set_route( '/axismundi/v1/actors/' . $actors[0]->get_uuid() . '/inbox' );
+	$crypto_request->set_route( '/axismundi/activitypub/actors/' . $actors[0]->get_uuid() . '/inbox' );
 	$assert( 401 === rest_do_request( $crypto_request )->get_status() && null === axismundi_act_get( $crypto_payload['id'] ), 'Real verifier rejects changing the signed recipient URL' );
 	$crypto_request->set_route( $rest );
 	$crypto_response = rest_do_request( $crypto_request );
 	$assert( 202 === $crypto_response->get_status(), 'RSA-signed POST passes the unmodified upstream verifier and records a receipt' );
-	$crypto_request->set_route( '/axismundi/v1/activitypub/inbox' );
+	$old_featured = rest_url( 'axismundi/v1/actors/' . $actors[0]->get_uuid() . '/featured' );
+	$new_featured = axismundi_actors_featured_uri( $actors[0] );
+	$assert( $new_featured === axismundi_actors_collection_target_uri( $old_featured ) && axismundi_act_outbox_same_intent( array( 'type' => 'Add', 'target' => $old_featured ), array( 'type' => 'Add', 'target' => $new_featured ) ), 'Local historical curation targets remain retry-equivalent without rewriting the ledger' );
+	$foreign_featured = 'https://foreign.test/wp-json/axismundi/v1/actors/' . $actors[0]->get_uuid() . '/featured';
+	$assert( $foreign_featured === axismundi_actors_collection_target_uri( $foreign_featured ), 'A matching UUID under another origin is never treated as our local collection alias' );
+	$old_followers = rest_url( 'axismundi/v1/actors/' . $actors[0]->get_uuid() . '/followers' );
+	$new_followers = axismundi_op_actor_followers_url( $actors[0] );
+	$groups = array( $new_followers => false );
+	$assert( 'followers' === axismundi_act_audience_visibility( array( $old_followers ), array(), $new_followers ) && axismundi_op_sent_matches_audience( array( 'to' => array( $old_followers ) ), 'none', $groups ), 'Historical followers addressing keeps its visibility and non-Group Sent classification' );
+	$crypto_request->set_route( '/axismundi/activitypub/inbox' );
 	$assert( 401 === rest_do_request( $crypto_request )->get_status(), 'Actor Inbox signature cannot be replayed against shared Inbox URL' );
 	$shared_payload = $payload( 'shared-crypto' );
 	$shared_payload['to'] = array( $actors[0]->get_uri(), $actors[1]->get_uri() );
 	$shared_body = wp_json_encode( $shared_payload );
-	$shared_request = new WP_REST_Request( 'POST', '/axismundi/v1/activitypub/inbox' );
+	$shared_request = new WP_REST_Request( 'POST', '/axismundi/activitypub/inbox' );
 	$shared_request->set_header( 'Content-Type', 'application/activity+json' );
 	$shared_request->set_body( $shared_body );
 	$assert( 401 === rest_do_request( $shared_request )->get_status() && null === axismundi_act_get( $shared_payload['id'] ), 'Shared Inbox rejects unsigned delivery before recording' );
@@ -197,12 +207,38 @@ try {
 	$assert( 202 === $shared_response->get_status() && $shared_activity instanceof Axismundi_Activity, 'RSA-signed shared delivery enters the same Bridge ledger' );
 	$assert( 2 === (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE activity_id=%d', axismundi_act_inbox_table(), $shared_activity->get_id() ) ), 'Shared delivery records only its two explicit local recipients' );
 	$assert( 202 === rest_do_request( $shared_request )->get_status() && 2 === (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE activity_id=%d', axismundi_act_inbox_table(), $shared_activity->get_id() ) ), 'Repeated shared POST creates no duplicate receipts' );
-	$assert( ! isset( rest_get_server()->get_routes()['/axismundi/v1/activitypub/inbox'][0]['methods']['GET'] ), 'Shared Inbox has no public collection GET' );
+	foreach ( array( '/axismundi/v1/activitypub/inbox' => 'axismundi/v1/activitypub/inbox', '/axismundi/v1/actors/' . $actors[0]->get_uuid() . '/inbox' => 'axismundi/v1/actors/' . $actors[0]->get_uuid() . '/inbox' ) as $old_route => $old_path ) {
+		$legacy_request = new WP_REST_Request( 'POST', $old_route );
+		$legacy_request->set_header( 'Content-Type', 'application/activity+json' );
+		$legacy_request->set_header( 'Host', wp_parse_url( home_url(), PHP_URL_HOST ) );
+		$legacy_request->set_body( $shared_body );
+		foreach ( $shared_signed['headers'] as $name => $value ) { $legacy_request->set_header( $name, $value ); }
+		$assert( 401 === rest_do_request( $legacy_request )->get_status(), 'Canonical shared signature cannot be replayed at legacy target: ' . $old_route );
+		$legacy_signed = ( new Activitypub\Signature\Http_Signature_Draft() )->sign( array( 'method' => 'POST', 'body' => $shared_body, 'key_id' => $key_id, 'private_key' => $private, 'headers' => array( 'Date' => gmdate( 'D, d M Y H:i:s' ) . ' GMT' ) ), rest_url( $old_path ) );
+		foreach ( $legacy_signed['headers'] as $name => $value ) { $legacy_request->set_header( $name, $value ); }
+		$assert( 202 === rest_do_request( $legacy_request )->get_status(), 'Legacy signed POST is handled at its original URL without redirect: ' . $old_route );
+	}
+	$assert( ! empty( rest_get_server()->get_routes()['/axismundi/activitypub/inbox'][0]['methods']['GET'] ), 'Shared Inbox offers a separate public GET collection' );
+	foreach ( array( '/axismundi/activitypub/inbox' => array( 'axismundi_op_get_shared_inbox', 'axismundi_activitypub_bridge_receive_shared_inbox' ), '/axismundi/activitypub/actors/(?P<uuid>[0-9a-f-]{36})/inbox' => array( 'axismundi_op_get_actor_inbox', 'axismundi_activitypub_bridge_receive_actor_inbox' ) ) as $route => $expected_callbacks ) {
+		$get = array(); $post = array();
+		foreach ( rest_get_server()->get_routes()[$route] as $handler ) {
+			if ( ! empty( $handler['methods']['GET'] ) ) { $get[] = $handler['callback']; }
+			if ( ! empty( $handler['methods']['POST'] ) ) { $post[] = $handler['callback']; }
+		}
+		$assert( array( $expected_callbacks[0] ) === $get && array( $expected_callbacks[1] ) === $post, 'Exactly one OP read handler and one Bridge POST handler: ' . $route );
+	}
+	$server = $GLOBALS['wp_rest_server'];
+	try {
+		$GLOBALS['wp_rest_server'] = new WP_REST_Server();
+		axismundi_op_register_inbox_routes();
+		$read_only_routes = rest_get_server()->get_routes();
+		$assert( ! empty( $read_only_routes['/axismundi/activitypub/inbox'][0]['methods']['GET'] ) && empty( $read_only_routes['/axismundi/activitypub/inbox'][0]['methods']['POST'] ) && ! empty( $read_only_routes['/axismundi/activitypub/actors/(?P<uuid>[0-9a-f-]{36})/inbox'][0]['methods']['GET'] ), 'OP independently registers Inbox reads without registering transport POST or requiring its verifier' );
+	} finally { $GLOBALS['wp_rest_server'] = $server; }
 	$follow_snapshot = axismundi_act_import_follow_snapshot( $actors[0]->get_uri(), $remote_uri, 'accepted', 'shared-inbox-test' );
 	$assert( ! is_wp_error( $follow_snapshot ), 'Accepted local follower exists for shared delivery' );
 	$follower_payload = $payload( 'shared-followers' );
 	$follower_payload['to'] = array( 'https://www.w3.org/ns/activitystreams#Public' );
-	$follower_request = new WP_REST_Request( 'POST', '/axismundi/v1/activitypub/inbox' );
+	$follower_request = new WP_REST_Request( 'POST', '/axismundi/activitypub/inbox' );
 	$follower_request->set_header( 'Content-Type', 'application/activity+json' );
 	$follower_request->set_body( wp_json_encode( $follower_payload ) );
 	$defer = static fn() : bool => true;
@@ -216,6 +252,43 @@ try {
 	$follower_activity = axismundi_act_get( $follower_payload['id'] );
 	$assert( 202 === $follower_response->get_status() && $follower_activity instanceof Axismundi_Activity && 1 === (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE activity_id=%d AND actor_identity_id=%d', axismundi_act_inbox_table(), $follower_activity->get_id(), $actors[0]->get_identity_id() ) ), 'Public shared delivery reaches the accepted local follower' );
 	$assert( 1 === (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE activity_id=%d', axismundi_act_inbox_table(), $follower_activity->get_id() ) ), 'Public shared delivery never becomes a site-wide broadcast' );
+	delete_option( 'ax_bridge_shared_inbox_public' );
+	$read_shared = new WP_REST_Request( 'GET', '/axismundi/activitypub/inbox' );
+	$read_shared->set_param( 'page', 1 );
+	wp_set_current_user( 0 );
+	$public_page = rest_do_request( $read_shared );
+	if ( 200 !== $public_page->get_status() ) { throw new RuntimeException( 'Shared GET response: ' . wp_json_encode( $public_page->get_data() ) ); }
+	$public_ids = array_column( $public_page->get_data()['orderedItems'] ?? array(), 'id' );
+	$assert( 200 === $public_page->get_status() && in_array( $follower_payload['id'], $public_ids, true ) && ! in_array( $shared_payload['id'], $public_ids, true ), 'Default-on anonymous shared GET includes public receipt and excludes private shared receipt' );
+	$legacy_public = $payload( 'legacy-public' );
+	$legacy_public['to'] = array( 'https://www.w3.org/ns/activitystreams#Public', $actors[0]->get_uri() );
+	$legacy_row = axismundi_act_record_activity( $legacy_public, 'inbound', array( $actors[0]->get_identity_id() ) );
+	$actor_public = $payload( 'actor-public' );
+	$actor_public['to'] = $legacy_public['to'];
+	$actor_row = axismundi_activitypub_bridge_record_inbox( $actor_public, array(), false, $actors[0], null, 'actor' );
+	$legacy_receipt = $wpdb->get_row( $wpdb->prepare( 'SELECT received_via FROM %i WHERE activity_id=%d LIMIT 1', axismundi_act_inbox_table(), $legacy_row->get_id() ), ARRAY_A );
+	$assert( is_array( $legacy_receipt ) && '' === $legacy_receipt['received_via'], 'Unclassified receipts remain unclassified without backfill' );
+	$public_page = rest_do_request( $read_shared );
+	$public_ids = array_column( $public_page->get_data()['orderedItems'] ?? array(), 'id' );
+	$assert( ! in_array( $legacy_public['id'], $public_ids, true ) && ! in_array( $actor_public['id'], $public_ids, true ), 'Public alone cannot disclose legacy or Actor-only receipts through shared GET' );
+	$promoted = axismundi_activitypub_bridge_record_inbox( $actor_public, array(), false, null, array( $actors[0]->get_identity_id() => $actors[0], $actors[1]->get_identity_id() => $actors[1] ), 'shared' );
+	$assert( $promoted instanceof Axismundi_Activity && $actor_row->get_id() === $promoted->get_id(), 'A newly observed shared retry reuses the Activity instead of backfilling history' );
+	axismundi_activitypub_bridge_record_inbox( $actor_public, array(), false, $actors[0], null, 'actor' );
+	$assert( 'shared' === $wpdb->get_var( $wpdb->prepare( 'SELECT received_via FROM %i WHERE activity_id=%d AND actor_identity_id=%d', axismundi_act_inbox_table(), $actor_row->get_id(), $actors[0]->get_identity_id() ) ), 'Later Actor delivery cannot erase an observed shared receipt' );
+	$shared_one = axismundi_act_get_shared_inbox_page( 1 );
+	$shared_two = axismundi_act_get_shared_inbox_page( 1, $shared_one['next_cursor'] );
+	$assert( $shared_one['has_more'] && count( $shared_one['items'] ) === 1 && count( $shared_two['items'] ) === 1 && $shared_one['items'][0]['id'] !== $shared_two['items'][0]['id'], 'Shared cursor groups recipients before page slicing without duplicate Activities' );
+	$wpdb->update( axismundi_act_activities_table(), array( 'has_public_audience' => 1 ), array( 'id' => $shared_activity->get_id() ) );
+	$shared_after_stale = axismundi_act_get_shared_inbox_page( 50 );
+	$assert( ! in_array( $shared_payload['id'], array_column( $shared_after_stale['items'], 'id' ), true ), 'Payload audience gate rejects private content even with a stale public candidate flag' );
+	$wpdb->update( axismundi_act_activities_table(), array( 'has_public_audience' => 0 ), array( 'id' => $shared_activity->get_id() ) );
+	$bad_shared = new WP_REST_Request( 'GET', '/axismundi/activitypub/inbox' );
+	$bad_shared->set_param( 'cursor', 'bad' );
+	$assert( 400 === rest_do_request( $bad_shared )->get_status(), 'Shared GET rejects malformed cursors' );
+	update_option( 'ax_bridge_shared_inbox_public', '0' );
+	$assert( 404 === rest_do_request( $read_shared )->get_status(), 'Disclosure setting hides shared GET from all viewers' );
+	$assert( 202 === rest_do_request( $shared_request )->get_status(), 'Disabling shared GET does not disable signed POST reception' );
+	wp_set_current_user( $users[0] );
 	$wpdb->delete( axismundi_act_relations_table(), array( 'subject_actor_uri_hash' => hash( 'sha256', $actors[0]->get_uri() ), 'object_actor_uri_hash' => hash( 'sha256', $remote_uri ) ) );
 	remove_filter( 'activitypub_pre_http_get_remote_object', $key_lookup, 10 );
 	$key_lookup = null;
@@ -300,6 +373,7 @@ try {
 	}
 	echo "PASS: {$checks} Actor Inbox checks\n";
 } finally {
+	if ( null === $shared_public_before ) { delete_option( 'ax_bridge_shared_inbox_public' ); } else { update_option( 'ax_bridge_shared_inbox_public', $shared_public_before ); }
 	if ( $fail ) { remove_filter( 'query', $fail ); }
 	if ( $defer ) { remove_filter( 'activitypub_defer_signature_verification', $defer ); }
 	if ( $key_lookup ) { remove_filter( 'activitypub_pre_http_get_remote_object', $key_lookup, 10 ); }

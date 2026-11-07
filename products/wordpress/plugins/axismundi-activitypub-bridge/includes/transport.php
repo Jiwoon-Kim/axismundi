@@ -14,7 +14,7 @@ function axismundi_activitypub_bridge_inbox_url( Axismundi_Actor $actor ) : stri
 
 /** Bridge-owned shared Inbox transport endpoint. */
 function axismundi_activitypub_bridge_shared_inbox_url() : string {
-	return rest_url( 'axismundi/v1/activitypub/inbox' );
+	return axismundi_op_shared_inbox_url();
 }
 
 /** Non-secret descriptor for resolving one local Actor's signing key on demand. */
@@ -234,7 +234,7 @@ function axismundi_activitypub_bridge_activity_inboxes( Axismundi_Activity $acti
 		: '';
 	$addresses_followers = in_array( 'https://www.w3.org/ns/activitystreams#Public', $candidates, true )
 		|| in_array( 'as:Public', $candidates, true )
-		|| ( '' !== $followers_uri && in_array( $followers_uri, $candidates, true ) );
+		|| ( '' !== $followers_uri && in_array( $followers_uri, array_map( 'axismundi_actors_collection_target_uri', $candidates ), true ) );
 	/*
 	 * A Group submission carries Public for strict threadiverse object
 	 * validation, but remains a direct inbox delivery. Its Group decides whether

@@ -20,6 +20,15 @@
 
 defined( 'ABSPATH' ) || exit;
 
+/** Compare known local collection references across the namespace move without rewriting stored Activities. */
+function axismundi_actors_collection_target_uri( $uri ) : string {
+	if ( ! is_string( $uri ) ) { return ''; }
+	$prefix = rest_url( 'axismundi/v1/actors/' );
+	if ( ! str_starts_with( $uri, $prefix ) || ! preg_match( '#^([a-f0-9-]{36})/(featured|moderators|followers)$#D', substr( $uri, strlen( $prefix ) ), $match ) ) { return $uri; }
+	$actor = axismundi_actors_get_by_uuid( $match[1] );
+	return $actor && $actor->is_local() ? rest_url( 'axismundi/activitypub/actors/' . $actor->get_uuid() . '/' . $match[2] ) : $uri;
+}
+
 /** Register the vocabulary contributed by Actor key descriptors. */
 function axismundi_actors_register_vocabulary() : void {
 	axismundi_op_register_vocabulary_group( array(

@@ -241,7 +241,7 @@ function axismundi_activitypub_bridge_inbox_targets( array $activity, array $rec
  * @param bool            $allow_mention_targets Trust Mention href only after the official shared Inbox has verified the request.
  * @return Axismundi_Activity|WP_Error
  */
-function axismundi_activitypub_bridge_record_inbox( array $activity, array $recipient_user_ids = array(), bool $allow_mention_targets = false, ?Axismundi_Actor $route_actor = null, ?array $receipt_targets = null ) {
+function axismundi_activitypub_bridge_record_inbox( array $activity, array $recipient_user_ids = array(), bool $allow_mention_targets = false, ?Axismundi_Actor $route_actor = null, ?array $receipt_targets = null, string $received_via = '' ) {
 	if ( ! axismundi_activitypub_bridge_ready() ) {
 		return new WP_Error( 'ax_bridge_inbox_not_ready', __( 'The Axismundi Inbox repositories are unavailable.', 'axismundi-activitypub-bridge' ) );
 	}
@@ -283,19 +283,19 @@ function axismundi_activitypub_bridge_record_inbox( array $activity, array $reci
 
 	$object      = is_array( $activity['object'] ?? null ) ? $activity['object'] : array();
 	if ( 'Announce' === ( $activity['type'] ?? '' ) && in_array( $object['type'] ?? '', array( 'Add', 'Remove', 'Move' ), true ) ) {
-		return axismundi_activitypub_bridge_receive_collection_control( $activity, $actor, array_keys( $admitted ) );
+		return axismundi_activitypub_bridge_receive_collection_control( $activity, $actor, array_keys( $admitted ), $received_via );
 	}
 	if ( in_array( $activity['type'] ?? '', array( 'Add', 'Remove' ), true ) && 'Person' === $actor->get_type() ) {
 		$control_group = axismundi_actors_get_by_uri( axismundi_act_member_uri( $activity['audience'] ?? '' ) );
 		if ( ! $control_group ) { $control_group = apply_filters( 'axismundi_activitypub_bridge_local_collection_group', null, axismundi_act_member_uri( $activity['target'] ?? '' ) ); }
 		if ( $control_group instanceof Axismundi_Actor && 'Group' === $control_group->get_type() && ( ! $control_group->is_local() || axismundi_activitypub_bridge_group_advertises_collection( $control_group, axismundi_act_member_uri( $activity['target'] ?? '' ) ) ) ) {
-			return axismundi_activitypub_bridge_receive_collection_control( $activity, $actor, array_keys( $admitted ) );
+			return axismundi_activitypub_bridge_receive_collection_control( $activity, $actor, array_keys( $admitted ), $received_via );
 		}
 	}
 	if ( in_array( $activity['type'] ?? '', array( 'Add', 'Remove' ), true ) && function_exists( 'axismundi_actors_featured_uri' )
 		&& ( ! isset( $activity['id'] ) || axismundi_actors_featured_uri( $actor ) === axismundi_act_member_uri( $activity['target'] ?? '' ) ) ) {
 		if ( isset( $activity['id'] ) ) {
-			$stored = axismundi_act_record_activity( $activity, 'inbound', array_keys( $admitted ) );
+			$stored = axismundi_act_record_activity( $activity, 'inbound', array_keys( $admitted ), $received_via );
 			if ( is_wp_error( $stored ) ) { return $stored; }
 		}
 		return axismundi_activitypub_bridge_receive_featured( $activity, $actor );
@@ -313,7 +313,7 @@ function axismundi_activitypub_bridge_record_inbox( array $activity, array $reci
 		}
 	}
 
-	$result = axismundi_act_record_activity( $activity, 'inbound', array_keys( $admitted ) );
+	$result = axismundi_act_record_activity( $activity, 'inbound', array_keys( $admitted ), $received_via );
 	if ( $result instanceof Axismundi_Activity && 'Create' === $result->get_type() ) {
 		foreach ( $admitted as $recipient ) {
 			if ( 'Group' !== $recipient->get_type() || '' === axismundi_actors_group_profile( $recipient ) ) { continue; }
@@ -395,7 +395,7 @@ function axismundi_activitypub_bridge_inbox_outcome( array $activity, $result = 
 function axismundi_activitypub_bridge_actor_inbox( array $activity, $user_id, string $type, $object, string $context ) : void {
 	unset( $type, $object );
 	if ( 'inbox' === $context ) {
-		$recorded = axismundi_activitypub_bridge_record_inbox( $activity, array( (int) $user_id ) );
+		$recorded = axismundi_activitypub_bridge_record_inbox( $activity, array( (int) $user_id ), false, null, null, 'actor' );
 		axismundi_activitypub_bridge_inbox_outcome( $activity, $recorded );
 		axismundi_activitypub_bridge_record_inbox_diagnostic( 'actor', $activity, $recorded );
 		if ( $recorded instanceof Axismundi_Activity || ( is_array( $recorded ) && ( isset( $recorded['featured_receipt'] ) || isset( $recorded['collection_control_receipt'] ) ) ) ) {
@@ -408,7 +408,7 @@ add_action( 'activitypub_inbox', 'axismundi_activitypub_bridge_actor_inbox', 10,
 /** Consume the shared Inbox action once for all resolved recipients. */
 function axismundi_activitypub_bridge_shared_inbox( array $activity, array $user_ids, string $type, $object, string $context ) : void {
 	unset( $type, $object, $context );
-	$recorded = axismundi_activitypub_bridge_record_inbox( $activity, array_map( 'intval', $user_ids ), true );
+	$recorded = axismundi_activitypub_bridge_record_inbox( $activity, array_map( 'intval', $user_ids ), true, null, null, 'shared' );
 	axismundi_activitypub_bridge_inbox_outcome( $activity, $recorded );
 	axismundi_activitypub_bridge_record_inbox_diagnostic( 'shared', $activity, $recorded );
 	if ( $recorded instanceof Axismundi_Activity || ( is_array( $recorded ) && ( isset( $recorded['featured_receipt'] ) || isset( $recorded['collection_control_receipt'] ) ) ) ) {

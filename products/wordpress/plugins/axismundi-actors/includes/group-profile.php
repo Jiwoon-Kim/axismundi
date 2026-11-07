@@ -29,7 +29,7 @@ function axismundi_actors_check_group_profile_update( array $args ) {
 
 /** Reject mutation on Actor REST surfaces without adding an update API. */
 function axismundi_actors_guard_group_profile_rest( $result, $server, WP_REST_Request $request ) {
-	if ( null !== $result || ! preg_match( '#^/axismundi/v1/actors(?:/|$)#', $request->get_route() )
+	if ( null !== $result || ! preg_match( '#^/axismundi/(?:v1|activitypub)/actors(?:/|$)#', $request->get_route() )
 		|| in_array( $request->get_method(), array( 'GET', 'HEAD', 'OPTIONS' ), true ) ) { return $result; }
 	$check = axismundi_actors_check_group_profile_update( $request->get_params() );
 	return is_wp_error( $check ) ? $check : $result;

@@ -26,7 +26,7 @@ final class Axismundi_OP_Actor_Followers {
 
 /** Stable public Outbox URI owned by the representation layer. */
 function axismundi_op_actor_outbox_url( Axismundi_Actor $actor ) : string {
-	return rest_url( 'axismundi/v1/actors/' . rawurlencode( $actor->get_uuid() ) . '/outbox' );
+	return rest_url( 'axismundi/activitypub/actors/' . rawurlencode( $actor->get_uuid() ) . '/outbox' );
 }
 
 /**
@@ -86,7 +86,7 @@ function axismundi_op_actor_followers_url( Axismundi_Actor $actor ) : string {
 /** Stable Followers/Following URI owned by the representation layer. */
 function axismundi_op_actor_follow_collection_url( Axismundi_Actor $actor, string $collection, int $page = 0 ) : string {
 	$collection = 'following' === $collection ? 'following' : 'followers';
-	$url = rest_url( 'axismundi/v1/actors/' . rawurlencode( $actor->get_uuid() ) . '/' . $collection );
+	$url = rest_url( 'axismundi/activitypub/actors/' . rawurlencode( $actor->get_uuid() ) . '/' . $collection );
 	return $page > 0 ? add_query_arg( 'page', $page, $url ) : $url;
 }
 
@@ -477,8 +477,7 @@ function axismundi_op_register_actor_outbox_route() : void {
 	if ( ! class_exists( 'Axismundi_Actor' ) || ! function_exists( 'axismundi_actors_get_by_uuid' ) ) {
 		return;
 	}
-	register_rest_route(
-		'axismundi/v1',
+	axismundi_op_register_activitypub_read_route(
 		'/actors/(?P<uuid>[0-9a-f-]{36})/outbox',
 		array(
 			'methods'             => WP_REST_Server::READABLE,
@@ -499,7 +498,7 @@ add_action( 'rest_api_init', static function (): void {
 	if ( ! function_exists( 'axismundi_actors_get_by_uuid' ) || ! function_exists( 'axismundi_act_get_outbox_after' ) ) {
 		return;
 	}
-	register_rest_route( 'axismundi/v1', '/actors/(?P<uuid>[0-9a-f-]{36})/sent', array(
+	axismundi_op_register_activitypub_read_route( '/actors/(?P<uuid>[0-9a-f-]{36})/sent', array(
 		'methods'             => WP_REST_Server::READABLE,
 		'callback'            => 'axismundi_op_get_actor_sent',
 		'permission_callback' => '__return_true',
@@ -527,7 +526,7 @@ function axismundi_op_get_actor_sent( WP_REST_Request $request ) {
 	$type = (string) $request['object_type'];
 	$audience = (string) $request['audience'];
 	$reply = (string) $request['in_reply_to'];
-	$root = add_query_arg( array_filter( array( 'object_type' => rawurlencode( $type ), 'audience' => rawurlencode( $audience ), 'in_reply_to' => rawurlencode( $reply ) ) ), rest_url( 'axismundi/v1/actors/' . $actor->get_uuid() . '/sent' ) );
+	$root = add_query_arg( array_filter( array( 'object_type' => rawurlencode( $type ), 'audience' => rawurlencode( $audience ), 'in_reply_to' => rawurlencode( $reply ) ) ), rest_url( 'axismundi/activitypub/actors/' . $actor->get_uuid() . '/sent' ) );
 	$first = add_query_arg( 'page', '1', $root );
 	$out = array( '@context' => 'https://www.w3.org/ns/activitystreams', 'id' => $root, 'type' => 'OrderedCollection', 'attributedTo' => $actor->get_uri(), 'first' => $first );
 	if ( ! $request['page'] && '' === $cursor ) {
@@ -610,6 +609,7 @@ function axismundi_op_sent_matches_audience( array $payload, string $filter, arr
 	$has_group = false;
 	foreach ( array( 'to', 'cc', 'audience' ) as $field ) {
 		foreach ( axismundi_op_application_recipient_uris( $payload[ $field ] ?? null ) as $uri ) {
+			$uri = axismundi_actors_collection_target_uri( $uri );
 			if ( in_array( $uri, array( 'https://www.w3.org/ns/activitystreams#Public', 'as:Public', 'Public' ), true ) ) {
 				continue;
 			}
@@ -634,8 +634,7 @@ function axismundi_op_register_actor_followers_route() : void {
 	if ( ! class_exists( 'Axismundi_Actor' ) || ! function_exists( 'axismundi_actors_get_by_uuid' ) ) {
 		return;
 	}
-	register_rest_route(
-		'axismundi/v1',
+	axismundi_op_register_activitypub_read_route(
 		'/actors/(?P<uuid>[0-9a-f-]{36})/(?P<collection>followers|following)',
 		array(
 			'methods'             => WP_REST_Server::READABLE,
@@ -679,7 +678,7 @@ function axismundi_op_actor_collection_reader( Axismundi_Actor $actor ) : array 
 				$visible = false;
 				foreach ( array( 'to', 'cc', 'bto', 'bcc', 'audience' ) as $field ) {
 					$members = axismundi_op_application_recipient_uris( $payload[ $field ] ?? null );
-					$visible = $visible || in_array( $viewer_uri, $members, true ) || ( '' !== $followers && in_array( $followers, $members, true ) );
+					$visible = $visible || in_array( $viewer_uri, $members, true ) || ( '' !== $followers && in_array( $followers, array_map( 'axismundi_actors_collection_target_uri', $members ), true ) );
 				}
 				unset( $payload['bto'], $payload['bcc'] );
 				if ( is_array( $payload['object'] ?? null ) ) { unset( $payload['object']['bto'], $payload['object']['bcc'] ); }

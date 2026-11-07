@@ -61,7 +61,7 @@ function axismundi_actors_is_community( Axismundi_Actor $group ) : bool {
 }
 
 function axismundi_actors_moderators_uri( Axismundi_Actor $group ) : string {
-	if ( $group->is_local() ) { return rest_url( 'axismundi/v1/actors/' . $group->get_uuid() . '/moderators' ); }
+	if ( $group->is_local() ) { return rest_url( 'axismundi/activitypub/actors/' . $group->get_uuid() . '/moderators' ); }
 	$payload = axismundi_actors_get_remote_payload( $group->get_identity_id() );
 	$reference = $payload['attributedTo'] ?? null;
 	// A typed Actor array remains attribution evidence, not a moderator collection.
@@ -74,7 +74,7 @@ function axismundi_actors_moderators_uri( Axismundi_Actor $group ) : string {
 function axismundi_actors_moderators_group_for_uri( string $uri ) : ?Axismundi_Actor {
 	if ( ! preg_match( '#/actors/([a-f0-9-]{36})/moderators$#D', $uri, $matches ) ) { return null; }
 	$group = axismundi_actors_get_by_uuid( $matches[1] );
-	return $group && axismundi_actors_is_community( $group ) && $uri === axismundi_actors_moderators_uri( $group ) ? $group : null;
+	return $group && axismundi_actors_is_community( $group ) && axismundi_actors_collection_target_uri( $uri ) === axismundi_actors_moderators_uri( $group ) ? $group : null;
 }
 
 /** Remote self-description defines the reference; only a fetched Person collection supplies roles. */

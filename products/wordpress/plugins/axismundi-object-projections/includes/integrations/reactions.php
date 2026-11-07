@@ -36,17 +36,17 @@ final class Axismundi_OP_Object_Shares {
 
 /** Stable representation URI for an Object's likes collection. */
 function axismundi_op_object_likes_url( string $object_uri ) : string {
-	return add_query_arg( 'object', $object_uri, rest_url( 'axismundi/v1/objects/likes' ) );
+	return add_query_arg( 'object', $object_uri, rest_url( 'axismundi/activitypub/objects/likes' ) );
 }
 
 /** Stable representation URI for an Object's FEP-c0e0 emoji reaction collection. */
 function axismundi_op_object_emoji_reactions_url( string $object_uri ) : string {
-	return add_query_arg( 'object', $object_uri, rest_url( 'axismundi/v1/objects/emoji-reactions' ) );
+	return add_query_arg( 'object', $object_uri, rest_url( 'axismundi/activitypub/objects/emoji-reactions' ) );
 }
 
 /** Stable representation URI for an Object's shares collection. */
 function axismundi_op_object_shares_url( string $object_uri ) : string {
-	return add_query_arg( 'object', $object_uri, rest_url( 'axismundi/v1/objects/shares' ) );
+	return add_query_arg( 'object', $object_uri, rest_url( 'axismundi/activitypub/objects/shares' ) );
 }
 
 /** Attach the likes collection URI to a projected local object. */
@@ -229,8 +229,7 @@ add_action( 'axismundi_op_register_transformers', 'axismundi_op_register_reactio
  */
 function axismundi_op_register_object_collection_routes() : void {
 	if ( function_exists( 'axismundi_act_get_effective_reactions' ) ) {
-		register_rest_route(
-			'axismundi/v1',
+		axismundi_op_register_activitypub_read_route(
 			'/objects/emoji-reactions',
 			array(
 				'methods'             => WP_REST_Server::READABLE,
@@ -241,8 +240,7 @@ function axismundi_op_register_object_collection_routes() : void {
 		);
 	}
 	if ( function_exists( 'axismundi_act_get_like_count' ) ) {
-		register_rest_route(
-			'axismundi/v1',
+		axismundi_op_register_activitypub_read_route(
 			'/objects/likes',
 			array(
 				'methods'             => WP_REST_Server::READABLE,
@@ -253,8 +251,7 @@ function axismundi_op_register_object_collection_routes() : void {
 		);
 	}
 	if ( function_exists( 'axismundi_act_get_announce_count' ) ) {
-		register_rest_route(
-			'axismundi/v1',
+		axismundi_op_register_activitypub_read_route(
 			'/objects/shares',
 			array(
 				'methods'             => WP_REST_Server::READABLE,

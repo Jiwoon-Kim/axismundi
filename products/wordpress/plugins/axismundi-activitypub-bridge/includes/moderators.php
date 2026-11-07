@@ -6,7 +6,7 @@ add_filter( 'axismundi_activitypub_bridge_local_collection_group', static functi
 	return $group ?? axismundi_actors_moderators_group_for_uri( $target );
 }, 10, 2 );
 add_filter( 'axismundi_activitypub_bridge_local_collection_owned', static function ( bool $owned, Axismundi_Actor $group, string $target ) : bool {
-	return $owned || ( axismundi_actors_is_community( $group ) && axismundi_actors_moderators_uri( $group ) === $target );
+	return $owned || ( axismundi_actors_is_community( $group ) && axismundi_actors_moderators_uri( $group ) === axismundi_actors_collection_target_uri( $target ) );
 }, 10, 3 );
 
 function axismundi_activitypub_bridge_receive_moderators( array $control, array $context ) {
@@ -34,7 +34,7 @@ function axismundi_activitypub_bridge_receive_moderators( array $control, array 
 	return axismundi_actors_request_moderators_sync( $group );
 }
 add_filter( 'axismundi_activitypub_bridge_collection_control_handler', static function ( $handler, string $target, Axismundi_Actor $group ) {
-	if ( null !== $handler || $target !== axismundi_actors_moderators_uri( $group ) ) { return $handler; }
+	if ( null !== $handler || axismundi_actors_collection_target_uri( $target ) !== axismundi_actors_moderators_uri( $group ) ) { return $handler; }
 	if ( $group->is_local() ? ! axismundi_actors_is_community( $group ) : ! axismundi_actors_remote_moderators_reference( $group, $target ) ) { return $handler; }
 	if ( ! $group->is_local() && is_wp_error( axismundi_actors_read_moderators( $group ) ) ) {
 		// Receive the evidence regardless, but do not label an unverified collection as roles.

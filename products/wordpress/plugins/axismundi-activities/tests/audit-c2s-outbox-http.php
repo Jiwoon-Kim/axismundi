@@ -18,8 +18,8 @@ $http_origin = rtrim( getenv( 'AX_C2S_HTTP_ORIGIN' ) ?: home_url(), '/' );
 $host = wp_parse_url( home_url(), PHP_URL_HOST );
 $port = wp_parse_url( home_url(), PHP_URL_PORT );
 $host .= $port ? ':' . $port : '';
-$request = static function ( string $path, ?array $body = null, array $headers = array() ) use ( $http_origin, $host ) : array {
-	$result = wp_remote_request( $http_origin . '/wp-json/axismundi/v1/' . $path, array(
+$request = static function ( string $path, ?array $body = null, array $headers = array(), string $namespace = 'axismundi/activitypub' ) use ( $http_origin, $host ) : array {
+	$result = wp_remote_request( $http_origin . '/wp-json/' . $namespace . '/' . $path, array(
 		'method' => null === $body ? 'GET' : 'POST', 'timeout' => 30, 'redirection' => 0,
 		'headers' => array_merge( array( 'Host' => $host, 'Content-Type' => 'application/activity+json' ), $headers ),
 		'body' => null === $body ? null : wp_json_encode( $body ),
@@ -61,6 +61,10 @@ try {
 	$first_uri = (string) ( $first[2]['location'] ?? '' );
 	$assert( 201 === $first[0] && '' !== $first_uri && 'https://example.test/client-id' !== $first_uri, 'Cookie POST returns server identity in 201 Location' );
 	$assert( axismundi_act_get( $first_uri ) instanceof Axismundi_Activity, 'HTTP POST commits one real ledger Like' );
+	$legacy_retry = $request( $path, $like, array_merge( $auth, array( 'Idempotency-Key' => 'like-1' ) ), 'axismundi/v1' );
+	$assert( 201 === $legacy_retry[0] && $first_uri === (string) $legacy_retry[2]['location'], 'Legacy C2S POST executes without redirect and shares canonical idempotency' );
+	$legacy_get = $request( $path, null, array(), 'axismundi/v1' );
+	$assert( 302 === $legacy_get[0] && axismundi_op_actor_outbox_url( $owner ) === (string) $legacy_get[2]['location'], 'Legacy outbox GET redirects to the advertised canonical endpoint' );
 	$assert( 200 === $request( $path )[0], 'Adding POST preserves existing outbox GET' );
 	$assert( 'private' === axismundi_actors_liked_visibility( $owner ) && 403 === $request( $liked )[0], 'Liked collection starts private for anonymous readers' );
 	$assert( 403 === $request( $liked, null, $auth )[0], 'AP private collection is closed even to its authenticated operator' );

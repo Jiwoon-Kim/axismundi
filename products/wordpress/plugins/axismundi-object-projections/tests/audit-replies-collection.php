@@ -84,7 +84,7 @@ try {
 	$page_one = axismundi_op_get_public_reply_collection_page( $root['uri'], 1, 1 );
 	$page_two = axismundi_op_get_public_reply_collection_page( $root['uri'], 2, 1 );
 	$count    = axismundi_op_get_public_reply_collection_count( $root['uri'] );
-	$request = new WP_REST_Request( 'GET', '/axismundi/v1/objects/replies' );
+	$request = new WP_REST_Request( 'GET', '/axismundi/activitypub/objects/replies' );
 	$request->set_param( 'object', $root['uri'] );
 	$request->set_param( 'page', 1 );
 	$rest = axismundi_op_get_object_replies( $request );
@@ -95,10 +95,10 @@ try {
 	ax_rc_assert( $ax_rc_results, 'the bounded display count applies the same public visibility and reply-inclusion gates as collection pages', 2 === (int) $count['count'] && empty( $count['truncated'] ) );
 
 	$private_root = ax_rc_note( $ax_rc_posts, (int) $author->ID, 'Private parent.', '', 'followers' );
-	$not_found = new WP_REST_Request( 'GET', '/axismundi/v1/objects/replies' );
+	$not_found = new WP_REST_Request( 'GET', '/axismundi/activitypub/objects/replies' );
 	$not_found->set_param( 'object', $private_root['uri'] );
 	$private_response = axismundi_op_get_object_replies( $not_found );
-	$remote_request = new WP_REST_Request( 'GET', '/axismundi/v1/objects/replies' );
+	$remote_request = new WP_REST_Request( 'GET', '/axismundi/activitypub/objects/replies' );
 	$remote_request->set_param( 'object', $remote_parent );
 	$remote_response = axismundi_op_get_object_replies( $remote_request );
 	ax_rc_assert( $ax_rc_results, 'private local and cached remote parents fail closed instead of exposing a replies collection', is_wp_error( $private_response ) && 404 === (int) ( $private_response->get_error_data()['status'] ?? 0 ) && is_wp_error( $remote_response ) && 404 === (int) ( $remote_response->get_error_data()['status'] ?? 0 ) );

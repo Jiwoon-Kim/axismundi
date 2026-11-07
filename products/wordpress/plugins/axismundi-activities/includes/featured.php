@@ -7,7 +7,7 @@ function axismundi_act_submit_featured( int $user, Axismundi_Actor $actor, array
 	if ( is_wp_error( $permission ) ) { return $permission; }
 	$type = axismundi_act_type( $input['type'] ?? '' );
 	if ( 'Person' !== $actor->get_type() || ! in_array( $type, array( 'Add', 'Remove' ), true )
-		|| ( $input['actor'] ?? '' ) !== $actor->get_uri() || ( $input['target'] ?? '' ) !== axismundi_actors_featured_uri( $actor ) ) {
+		|| ( $input['actor'] ?? '' ) !== $actor->get_uri() || axismundi_actors_collection_target_uri( $input['target'] ?? '' ) !== axismundi_actors_featured_uri( $actor ) ) {
 		return new WP_Error( 'ax_c2s_featured_target', 'Only this Person\'s featured collection may be curated.', array( 'status' => 403 ) );
 	}
 	$uri = $input['object'] ?? null;

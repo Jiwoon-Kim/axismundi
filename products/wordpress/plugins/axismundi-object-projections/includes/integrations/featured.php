@@ -7,7 +7,7 @@ final class Axismundi_OP_Actor_Featured {
 }
 
 function axismundi_op_actor_featured_url( Axismundi_Actor $actor ) : string {
-	return rest_url( 'axismundi/v1/actors/' . rawurlencode( $actor->get_uuid() ) . '/featured' );
+	return rest_url( 'axismundi/activitypub/actors/' . rawurlencode( $actor->get_uuid() ) . '/featured' );
 }
 add_filter( 'axismundi_actors_featured_uri', static fn( string $uri, Axismundi_Actor $actor ) : string => axismundi_op_actor_featured_url( $actor ), 10, 2 );
 
@@ -61,7 +61,7 @@ function axismundi_op_get_actor_featured( WP_REST_Request $request ) {
 }
 add_action( 'rest_api_init', static function () : void {
 	if ( ! function_exists( 'axismundi_actors_read_featured' ) ) { return; }
-	register_rest_route( 'axismundi/v1', '/actors/(?P<uuid>[0-9a-f-]{36})/featured', array(
+	axismundi_op_register_activitypub_read_route( '/actors/(?P<uuid>[0-9a-f-]{36})/featured', array(
 		'methods' => WP_REST_Server::READABLE, 'callback' => 'axismundi_op_get_actor_featured', 'permission_callback' => '__return_true',
 	) );
 } );

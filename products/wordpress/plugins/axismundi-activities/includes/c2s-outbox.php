@@ -28,6 +28,8 @@ function axismundi_act_outbox_authorize( int $user_id, $actor ) {
 /** Compare request intent, not server-generated identity or timestamps. */
 function axismundi_act_outbox_same_intent( array $stored, array $submitted ) : bool {
 	unset( $stored['id'], $submitted['id'] );
+	if ( isset( $stored['target'] ) && is_string( $stored['target'] ) ) { $stored['target'] = axismundi_actors_collection_target_uri( $stored['target'] ); }
+	if ( isset( $submitted['target'] ) && is_string( $submitted['target'] ) ) { $submitted['target'] = axismundi_actors_collection_target_uri( $submitted['target'] ); }
 	if ( ! isset( $submitted['published'] ) ) { unset( $stored['published'], $submitted['published'] ); }
 	$canonical = static function ( $value ) use ( &$canonical ) {
 		if ( is_array( $value ) ) {
@@ -119,10 +121,12 @@ function axismundi_act_post_actor_outbox( WP_REST_Request $request ) {
 }
 
 function axismundi_act_register_c2s_outbox() : void {
-	register_rest_route( 'axismundi/v1', '/actors/(?P<uuid>[0-9a-f-]{36})/outbox', array(
-		'methods' => WP_REST_Server::CREATABLE, 'callback' => 'axismundi_act_post_actor_outbox',
-		'permission_callback' => 'axismundi_act_outbox_permission',
-	) );
+	foreach ( array( 'axismundi/activitypub', 'axismundi/v1' ) as $namespace ) {
+		register_rest_route( $namespace, '/actors/(?P<uuid>[0-9a-f-]{36})/outbox', array(
+			'methods' => WP_REST_Server::CREATABLE, 'callback' => 'axismundi_act_post_actor_outbox',
+			'permission_callback' => 'axismundi_act_outbox_permission',
+		) );
+	}
 }
 add_action( 'rest_api_init', 'axismundi_act_register_c2s_outbox' );
 

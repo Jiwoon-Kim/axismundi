@@ -28,7 +28,7 @@ function axismundi_op_object_replies_url( string $object_uri, int $page = 0 ) : 
 	if ( $page > 0 ) {
 		$args['page'] = $page;
 	}
-	return add_query_arg( $args, rest_url( 'axismundi/v1/objects/replies' ) );
+	return add_query_arg( $args, rest_url( 'axismundi/activitypub/objects/replies' ) );
 }
 
 /** Attach a replies collection only to an active locally authoritative Object. */
@@ -252,8 +252,7 @@ add_action( 'axismundi_op_register_collection_contracts', 'axismundi_op_register
 
 /** Register the public replies collection endpoint. */
 function axismundi_op_register_object_replies_route() : void {
-	register_rest_route(
-		'axismundi/v1',
+	axismundi_op_register_activitypub_read_route(
 		'/objects/replies',
 		array(
 			'methods'             => WP_REST_Server::READABLE,

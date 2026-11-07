@@ -105,7 +105,7 @@ try {
 	$source     = new Axismundi_OP_Actor_Outbox( $actor );
 	$collection = axismundi_op_transform_collection( $source );
 	ax_op_outbox_assert( $ax_op_outbox_results, 'Object Projections resolves the Actor Outbox collection transformer', $recorded instanceof Axismundi_Activity && 21 === count( $ax_op_outbox_activities ) && 2 === count( $ax_op_outbox_protocol_activities ) && is_array( $collection ) && 'OrderedCollection' === $collection['type'] );
-	ax_op_outbox_assert( $ax_op_outbox_results, 'the collection URI uses the representation-owned neutral namespace', is_array( $collection ) && axismundi_op_actor_outbox_url( $actor ) === $collection['id'] && false !== strpos( $collection['id'], '/axismundi/v1/' ) );
+	ax_op_outbox_assert( $ax_op_outbox_results, 'the collection URI uses the representation-owned ActivityPub namespace', is_array( $collection ) && axismundi_op_actor_outbox_url( $actor ) === $collection['id'] && false !== strpos( $collection['id'], '/axismundi/activitypub/' ) );
 	ax_op_outbox_assert( $ax_op_outbox_results, 'the Outbox root names its first page without claiming a truncated total or embedding members', $private_recorded instanceof Axismundi_Activity && is_array( $collection ) && $actor->get_uri() === $collection['attributedTo'] && isset( $collection['first'] ) && ! isset( $collection['totalItems'], $collection['orderedItems'] ) );
 
 	/*
@@ -171,12 +171,12 @@ try {
 			&& null !== axismundi_act_parse_feed_cursor( (string) $next_query['cursor'] )
 	);
 
-	$request = new WP_REST_Request( 'GET', '/axismundi/v1/actors/' . $actor->get_uuid() . '/outbox' );
+	$request = new WP_REST_Request( 'GET', '/axismundi/activitypub/actors/' . $actor->get_uuid() . '/outbox' );
 	$request->set_param( 'uuid', $actor->get_uuid() );
 	$response = axismundi_op_get_actor_outbox( $request );
 	$data     = $response instanceof WP_REST_Response ? $response->get_data() : array();
 	ax_op_outbox_assert( $ax_op_outbox_results, 'the public REST callback serves the same ActivityStreams collection root', $response instanceof WP_REST_Response && $collection['id'] === $data['id'] && 'OrderedCollection' === $data['type'] && $collection['first'] === $data['first'] );
-	$page_request = new WP_REST_Request( 'GET', '/axismundi/v1/actors/' . $actor->get_uuid() . '/outbox' );
+	$page_request = new WP_REST_Request( 'GET', '/axismundi/activitypub/actors/' . $actor->get_uuid() . '/outbox' );
 	$page_request->set_param( 'uuid', $actor->get_uuid() );
 	$page_request->set_param( 'page', 1 );
 	$page_response = axismundi_op_get_actor_outbox( $page_request );
@@ -184,7 +184,7 @@ try {
 	$page_headers  = $page_response instanceof WP_REST_Response ? $page_response->get_headers() : array();
 	ax_op_outbox_assert( $ax_op_outbox_results, 'the public REST callback distinguishes the first Outbox page from its collection root and mirrors next as an HTTP Link header', $page_response instanceof WP_REST_Response && is_array( $first_page ) && $first_page['id'] === $page_data['id'] && 'OrderedCollectionPage' === $page_data['type'] && $collection['id'] === $page_data['partOf'] && isset( $page_data['next'], $page_headers['Link'] ) && '<' . $page_data['next'] . '>; rel="next"' === $page_headers['Link'] );
 	remove_filter( 'axismundi_op_outbox_page_size', $ax_op_outbox_page_size );
-	$invalid_request = new WP_REST_Request( 'GET', '/axismundi/v1/actors/' . $actor->get_uuid() . '/outbox' );
+	$invalid_request = new WP_REST_Request( 'GET', '/axismundi/activitypub/actors/' . $actor->get_uuid() . '/outbox' );
 	$invalid_request->set_param( 'uuid', $actor->get_uuid() );
 	$invalid_request->set_param( 'page', 1 );
 	$invalid_request->set_param( 'cursor', 'not-a-ledger-cursor' );
@@ -193,7 +193,7 @@ try {
 
 	$followers_source     = new Axismundi_OP_Actor_Followers( $actor );
 	$followers_collection = axismundi_op_transform_collection( $followers_source );
-	$followers_request    = new WP_REST_Request( 'GET', '/axismundi/v1/actors/' . $actor->get_uuid() . '/followers' );
+	$followers_request    = new WP_REST_Request( 'GET', '/axismundi/activitypub/actors/' . $actor->get_uuid() . '/followers' );
 	$followers_request->set_param( 'collection', 'followers' );
 	$followers_response = rest_do_request( $followers_request );
 	$followers_data     = $followers_response instanceof WP_REST_Response ? $followers_response->get_data() : array();

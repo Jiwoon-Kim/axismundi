@@ -1,8 +1,8 @@
 <?php
 /**
  * Local NodeInfo 2.1. Advertises this site's software / protocol / registration
- * policy / usage at `/.well-known/nodeinfo` (discovery) and `/nodeinfo/2.1` (the
- * document). No table — built from WP options and live counts. A future Federation
+ * policy / usage at `/.well-known/nodeinfo` (discovery) and the Actors-owned REST
+ * document. No table — built from WP options and live counts. A future Federation
  * plugin refines software name/version, protocols, and services via the filters.
  *
  * @package AxismundiActors
@@ -10,12 +10,32 @@
 
 defined( 'ABSPATH' ) || exit;
 
-/** @return string The NodeInfo 2.1 document URL (pretty when available, else plain). */
+/** @return string The NodeInfo 2.1 document URL, independent of our application API version. */
 function axismundi_actors_nodeinfo_document_url() : string {
-	return get_option( 'permalink_structure' )
-		? home_url( '/nodeinfo/2.1' )
-		: add_query_arg( 'ax_nodeinfo', '2.1', home_url( '/' ) );
+	return rest_url( 'axismundi/nodeinfo/2.1' );
 }
+
+/** Public protocol document; the discovery link remains at its standardized well-known path. */
+function axismundi_actors_register_nodeinfo_route() : void {
+	register_rest_route( 'axismundi/nodeinfo', '/2.1', array(
+		'methods' => WP_REST_Server::READABLE,
+		'permission_callback' => '__return_true',
+		'callback' => static function () {
+			return new WP_REST_Response( axismundi_actors_nodeinfo_document(), 200, array( 'Cache-Control' => 'public, max-age=300' ) );
+		},
+	) );
+}
+add_action( 'rest_api_init', 'axismundi_actors_register_nodeinfo_route' );
+
+/** A stale upstream rewrite must not take ownership of our exact discovery path. */
+function axismundi_actors_route_nodeinfo_discovery( WP $wp ) : void {
+	$path = wp_parse_url( wp_unslash( $_SERVER['REQUEST_URI'] ?? '' ), PHP_URL_PATH );
+	$expected = wp_parse_url( home_url( '/.well-known/nodeinfo' ), PHP_URL_PATH );
+	if ( ! is_string( $path ) || untrailingslashit( $path ) !== $expected ) { return; }
+	$wp->query_vars['ax_nodeinfo'] = 'discovery';
+	unset( $wp->query_vars['rest_route'] );
+}
+add_action( 'parse_request', 'axismundi_actors_route_nodeinfo_discovery', 0 );
 
 /**
  * The `/.well-known/nodeinfo` discovery document (links to the 2.1 document).
@@ -104,13 +124,18 @@ function axismundi_actors_serve_nodeinfo() : void {
 	if ( '' === $which ) {
 		return;
 	}
+	$method = strtoupper( sanitize_text_field( wp_unslash( $_SERVER['REQUEST_METHOD'] ?? 'GET' ) ) );
+	if ( ! in_array( $method, array( 'GET', 'HEAD' ), true ) ) { status_header( 405 ); header( 'Allow: GET, HEAD' ); exit; }
+	if ( 'discovery' !== $which ) { wp_safe_redirect( axismundi_actors_nodeinfo_document_url(), 302 ); exit; }
 	header( 'Access-Control-Allow-Origin: *' );
 	header( 'Access-Control-Allow-Methods: GET, HEAD' );
-	$payload = 'discovery' === $which ? axismundi_actors_nodeinfo_discovery() : axismundi_actors_nodeinfo_document();
+	$payload = axismundi_actors_nodeinfo_discovery();
 	status_header( 200 );
 	header( 'Content-Type: application/json; charset=' . get_option( 'blog_charset' ) );
 	header( 'Cache-Control: public, max-age=300' );
-	echo wp_json_encode( $payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
+	if ( 'HEAD' !== $method ) {
+		echo wp_json_encode( $payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
+	}
 	exit;
 }
 add_action( 'template_redirect', 'axismundi_actors_serve_nodeinfo', 0 );

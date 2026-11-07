@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.1.9-dev
+Stable tag: 0.1.9
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, identity, actor, federation
@@ -116,6 +116,11 @@ not done here. Where another plugin performs that federation, it discloses it it
 section covers only what this plugin's own code requests.
 
 == Changelog ==
+
+= 0.1.9 =
+* Advertise ActivityPub collections under the protocol-named REST namespace without changing Actor identities.
+* Serve NodeInfo 2.1 under axismundi/nodeinfo and advertise it through the well-known discovery document.
+* Redirect the previous NodeInfo document route to its new address.
 
 = 0.1.8 =
 * Separate Actor-owned identifiers and profile evidence from Object identifiers, preserving existing Actor IDs and URIs during migration.

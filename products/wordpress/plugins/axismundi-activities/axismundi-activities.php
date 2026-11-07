@@ -3,7 +3,7 @@
  * Plugin Name:       Axismundi Activities
  * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi/tree/main/products/wordpress/plugins/axismundi-activities
  * Description:       ActivityStreams activity ledger and social relationship state for Axismundi. Requires Axismundi Actors and the vocabulary contracts in Axismundi Object Projections. It owns no HTTP inbox, signatures, delivery queue, notifications, or Web Push, and makes no network request of its own.
- * Version:           0.1.6-dev
+ * Version:           0.1.6
  * Requires at least: 6.7
  * Requires PHP:      8.1
  * Requires Plugins:  axismundi-actors, axismundi-object-projections
@@ -30,7 +30,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACTIVITIES_VERSION = '0.1.6-dev';
+const AXISMUNDI_ACTIVITIES_VERSION = '0.1.6';
 
 require_once __DIR__ . '/includes/repository.php';
 require_once __DIR__ . '/includes/vocabulary.php';

@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.1.6-dev
+Stable tag: 0.1.6
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, federation, social
@@ -109,6 +109,13 @@ it is worth naming because a visitor rather than an administrator sets it off:
 Nothing else here reaches outside this site.
 
 == Changelog ==
+
+= 0.1.6 =
+* Add object-based Sent membership and audience and reply filters independently of Outbox Activity history.
+* Record Inbox receipt provenance for new deliveries without classifying historical receipts.
+* Accept C2S submissions at protocol-named Outbox routes while keeping previous POST routes available.
+* Sanitize named submitted fields and escape helper markup at output with local HTML allowlists.
+* Preserve Interactivity context through block wrapper attributes instead of unescaped attribute output.
 
 = 0.1.5 =
 * Serve and observe a Person's featured collection, holding an unresolved member's

@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.1.8-dev
+Stable tag: 0.1.8
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, jsonld, federation
@@ -144,6 +144,12 @@ nothing to its author. Each server contacted is somebody else's, run under its o
 service and privacy policy.
 
 == Changelog ==
+
+= 0.1.8 =
+* Serve remote Object views at remote-objects/{hash}, retaining remote identity URIs and redirecting previous query-based links.
+* Add Actor Sent and authenticated Inbox read surfaces and a Public-only shared Inbox collection.
+* Serve ActivityPub collections under the protocol-named REST namespace and redirect previous GET routes.
+* Guard Outbox inline Object snapshots and synchronize local Object readability with current addressing.
 
 = 0.1.7 =
 * Separate Object identifiers from Actor storage with verified migration and retry incomplete identifier upgrades even when a previous schema marker claims completion.

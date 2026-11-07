@@ -36,7 +36,8 @@ function ax_bridge_delivery_http_mock( $response, array $args, string $url ) {
 	unset( $response );
 	$GLOBALS['ax_bridge_delivery_http_args'] = array( 'url' => $url, 'args' => $args );
 	$GLOBALS['ax_bridge_delivery_http_urls'][] = $url;
-	return array( 'headers' => array(), 'body' => '', 'response' => array( 'code' => 202, 'message' => 'Accepted' ), 'cookies' => array(), 'filename' => null );
+	$code = $GLOBALS['ax_bridge_delivery_mock_codes'][ $url ] ?? 202;
+	return array( 'headers' => array(), 'body' => '', 'response' => array( 'code' => $code, 'message' => 'Fixture' ), 'cookies' => array(), 'filename' => null );
 }
 
 try {
@@ -308,6 +309,48 @@ try {
 	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'one delivery row pages a large pending recipient list without dropping its final batch', is_int( $batch_id ) && is_object( $batch_mid ) && 'queued' === $batch_mid->status && array( 'https://example.com/inbox/3' ) === json_decode( (string) $batch_mid->pending_inboxes_json, true ) && is_object( $batch_final ) && 'delivered' === $batch_final->status && array( 'https://example.com/inbox/1', 'https://example.com/inbox/2', 'https://example.com/inbox/3' ) === $GLOBALS['ax_bridge_delivery_http_urls'] );
 
 	$provisional_uri = home_url( '/activities/provisional-' . wp_generate_uuid4() . '/' );
+	$mixed_payload = $batch_payload;
+	$mixed_payload['id'] = home_url( '/activities/mixed-' . wp_generate_uuid4() . '/' );
+	$mixed_inboxes = array( 'https://example.com/inbox/mixed', 'https://example.org/inbox/mixed' );
+	$mixed_id = axismundi_activitypub_bridge_enqueue_delivery( $mixed_payload, $sender, $mixed_inboxes, false );
+	if ( is_int( $mixed_id ) ) { $ax_bridge_delivery_ids[] = $mixed_id; }
+	$one = static fn() : int => 1;
+	add_filter( 'axismundi_activitypub_bridge_delivery_batch_size', $one, 99 );
+	$GLOBALS['ax_bridge_delivery_mock_codes'] = array( $mixed_inboxes[0] => 410 );
+	add_filter( 'pre_http_request', 'ax_bridge_delivery_http_mock', 99, 3 );
+	axismundi_activitypub_bridge_process_delivery( (int) $mixed_id, 1 );
+	axismundi_activitypub_bridge_process_delivery( (int) $mixed_id, 1 );
+	remove_filter( 'pre_http_request', 'ax_bridge_delivery_http_mock', 99 );
+	remove_filter( 'axismundi_activitypub_bridge_delivery_batch_size', $one, 99 );
+	unset( $GLOBALS['ax_bridge_delivery_mock_codes'] );
+	$mixed = axismundi_activitypub_bridge_get_delivery( (int) $mixed_id );
+	$states = json_decode( $mixed->delivery_status_json, true );
+	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'a permanent failure survives a later accepted batch on another host', 'failed' === $mixed->status && 'failed' === $states[ $mixed_inboxes[0] ]['state'] && 410 === $states[ $mixed_inboxes[0] ]['httpStatus'] && 'accepted' === $states[ $mixed_inboxes[1] ]['state'] );
+	$saved_user = get_current_user_id();
+	wp_set_current_user( 0 );
+	$forbidden = axismundi_activitypub_bridge_delivery_report( (int) $mixed_id );
+	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'anonymous readers cannot enumerate delivery recipients', is_wp_error( $forbidden ) && 'ax_bridge_delivery_forbidden' === $forbidden->get_error_code() );
+	wp_set_current_user( $ax_bridge_delivery_user );
+	$report = axismundi_activitypub_bridge_delivery_report( (int) $mixed_id );
+	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'the sender reads mixed per-Inbox acceptance without publishing it in the Activity', is_array( $report ) && 1 === $report['counts']['accepted'] && 1 === $report['counts']['failed'] && ! isset( $mixed_payload['deliveryStatus'] ) );
+	wp_set_current_user( $saved_user );
+	$retry_payload = $batch_payload;
+	$retry_payload['id'] = home_url( '/activities/partial-retry-' . wp_generate_uuid4() . '/' );
+	$retry_id = axismundi_activitypub_bridge_enqueue_delivery( $retry_payload, $sender, $mixed_inboxes, false );
+	if ( is_int( $retry_id ) ) { $ax_bridge_delivery_ids[] = $retry_id; }
+	$GLOBALS['ax_bridge_delivery_mock_codes'] = array( $mixed_inboxes[1] => 503 );
+	$GLOBALS['ax_bridge_delivery_http_urls'] = array();
+	add_filter( 'pre_http_request', 'ax_bridge_delivery_http_mock', 99, 3 );
+	axismundi_activitypub_bridge_process_delivery( (int) $retry_id, 1 );
+	$mid_retry = axismundi_activitypub_bridge_get_delivery( (int) $retry_id );
+	$mid_states = json_decode( $mid_retry->delivery_status_json, true );
+	$wpdb->update( $table, array( 'available_at' => current_time( 'mysql', true ) ), array( 'id' => $retry_id ) );
+	unset( $GLOBALS['ax_bridge_delivery_mock_codes'] );
+	axismundi_activitypub_bridge_process_delivery( (int) $retry_id, 2 );
+	remove_filter( 'pre_http_request', 'ax_bridge_delivery_http_mock', 99 );
+	$end_retry = axismundi_activitypub_bridge_get_delivery( (int) $retry_id );
+	$end_states = json_decode( $end_retry->delivery_status_json, true );
+	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'transient failure retries only the pending Inbox and preserves previous acceptance', 'retrying' === $mid_retry->status && 'accepted' === $mid_states[ $mixed_inboxes[0] ]['state'] && 'queued' === $mid_states[ $mixed_inboxes[1] ]['state'] && 'delivered' === $end_retry->status && 1 === $end_states[ $mixed_inboxes[0] ]['attempt'] && 2 === $end_states[ $mixed_inboxes[1] ]['attempt'] && array( $mixed_inboxes[0], $mixed_inboxes[1], $mixed_inboxes[1] ) === $GLOBALS['ax_bridge_delivery_http_urls'] );
 	$provisional_payload = array( 'id' => $provisional_uri, 'type' => 'Like', 'actor' => $local->get_uri(), 'object' => 'https://example.com/objects/provisional', 'to' => array( $remote_uri ) );
 	$provisional_source = wp_insert_post(
 		array(

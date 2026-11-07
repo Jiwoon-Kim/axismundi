@@ -7,7 +7,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACTIVITYPUB_BRIDGE_DELIVERY_DB_VERSION        = '1';
+const AXISMUNDI_ACTIVITYPUB_BRIDGE_DELIVERY_DB_VERSION        = '2';
 const AXISMUNDI_ACTIVITYPUB_BRIDGE_DELIVERY_DB_VERSION_OPTION = 'ax_activitypub_bridge_delivery_db_version';
 const AXISMUNDI_ACTIVITYPUB_BRIDGE_DELIVERY_HOOK              = 'axismundi_activitypub_bridge_process_delivery';
 const AXISMUNDI_ACTIVITYPUB_BRIDGE_LEGACY_POST_TYPE           = 'ax_ap_delivery';
@@ -42,6 +42,7 @@ function axismundi_activitypub_bridge_install_delivery_table() : bool {
 			payload_json longtext NOT NULL,
 			inboxes_json longtext NOT NULL,
 			pending_inboxes_json longtext NOT NULL,
+			delivery_status_json longtext NULL,
 			status varchar(16) NOT NULL,
 			attempt smallint(5) unsigned NOT NULL DEFAULT 0,
 			available_at datetime NOT NULL,
@@ -64,7 +65,7 @@ function axismundi_activitypub_bridge_install_delivery_table() : bool {
 	$status  = $wpdb->get_row( $wpdb->prepare( 'SHOW TABLE STATUS LIKE %s', $wpdb->esc_like( $table ) ), ARRAY_A );
 	$needed  = array(
 		'id', 'activity_uri', 'activity_uri_hash', 'actor_uri', 'actor_uri_hash', 'key_id',
-		'payload_json', 'inboxes_json', 'pending_inboxes_json', 'status', 'attempt',
+		'payload_json', 'inboxes_json', 'pending_inboxes_json', 'delivery_status_json', 'status', 'attempt',
 		'available_at', 'lock_token', 'locked_at', 'last_error', 'created_at', 'updated_at',
 	);
 	$valid = empty( array_diff( $needed, $columns ) )
@@ -289,7 +290,7 @@ function axismundi_activitypub_bridge_retry_failed_delivery( int $id ) {
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Trusted table identifier.
 	$updated = $wpdb->query(
 		$wpdb->prepare(
-			"UPDATE {$table} SET status = 'retrying', attempt = 0, pending_inboxes_json = inboxes_json, available_at = %s, last_error = '', lock_token = NULL, locked_at = NULL, updated_at = %s WHERE id = %d AND status = 'failed' AND lock_token IS NULL",
+			"UPDATE {$table} SET status = 'retrying', attempt = 0, delivery_status_json = NULL, pending_inboxes_json = inboxes_json, available_at = %s, last_error = '', lock_token = NULL, locked_at = NULL, updated_at = %s WHERE id = %d AND status = 'failed' AND lock_token IS NULL",
 			$now,
 			$now,
 			$id
@@ -539,6 +540,8 @@ function axismundi_activitypub_bridge_process_delivery( int $id, int $attempt = 
 		$retry        = array();
 		$errors       = array();
 		$key_recovery = false;
+		$states = json_decode( (string) ( $job->delivery_status_json ?? '' ), true );
+		$states = is_array( $states ) ? $states : array();
 		foreach ( $batch as $inbox ) {
 			if ( ! axismundi_activitypub_bridge_touch_delivery_claim( $id, $token ) ) {
 				return;
@@ -561,7 +564,22 @@ function axismundi_activitypub_bridge_process_delivery( int $id, int $attempt = 
 				)
 			);
 			$code = is_wp_error( $response ) ? 0 : (int) wp_remote_retrieve_response_code( $response );
-			if ( axismundi_activitypub_bridge_delivery_should_retry( $response, $code ) ) {
+			$retryable = axismundi_activitypub_bridge_delivery_should_retry( $response, $code );
+			$accepted = ! is_wp_error( $response ) && $code >= 200 && $code < 300;
+			$states[ $inbox ] = array(
+				'state' => $accepted ? 'accepted' : ( $retryable ? 'queued' : 'failed' ),
+				'httpStatus' => $code,
+				'attempt' => (int) ( $states[ $inbox ]['attempt'] ?? 0 ) + 1,
+				'updatedAt' => current_time( 'mysql', true ),
+				'errorCode' => is_wp_error( $response ) ? sanitize_key( $response->get_error_code() ) : '',
+			);
+			// Persist each observation while the lease is held, not only the last batch.
+			$table = axismundi_activitypub_bridge_delivery_table();
+			$saved = $wpdb->query( $wpdb->prepare( "UPDATE {$table} SET delivery_status_json = %s WHERE id = %d AND lock_token = %s", wp_json_encode( $states ), $id, $token ) );
+			if ( 1 !== $saved ) {
+				return;
+			}
+			if ( $retryable ) {
 				$retry[]      = $inbox;
 				$key_recovery = $key_recovery || axismundi_activitypub_bridge_delivery_is_key_recovery_error( $response, $code );
 			}
@@ -582,6 +600,18 @@ function axismundi_activitypub_bridge_process_delivery( int $id, int $attempt = 
 		}
 
 		// Record the final attempt before the terminal transition.
+		$failed_before = false;
+		foreach ( $states as &$state ) {
+			if ( 'queued' === $state['state'] ) {
+				$state['state'] = 'unknown';
+			}
+			$failed_before = $failed_before || 'accepted' !== $state['state'];
+		}
+		unset( $state );
+		if ( $failed_before && empty( $errors ) ) {
+			$errors[] = 'At least one Inbox was not accepted in an earlier batch.';
+		}
+		$wpdb->query( $wpdb->prepare( "UPDATE {$table} SET delivery_status_json = %s WHERE id = %d AND lock_token = %s", wp_json_encode( $states ), $id, $token ) );
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Trusted table identifier.
 		$wpdb->query( $wpdb->prepare( "UPDATE {$table} SET attempt = %d, pending_inboxes_json = %s WHERE id = %d AND lock_token = %s", $attempt, wp_json_encode( $retry ), $id, $token ) );
 		axismundi_activitypub_bridge_finish_delivery( $id, $token, empty( $errors ) ? 'delivered' : 'failed', implode( '; ', $errors ) );
@@ -590,6 +620,30 @@ function axismundi_activitypub_bridge_process_delivery( int $id, int $attempt = 
 	}
 }
 add_action( AXISMUNDI_ACTIVITYPUB_BRIDGE_DELIVERY_HOOK, 'axismundi_activitypub_bridge_process_delivery', 10, 2 );
+
+/** Private transport read surface; Activity documents never carry these recipients. */
+function axismundi_activitypub_bridge_delivery_report( int $id ) {
+	$job = axismundi_activitypub_bridge_get_delivery( $id );
+	if ( ! $job ) {
+		return new WP_Error( 'ax_bridge_delivery_missing', 'Delivery not found.', array( 'status' => 404 ) );
+	}
+	$actor = function_exists( 'axismundi_actors_get_by_uri' ) ? axismundi_actors_get_by_uri( $job->actor_uri ) : null;
+	$allowed = current_user_can( 'manage_options' ) || ( $actor && function_exists( 'axismundi_actors_can_act_as' ) && axismundi_actors_can_act_as( $actor, get_current_user_id() ) );
+	if ( ! $allowed ) {
+		return new WP_Error( 'ax_bridge_delivery_forbidden', 'Delivery access denied.', array( 'status' => 403 ) );
+	}
+	$known = json_decode( (string) ( $job->delivery_status_json ?? '' ), true );
+	$known = is_array( $known ) ? $known : array();
+	$states = array();
+	$counts = array( 'accepted' => 0, 'queued' => 0, 'failed' => 0, 'unknown' => 0 );
+	foreach ( (array) json_decode( $job->inboxes_json, true ) as $inbox ) {
+		// Legacy completion cannot establish a per-Inbox outcome retrospectively.
+		$state = $known[ $inbox ] ?? array( 'state' => in_array( $job->status, array( 'queued', 'retrying' ), true ) ? 'queued' : 'unknown' );
+		$states[ $inbox ] = $state;
+		$counts[ $state['state'] ]++;
+	}
+	return array( 'activity' => $job->activity_uri, 'status' => $job->status, 'counts' => $counts, 'inboxes' => $states );
+}
 
 /** Recent Bridge transport jobs for read-only administration. */
 function axismundi_activitypub_bridge_delivery_jobs( int $limit = 100 ) : array {

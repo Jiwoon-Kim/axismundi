@@ -12,9 +12,9 @@ function axismundi_activitypub_bridge_inbox_url( Axismundi_Actor $actor ) : stri
 	return axismundi_activitypub_bridge_actor_inbox_url( $actor );
 }
 
-/** The official shared Inbox transport endpoint. */
+/** Bridge-owned shared Inbox transport endpoint. */
 function axismundi_activitypub_bridge_shared_inbox_url() : string {
-	return rest_url( 'activitypub/1.0/inbox' );
+	return rest_url( 'axismundi/v1/activitypub/inbox' );
 }
 
 /** Non-secret descriptor for resolving one local Actor's signing key on demand. */

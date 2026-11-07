@@ -128,6 +128,11 @@ function axismundi_activitypub_bridge_verify_actor_inbox( WP_REST_Request $reque
 	if ( ! axismundi_activitypub_bridge_actor_inbox_available() || ! axismundi_activitypub_bridge_inbox_route_actor( $request ) ) {
 		return new WP_Error( 'ax_bridge_inbox_missing', 'The Actor Inbox is unavailable.', array( 'status' => 404 ) );
 	}
+	return axismundi_activitypub_bridge_verify_inbox_request( $request );
+}
+
+/** Validate the body and verify the original signed HTTP target for either namespace. */
+function axismundi_activitypub_bridge_verify_inbox_request( WP_REST_Request $request ) {
 	$payload = $request->get_json_params();
 	if ( ! is_array( $payload ) || array_is_list( $payload )
 		|| array_diff( array( 'type', 'actor', 'object' ), array_keys( $payload ) )
@@ -135,6 +140,55 @@ function axismundi_activitypub_bridge_verify_actor_inbox( WP_REST_Request $reque
 		return new WP_Error( 'ax_bridge_inbox_body', 'An Activity JSON object is required.', array( 'status' => 400 ) );
 	}
 	return ( new Activitypub\Rest\Inbox_Controller() )->verify_signature( $request, true );
+}
+
+function axismundi_activitypub_bridge_verify_shared_inbox( WP_REST_Request $request ) {
+	return axismundi_activitypub_bridge_actor_inbox_available()
+		? axismundi_activitypub_bridge_verify_inbox_request( $request )
+		: new WP_Error( 'ax_bridge_inbox_missing', 'The shared Inbox is unavailable.', array( 'status' => 404 ) );
+}
+
+/** Shared transport has no implicit recipient: use addresses and accepted local followers. */
+function axismundi_activitypub_bridge_receive_shared_inbox( WP_REST_Request $request ) {
+	$payload = $request->get_json_params();
+	if ( ! axismundi_activitypub_bridge_actor_inbox_available() || ! is_array( $payload ) ) {
+		return new WP_Error( 'ax_bridge_inbox_missing', 'The shared Inbox is unavailable.', array( 'status' => 404 ) );
+	}
+	$targets = axismundi_activitypub_bridge_receipt_targets( $payload );
+	$sender_uri = axismundi_act_member_uri( $payload['actor'] ?? '' );
+	$sender = axismundi_actors_get_by_uri( $sender_uri );
+	$addresses = array();
+	foreach ( array( $payload, is_array( $payload['object'] ?? null ) ? $payload['object'] : array() ) as $document ) {
+		foreach ( array( 'to', 'cc', 'bto', 'bcc', 'audience' ) as $field ) {
+			$addresses = array_merge( $addresses, axismundi_activitypub_bridge_member_uris( $document[ $field ] ?? array() ) );
+		}
+	}
+	$followers = $sender ? axismundi_actors_get_endpoint( $sender, 'followers' ) : '';
+	if ( array_intersect( $addresses, array_filter( array( 'https://www.w3.org/ns/activitystreams#Public', 'as:Public', $followers ) ) ) ) {
+		foreach ( axismundi_activitypub_bridge_follower_candidates( $sender_uri ) as $uri ) {
+			$actor = axismundi_actors_get_by_uri( $uri );
+			if ( $actor && $actor->is_local() && 'public' === $actor->get_status() ) {
+				$targets[ $actor->get_identity_id() ] = $actor;
+			}
+		}
+	}
+	if ( ! $targets ) {
+		return new WP_Error( 'ax_bridge_inbox_no_target', 'No local recipient could be resolved.', array( 'status' => 400 ) );
+	}
+	$result = axismundi_activitypub_bridge_record_inbox( $payload, array(), false, null, $targets );
+	axismundi_activitypub_bridge_record_inbox_diagnostic( 'shared-axismundi', $payload, $result );
+	if ( is_wp_error( $result ) ) {
+		$data = $result->get_error_data();
+		$data = is_array( $data ) ? $data : array();
+		$code = $result->get_error_code();
+		$domain_error = str_starts_with( $code, 'ax_bridge_control_' ) || str_starts_with( $code, 'ax_mod_' ) || str_starts_with( $code, 'ax_community_' );
+		$data['status'] = $data['status'] ?? ( 'ax_bridge_inbox_blocked' === $code ? 403 : ( $domain_error && ! in_array( $code, array( 'ax_bridge_control_store', 'ax_bridge_control_busy' ), true ) ? 400 : 503 ) );
+		$result->add_data( $data );
+		return $result;
+	}
+	$response = new WP_REST_Response( null, 202 );
+	$response->header( 'Cache-Control', 'private, no-store' );
+	return $response;
 }
 
 function axismundi_activitypub_bridge_receive_actor_inbox( WP_REST_Request $request ) {
@@ -218,6 +272,12 @@ function axismundi_activitypub_bridge_register_actor_inbox() : void {
 	}
 	// The permission callback still requires id for every non-featured Activity.
 	$post_args['id']['required'] = false;
+	register_rest_route( 'axismundi/v1', '/activitypub/inbox', array(
+		'methods' => WP_REST_Server::CREATABLE,
+		'callback' => 'axismundi_activitypub_bridge_receive_shared_inbox',
+		'permission_callback' => 'axismundi_activitypub_bridge_verify_shared_inbox',
+		'args' => $post_args,
+	) );
 	register_rest_route( 'axismundi/v1', '/actors/(?P<uuid>[0-9a-f-]{36})/inbox', array(
 		'args' => array( 'uuid' => array( 'required' => true, 'type' => 'string', 'pattern' => '^[0-9a-f-]{36}$' ) ),
 		array( 'methods' => WP_REST_Server::READABLE, 'callback' => 'axismundi_activitypub_bridge_read_actor_inbox', 'permission_callback' => '__return_true',

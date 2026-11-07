@@ -177,6 +177,46 @@ try {
 	$crypto_request->set_route( $rest );
 	$crypto_response = rest_do_request( $crypto_request );
 	$assert( 202 === $crypto_response->get_status(), 'RSA-signed POST passes the unmodified upstream verifier and records a receipt' );
+	$crypto_request->set_route( '/axismundi/v1/activitypub/inbox' );
+	$assert( 401 === rest_do_request( $crypto_request )->get_status(), 'Actor Inbox signature cannot be replayed against shared Inbox URL' );
+	$shared_payload = $payload( 'shared-crypto' );
+	$shared_payload['to'] = array( $actors[0]->get_uri(), $actors[1]->get_uri() );
+	$shared_body = wp_json_encode( $shared_payload );
+	$shared_request = new WP_REST_Request( 'POST', '/axismundi/v1/activitypub/inbox' );
+	$shared_request->set_header( 'Content-Type', 'application/activity+json' );
+	$shared_request->set_body( $shared_body );
+	$assert( 401 === rest_do_request( $shared_request )->get_status() && null === axismundi_act_get( $shared_payload['id'] ), 'Shared Inbox rejects unsigned delivery before recording' );
+	$shared_signed = ( new Activitypub\Signature\Http_Signature_Draft() )->sign( array(
+		'method' => 'POST', 'body' => $shared_body, 'key_id' => $key_id, 'private_key' => $private,
+		'headers' => array( 'Date' => gmdate( 'D, d M Y H:i:s' ) . ' GMT' ),
+	), axismundi_activitypub_bridge_shared_inbox_url() );
+	$shared_request->set_header( 'Host', wp_parse_url( home_url(), PHP_URL_HOST ) );
+	foreach ( $shared_signed['headers'] as $name => $value ) { $shared_request->set_header( $name, $value ); }
+	$shared_response = rest_do_request( $shared_request );
+	$shared_activity = axismundi_act_get( $shared_payload['id'] );
+	$assert( 202 === $shared_response->get_status() && $shared_activity instanceof Axismundi_Activity, 'RSA-signed shared delivery enters the same Bridge ledger' );
+	$assert( 2 === (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE activity_id=%d', axismundi_act_inbox_table(), $shared_activity->get_id() ) ), 'Shared delivery records only its two explicit local recipients' );
+	$assert( 202 === rest_do_request( $shared_request )->get_status() && 2 === (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE activity_id=%d', axismundi_act_inbox_table(), $shared_activity->get_id() ) ), 'Repeated shared POST creates no duplicate receipts' );
+	$assert( ! isset( rest_get_server()->get_routes()['/axismundi/v1/activitypub/inbox'][0]['methods']['GET'] ), 'Shared Inbox has no public collection GET' );
+	$follow_snapshot = axismundi_act_import_follow_snapshot( $actors[0]->get_uri(), $remote_uri, 'accepted', 'shared-inbox-test' );
+	$assert( ! is_wp_error( $follow_snapshot ), 'Accepted local follower exists for shared delivery' );
+	$follower_payload = $payload( 'shared-followers' );
+	$follower_payload['to'] = array( 'https://www.w3.org/ns/activitystreams#Public' );
+	$follower_request = new WP_REST_Request( 'POST', '/axismundi/v1/activitypub/inbox' );
+	$follower_request->set_header( 'Content-Type', 'application/activity+json' );
+	$follower_request->set_body( wp_json_encode( $follower_payload ) );
+	$defer = static fn() : bool => true;
+	add_filter( 'activitypub_defer_signature_verification', $defer );
+	try {
+		$follower_response = rest_do_request( $follower_request );
+	} finally {
+		remove_filter( 'activitypub_defer_signature_verification', $defer );
+		$defer = null;
+	}
+	$follower_activity = axismundi_act_get( $follower_payload['id'] );
+	$assert( 202 === $follower_response->get_status() && $follower_activity instanceof Axismundi_Activity && 1 === (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE activity_id=%d AND actor_identity_id=%d', axismundi_act_inbox_table(), $follower_activity->get_id(), $actors[0]->get_identity_id() ) ), 'Public shared delivery reaches the accepted local follower' );
+	$assert( 1 === (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE activity_id=%d', axismundi_act_inbox_table(), $follower_activity->get_id() ) ), 'Public shared delivery never becomes a site-wide broadcast' );
+	$wpdb->delete( axismundi_act_relations_table(), array( 'subject_actor_uri_hash' => hash( 'sha256', $actors[0]->get_uri() ), 'object_actor_uri_hash' => hash( 'sha256', $remote_uri ) ) );
 	remove_filter( 'activitypub_pre_http_get_remote_object', $key_lookup, 10 );
 	$key_lookup = null;
 	$owner_row = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM %i WHERE identity_id = %d AND user_id = %d', axismundi_actors_managers_table(), $group->get_identity_id(), $users[0] ), ARRAY_A );

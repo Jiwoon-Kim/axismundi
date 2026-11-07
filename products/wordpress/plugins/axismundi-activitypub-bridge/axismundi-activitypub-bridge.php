@@ -241,14 +241,14 @@ function axismundi_activitypub_bridge_inbox_targets( array $activity, array $rec
  * @param bool            $allow_mention_targets Trust Mention href only after the official shared Inbox has verified the request.
  * @return Axismundi_Activity|WP_Error
  */
-function axismundi_activitypub_bridge_record_inbox( array $activity, array $recipient_user_ids = array(), bool $allow_mention_targets = false, ?Axismundi_Actor $route_actor = null ) {
+function axismundi_activitypub_bridge_record_inbox( array $activity, array $recipient_user_ids = array(), bool $allow_mention_targets = false, ?Axismundi_Actor $route_actor = null, ?array $receipt_targets = null ) {
 	if ( ! axismundi_activitypub_bridge_ready() ) {
 		return new WP_Error( 'ax_bridge_inbox_not_ready', __( 'The Axismundi Inbox repositories are unavailable.', 'axismundi-activitypub-bridge' ) );
 	}
 	if ( null !== $route_actor && ( ! $route_actor->is_local() || 'public' !== $route_actor->get_status() ) ) {
 		return new WP_Error( 'ax_bridge_inbox_no_target', 'The route recipient is unavailable.' );
 	}
-	if ( null === $route_actor && empty( axismundi_activitypub_bridge_inbox_targets( $activity, $recipient_user_ids, $allow_mention_targets ) ) ) {
+	if ( null === $route_actor && empty( $receipt_targets ) && empty( axismundi_activitypub_bridge_inbox_targets( $activity, $recipient_user_ids, $allow_mention_targets ) ) ) {
 		return new WP_Error( 'ax_bridge_inbox_no_target', __( 'No public local Actor target could be resolved.', 'axismundi-activitypub-bridge' ) );
 	}
 
@@ -264,9 +264,9 @@ function axismundi_activitypub_bridge_record_inbox( array $activity, array $reci
 		axismundi_actors_ensure_remote_instance_cached( $actor );
 	}
 
-	$targets = null === $route_actor
+	$targets = $receipt_targets ?? ( null === $route_actor
 		? axismundi_activitypub_bridge_receipt_targets( $activity, $recipient_user_ids )
-		: array( $route_actor->get_identity_id() => $route_actor );
+		: array( $route_actor->get_identity_id() => $route_actor ) );
 	$admitted = array();
 	foreach ( $targets as $id => $recipient ) {
 		$permitted = axismundi_activitypub_bridge_inbox_permitted( $activity, $recipient );

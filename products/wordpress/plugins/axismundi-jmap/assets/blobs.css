@@ -1,0 +1,31 @@
+#ax-jmap-blobs .widefat {
+	table-layout: fixed;
+	margin-top: 16px;
+}
+#ax-jmap-blobs .widefat th:first-child {
+	width: 48%;
+}
+#ax-jmap-blobs td,
+#ax-jmap-blobs code {
+	overflow-wrap: anywhere;
+	white-space: normal;
+}
+#ax-jmap-blobs form {
+	margin-bottom: 12px;
+}
+#ax-jmap-blobs td form {
+	margin: 6px 0 0;
+}
+#ax-jmap-blobs input[type="file"] {
+	max-width: 100%;
+}
+#ax-jmap-blobs select {
+	max-width: 100%;
+}
+#ax-jmap-blobs td .button {
+	max-width: 100%;
+	padding: 2px 5px;
+	white-space: normal;
+	height: auto;
+	line-height: 1.5;
+}

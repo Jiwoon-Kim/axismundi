@@ -150,8 +150,12 @@ final class SessionProjector {
 			}
 			$literal = preg_replace( '/\{[A-Za-z][A-Za-z0-9]*\}/', 'value', $url );
 			$parts = parse_url( $literal );
+			// NON-STANDARD: wp-env loopback HTTP is allowed only in explicitly local/development installs.
+			$local_http = is_array( $parts ) && 'http' === ( $parts['scheme'] ?? '' )
+				&& in_array( strtolower( $parts['host'] ?? '' ), array( 'localhost', '127.0.0.1', '[::1]' ), true )
+				&& function_exists( 'wp_get_environment_type' ) && in_array( wp_get_environment_type(), array( 'local', 'development' ), true );
 			if ( str_contains( $literal, '{' ) || str_contains( $literal, '}' ) || ! is_array( $parts )
-				|| 'https' !== ( $parts['scheme'] ?? '' ) || empty( $parts['host'] )
+				|| ( 'https' !== ( $parts['scheme'] ?? '' ) && ! $local_http ) || empty( $parts['host'] )
 				|| isset( $parts['user'] ) || isset( $parts['fragment'] ) || ! filter_var( $literal, FILTER_VALIDATE_URL ) ) {
 				throw new \InvalidArgumentException( 'Session URLs require HTTPS and level-1 templates without credentials or fragments.' );
 			}

@@ -11,6 +11,8 @@ Todo PoC가 Principal·공유·동기화 계약의 첫 소비자다. Calendar와
 - [RFC 검토와 현재 구현 범위](docs/REFERENCE-RFC8620-AND-EXTENSIONS.md)
 - [Session·Account 투영 구현과 공개 전제](docs/IMPLEMENTATION-SESSION.md)
 - [코어 런타임·Account 정책 구현](docs/IMPLEMENTATION-CORE-RUNTIME.md)
+- [Session HTTP·인증과 부분 전송 구현](docs/HTTP-SESSION.md)
+- [Account blob 저장소와 접근 통제](docs/BLOB-STORE.md)
 - [Todo·Principal 공유 PoC와 검증 범위](docs/TODO-POC.md)
 - [공식 명세 목록](https://jmap.io/spec/index.html)
 - [RFC 8620](https://jmap.io/spec/rfc8620/)
@@ -20,7 +22,14 @@ Todo PoC가 Principal·공유·동기화 계약의 첫 소비자다. Calendar와
 Account 접근 판정은 Actors의 프로토콜 중립 작업 공간 API에 위임한다.
 Session·Account의 in-process 투영과 명시적 capability provider 등록을 추가했다.
 Todo PoC 데이터 provider를 제공하며 전체 Session 조립은 URL·Core 제한값을 명시적으로 요구한다.
-공용 nonce 인증 REST API와 Todo 관리자 경로를 제공한다. 공개 Session 발견·업로드·Push·Contacts 메서드는 아직 노출하지 않는다.
+쿠키+nonce 및 Application Password 인증 REST API와 Todo 관리자 경로를 제공한다.
+Session 발견과 인증된 Session GET은 axismundi/jmap 아래로 노출한다.
+Account별 blob 업로드·인증 다운로드 및 Tools의 JMAP Blobs 화면을 제공한다.
+blobId는 `b` + SHA-256이며 내용 행과 Account·업로더별 업로드 행을 분리한다.
+저장 전 정적 접근 차단을 검사하고 실패하면 업로드를 열지 않는다. Apache에서는
+통과했고 nginx 호스트에서는 플러그인이 만들 수 있는 차단 수단이 없다.
+RFC 9404 Blob 메서드와 AP uploadMedia 어댑터는 아직 없다.
+EventSource는 인증 후 501이며 Contacts 메서드는 아직 없다.
 WordPress 선택 화면·아바타 전환기·세션 쿠키 어댑터는 Actors 소유다. JMAP 없이도
 동작하며 기존 URL·POST action·nonce 및 PHP 호환 진입점은 유지한다. Actors의
 `ax_actors_account_selection_enabled` 옵션(기본 false) 또는 기존 필터로 명시적으로

@@ -14,6 +14,8 @@ use const Axismundi\Jmap\CORE;
 $users = array();
 $fixtures = array();
 $original_user = get_current_user_id();
+// This audit isolates registered data-type providers; the real Core blob writer is tested by audit-blobs.php.
+$blob_projection = remove_filter( 'axismundi_jmap_account_projection', 'Axismundi\\Jmap\\Blobs\\project_account', 10 );
 $checks = 0;
 $assert = static function ( bool $condition, string $label ) use ( &$checks ) : void {
 	++$checks;
@@ -190,6 +192,7 @@ try {
 	$assert( '{}' === json_encode( $projector->accounts( $users[0] )->primaryAccounts ), 'No primary remains for disabled Account' );
 	printf( "PASS: %d Session checks\n", $checks );
 } finally {
+	if ( $blob_projection ) { add_filter( 'axismundi_jmap_account_projection', 'Axismundi\\Jmap\\Blobs\\project_account', 10, 3 ); }
 	wp_set_current_user( $original_user );
 	foreach ( array_reverse( $fixtures ) as $id ) {
 		$wpdb->delete( axismundi_actors_managers_table(), array( 'identity_id' => $id ) );

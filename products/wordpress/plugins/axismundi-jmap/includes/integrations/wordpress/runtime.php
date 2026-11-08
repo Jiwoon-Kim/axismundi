@@ -50,6 +50,7 @@ final class Server {
 		$this->engine = $configuration->engine( $registry );
 	}
 	public function accounts() : \stdClass { return $this->projector->accounts( get_current_user_id() ); }
+	public function core_properties() : \stdClass { return $this->configuration->properties(); }
 	/** Authenticated runtime execution without claiming a public Session transport. */
 	public function execute_json( string $json ) : \stdClass {
 		$state = fn() => hash_hmac( 'sha256', wp_json_encode( $this->accounts() ), wp_salt( 'auth' ) );

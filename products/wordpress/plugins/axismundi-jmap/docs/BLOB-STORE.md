@@ -251,7 +251,14 @@ RFC 8620 §6.1이 `uploadUrl`을 Session 필수 속성으로 두므로 숨기면
 ## 미구현
 
 RFC 9404 Blob/upload·get·lookup capability와 RFC 8620 Blob/copy, EventSource,
-메일 MIME 조립, AP uploadMedia 어댑터·광고, attachment 가져오기는 후속이다.
+메일 MIME 조립은 후속이다.
+AP uploadMedia 어댑터는 JMAP 이 제공하지 않는다. JMAP 은 AS 객체를 모르고 blob 은
+메타데이터 없는 바이트이므로, 객체를 만드는 플러그인이 어댑터를 소유하고 바이트만
+이 저장소에 요청할 계획이다. 아직 구현·광고하지 않는다. 계획과 미결은
+[아키텍처 열린 항목](../../../architecture/activitystreams-open-items.md)의
+"Video 를 다루는 구역은 둘이다" 절에 있다.
+attachment 가져오기와 blob → Media Library 승격은 후속이 아니라 **기각**이다. 어느
+방향으로도 바이트를 옮기거나 빌리지 않는다. 참조·링크는 허용한다.
 다운로드는 권한 회수를 늦추지 않도록 private, no-store를 사용하며 Range는 무시하고
 인증 후 전체 바이트를 반환한다. 이 단계가 완전한 JMAP 서버라고 주장하지 않는다.
 

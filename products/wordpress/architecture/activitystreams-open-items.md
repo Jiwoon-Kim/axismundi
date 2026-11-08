@@ -199,6 +199,121 @@ canonical endpoint + 협상  표현을 제공하는 프로토콜 표면
 동작은 유지된다. [browser.pub](https://browser.pub/) 이 같은 구성의 참고
 사례다 — 하나의 읽기 표면 위에 일반 화면과 구조 확인 화면.
 
+### Video 를 다루는 구역은 둘이다, 2026-11-09
+
+사실·결정·미결을 섞지 않는다. 이 절을 쓰기 전 대화에서 다섯 주장을 과장했고(아래 *정정* 참조),
+그 교정이 이 구분 없이는 또 일어난다.
+
+#### 측정된 사실
+
+```txt
+MediaUpload (CG)   multipart/form-data 로 file + object(서버가 완성할 AS 객체 초안)를 POST
+                   201 (즉시 사용 가능) / 202 (처리 중), Location 헤더로 새 객체 id
+                   업로드 요청 자체는 outbox 제출이 아니다. 응답 객체를 Create 로 감쌀 수도 있다.
+                   last edited 2017-10-24, 상태 라벨 없음
+RFC 8620 §6.1/6.2  uploadUrl 은 Session 필수 속성. 다운로드는 인증된 GET.
+                   "unreferenced blobs MUST only be accessible to the uploader,
+                   even in shared accounts"
+RFC 8620 §1.2      Id 는 A-Za-z0-9/-/_ 1–255 옥텟. 숫자 시작 회피 SHOULD,
+                   이유가 "on filesystems" 로 명시. "prefix every id with a single
+                   alphabetical character"
+RFC 9404           Blob/upload·get·lookup 을 추가한다. Blob/copy 는 RFC 8620 §6.3 이다.
+                   두 RFC 에 blob list/query/changes 메서드는 없다.
+RFC 8621           Email.blobId 와 비-multipart EmailBodyPart.blobId 는 필수
+RFC 9610 §3        blobId 는 uri 와 별개 속성이다. data: 로 들어온 미디어는
+                   "SHOULD return a blobId property and omit the uri property"
+                   blobId ↔ uri 매핑은 정의하지 않는다
+AS2 어휘           as:actor rdfs:subPropertyOf as:attributedTo (온톨로지 원문)
+                   attributedTo "one or more", Functional 아님
+우리 blob 라우트    인증 필수, Accept-Ranges: none, Cache-Control: private, no-store
+                   저장 루트에 .htaccess/web.config deny, 프로브 실패 시 업로드 차단
+우리 Forum         repository.php 가 공개된 **모든** 관리 Group 에
+                   ensure_public_community() 초기화 경로를 적용한다.
+                   정책 행 생성과 동일한 뜻은 아니다. 기본 정책은 행 없이 가상으로 읽는다.
+```
+
+근거: [MediaUpload CG 제안](https://www.w3.org/wiki/SocialCG/ActivityPub/MediaUpload),
+[RFC 8620](https://www.rfc-editor.org/rfc/rfc8620.html),
+[RFC 9404](https://www.rfc-editor.org/rfc/rfc9404.html),
+[RFC 8621](https://www.rfc-editor.org/rfc/rfc8621.html),
+[RFC 9610 §3](https://www.rfc-editor.org/rfc/rfc9610.html#section-3),
+[AS2 온톨로지](https://www.w3.org/ns/activitystreams-owl).
+코드 근거는 `axismundi-jmap/includes/integrations/wordpress/blob-http.php` 와
+`axismundi-forum/includes/repository.php::axismundi_forum_ensure_public_community` 다.
+`actor` 의 하위속성 관계는 Activity 자체에 적용되며 중첩 객체의 발행 권한을 증명하지 않는다.
+
+#### 제품 결정
+
+```txt
+Video 는 두 구역    attachment 의 영상은 종속/독립 객체이고, 1급 주체는 C2S local object 다.
+                    attachment 로 1급 Video 를 만드는 것이 불가능한 것은 아니다 —
+                    얹어야 하는 모델의 양과 유지 책임 때문의 선택이다.
+                    사용자 중심 attachment ⊥ Actor 중심 C2S Video.
+uploadMedia          Person Actor 의 엔드포인트로 광고하고 CG 의미를 지킨다 —
+                    PeerTube 채널 Group 기능 이식 시기에 구현할 계획이며 현재 광고하지 않는다.
+                    객체를 만들고 Location 을 돌려준다. 자동 발행·배달은 하지 않는 제품 정책이며,
+                    팔로워 배달은 별도 outbox Create 다(CG 자체가 Create 래핑을 금지하지는 않는다).
+                    소유는 객체를 만드는 쪽이고 JMAP 이 아니다(JMAP 은 AS 객체를 모른다).
+바이트                JMAP blob 저장소를 공유한다. 창구는 둘(JMAP uploadUrl, AP uploadMedia),
+                    저장소는 하나. 선례는 Emoji(S2S, attachment page 없음)와 blob(C2S).
+blob 은 비공개 유지   정적 차단을 끄지 않는다. deny 는 디렉터리 전역이고 가시성은
+                    참조별 속성이라 전역 스위치로 표현할 수 없다. 미발행 초안과
+                    staging/(확장자 유지) 이 같은 트리에 있다.
+승격·차용 금지        blob ↔ attachment 는 어느 방향으로도 바이트를 옮기거나 빌리지 않는다.
+                    참조·링크는 허용한다(attachment URL 을 Video 의 url 로 쓰는 것은 된다).
+                    attachment URL 을 참조하는 local Video 는 재업로드 없이도 가능하다.
+                    독립 blob 사본이 필요하다면 별도 업로드이며 기존 attachment 를 이전하지 않는다.
+할당량                원장은 둘(blob 업로드 행 / attributedTo 가 그 account 인 attachment),
+                    집계자는 하나로 설계한다. 공동귀속의 계상 주체·범위는 아래 미결로 남긴다.
+공개 카드             WebFinger 가 rel="describedby" 로 .jscontact 를 광고하므로, 공개 카드의
+                    사진은 해석 가능한 공개 uri 가 있을 때만 싣고 없으면 항목을 생략한다.
+                    blobId 는 쓰지 않고 data: 내장도 하지 않는다.
+JMAP 업로드 제약      전체 JMAP 작업의 선행 장애물로 삼지 않는다. Contacts·Calendar 는
+                    접근 가능한 미디어 URL 참조로 진행한다. blob 이 필수가 되는 지점은
+                    Mail(RFC 8621)은 blob 이 필수다. RFC 9610 §3 의 data: 변환은 SHOULD 로,
+                    필수와 구분하며 Contacts 구현 때 지원 정책을 기록한다.
+```
+
+#### 미결 설계
+
+```txt
+공개 제공 방식        별도 물리 사본이 필수인 것은 아니다. 같은 바이트 위의 공개 라우트
+                    (비인증·Range·public 캐시)도 후보다. 안정된 미디어 URL 을 우선 검토하되,
+                    서명·만료 URL 을 프로토콜상 금지하지 않는다. 공개 노출은 blob
+                    참조와 별도 수명으로 센다. 일단 공개되면 리모트·엣지 사본의 회수를
+                    보장할 수 없으므로 "비공개로 되돌리기"를 기능으로 약속하지 않는다.
+202 상태 객체         처리가 비동기라면 202 를 사용할 수 있다. 트랜스코딩 채택과 처리 중
+                    url 유무는 미정이다. AS2 는 url 을 일반 필수 속성으로 요구하지 않는다.
+해상도별 표현         blob 에 렌디션을 넣는 것이 아니라 여러 blob 을 url 배열로 묶는다.
+                    배열의 생성 주체가 미정.
+기존 blob 재사용      file + object 를 함께 받는 기본 uploadMedia 에 별도 blobId 와이어는
+                    필요하지 않다. 기존 JMAP blob 을 재사용하는 확장이 필요해질 때만
+                    별도 계약을 검토한다. 현재 필수 선행 작업으로 두지 않는다.
+사용량 계상           attachment 의 주 발행 계정과 공동귀속 중 누구에게 계상할지, 원본·파생
+                    파일 중 무엇을 셀지와 집계 갱신 방식을 결정한다. 아직 강제하지 않는다.
+Group 의 역할         채널 Group 을 공개하면 Forum 이 자동으로 커뮤니티를 만든다
+                    (멤버 목록·Topic 심사 큐까지). Group 의 역할을 명시값으로 만들어야 하고,
+                    그 자리는 Forum 의 Group 관심사를 Actors/Activities 로 추출하는 작업이다.
+                    채널 시작 때 발견하지 말고 추출의 요구사항으로 넣는다.
+S2S 캐시가 둘         uploads/axismundi-emoji/blobs 가 이미 리모트 바이너리 캐시다.
+                    OP 쪽 리모트 바이너리 저장소를 만들면 둘이 된다. 저장소를 합칠지는
+                    열어 둔다. 공통 기법은 참고하되 base 추출은 별도 판단이며 이번에 결정하지 않는다.
+```
+
+#### 정정
+
+대화에서 다섯 주장을 과장했고 codex 가 교정했다. 같은 실수의 형태가 하나다 —
+**우리 불변식을 프로토콜 요구사항으로 올려 말한 것.**
+
+```txt
+"attachment 로는 우회가 없다"        → 불가능이 아니고 설계 선택이다
+"AP 는 바이트 불변성을 요구한다"      → 요구하지 않는다. 불변인 쪽은 우리 blob 저장소다
+"파일 하나라 다중 표현 불가"          → 메타데이터로 여러 표현을 연결할 수 있다.
+                                      코어의 지원 범위를 여기서 이미지 sizes 로 한정하지 않는다
+"엣지 사본이 영구히 남는다"           → 회수를 보장할 수 없다는 표현이 정확하다
+"공개 미디어는 별도 물리 사본"         → 미결 설계 항목이다
+```
+
 ## Known Defects, Measured
 
 ### The Emitter Can Mint A Hashtag `id` It Cannot Serve
@@ -653,7 +768,14 @@ pending 의 정확한 표현이다. 2026-10-24 측정: attachment 18210 은 `pos
 
 ### 업로드는 WordPress 코어 API 를 쓴다
 
-JMAP blob 기계를 만들지 않는다. blob 이 대신해 주는 것은 **아직 주소가 없는 바이트**인데,
+> **이 절이 스스로 적어 둔 조건이 발동했다 (2026-11-09).** 아래 "되돌아오는 경우는
+> 비공개 미디어다" 가 그것이고, JMAP blob 저장소는 구현되어 Apache 에서 검증됐다
+> (`axismundi-jmap/docs/BLOB-STORE.md`). 아래 측정은 **첨부로 충분한 미디어**에 대해
+> 여전히 유효하다. 1급 Video 와 비공개 바이트는 위 **Video 를 다루는 구역은 둘이다**
+> 절을 읽는다.
+
+아래는 대체된 과거 판단이다. 당시에는 JMAP blob 기계를 만들지 않기로 했다.
+blob 이 대신해 주는 것은 **아직 주소가 없는 바이트**인데,
 WordPress 는 업로드 즉시 attachment 행을 만들어 id 와 공개 url 을 준다. 메울 자리가
 생기지 않는다.
 
@@ -1021,10 +1143,13 @@ Primer 가 말하는 "activity/JSON content type 확인" 완화책을 느슨하�
             201/202 와 Location 헤더를 받는 형태.
 ```
 
-그러므로 "context 에 있다" 를 "쓸 수 있는 기능이 있다" 로 읽으면 안 된다. 그리고 이미
-내린 결정이 그 자리를 채우고 있다 -- 위 **업로드는 WordPress 코어 API 를 쓴다** 절이고,
-JMAP blob 기계도 만들지 않는다. 이 측정은 그 결정을 **강화한다**: AP 쪽 대안이 9 년 묵은
-무상태 wiki 페이지뿐이므로 비교 대상이 아니다.
+그러므로 "context 에 있다" 를 "쓸 수 있는 기능이 있다" 로 읽으면 안 된다.
+
+> **결론 부분만 2026-11-09 에 뒤집혔다.** 위 측정(용어는 context 에 있고, 메커니즘은
+> 2017 년 무상태 wiki 페이지뿐)은 그대로 유효하다. 바뀐 것은 그래서 쓰지 않는다는 결론이다
+> — 1급 Video 를 위해 `uploadMedia` 를 **CG 제안의 의미대로** 구현하기로 했다. 아래
+> **Video 를 다루는 구역은 둘이다** 절이 계획과 미결을 적는다. 비규범 메커니즘을 채택하는
+> 선택이므로, 그 사실 자체를 계약에 명시한다.
 
 ### 공유 미디어 컬렉션에 걸리는 지점
 

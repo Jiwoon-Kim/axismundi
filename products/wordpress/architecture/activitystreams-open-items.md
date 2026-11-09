@@ -260,7 +260,13 @@ uploadMedia          Person Actor 의 엔드포인트로 광고하고 CG 의미�
                     **공개 바이트는 공유하지 않는다.** 저장 루트의 deny 가 트리 전체에
                     상속되므로 jmap/blobs 안의 어떤 하위 경로도 Video 의 url 이 될 수 없다.
 공개 업로드           발행 목적 미디어는 처음부터 OP 소유 공개 경로에 확장자를 붙여 쓴다
-                    ({hash}.webm). 목적지(공개/비공개)를 업로드 시점에 정하고 나중에 옮기지
+                    (uploads/axismundi-object-projections/blobs/{shard}/{hash}.{ext}).
+                    디렉터리는 **플러그인 슬러그 전체**이고 축약하지 않는다 — 기존 두
+                    저장소가 모두 슬러그다(uploads/axismundi-jmap/blobs,
+                    uploads/axismundi-emoji/blobs). 축약(ax_·op)은 코드 식별자 쪽 관례이고
+                    파일시스템·URL 경로에는 쓰지 않는다. 이 경로는 Video 의 url 로 나가
+                    리모트·엣지에 캐시되며 URL 불변을 요구사항으로 두었으므로 나중에
+                    바꾸면 발행된 URL 이 깨진다. 목적지(공개/비공개)를 업로드 시점에 정하고 나중에 옮기지
                     않는다 — 승격 금지와 같은 이유다. 확장자는 content_type 에서 유도하고
                     알 수 없으면 거부한다(정적 서버가 확장자로 Content-Type 을 고른다).
                     할당량 정책을 공통으로 적용하는 것과 물리 저장소를 공유하는 것은 별개다.

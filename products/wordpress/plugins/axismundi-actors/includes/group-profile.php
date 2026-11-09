@@ -47,8 +47,19 @@ add_action( 'admin_init', 'axismundi_actors_guard_group_profile_admin' );
 
 /** Conditional creation field shared by local Actor forms. */
 function axismundi_actors_render_group_profile_field() : void {
-	echo '<tr data-ax-group-profile hidden><th>Federation profile</th><td><fieldset><label><input type="radio" name="federation_profile" value="community" checked disabled> Community</label><p class="description">Lemmy interoperability profile (implementation in progress)</p><label><input type="radio" value="channel" disabled> Channel (not implemented)</label><p class="description">Cannot be changed after creation.</p></fieldset></td></tr>';
 	?>
+	<tr data-ax-group-profile hidden>
+		<th><?php esc_html_e( 'Federation profile', 'axismundi-actors' ); ?></th>
+		<td>
+			<fieldset>
+				<label><input type="radio" name="federation_profile" value="community" checked disabled> <?php esc_html_e( 'Community', 'axismundi-actors' ); ?></label>
+				<p class="description"><?php esc_html_e( 'Uses FEP-1b12 for community federation. Implementation is in progress.', 'axismundi-actors' ); ?></p>
+				<label><input type="radio" value="channel" disabled> <?php esc_html_e( 'Channel (not implemented)', 'axismundi-actors' ); ?></label>
+				<p class="description"><?php esc_html_e( 'The Channel profile does not use FEP-1b12.', 'axismundi-actors' ); ?></p>
+				<p class="description"><?php esc_html_e( 'The federation profile cannot be changed after creation.', 'axismundi-actors' ); ?></p>
+			</fieldset>
+		</td>
+	</tr>
 	<script>
 	document.addEventListener('DOMContentLoaded', function () {
 		document.querySelectorAll('[data-ax-group-profile]').forEach(function (row) {

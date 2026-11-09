@@ -9,6 +9,7 @@ global $wpdb;
 $checks = 0;
 $assert = static function ( $ok, $label ) use ( &$checks ) { if ( ! $ok ) { throw new RuntimeException( $label ); } ++$checks; };
 $users = array(); $actors = array(); $objects = array(); $activity_uris = array();
+$wire_activity_uri = '';
 $old_user = get_current_user_id();
 $old_acquisition = get_option( AXISMUNDI_OP_BACKGROUND_ACQUISITION_OPTION, null );
 $prefix = 'https://example.com/community-post-' . wp_generate_uuid4();
@@ -52,6 +53,11 @@ try {
 	$author = axismundi_actors_upsert_remote( $record );
 	if ( ! $author instanceof Axismundi_Actor ) { throw new RuntimeException( 'Remote Person fixture failed' ); }
 	$actors[] = $author;
+	$blind_uri = $prefix . '/blind-recipient';
+	$blind_inbox = $blind_uri . '/inbox';
+	$blind = axismundi_actors_upsert_remote( axismundi_actors_normalize_remote_actor_payload( array( 'id' => $blind_uri, 'type' => 'Person', 'preferredUsername' => 'axcpblind', 'inbox' => $blind_inbox, 'outbox' => $blind_uri . '/outbox' ), $blind_uri ) );
+	$assert( $blind instanceof Axismundi_Actor, 'The blind recipient resolves to a deliverable remote Actor' );
+	$actors[] = $blind;
 	$initialized = axismundi_act_initialize_moderators( $group, $people[0], $users[0] );
 	$assert( $initialized instanceof Axismundi_Activity, 'Existing moderator bootstrap is reused' );
 	axismundi_act_write_relation( 'follow', $author_uri, $group->get_uri(), 'inbound', 'accepted', null, null );
@@ -64,6 +70,15 @@ try {
 		return array( '@context' => 'https://www.w3.org/ns/activitystreams', 'id' => $uri . '/create', 'type' => 'Create', 'actor' => $author_uri, 'object' => $object, 'to' => array( $group->get_uri() ), 'cc' => array( 'https://www.w3.org/ns/activitystreams#Public' ) );
 	};
 	$payload = $make( 'page' );
+	$payload['@context'] = array( $payload['@context'], array( 'audit' => 'https://example.com/ns/audit#' ) );
+	$payload['audit:extension'] = array( 'flags' => array( true, false ), 'value' => null );
+	$payload['object']['audit:extension'] = array( 'items' => array( 'first', 'second' ) );
+	$payload['bto'] = $payload['bcc'] = array( $blind_uri );
+	$payload['object']['bto'] = $payload['object']['bcc'] = array( $blind_uri );
+	// An opaque fixture, not a cryptographically valid proof.
+	$payload['proof'] = array( 'type' => 'DataIntegrityProof', 'proofValue' => 'zAuditFixture' );
+	$inbound_json = json_encode( $payload, JSON_THROW_ON_ERROR );
+	$payload = json_decode( $inbound_json, true, 512, JSON_THROW_ON_ERROR );
 	$received = axismundi_activitypub_bridge_record_inbox( $payload, array(), false, $group );
 	$assert( $received instanceof Axismundi_Activity, 'Verified Bridge handoff records the Person Create' );
 	$assert( $payload === $received->get_payload(), 'Original Create payload is preserved' );
@@ -92,6 +107,43 @@ try {
 	$approved = $review( $users[0], $people[0], $group, $payload['object']['id'], true );
 	$assert( $approved instanceof Axismundi_Activity, 'Moderator approval produces an Announce' );
 	$assert( $approved->get_actor_uri() === $group->get_uri() && $approved->get_payload()['object'] === $payload, 'Group announcement preserves the Person authored Create' );
+	$wire_activity_uri = $approved->get_uri();
+	$no_delivery_schedule = static function ( $pre, $event ) {
+		return AXISMUNDI_ACTIVITYPUB_BRIDGE_DELIVERY_HOOK === $event->hook ? false : $pre;
+	};
+	add_filter( 'pre_schedule_event', $no_delivery_schedule, PHP_INT_MAX, 2 );
+	try {
+		axismundi_activitypub_bridge_queue_outbound( $approved );
+	} finally {
+		remove_filter( 'pre_schedule_event', $no_delivery_schedule, PHP_INT_MAX );
+	}
+	$delivery_id = axismundi_activitypub_bridge_find_delivery( $wire_activity_uri );
+	$delivery = axismundi_activitypub_bridge_get_delivery( $delivery_id );
+	$assert( is_object( $delivery ) && ! wp_next_scheduled( AXISMUNDI_ACTIVITYPUB_BRIDGE_DELIVERY_HOOK, array( $delivery_id, 1 ) ), 'Bridge serializes a real outbound job without scheduling its worker' );
+	$wire = json_decode( $delivery->payload_json, false, 512, JSON_THROW_ON_ERROR );
+	$original = json_decode( $inbound_json, false, 512, JSON_THROW_ON_ERROR );
+	// Compare JSON values, ignoring only object key order, not array order or shape.
+	$canonical = static function ( $value ) use ( &$canonical ) {
+		if ( $value instanceof stdClass ) {
+			$members = get_object_vars( $value );
+			ksort( $members, SORT_STRING );
+			return array( 'object', array_map( $canonical, $members ) );
+		}
+		return is_array( $value ) ? array( 'array', array_map( $canonical, $value ) ) : $value;
+	};
+	$mutated = clone $original;
+	unset( $mutated->proof );
+	$assert( $canonical( $original ) !== $canonical( $mutated ), 'Wire comparison detects a dropped proof' );
+	$mutated = clone $wire->object;
+	unset( $mutated->bto );
+	$assert( $canonical( $original ) !== $canonical( $mutated ), 'Wire comparison detects a stripped blind address on the forwarded original' );
+	$assert( 'Announce' === $wire->type && $group->get_uri() === $wire->actor && $canonical( $original ) === $canonical( $wire->object ), 'Bridge request body preserves every original Create member and its id' );
+	$assert( array( $author_uri . '/inbox' ) === json_decode( $delivery->inboxes_json, true, 512, JSON_THROW_ON_ERROR ), 'Only the Group follower is queued, not the embedded blind recipient' );
+	$with_outer_blind = array_merge( $approved->get_payload(), array( 'bto' => array( $blind_uri ), 'bcc' => array( $blind_uri ) ) );
+	$finalized = axismundi_op_finalize_activity( $with_outer_blind, $approved->get_uri(), true );
+	$assert( is_array( $finalized ) && ! array_key_exists( 'bto', $finalized ) && ! array_key_exists( 'bcc', $finalized ) && $payload === $finalized['object'], 'Our outer blind fields are removed without touching the original' );
+	$display = axismundi_act_public_payload( $approved );
+	$assert( is_array( $display ) && ! str_contains( wp_json_encode( $display ), $blind_uri ) && $payload === $approved->get_payload()['object'], 'Public display omits nested blind addresses without changing the ledger' );
 	$assert( 'approved' === axismundi_actors_get_community_post( $group->get_identity_id(), $payload['object']['id'] )['admission_state'], 'Approval and publication commit together' );
 	$assert( $approved->get_uri() === $review( $users[0], $people[0], $group, $payload['object']['id'], true )->get_uri(), 'Approval retries reuse one Announce' );
 	$assert( $cache_before === axismundi_op_get_remote_object( $payload['object']['id'], false ), 'Approval never changes the source cache' );
@@ -107,7 +159,7 @@ try {
 	$assert( true === $review( $users[0], $people[0], $group, $article['object']['id'], false, 'Not appropriate for this Community.' ), 'Moderator can reject a pending root' );
 	$assert( is_wp_error( $review( $users[0], $people[0], $group, $article['object']['id'], true ) ), 'Rejected submissions cannot silently become approved' );
 	$assert( array() === axismundi_act_get_by_object( $article_create->get_uri() ), 'Rejection emits no Announce' );
-	$assert( ( isset( $community_reply_check ) ? 3 : 2 ) === (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM %i WHERE group_id=%d AND verb IN ('ApprovePost','RejectPost')", axismundi_actors_moderators_log_table(), $group->get_identity_id() ) ), 'Approval and rejection use the existing moderation log' );
+	$assert( ( isset( $community_reply_check ) ? 4 : 2 ) === (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM %i WHERE group_id=%d AND verb IN ('ApprovePost','RejectPost')", axismundi_actors_moderators_log_table(), $group->get_identity_id() ) ), 'Approval and rejection use the existing moderation log' );
 	update_option( AXISMUNDI_OP_BACKGROUND_ACQUISITION_OPTION, '1' );
 	$reply_payload = $make( 'reply', 'Note', $parent );
 	$reply = axismundi_activitypub_bridge_record_inbox( $reply_payload, array(), false, $people[0] );
@@ -132,6 +184,13 @@ try {
 	$assert( $principals === $wpdb->get_results( 'SELECT * FROM ' . axismundi_actors_managers_table() . ' ORDER BY identity_id,principal_kind,principal_id', ARRAY_A ), 'No principal grants are created' );
 	$assert( $relations === $wpdb->get_results( 'SELECT * FROM ' . axismundi_act_relations_table() . ' ORDER BY id', ARRAY_A ), 'Submission and review do not change Follow relations' );
 } finally {
+	if ( '' !== $wire_activity_uri ) {
+		$delivery_id = axismundi_activitypub_bridge_find_delivery( $wire_activity_uri );
+		if ( $delivery_id ) {
+			wp_clear_scheduled_hook( AXISMUNDI_ACTIVITYPUB_BRIDGE_DELIVERY_HOOK, array( $delivery_id, 1 ) );
+			$wpdb->delete( axismundi_activitypub_bridge_delivery_table(), array( 'id' => $delivery_id ) );
+		}
+	}
 	remove_filter( 'query', $no_forum );
 	remove_filter( 'pre_http_request', $http, PHP_INT_MAX );
 	add_action( 'axismundi_act_activity_recorded', 'axismundi_activitypub_bridge_queue_outbound', 10 );

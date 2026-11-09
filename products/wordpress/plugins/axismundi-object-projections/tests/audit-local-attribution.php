@@ -27,7 +27,7 @@ try {
 	$author_id = (int) wp_insert_user( array( 'user_login' => 'ax-attr-' . wp_generate_password( 8, false, false ), 'user_pass' => wp_generate_password( 20 ), 'role' => 'administrator' ) );
 	$ax_attr_users[] = $author_id;
 	wp_set_current_user( $author_id );
-	$actor = axismundi_actors_create_local( array( 'actor_type' => 'Person', 'actor_scope' => 'user', 'local_user_id' => $author_id, 'preferred_username' => 'attr-' . strtolower( wp_generate_password( 8, false, false ) ) ) );
+	$actor = axismundi_actors_create_local( array( 'actor_type' => 'Person', 'actor_scope' => 'user', 'local_user_id' => $author_id, 'personal_owner_user_id' => $author_id, 'initial_owner_user_id' => $author_id, 'preferred_username' => 'attr-' . strtolower( wp_generate_password( 8, false, false ) ) ) );
 	if ( $actor instanceof Axismundi_Actor ) {
 		$ax_attr_ids[] = $actor->get_identity_id();
 		axismundi_actors_set_status( $actor->get_identity_id(), 'public' );
@@ -38,17 +38,18 @@ try {
 	$ax_attr_posts[] = $post_id;
 	$object_uri = axismundi_op_post_object_uri( get_post( $post_id ) );
 	$ax_attr_objects[] = $object_uri;
+	axismundi_op_set_post_attribution( $post_id, $actor->get_uri(), $author_id );
 	$recorded  = function_exists( 'axismundi_act_get_object_attribution' ) ? axismundi_act_get_object_attribution( $object_uri ) : '';
 	$projected = axismundi_op_transform_object( get_post( $post_id ) );
-	ax_attr_assert( $ax_attr_results, 'a published Object is attributed to what the ledger recorded, not to anything derived from its author', '' !== $recorded && is_array( $projected ) && $recorded === (string) ( $projected['attributedTo'] ?? '' ) );
+	ax_attr_assert( $ax_attr_results, 'a published Object reads explicitly stored attribution, never its WP author', '' !== $recorded && is_array( $projected ) && $recorded === (string) ( $projected['attributedTo'] ?? '' ) );
 
-	// With no provider answering, this plugin must still project -- it never reads the ledger.
+	// Provider absence does not erase current metadata.
 	$had_provider = function_exists( 'axismundi_act_local_object_attribution' ) && remove_filter( 'axismundi_op_local_object_attribution', 'axismundi_act_local_object_attribution', 10 );
 	$without = axismundi_op_transform_object( get_post( $post_id ) );
 	if ( $had_provider ) {
 		add_filter( 'axismundi_op_local_object_attribution', 'axismundi_act_local_object_attribution', 10, 3 );
 	}
-	ax_attr_assert( $ax_attr_results, 'projection survives its attribution provider being absent, omitting the member rather than failing or emitting it empty', is_array( $without ) && ! array_key_exists( 'attributedTo', $without ) && isset( $without['id'], $without['type'], $without['url'] ) );
+	ax_attr_assert( $ax_attr_results, 'projection retains source attribution without a ledger provider', is_array( $without ) && $recorded === ( $without['attributedTo'] ?? '' ) && isset( $without['id'], $without['type'], $without['url'] ) );
 
 	// An author with no Actor at all: readable, unattributed, and published by nobody.
 	$plain_id = (int) wp_insert_user( array( 'user_login' => 'ax-attr-plain-' . wp_generate_password( 8, false, false ), 'user_pass' => wp_generate_password( 20 ), 'role' => 'author' ) );

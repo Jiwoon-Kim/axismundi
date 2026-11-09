@@ -83,7 +83,7 @@ function axismundi_act_can_announce_object( Axismundi_Actor $actor, string $obje
 }
 
 /** Record or return the effective personal Announce for one public object. */
-function axismundi_act_announce_object( Axismundi_Actor $actor, string $object_uri, string $recipient_actor_uri = '' ) {
+function axismundi_act_announce_object( Axismundi_Actor $actor, string $object_uri, string|array $recipient_actor_uri = '' ) {
 	$valid  = axismundi_act_validate_reaction_actor( $actor );
 	$object = axismundi_act_uri( $object_uri );
 	if ( is_wp_error( $valid ) ) {
@@ -100,8 +100,8 @@ function axismundi_act_announce_object( Axismundi_Actor $actor, string $object_u
 	if ( $existing instanceof Axismundi_Activity ) {
 		return $existing;
 	}
-	$recipient = '' !== $recipient_actor_uri ? axismundi_actors_get_by_uri( $recipient_actor_uri ) : null;
-	if ( '' !== $recipient_actor_uri && ! $recipient instanceof Axismundi_Actor ) {
+	$recipients = axismundi_act_reaction_recipients( $recipient_actor_uri );
+	if ( is_wp_error( $recipients ) ) {
 		return new WP_Error( 'ax_act_announce_recipient', __( 'The object owner Actor is unavailable.', 'axismundi-activities' ) );
 	}
 	$payload = array(
@@ -110,9 +110,10 @@ function axismundi_act_announce_object( Axismundi_Actor $actor, string $object_u
 		'object' => $object,
 		'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
 	);
-	if ( $recipient instanceof Axismundi_Actor && $recipient->get_uri() !== $actor->get_uri() ) {
+	$cc = array_values( array_diff( $recipients, array( $actor->get_uri() ) ) );
+	if ( $cc ) {
 		// The origin server must receive Announce for its `shares` side effect.
-		$payload['cc'] = array( $recipient->get_uri() );
+		$payload['cc'] = $cc;
 	}
 	$cycle  = axismundi_act_announce_cycle_count( $actor->get_uri(), $object ) + 1;
 	$source = 'announce:' . hash( 'sha256', $actor->get_uri() ) . ':' . hash( 'sha256', $object ) . ':' . $cycle;

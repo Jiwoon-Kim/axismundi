@@ -57,6 +57,7 @@ try {
 
 	$ax_rm_post = (int) wp_insert_post( array( 'post_type' => 'post', 'post_status' => 'publish', 'post_author' => $ax_rm_user, 'post_title' => 'Reaction mutation fixture', 'post_content' => 'Body.' ) );
 	$ax_rm_posts[] = $ax_rm_post;
+	ax_rm_assert( $ax_rm_results, 'fixture explicitly assigns publication attribution instead of deriving it from post_author', true === axismundi_op_store_post_attribution( get_post( $ax_rm_post ), $ax_rm_actor->get_uri() ) );
 	$ax_rm_object  = axismundi_op_transform_object( get_post( $ax_rm_post ) );
 	$ax_rm_uri     = (string) $ax_rm_object['id'];
 	$ax_rm_owner   = (string) $ax_rm_object['attributedTo'];

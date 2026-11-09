@@ -362,10 +362,16 @@ function axismundi_forum_note_reply_group( Axismundi_Note_Source $source ) : ?Ax
 	return null;
 }
 
-/** Return the parent author as an explicit Reply recipient when it has a URI. */
+/** Return every parent author as an explicit Reply recipient, independent of publication authority. */
+function axismundi_forum_note_reply_parent_actor_uris( Axismundi_Note_Source $source ) : array {
+	$parent = axismundi_forum_note_reply_parent_object( $source );
+	return axismundi_act_attribution_uris( $parent['attributedTo'] ?? array() );
+}
+
+/** Legacy scalar accessor reports authority, never the first unordered attribution member. */
 function axismundi_forum_note_reply_parent_actor_uri( Axismundi_Note_Source $source ) : string {
 	$parent = axismundi_forum_note_reply_parent_object( $source );
-	return axismundi_act_member_uri( $parent['attributedTo'] ?? '' );
+	return axismundi_act_object_publisher_uri( $parent );
 }
 
 /** Whether this user may submit a threaded Note directly to this local or remote Group. */
@@ -401,10 +407,7 @@ function axismundi_forum_note_reply_audience( array $audience, Axismundi_Note_So
 	 * out through the author's followers before the Group Announce exists.
 	 */
 	$recipients = array_merge( array( $public_uri ), $mentions );
-	$parent_actor_uri = axismundi_forum_note_reply_parent_actor_uri( $source );
-	if ( '' !== $parent_actor_uri ) {
-		$recipients[] = $parent_actor_uri;
-	}
+	$recipients = array_merge( $recipients, axismundi_forum_note_reply_parent_actor_uris( $source ) );
 	return array( 'public' => true, 'to' => array( $group->get_uri() ), 'cc' => array_values( array_unique( $recipients ) ) );
 }
 // Retired CPT-Note adapter. C2S local Objects use Activities' Community reply policy.
@@ -473,7 +476,7 @@ function axismundi_forum_submitted_object_community_group( string $object_uri, b
 			continue;
 		}
 		$object = $submission->get_payload()['object'] ?? null;
-		if ( ! is_array( $object ) || ! hash_equals( $object_uri, (string) ( $object['id'] ?? '' ) ) || (string) ( $object['attributedTo'] ?? '' ) !== $submission->get_actor_uri() ) {
+		if ( ! is_array( $object ) || ! hash_equals( $object_uri, (string) ( $object['id'] ?? '' ) ) || axismundi_act_object_publisher_uri( $object ) !== $submission->get_actor_uri() ) {
 			continue;
 		}
 		$group_uri = axismundi_act_member_uri( $object['audience'] ?? '' );
@@ -565,7 +568,7 @@ function axismundi_forum_is_direct_group_reply_activity( Axismundi_Activity $act
 	return $group instanceof Axismundi_Actor
 		&& hash_equals( $group->get_uri(), $group_uri )
 		&& axismundi_forum_activity_addresses_actor( $activity, $group_uri )
-		&& (string) ( $object['attributedTo'] ?? '' ) === $activity->get_actor_uri();
+		&& axismundi_act_object_publisher_uri( $object ) === $activity->get_actor_uri();
 }
 
 /*

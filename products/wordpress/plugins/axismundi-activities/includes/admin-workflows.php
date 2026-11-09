@@ -183,21 +183,40 @@ function axismundi_act_render_composer() : void {
 	echo '<label for="ax-c2s-object-type">' . esc_html__( 'Object type', 'axismundi-activities' ) . '</label> <select id="ax-c2s-object-type"><option value="Note">Note</option></select>';
 	echo '<form id="ax-c2s-composer"><table class="form-table"><tr><th><label for="ax-c2s-parent">' . esc_html__( 'Parent Object URI (optional)', 'axismundi-activities' ) . '</label></th><td><input class="large-text" type="url" id="ax-c2s-parent"></td></tr><tr><th><label for="ax-c2s-content">' . esc_html__( 'Note', 'axismundi-activities' ) . '</label></th><td><textarea class="large-text" id="ax-c2s-content" rows="8" required></textarea></td></tr>';
 	echo '<tr hidden><th><label for="ax-c2s-target">' . esc_html__( 'Object URI', 'axismundi-activities' ) . '</label></th><td><input type="url" class="large-text" id="ax-c2s-target" value="' . esc_attr( $edit['object_uri'] ?? '' ) . '"' . ( $edit ? ' readonly' : '' ) . '></td></tr>';
-	echo '<tr><th><label for="ax-c2s-visibility">' . esc_html__( 'Audience', 'axismundi-activities' ) . '</label></th><td><select id="ax-c2s-visibility" required><option value="">' . esc_html__( 'Select audience', 'axismundi-activities' ) . '</option>';
+	echo '<tr><th><label for="ax-c2s-visibility">' . esc_html__( 'Visibility', 'axismundi-activities' ) . '</label></th><td><select id="ax-c2s-visibility" required><option value="">' . esc_html__( 'Select visibility', 'axismundi-activities' ) . '</option>';
 	foreach ( array( 'public' => __( 'Public', 'axismundi-activities' ), 'unlisted' => __( 'Quiet public', 'axismundi-activities' ), 'followers' => __( 'Followers', 'axismundi-activities' ), 'mentioned' => __( 'Mentioned only', 'axismundi-activities' ) ) as $value => $label ) {
 		echo '<option value="' . esc_attr( $value ) . '">' . esc_html( $label ) . '</option>';
 	}
 	echo '</select></td></tr>';
-	foreach ( array( 'mentions' => __( 'Mention handles', 'axismundi-activities' ), 'to' => __( 'Additional To Actor URIs', 'axismundi-activities' ), 'recipients' => __( 'Additional Cc Actor URIs', 'axismundi-activities' ) ) as $field => $label ) {
+	foreach ( array( 'to' => 'to', 'recipients' => 'cc', 'bto' => 'bto', 'bcc' => 'bcc' ) as $field => $label ) {
 		$id = 'ax-c2s-' . $field;
-		echo '<tr><th><label for="' . esc_attr( $id ) . '">' . esc_html( $label ) . '</label></th><td><textarea class="large-text" id="' . esc_attr( $id ) . '" rows="2" aria-describedby="' . esc_attr( $id . '-help' ) . '"></textarea><p class="description" id="' . esc_attr( $id . '-help' ) . '">' . esc_html( 'mentions' === $field ? __( 'Separate handles with commas, for example @alice, @bob@example.social.', 'axismundi-activities' ) : __( 'One Actor URI per line.', 'axismundi-activities' ) ) . '</p></td></tr>';
+		echo '<tr><th><label for="' . esc_attr( $id ) . '"><code>' . esc_html( $label ) . '</code></label></th><td><textarea class="large-text" id="' . esc_attr( $id ) . '" rows="2" spellcheck="false"></textarea></td></tr>';
 	}
+	echo '<tr><th><label for="ax-c2s-audience">' . esc_html__( 'Audience', 'axismundi-activities' ) . '</label></th><td><select id="ax-c2s-audience"><option value="">' . esc_html__( 'No Community', 'axismundi-activities' ) . '</option>';
+	$groups = array();
+	$user = get_current_user_id();
+	foreach ( axismundi_actors_acting_actor_options( $user ) as $group ) {
+		if ( axismundi_act_can_select_community( $actor, $group, $user ) ) { $groups[ $group->get_uri() ] = $group; }
+	}
+	$page = 1;
+	do {
+		$following = axismundi_act_get_follow_collection_page( 'subject', $actor->get_uri(), $page++, 100 );
+		foreach ( $following['items'] as $uri ) {
+			$group = axismundi_actors_get_by_uri( $uri );
+			if ( $group && axismundi_act_can_select_community( $actor, $group, $user ) ) { $groups[ $group->get_uri() ] = $group; }
+		}
+	} while ( $following['has_more'] );
+	foreach ( $groups as $uri => $group ) {
+		echo '<option value="' . esc_attr( $uri ) . '">' . esc_html( $group->get_display_name() . ' (' . axismundi_actors_federated_mention_name( $group ) . ')' ) . '</option>';
+	}
+	echo '</select><p><label for="ax-c2s-audience-uri">' . esc_html__( 'Audience URI', 'axismundi-activities' ) . '</label><br><input type="url" class="large-text" id="ax-c2s-audience-uri"></p></td></tr>';
+	echo '<tr><th><label for="ax-c2s-mentions">' . esc_html__( 'Mention handles', 'axismundi-activities' ) . '</label></th><td><textarea class="large-text" id="ax-c2s-mentions" rows="2" aria-describedby="ax-c2s-mentions-help"></textarea><p class="description" id="ax-c2s-mentions-help">' . esc_html__( 'Separate handles with commas, for example @alice, @bob@example.social.', 'axismundi-activities' ) . '</p></td></tr>';
 	echo '</table>';
 	submit_button( __( 'Publish Note', 'axismundi-activities' ) );
 	echo '<button type="button" class="button" id="ax-c2s-preview">' . esc_html__( 'Preview HTTP request', 'axismundi-activities' ) . '</button>';
 	echo '<pre id="ax-c2s-request" aria-live="polite" style="white-space:pre-wrap;overflow-wrap:anywhere" hidden></pre>';
 	echo '</form><div id="ax-c2s-result" role="status" aria-live="polite"></div></div>';
-	wp_enqueue_script( 'axismundi-c2s-composer', plugins_url( 'assets/c2s-composer.js', dirname( __DIR__ ) . '/axismundi-activities.php' ), array(), AXISMUNDI_ACTIVITIES_VERSION, true );
+	wp_enqueue_script( 'axismundi-c2s-composer', plugins_url( 'assets/c2s-composer.js', dirname( __DIR__ ) . '/axismundi-activities.php' ), array(), AXISMUNDI_ACTIVITIES_VERSION . '-' . (string) filemtime( dirname( __DIR__ ) . '/assets/c2s-composer.js' ), true );
 	wp_localize_script( 'axismundi-c2s-composer', 'axismundiC2SMentions', array(
 		'actor' => $actor->get_uri(),
 		'editContent' => $edit['document']['content'] ?? '',
@@ -205,6 +224,8 @@ function axismundi_act_render_composer() : void {
 		'activityLabel' => __( 'Activity URI:', 'axismundi-activities' ),
 		'objectLabel' => __( 'Object URI:', 'axismundi-activities' ),
 		'mentionRequired' => __( 'Mentioned only requires at least one mentioned Actor.', 'axismundi-activities' ),
+		'communityVisibility' => __( 'Community submissions require Public or Quiet public visibility.', 'axismundi-activities' ),
+		'communityBlindAddress' => __( 'Community submissions do not support bto or bcc recipients.', 'axismundi-activities' ),
 		'url' => rest_url( 'axismundi/v1/actors/mention-search' ),
 		'unresolved' => __( 'Could not resolve every mention. Use comma-separated handles of known Actors.', 'axismundi-activities' ),
 	) );

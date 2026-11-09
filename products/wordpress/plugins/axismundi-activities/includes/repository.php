@@ -254,6 +254,46 @@ function axismundi_act_member_uri( $value ) : string {
 	return '';
 }
 
+/** All distinct attribution URIs; notification addressing never selects a first author. */
+function axismundi_act_attribution_uris( $value ) : array {
+	$result = array();
+	foreach ( axismundi_as2_normalize_members( $value ) as $member ) {
+		$uri = ! empty( $member['resolvable'] ) ? (string) $member['uri'] : '';
+		if ( '' !== $uri ) { $result[$uri] = true; }
+	}
+	return array_keys( $result );
+}
+
+/** Local registry authority or a single unambiguous source author; never array order. */
+function axismundi_act_object_publisher_uri( array $object ) : string {
+	if ( function_exists( 'axismundi_op_local_object_publisher_uri' ) ) { return axismundi_op_local_object_publisher_uri( $object ); }
+	$value = $object['attributedTo'] ?? array();
+	$values = is_array( $value ) && array_is_list( $value ) ? $value : array( $value );
+	$uris = array();
+	foreach ( $values as $member ) {
+		if ( is_array( $member ) && array_is_list( $member ) ) { return ''; }
+		$normalized = axismundi_as2_normalize_members( $member );
+		if ( 1 !== count( $normalized ) || empty( $normalized[0]['resolvable'] ) ) { return ''; }
+		$uris[$normalized[0]['uri']] = true;
+	}
+	return 1 === count( $uris ) ? array_key_first( $uris ) : '';
+}
+
+/** Validate every requested reaction recipient without fetching missing Actors. */
+function axismundi_act_reaction_recipients( string|array $value ) {
+	if ( '' === $value || array() === $value ) { return array(); }
+	$values = is_array( $value ) && array_is_list( $value ) ? $value : array( $value );
+	$uris = array();
+	foreach ( $values as $member ) {
+		$normalized = axismundi_as2_normalize_members( $member );
+		if ( ( is_array( $member ) && array_is_list( $member ) ) || 1 !== count( $normalized ) || empty( $normalized[0]['resolvable'] ) ) { return new WP_Error( 'ax_act_reaction_recipient', 'Interaction recipients are invalid.' ); }
+		$uri = $normalized[0]['uri'];
+		if ( ! axismundi_actors_get_by_uri( $uri ) instanceof Axismundi_Actor ) { return new WP_Error( 'ax_act_reaction_recipient', 'An interaction recipient Actor is unavailable.' ); }
+		$uris[$uri] = true;
+	}
+	return array_keys( $uris );
+}
+
 /** Supported Activity types. */
 function axismundi_act_types() : array {
 	/*
@@ -542,8 +582,17 @@ function axismundi_act_public_payload( Axismundi_Activity $activity ) : ?array {
 	if ( ! axismundi_act_is_public( $activity ) ) {
 		return null;
 	}
-	$payload = $activity->get_payload();
+	return axismundi_act_omit_blind_addresses( $activity->get_payload() );
+}
+
+/** Remove blind address members from a display copy, including wrapped Activities. */
+function axismundi_act_omit_blind_addresses( array $payload ) : array {
 	unset( $payload['bto'], $payload['bcc'] );
+	foreach ( $payload as $key => $member ) {
+		if ( is_array( $member ) ) {
+			$payload[ $key ] = axismundi_act_omit_blind_addresses( $member );
+		}
+	}
 	return $payload;
 }
 
@@ -672,7 +721,7 @@ function axismundi_act_get_object_lifecycle( string $object_uri ) : ?Axismundi_A
 }
 
 /**
- * The Actor one Object is attributed to, as the ledger recorded it.
+ * Current source attribution for core WP Objects, with a historical fallback for other sources.
  *
  * Not the same question as `axismundi_act_get_object_lifecycle()`, which answers what
  * happened to the Object most recently. An Activity carries the Actor who performed it and
@@ -682,7 +731,9 @@ function axismundi_act_get_object_lifecycle( string $object_uri ) : ?Axismundi_A
  * attribution off the latest lifecycle row would hand the page to that contributor on the
  * next save.
  *
- * Attribution is therefore taken from the Create that began the current generation. A
+ * Core posts and attachments use their explicitly stored postmeta when available. Legacy
+ * sources without that metadata retain the Create fallback until explicit migration.
+ * For those sources, attribution is taken from the Create that began the current generation. A
  * withdrawn Object has no attribution to report: a later publication starts a new
  * generation and resolves its identity afresh.
  *
@@ -696,6 +747,12 @@ function axismundi_act_get_object_lifecycle( string $object_uri ) : ?Axismundi_A
 function axismundi_act_get_object_attribution( string $object_uri ) : string {
 	global $wpdb;
 	$uri = axismundi_act_uri( $object_uri );
+	if ( function_exists( 'axismundi_act_attribution_post_source' ) && function_exists( 'axismundi_op_stored_post_attribution' ) ) {
+		$post = axismundi_act_attribution_post_source( $uri );
+		if ( $post && metadata_exists( 'post', $post->ID, AXISMUNDI_OP_ATTRIBUTED_TO_META ) ) {
+			return axismundi_op_stored_post_attribution( $post->ID );
+		}
+	}
 	if ( '' === $uri || AXISMUNDI_ACT_DB_VERSION !== (string) get_option( AXISMUNDI_ACT_DB_VERSION_OPTION, '' ) ) {
 		return '';
 	}

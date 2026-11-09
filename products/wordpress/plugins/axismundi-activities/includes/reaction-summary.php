@@ -232,7 +232,7 @@ function axismundi_act_rest_react( WP_REST_Request $request ) {
 	if ( ! $actor instanceof Axismundi_Actor || is_wp_error( $target ) ) {
 		return is_wp_error( $target ) ? $target : new WP_Error( 'ax_act_reaction_actor', __( 'No active local Actor is available.', 'axismundi-activities' ), array( 'status' => 403 ) );
 	}
-	$activity = axismundi_act_react_to_object( $actor, (string) $target['object_uri'], (string) $request['content'], (string) $target['recipient_uri'] );
+	$activity = axismundi_act_react_to_object( $actor, (string) $target['object_uri'], (string) $request['content'], $target['recipient_uris'] ?? ( $target['recipient_uri'] ?? '' ) );
 	return is_wp_error( $activity ) ? $activity : axismundi_act_reaction_mutation_response( $actor, (string) $target['object_uri'] );
 }
 

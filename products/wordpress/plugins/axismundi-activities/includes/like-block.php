@@ -7,7 +7,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-/** Resolve one supported projected/cached object and its attributed Actor. */
+/** Resolve a supported Object with a publisher hint and its complete attribution recipient set. */
 function axismundi_act_resolve_sentiment_target( string $object_uri ) {
 	$uri = axismundi_act_uri( $object_uri );
 	if ( '' === $uri ) {
@@ -19,7 +19,7 @@ function axismundi_act_resolve_sentiment_target( string $object_uri ) {
 			if ( 'active' !== (string) $remote['object_status'] || empty( $remote['attributed_to_uri'] ) ) {
 				return new WP_Error( 'ax_act_sentiment_target_unavailable', __( 'The remote object cannot currently receive this interaction.', 'axismundi-activities' ), array( 'status' => 409 ) );
 			}
-			return array( 'object_uri' => $uri, 'recipient_uri' => (string) $remote['attributed_to_uri'], 'source' => $remote );
+			return array( 'object_uri' => $uri, 'recipient_uri' => axismundi_act_object_publisher_uri( $remote['payload'] ?? array() ), 'recipient_uris' => axismundi_act_attribution_uris( $remote['payload']['attributedTo'] ?? $remote['attributed_to_uri'] ), 'source' => $remote );
 		}
 	}
 
@@ -42,12 +42,12 @@ function axismundi_act_resolve_sentiment_target( string $object_uri ) {
 		&& axismundi_op_post_article_visible( $source )
 		&& hash_equals( axismundi_op_post_object_uri( $source ), $uri )
 	) {
-		return array( 'object_uri' => $uri, 'recipient_uri' => axismundi_op_post_actor_uri( $source ), 'source' => $source );
+		return array( 'object_uri' => $uri, 'recipient_uri' => axismundi_op_post_actor_uri( $source ), 'recipient_uris' => axismundi_op_post_attribution_uris( $source ), 'source' => $source );
 	}
 	if ( $source instanceof WP_Post && function_exists( 'axismundi_op_transform_object' ) ) {
 		$object = axismundi_op_transform_object( $source );
 		if ( is_array( $object ) && isset( $object['id'], $object['attributedTo'] ) && hash_equals( (string) $object['id'], $uri ) ) {
-			return array( 'object_uri' => $uri, 'recipient_uri' => axismundi_act_member_uri( $object['attributedTo'] ), 'source' => $source );
+			return array( 'object_uri' => $uri, 'recipient_uri' => axismundi_act_object_publisher_uri( $object ), 'recipient_uris' => axismundi_act_attribution_uris( $object['attributedTo'] ), 'source' => $source );
 		}
 	}
 
@@ -151,7 +151,7 @@ function axismundi_act_rest_like_object( WP_REST_Request $request ) {
 	if ( ! $actor instanceof Axismundi_Actor || is_wp_error( $target ) ) {
 		return is_wp_error( $target ) ? $target : new WP_Error( 'ax_act_like_actor', __( 'No active local Actor is available.', 'axismundi-activities' ), array( 'status' => 403 ) );
 	}
-	$activity = axismundi_act_like_object( $actor, (string) $target['object_uri'], (string) $target['recipient_uri'] );
+	$activity = axismundi_act_like_object( $actor, (string) $target['object_uri'], $target['recipient_uris'] ?? ( $target['recipient_uri'] ?? '' ) );
 	return is_wp_error( $activity ) ? $activity : axismundi_act_like_rest_response( $actor, (string) $target['object_uri'], $activity );
 }
 
@@ -186,7 +186,7 @@ function axismundi_act_rest_dislike_object( WP_REST_Request $request ) {
 	if ( ! $actor instanceof Axismundi_Actor || is_wp_error( $target ) ) {
 		return is_wp_error( $target ) ? $target : new WP_Error( 'ax_act_dislike_actor', __( 'No active local Actor is available.', 'axismundi-activities' ), array( 'status' => 403 ) );
 	}
-	$activity = axismundi_act_dislike_object( $actor, (string) $target['object_uri'], (string) $target['recipient_uri'] );
+	$activity = axismundi_act_dislike_object( $actor, (string) $target['object_uri'], $target['recipient_uris'] ?? ( $target['recipient_uri'] ?? '' ) );
 	return is_wp_error( $activity ) ? $activity : axismundi_act_dislike_rest_response( $actor, (string) $target['object_uri'], $activity );
 }
 

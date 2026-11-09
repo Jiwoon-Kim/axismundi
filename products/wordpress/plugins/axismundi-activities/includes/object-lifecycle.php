@@ -18,6 +18,9 @@ function axismundi_act_lifecycle_canonicalize( $value ) {
 	ksort( $value, SORT_STRING );
 	foreach ( $value as $key => $member ) {
 		$value[ $key ] = axismundi_act_lifecycle_canonicalize( $member );
+		if ( 'attributedTo' === $key && is_array( $value[$key] ) && array_is_list( $value[$key] ) ) {
+			usort( $value[$key], static fn( $a, $b ) => strcmp( wp_json_encode( $a ), wp_json_encode( $b ) ) );
+		}
 	}
 	return $value;
 }
@@ -37,9 +40,12 @@ function axismundi_act_lifecycle_fingerprint( array $object ) : string {
  *
  * @return Axismundi_Activity|WP_Error
  */
-function axismundi_act_record_object_commit( array $object ) {
+function axismundi_act_record_object_commit( array $object, string $publisher_uri = '' ) {
 	$object_uri = axismundi_act_member_uri( $object['id'] ?? '' );
-	$actor_uri  = axismundi_act_member_uri( $object['attributedTo'] ?? '' );
+	$actor_uri = '' !== $publisher_uri ? axismundi_act_uri( $publisher_uri )
+		: axismundi_act_object_publisher_uri( $object );
+	$members = axismundi_as2_normalize_members( $object['attributedTo'] ?? array() );
+	if ( ! in_array( $actor_uri, array_column( $members, 'uri' ), true ) ) { $actor_uri = ''; }
 	if ( '' === $object_uri || '' === $actor_uri || 'Tombstone' === (string) ( $object['type'] ?? '' ) ) {
 		return new WP_Error( 'ax_act_object_snapshot', __( 'A local lifecycle commit requires a complete active Object snapshot.', 'axismundi-activities' ) );
 	}

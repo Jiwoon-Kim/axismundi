@@ -117,23 +117,4 @@ function axismundi_act_publish_actor_uri( WP_Post $post, string $object_uri = ''
 	return (string) apply_filters( 'axismundi_act_publish_actor_uri', $uri, $post, $object_uri, $user_id );
 }
 
-/**
- * Answer Object Projections when it asks who a local Object is attributed to.
- *
- * The direction that makes this plugin the authority: projection no longer derives an identity
- * and hands it over to be recorded; it asks what was recorded. Object Projections owns the
- * filter and never reads this ledger, so it keeps working with this plugin inactive -- an
- * Object simply has no attribution then, which is the correct answer rather than a degraded one.
- *
- * An Actor that later stops being public does not retract attribution. What went out under a
- * name stays under that name; withdrawing it is a Delete, not a silent change of author.
- *
- * @param string  $uri        Attribution another integration already settled.
- * @param WP_Post $post       Source post.
- * @param string  $object_uri Canonical Object URI.
- */
-function axismundi_act_local_object_attribution( string $uri, WP_Post $post, string $object_uri ) : string {
-	unset( $post );
-	return '' !== $uri ? $uri : axismundi_act_get_object_attribution( $object_uri );
-}
-add_filter( 'axismundi_op_local_object_attribution', 'axismundi_act_local_object_attribution', 10, 3 );
+// Current source attribution is read by OP from postmeta, never from this ledger.

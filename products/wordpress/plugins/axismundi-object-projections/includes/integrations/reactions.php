@@ -116,7 +116,7 @@ function axismundi_op_object_likes_transform( Axismundi_OP_Object_Likes $source 
 	return axismundi_op_assemble_collection( 'ap-likes', array(
 		'id'           => axismundi_op_object_likes_url( $source->get_object_uri() ),
 		'type'         => 'OrderedCollection',
-		'attributedTo' => (string) $object['attributedTo'],
+		'attributedTo' => $object['attributedTo'] ?? '',
 		'url'          => axismundi_op_object_html_url( $object ),
 	), array( 'total' => axismundi_op_read_collection_contract( 'ap-likes', $source->get_object_uri() ) ), 'public', true );
 }
@@ -149,7 +149,7 @@ function axismundi_op_object_emoji_reactions_transform( Axismundi_OP_Object_Emoj
 	return array(
 		'id'           => axismundi_op_object_emoji_reactions_url( $source->get_object_uri() ),
 		'type'         => 'OrderedCollection',
-		'attributedTo' => (string) $object['attributedTo'],
+		'attributedTo' => $object['attributedTo'] ?? '',
 		'url'          => axismundi_op_object_html_url( $object ),
 		// The ledger's true count, not the size of this bounded page.
 		'totalItems'   => axismundi_act_get_reaction_activity_count( $source->get_object_uri() ),
@@ -167,7 +167,7 @@ function axismundi_op_object_shares_transform( Axismundi_OP_Object_Shares $sourc
 		'id'           => axismundi_op_object_shares_url( $source->get_object_uri() ),
 		// Kept aligned with Axismundi's existing likes collection; Mastodon uses Collection.
 		'type'         => 'OrderedCollection',
-		'attributedTo' => (string) $object['attributedTo'],
+		'attributedTo' => $object['attributedTo'] ?? '',
 		'url'          => axismundi_op_object_html_url( $object ),
 	), array( 'total' => axismundi_op_read_collection_contract( 'ap-shares', $source->get_object_uri() ) ), 'public', true );
 }
@@ -339,12 +339,12 @@ function axismundi_op_resolve_announce_target( $target, string $object_uri ) {
 	if ( null !== $source ) {
 		$object = axismundi_op_transform_object( $source );
 		if ( is_array( $object ) && ! empty( $object['attributedTo'] ) ) {
-			return array( 'object_uri' => $object_uri, 'recipient_uri' => axismundi_act_member_uri( $object['attributedTo'] ), 'source' => $source );
+			return array( 'object_uri' => $object_uri, 'recipient_uri' => axismundi_act_object_publisher_uri( $object ), 'recipient_uris' => axismundi_act_attribution_uris( $object['attributedTo'] ), 'source' => $source );
 		}
 	}
 	$row = function_exists( 'axismundi_op_get_remote_object' ) ? axismundi_op_get_remote_object( $object_uri, false ) : null;
 	if ( is_array( $row ) && axismundi_op_remote_object_is_announceable( $row ) ) {
-		return array( 'object_uri' => $object_uri, 'recipient_uri' => (string) $row['attributed_to_uri'], 'source' => $row );
+		return array( 'object_uri' => $object_uri, 'recipient_uri' => axismundi_act_object_publisher_uri( $row['payload'] ?? array() ), 'recipient_uris' => axismundi_act_attribution_uris( $row['payload']['attributedTo'] ?? $row['attributed_to_uri'] ), 'source' => $row );
 	}
 	return $target;
 }

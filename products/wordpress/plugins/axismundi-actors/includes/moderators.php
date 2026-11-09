@@ -60,6 +60,24 @@ function axismundi_actors_is_community( Axismundi_Actor $group ) : bool {
 	return $group->is_local() && 'Group' === $group->get_type() && 'community' === axismundi_actors_group_profile( $group );
 }
 
+/** Read Community submission evidence without fetching or granting moderator authority. */
+function axismundi_actors_has_community_submission_profile( Axismundi_Actor $group ) : bool {
+	if ( 'Group' !== $group->get_type() || 'public' !== $group->get_status() ) { return false; }
+	if ( $group->is_local() ) { return axismundi_actors_is_community( $group ); }
+	$payload = axismundi_actors_get_remote_payload( $group->get_identity_id() );
+	$reference = $payload['attributedTo'] ?? null;
+	$members = is_array( $reference ) && array_is_list( $reference ) ? $reference : array( $reference );
+	$collections = array();
+	foreach ( $members as $member ) {
+		if ( ! is_array( $member ) || ! array_intersect( array( 'Collection', 'OrderedCollection' ), (array) ( $member['type'] ?? array() ) ) ) { continue; }
+		$uri = (string) ( axismundi_as2_normalize_members( $member )[0]['uri'] ?? '' );
+		if ( axismundi_actors_remote_moderators_reference( $group, $uri ) ) { $collections[ $uri ] = true; }
+	}
+	if ( $collections ) { return 1 === count( $collections ); }
+	// A bare IRI is ambiguous until the existing moderator snapshot confirms its type.
+	return ! is_wp_error( axismundi_actors_read_moderators( $group ) );
+}
+
 function axismundi_actors_moderators_uri( Axismundi_Actor $group ) : string {
 	if ( $group->is_local() ) { return rest_url( 'axismundi/activitypub/actors/' . $group->get_uuid() . '/moderators' ); }
 	$payload = axismundi_actors_get_remote_payload( $group->get_identity_id() );

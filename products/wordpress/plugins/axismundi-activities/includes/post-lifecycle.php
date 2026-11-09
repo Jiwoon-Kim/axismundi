@@ -151,6 +151,10 @@ function axismundi_act_post_delete_failed( WP_Error $error, WP_Post $post ) : vo
  */
 function axismundi_act_on_object_publish_candidate( WP_Post $post, string $object_uri, string $actor_uri, ?WP_Post $post_before = null ) : void {
 	unset( $object_uri, $actor_uri );
+	if ( ! empty( $GLOBALS['axismundi_act_attribution_only_saves'][$post->ID] ) ) {
+		unset( $GLOBALS['axismundi_act_attribution_only_saves'][$post->ID] );
+		return;
+	}
 	if ( axismundi_act_execute_scheduled_publication( $post, $post_before ) ) {
 		return;
 	}
@@ -200,7 +204,7 @@ function axismundi_act_post_list_publication( WP_Post $post ) : array {
 		return array();
 	}
 	$object = axismundi_op_transform_object( $post );
-	if ( ! is_array( $object ) || ( $object['id'] ?? '' ) !== $uri || ( $object['attributedTo'] ?? '' ) !== $actor->get_uri() ) {
+	if ( ! is_array( $object ) || ( $object['id'] ?? '' ) !== $uri || axismundi_op_local_object_publisher_uri( $object ) !== $actor->get_uri() ) {
 		return array();
 	}
 	if ( is_array( $previous ) ) {

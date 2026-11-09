@@ -57,8 +57,8 @@ function axismundi_op_post_actor_uri( WP_Post $post ) : string {
 	 * The answer belongs to whatever recorded the publication, which is why the default is
 	 * empty rather than derived here: `post_author` says who may edit a post, not whose the
 	 * Object is, and the two stop agreeing the moment an account can publish as more than one
-	 * identity. Axismundi Activities answers this from its ledger. This plugin does not read
-	 * that ledger and does not depend on it.
+	 * identity. Current attribution lives with the source in postmeta; Activities may write
+	 * it after publication, but reading never requires that plugin or its ledger.
 	 *
 	 * Returning an empty string is a real answer. An Object with no attribution is still
 	 * projected for reading; it simply was not published by anyone.
@@ -68,7 +68,7 @@ function axismundi_op_post_actor_uri( WP_Post $post ) : string {
 	 * @param WP_Post $post       Source post.
 	 * @param string  $object_uri Canonical Object URI.
 	 */
-	$uri = (string) apply_filters( 'axismundi_op_local_object_attribution', '', $post, axismundi_op_post_object_uri( $post ) );
+	$uri = (string) apply_filters( 'axismundi_op_local_object_attribution', axismundi_op_stored_post_attribution( $post->ID ), $post, axismundi_op_post_object_uri( $post ) );
 
 	/**
 	 * Filter the Actor URI attributed to one local post.
@@ -118,7 +118,7 @@ function axismundi_op_core_attachment_uri( WP_Post $attachment ) : string {
  * editing account must not become `attributedTo` by inference.
  */
 function axismundi_op_attachment_actor_uri( WP_Post $attachment ) : string {
-	return (string) apply_filters( 'axismundi_op_attachment_actor_uri', '', $attachment, axismundi_op_core_attachment_uri( $attachment ) );
+	return (string) apply_filters( 'axismundi_op_attachment_actor_uri', axismundi_op_stored_post_attribution( $attachment->ID ), $attachment, axismundi_op_core_attachment_uri( $attachment ) );
 }
 
 /** Resolve this plugin's default local Post URI without relying on an optional integration. */
@@ -549,7 +549,7 @@ function axismundi_op_post_article_summary_source( WP_Post $post, ?array $sectio
 }
 
 /** Build the optional embedded Note preview without minting another object id. */
-function axismundi_op_post_article_preview( WP_Post $post, string $attributed_to, string $published, string $language, ?array $sections = null ) : ?array {
+function axismundi_op_post_article_preview( WP_Post $post, string|array $attributed_to, string $published, string $language, ?array $sections = null ) : ?array {
 	// The explicitly edited excerpt is the preferred compatibility preview. When
 	// it is absent, the stream summary is still a useful minimal Note fallback.
 	$content = trim( (string) $post->post_excerpt );
@@ -637,7 +637,7 @@ function axismundi_op_resolve_quote_request_target( $target, string $object_uri 
 	}
 	return array(
 		'object_uri'       => (string) $object['id'],
-		'author_actor_uri' => axismundi_op_remote_member_uri( $object['attributedTo'] ),
+		'author_actor_uri' => axismundi_op_post_actor_uri( $source ),
 		'policy'           => $policy,
 	);
 }
@@ -837,7 +837,13 @@ function axismundi_op_post_media_members( WP_Post $post ) : array {
  */
 function axismundi_op_post_to_article( WP_Post $post, array $claimed = array() ) {
 	$id            = isset( $claimed['id'] ) ? (string) $claimed['id'] : axismundi_op_post_object_uri( $post );
-	$attributed_to = isset( $claimed['attributedTo'] ) ? (string) $claimed['attributedTo'] : axismundi_op_post_actor_uri( $post );
+	$attributed_to = axismundi_op_post_attributed_to( $post );
+	if ( isset( $claimed['attributedTo'] ) ) {
+		$members = axismundi_op_normalize_attribution_uris( $claimed['attributedTo'] );
+		if ( is_wp_error( $members ) ) { return $members; }
+		$attributed_to = count( $members ) > 1 ? $members : ( $members[0] ?? '' );
+		if ( is_string( $attributed_to ) && '' !== $attributed_to ) { $attributed_to = axismundi_op_post_attributed_to( $post, $attributed_to ); }
+	}
 	$url           = get_permalink( $post );
 	if ( ! $url || '' === $id ) {
 		return new WP_Error( 'ax_op_post_identity', __( 'The post has no public object URI.', 'axismundi-object-projections' ) );
@@ -927,7 +933,7 @@ function axismundi_op_post_to_article( WP_Post $post, array $claimed = array() )
 	if ( $article['sensitive'] && '' !== $warning ) {
 		$article['dcterms:subject'] = $warning;
 	}
-	$interaction_policy = axismundi_op_post_quote_interaction_policy( $post, $attributed_to );
+	$interaction_policy = axismundi_op_post_quote_interaction_policy( $post, is_string( $attributed_to ) ? $attributed_to : axismundi_op_post_actor_uri( $post ) );
 	if ( null !== $interaction_policy ) {
 		$article['interactionPolicy'] = $interaction_policy;
 	}
@@ -1007,7 +1013,7 @@ function axismundi_op_core_attachment_transform( WP_Post $attachment ) {
 	if ( '' !== $caption ) {
 		$object['summary'] = $caption;
 	}
-	$attributed_to = trim( axismundi_op_attachment_actor_uri( $attachment ) );
+	$attributed_to = axismundi_op_post_attributed_to( $attachment );
 	if ( '' !== $attributed_to ) {
 		$object['attributedTo'] = $attributed_to;
 	}
@@ -1054,7 +1060,7 @@ function axismundi_op_local_post_object_view_model( $source ) : ?array {
 	$title     = axismundi_op_object_natural_language_value( $object, 'name', $language );
 	$summary   = axismundi_op_object_natural_language_value( $object, 'summary', $language );
 	$content   = axismundi_op_object_natural_language_value( $object, 'content', $language );
-	$actor_uri = (string) ( $object['attributedTo'] ?? '' );
+	$actor_uri = 'attachment' === $source->post_type ? axismundi_op_attachment_actor_uri( $source ) : axismundi_op_post_actor_uri( $source );
 	$actor     = '' !== $actor_uri && function_exists( 'axismundi_actors_get_by_uri' ) ? axismundi_actors_get_by_uri( $actor_uri ) : null;
 	$handle    = $actor instanceof Axismundi_Actor && function_exists( 'axismundi_actors_federated_mention_name' )
 		? axismundi_actors_federated_mention_name( $actor )

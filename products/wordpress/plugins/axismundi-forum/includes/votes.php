@@ -150,7 +150,7 @@ function axismundi_forum_cast_vote( Axismundi_Actor $actor, string $object_uri, 
 		}
 	}
 	if ( '' !== $keep ) {
-		$recipient = axismundi_forum_vote_recipient_uri( $object_uri );
+		$recipient = axismundi_forum_vote_recipient_uris( $object_uri );
 		$cast      = axismundi_act_vote_on_object( $keep, $actor, $object_uri, $recipient );
 		if ( is_wp_error( $cast ) ) {
 			return $cast;
@@ -167,8 +167,16 @@ function axismundi_forum_cast_vote( Axismundi_Actor $actor, string $object_uri, 
  * that keeps the score. Falling back to the author preserves the plain object case.
  *
  * @param string $object_uri Canonical object URI.
- * @return string Recipient Actor URI, or '' when none can be resolved.
+ * @return string[] Recipient Actor URIs; Group routing still takes precedence over authors.
  */
+function axismundi_forum_vote_recipient_uris( string $object_uri ) : array {
+	$group = function_exists( 'axismundi_forum_object_community_group' ) ? axismundi_forum_object_community_group( $object_uri ) : null;
+	if ( $group instanceof Axismundi_Actor ) { return array( $group->get_uri() ); }
+	$target = function_exists( 'axismundi_act_resolve_like_target' ) ? axismundi_act_resolve_like_target( $object_uri ) : null;
+	return is_array( $target ) ? axismundi_act_attribution_uris( $target['recipient_uris'] ?? ( $target['recipient_uri'] ?? '' ) ) : array();
+}
+
+/** Legacy scalar accessor; modern vote mutations use the complete recipient set. */
 function axismundi_forum_vote_recipient_uri( string $object_uri ) : string {
 	$group = function_exists( 'axismundi_forum_object_community_group' ) ? axismundi_forum_object_community_group( $object_uri ) : null;
 	if ( $group instanceof Axismundi_Actor ) {

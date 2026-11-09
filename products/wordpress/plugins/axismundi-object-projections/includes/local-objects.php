@@ -61,9 +61,25 @@ function axismundi_op_get_local_object( string $uri ) : ?array {
 	return $row;
 }
 
+// This is an existing product authoring policy, not an AS2/OWL cardinality requirement.
+axismundi_op_register_normative_requirement( 'local-note-attribution', array(
+	'subject' => 'Note.attributedTo',
+	'level' => 'LOCAL_POLICY',
+	'conformance_class' => 'c2s-local-note',
+	'source' => 'docs/VOCABULARY-SEMANTICS.md#local-note-attribution',
+	'kind' => 'input-validation',
+	'provenance' => 'product:object-projections',
+	'enforced_by' => array(
+		'validator' => 'includes/local-objects.php::axismundi_op_prepare_local_note',
+		'audit' => 'axismundi-activities/tests/audit-c2s-create-note.php',
+		'error_code' => 'ax_op_local_author',
+	),
+) );
+
 /** Validate before allocation; preserve structured values instead of selecting their first member. */
 function axismundi_op_prepare_local_note( array $input, Axismundi_Actor $actor, int $user_id = 0 ) {
 	if ( 'Note' !== ( $input['type'] ?? '' ) ) { return new WP_Error( 'ax_op_local_type', 'This authoring slice accepts Note only.', array( 'status' => 422 ) ); }
+	// This C2S Note slice stays single-Actor; WP post/attachment joint attribution is a separate source contract.
 	if ( isset( $input['attributedTo'] ) && $input['attributedTo'] !== $actor->get_uri() ) { return new WP_Error( 'ax_op_local_author', 'Object attribution conflicts with the outbox Actor.', array( 'status' => 403 ) ); }
 	unset( $input['id'], $input['url'], $input['published'], $input['updated'], $input['deleted'], $input['formerType'], $input['@context'] );
 	$input['attributedTo'] = $actor->get_uri();
@@ -212,7 +228,7 @@ add_action( 'axismundi_op_register_transformers', 'axismundi_op_register_local_b
 /** Collection URLs are server projections, never client-supplied membership authority. */
 function axismundi_op_transform_local_body( Axismundi_OP_Local_Source $source ) : array {
 	$document = $source->row['document'];
-	unset( $document['replies'], $document['likes'], $document['shares'], $document['http://fedibird.com/ns#emojiReactions'] );
+	unset( $document['bto'], $document['bcc'], $document['replies'], $document['likes'], $document['shares'], $document['http://fedibird.com/ns#emojiReactions'] );
 	if ( 'active' !== $source->row['object_status'] ) { return $document; }
 	$document = axismundi_op_add_replies_property( $document );
 	return function_exists( 'axismundi_op_add_likes_property' ) ? axismundi_op_add_likes_property( $document ) : $document;
@@ -222,6 +238,7 @@ function axismundi_op_local_body_view( $source ) : ?array {
 	if ( ! $source instanceof Axismundi_OP_Local_Source ) { return null; }
 	$row = $source->row;
 	$payload = $row['document'];
+	unset( $payload['bto'], $payload['bcc'] );
 	// Reuse the established document-to-view normalization, not the remote cache storage.
 	$row['payload'] = $payload;
 	$row['is_sensitive'] = ! empty( $payload['sensitive'] );

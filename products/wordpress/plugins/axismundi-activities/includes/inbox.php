@@ -105,13 +105,7 @@ function axismundi_act_get_shared_inbox_page( int $limit = 20, string $cursor = 
 
 /** Never disclose blind recipient metadata, including metadata inside embedded objects. */
 function axismundi_act_inbox_payload( array $payload ) : array {
-	unset( $payload['bto'], $payload['bcc'] );
-	foreach ( $payload as $key => $value ) {
-		if ( is_array( $value ) ) {
-			$payload[ $key ] = axismundi_act_inbox_payload( $value );
-		}
-	}
-	return $payload;
+	return axismundi_act_omit_blind_addresses( $payload );
 }
 
 /** Trusted internal delivery of an already committed local Activity; never records or replays it. */

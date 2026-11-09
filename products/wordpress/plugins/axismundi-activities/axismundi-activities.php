@@ -62,6 +62,7 @@ require_once __DIR__ . '/includes/reply-block.php';
 require_once __DIR__ . '/includes/actor-feed.php';
 require_once __DIR__ . '/includes/feed-patterns.php';
 require_once __DIR__ . '/includes/publish-command.php';
+require_once __DIR__ . '/includes/post-attribution.php';
 require_once __DIR__ . '/includes/editor-selection.php';
 require_once __DIR__ . '/includes/c2s.php';
 require_once __DIR__ . '/includes/c2s-outbox.php';

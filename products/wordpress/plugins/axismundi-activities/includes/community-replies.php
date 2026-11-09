@@ -36,17 +36,26 @@ function axismundi_act_community_reply_context( string $parent_uri ) {
 }
 
 /** Apply the established outbound contract only to explicitly public Person replies. */
-function axismundi_act_prepare_community_reply( array $note, Axismundi_Actor $actor ) {
+function axismundi_act_prepare_community_reply( array $note, Axismundi_Actor $actor, ?Axismundi_Actor $expected_group = null ) {
 	$parent_uri = axismundi_act_member_uri( $note['inReplyTo'] ?? '' );
+	if ( $expected_group && '' === $parent_uri ) {
+		return new WP_Error( 'ax_community_parent', __( 'Choose a valid parent Object in the selected Community.', 'axismundi-activities' ), array( 'status' => 422 ) );
+	}
 	if ( '' === $parent_uri || ! axismundi_act_audience_is_public( axismundi_act_audience( $note ) ) ) { return $note; }
 	$context = axismundi_act_community_reply_context( $parent_uri );
 	if ( is_wp_error( $context ) ) { return $context; }
+	if ( $expected_group && ( ! $context || $expected_group->get_uri() !== $context['group']->get_uri() ) ) {
+		return new WP_Error( 'ax_community_parent', __( 'The parent is not in the selected Community.', 'axismundi-activities' ), array( 'status' => 409 ) );
+	}
 	if ( null === $context ) { return $note; }
+	if ( ! empty( $note['bto'] ) || ! empty( $note['bcc'] ) ) {
+		return new WP_Error( 'ax_community_blind_address', __( 'Community submissions do not support bto or bcc recipients.', 'axismundi-activities' ), array( 'status' => 422 ) );
+	}
 	if ( 'Person' !== $actor->get_type() ) { return new WP_Error( 'ax_community_author', 'Community replies require a Person author.', array( 'status' => 403 ) ); }
 	$group = $context['group'];
 	$blocked = axismundi_act_actor_blocks( $actor->get_uri(), $group->get_uri() );
 	if ( is_wp_error( $blocked ) || $blocked ) { return new WP_Error( 'ax_community_blocked', 'The selected Person blocks this Group.', array( 'status' => 403 ) ); }
-	if ( $group->is_local() ) {
+	if ( $group->is_local() && ! $expected_group ) {
 		$follow = axismundi_act_get_relation( 'follow', $actor->get_uri(), $group->get_uri() );
 		if ( ! is_array( $follow ) || 'accepted' !== $follow['state'] ) { return new WP_Error( 'ax_community_membership', 'An accepted Follow is required for local Community replies.', array( 'status' => 403 ) ); }
 	}
@@ -58,15 +67,15 @@ function axismundi_act_prepare_community_reply( array $note, Axismundi_Actor $ac
 	return $note;
 }
 
-/** Submit one local C2S reply to its local Community; retries repair receipt/admission only. */
-function axismundi_act_receive_community_reply( Axismundi_Activity $create ) {
+/** Submit a local C2S Note to its Community; retries repair receipt/admission only. */
+function axismundi_act_receive_community_submission( Axismundi_Activity $create ) {
 	$object = $create->get_payload()['object'] ?? null;
-	if ( 'Create' !== $create->get_type() || ! is_array( $object ) || 'Note' !== ( $object['type'] ?? '' ) || empty( $object['inReplyTo'] ) ) { return $create; }
+	if ( 'Create' !== $create->get_type() || ! is_array( $object ) || 'Note' !== ( $object['type'] ?? '' ) ) { return $create; }
 	$group = axismundi_actors_get_by_uri( axismundi_act_member_uri( $object['audience'] ?? '' ) );
 	if ( ! $group || 'Group' !== $group->get_type() || ! $group->is_local() ) { return $create; }
 	$receipt = apply_filters( 'axismundi_act_community_reply_receipt', new WP_Error( 'ax_community_transport', 'The local Community delivery policy is unavailable.', array( 'status' => 503 ) ), $create, $group );
 	if ( is_wp_error( $receipt ) ) { return $receipt; }
-	$entry = axismundi_act_admit_community_reply( $create, $group );
+	$entry = empty( $object['inReplyTo'] ) ? axismundi_act_admit_community_root( $create, $group ) : axismundi_act_admit_community_reply( $create, $group );
 	return is_wp_error( $entry ) ? $entry : $create;
 }
 
@@ -77,7 +86,7 @@ function axismundi_act_admit_community_reply( Axismundi_Activity $create, Axismu
 	$person = axismundi_actors_get_by_uri( $create->get_actor_uri() );
 	if ( ! axismundi_actors_is_community( $group ) || 'public' !== $group->get_status() || 'Create' !== $create->get_type() || ! $create->is_effective()
 		|| ! $person || 'Person' !== $person->get_type() || 'public' !== $person->get_status() || ! is_array( $object ) || 'Note' !== ( $object['type'] ?? '' )
-		|| $person->get_uri() !== ( $object['attributedTo'] ?? '' ) || ! axismundi_act_is_publicly_renderable( $create ) ) { return new WP_Error( 'ax_community_reply', 'An eligible Person Note reply is required.', array( 'status' => 403 ) ); }
+		|| $person->get_uri() !== axismundi_act_object_publisher_uri( $object ) || ! axismundi_act_is_publicly_renderable( $create ) ) { return new WP_Error( 'ax_community_reply', 'An eligible Person Note reply is required.', array( 'status' => 403 ) ); }
 	$parent_uri = axismundi_act_member_uri( $object['inReplyTo'] ?? '' );
 	if ( '' === $parent_uri || ! axismundi_act_community_parent_accepted( $parent_uri, $group ) ) { return new WP_Error( 'ax_community_parent', 'The Community has not accepted the reply parent.', array( 'status' => 409 ) ); }
 	$addresses = array();
@@ -99,7 +108,7 @@ function axismundi_act_admit_community_reply( Axismundi_Activity $create, Axismu
 /** Group routing is not a personal profile publication, even when Public is in cc. */
 add_filter( 'axismundi_act_public_outbox_payload', static function ( $payload, Axismundi_Activity $activity ) {
 	$object = $activity->get_payload()['object'] ?? null;
-	if ( 'outbound' === $activity->get_direction() && 'Create' === $activity->get_type() && is_array( $object ) && 'Note' === ( $object['type'] ?? '' ) && ! empty( $object['inReplyTo'] ) ) {
+	if ( 'outbound' === $activity->get_direction() && 'Create' === $activity->get_type() && is_array( $object ) && 'Note' === ( $object['type'] ?? '' ) ) {
 		$group = axismundi_actors_get_by_uri( axismundi_act_member_uri( $object['audience'] ?? '' ) );
 		if ( $group && 'Group' === $group->get_type() ) { return null; }
 	}

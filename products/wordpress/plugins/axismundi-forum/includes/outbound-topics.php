@@ -261,7 +261,7 @@ function axismundi_forum_is_direct_topic_submission_activity( Axismundi_Activity
 		&& 'Group' === $group->get_type()
 		&& $group_uri === $group->get_uri()
 		&& axismundi_forum_activity_addresses_actor( $activity, $group_uri )
-		&& (string) ( $object['attributedTo'] ?? '' ) === $activity->get_actor_uri();
+		&& axismundi_act_object_publisher_uri( $object ) === $activity->get_actor_uri();
 }
 
 /*

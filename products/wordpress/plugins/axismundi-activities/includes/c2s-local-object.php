@@ -22,7 +22,7 @@ function axismundi_act_submit_local_object( int $user, Axismundi_Actor $actor, a
 		}
 		$note = axismundi_op_prepare_local_note( $note, $actor, $user );
 		if ( is_wp_error( $note ) ) { return $note; }
-		$note = axismundi_act_prepare_community_reply( $note, $actor );
+		$note = axismundi_act_prepare_community_submission( $note, $actor, $user );
 		if ( is_wp_error( $note ) ) { return $note; }
 	} elseif ( 'Update' === $type ) {
 		$note = $input['object'] ?? null;
@@ -86,7 +86,7 @@ function axismundi_act_submit_local_object( int $user, Axismundi_Actor $actor, a
 			$document['published'] = gmdate( 'c' );
 			foreach ( array( 'to', 'cc', 'bto', 'bcc', 'audience' ) as $field ) { if ( isset( $document[ $field ] ) ) { $activity[ $field ] = $document[ $field ]; } }
 			// Group forwarding must preserve a creation snapshot, including after local deletion.
-			$group = ! empty( $document['inReplyTo'] ) && ! empty( $document['audience'] ) ? axismundi_actors_get_by_uri( axismundi_act_member_uri( $document['audience'] ) ) : null;
+			$group = ! empty( $document['audience'] ) ? axismundi_actors_get_by_uri( axismundi_act_member_uri( $document['audience'] ) ) : null;
 			if ( $group && 'Group' === $group->get_type() ) { $activity['object'] = $document; }
 		} elseif ( 'Update' === $type ) {
 			foreach ( array( 'to', 'cc', 'bto', 'bcc', 'audience' ) as $field ) { if ( isset( $document[ $field ] ) ) { $activity[ $field ] = $document[ $field ]; } }
@@ -118,5 +118,5 @@ function axismundi_act_submit_local_object( int $user, Axismundi_Actor $actor, a
 		}
 		return $result;
 	} );
-	return is_wp_error( $result ) ? $result : axismundi_act_receive_community_reply( $result );
+	return is_wp_error( $result ) ? $result : axismundi_act_receive_community_submission( $result );
 }

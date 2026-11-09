@@ -187,7 +187,7 @@ function axismundi_op_object_replies_transform( Axismundi_OP_Object_Replies $sou
 		return axismundi_op_assemble_collection( 'replies', array(
 			'id'           => $root,
 			'type'         => 'OrderedCollection',
-			'attributedTo' => (string) $object['attributedTo'],
+			'attributedTo' => $object['attributedTo'] ?? '',
 			'url'          => axismundi_op_object_html_url( $object ),
 			'first'        => axismundi_op_object_replies_url( $source->get_object_uri(), 1 ),
 		), array() );
@@ -196,7 +196,7 @@ function axismundi_op_object_replies_transform( Axismundi_OP_Object_Replies $sou
 	$payload = array(
 		'id'           => axismundi_op_object_replies_url( $source->get_object_uri(), $source->get_page() ),
 		'type'         => 'OrderedCollectionPage',
-		'attributedTo' => (string) $object['attributedTo'],
+		'attributedTo' => $object['attributedTo'] ?? '',
 		'url'          => axismundi_op_object_html_url( $object ),
 		'partOf'       => $root,
 	);

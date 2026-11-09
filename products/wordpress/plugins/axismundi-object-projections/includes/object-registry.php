@@ -270,10 +270,13 @@ function axismundi_op_register_object( array $args ) {
 	$origin       = (string) ( $args['origin'] ?? 'local' );
 	$source_owner = sanitize_key( (string) ( $args['source_owner'] ?? '' ) );
 	$source_kind  = sanitize_key( (string) ( $args['source_kind'] ?? '' ) );
+	// Registry admission describes a source, not evidence that an Activity was published.
 	if ( 'wordpress-core' === $source_owner ) {
-		$recorded = function_exists( 'axismundi_act_get_object_attribution' ) ? axismundi_act_get_object_attribution( $uri ) : '';
-		if ( '' === $recorded || $recorded !== (string) ( $args['attributed_to_uri'] ?? '' ) ) {
-			return new WP_Error( 'ax_op_unpublished_wp', 'WordPress registry admission requires a recorded Create and matching attribution.' );
+		$post = ! empty( $args['source_ref'] ) ? get_post( (int) $args['source_ref'] ) : null;
+		$profile = $post instanceof WP_Post ? axismundi_op_local_object_profile( $post ) : null;
+		if ( ! is_array( $profile ) || $profile['uri'] !== $uri || $profile['kind'] !== $source_kind
+			|| $profile['type'] !== ( $args['as2_type'] ?? '' ) || $profile['attributed_to_uri'] !== (string) ( $args['attributed_to_uri'] ?? '' ) ) {
+			return new WP_Error( 'ax_op_wp_source', 'WordPress registry admission must match its current source profile.' );
 		}
 	}
 	$as2_type     = substr( sanitize_text_field( (string) ( $args['as2_type'] ?? '' ) ), 0, 64 );
@@ -379,8 +382,7 @@ function axismundi_op_local_object_profile( WP_Post $post ) : ?array {
 /** Register the Object slice for one explicit local post profile. */
 function axismundi_op_register_local_post_object( WP_Post $post ) {
 	$profile = axismundi_op_local_object_profile( $post );
-	if ( ! is_array( $profile ) || empty( $profile['attributed_to_uri'] ) || ! function_exists( 'axismundi_act_get_object_attribution' )
-		|| $profile['attributed_to_uri'] !== axismundi_act_get_object_attribution( $profile['uri'] ) ) { return null; }
+	if ( ! is_array( $profile ) ) { return null; }
 	return is_array( $profile )
 		? axismundi_op_register_object(
 			array(
@@ -402,7 +404,15 @@ function axismundi_op_register_saved_local_post_object( int $post_id, WP_Post $p
 }
 add_action( 'save_post', 'axismundi_op_register_saved_local_post_object', 100, 3 );
 
-/** A published WP source enters the common index only after its Create commits. */
+/** Core attachment insertion returns before the generic save_post hooks. */
+function axismundi_op_register_saved_attachment_object( int $post_id ) : void {
+	$post = get_post( $post_id );
+	if ( $post instanceof WP_Post ) { axismundi_op_register_local_post_object( $post ); }
+}
+add_action( 'add_attachment', 'axismundi_op_register_saved_attachment_object', 100 );
+add_action( 'edit_attachment', 'axismundi_op_register_saved_attachment_object', 100 );
+
+/** Refresh a WP source shadow after a committed lifecycle event; admission needs no Create. */
 function axismundi_op_register_recorded_wp_source( Axismundi_Activity $activity ) : void {
 	if ( ! in_array( $activity->get_type(), array( 'Create', 'Update', 'Delete' ), true ) || 'inbound' === $activity->get_direction() ) { return; }
 	$uri = (string) $activity->get_object_uri();

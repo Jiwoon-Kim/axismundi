@@ -456,7 +456,7 @@ function axismundi_op_quick_edit_fields( string $column, string $post_type ) : v
 				<span class="input-text-wrap"><input type="text" name="axismundi_op_content_warning" maxlength="500" /></span>
 			</label>
 			<label class="alignleft">
-				<span class="title"><?php esc_html_e( 'Audience', 'axismundi-object-projections' ); ?></span>
+				<span class="title"><?php esc_html_e( 'Visibility', 'axismundi-object-projections' ); ?></span>
 				<select name="axismundi_op_visibility">
 					<option value="public"><?php esc_html_e( 'Public', 'axismundi-object-projections' ); ?></option>
 					<option value="unlisted"><?php esc_html_e( 'Quiet public', 'axismundi-object-projections' ); ?></option>

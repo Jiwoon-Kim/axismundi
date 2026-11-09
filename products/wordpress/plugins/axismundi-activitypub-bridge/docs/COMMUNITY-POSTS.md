@@ -99,6 +99,20 @@ Forum의 기존 Note 주소지정·객체 확장·답글 Announce·개인 Outbox
 Forum의 로컬 Topic 바인딩과 그 의존 코드는 유지한다. 기존 Forum 관리 UI·테이블을
 통째로 삭제하거나 마이그레이션한 것은 아니며 이 작업과 구분한다.
 
+## C2S Audience
+
+Composer의 Visibility는 공개 범위를, Audience는 선택한 Community Group URI를 뜻한다.
+Visibility의 기본 to/cc는 입력란에 표시하고, 프리셋을 바꿔도 별도로 입력한 주소는 남긴다.
+Audience 선택기는 현재 발행 Person이 수락된 Follow를 가진 Group과 현재 사용자가
+운영할 수 있는 로컬 Community를 표시한다. 직접 URI 입력도 같은 제출 정책을 적용한다.
+로컬은 Community 프로필, 원격은 캐시된 컬렉션 타입 선언 또는 검증된 모더레이터
+스냅샷을 근거로 삼는다. 후보를 표시하거나 제출할 때 원격 역참조를 하지 않는다.
+
+Audience가 명시된 Note는 Public 또는 Quiet public이어야 하며, 부모가 있으면 같은
+Community에 속해야 한다. 로컬 최상위 Note는 Forum 없이 Inbox 수신과 심사를 거쳐
+승인된 후 Announce된다. 원격 최상위 Note는 해당 Group Inbox로만 보낸다.
+기존의 원격 수신 루트 Page/Article 정책과 Forum Topic 편집 정책은 그대로다.
+
 ## 남은 표면
 
 - 심사 목록·관리 UI는 Activities의 Community Moderation으로 제공한다
@@ -119,3 +133,21 @@ python tools/wp-env/run_audits.py run --audit audit-community-replies.php --audi
 Forum 비활성에서 수행한다. 새 감사는 Forum 테이블 쿼리가 실행되면 실패하고,
 principal/Follow 스냅샷이 바뀌지 않는지 확인한다. Bridge의 verified handoff부터
 검사하며 실제 HTTP 서명 생성·원격 Lemmy 배달은 이 fixture의 범위가 아니다.
+
+[FEP-1b12](https://codeberg.org/fediverse/fep/src/branch/main/fep/1b12/fep-1b12.md)의
+원본 활동 보존은 루트 Create 승인 경로에서 검사한다. 수신 fixture의 JSON과 Bridge
+스풀에 기록된 요청 본문의 Announce.object를 비교한다. 객체 키 순서만 무시하며
+id, 확장 속성, 중첩 객체, 배열 순서, 배열형 context, proof 값은 보존돼야 한다.
+proof를 제거한 변이가 비교에서 실패하는지도 확인한다. proof 자체의 유효성은
+검사하지 않는다. 테스트 배송 예약을 차단하고 워커는 실행하지 않는다.
+
+블라인드 주소가 있다는 이유만으로 Inbox 수신을 거부하지 않으며 원장도 수정하지
+않는다. 송출 시 Bridge는 Announce.object가 수신 원장 활동과 일치하는 경우에만
+원본 보존을 요청한다. 최종 렌더러는 자체 Announce의 bto/bcc를 제거하고 원본
+Create 및 그 안의 객체는 그대로 둔다. [ActivityPub의 발신 규칙](https://www.w3.org/TR/activitypub/#client-to-server-interactions)과
+FEP-1b12의 원본 보존을 별개로 적용하는 제품 정책이다. 감싸인 주소는 새 배송
+대상을 만들지 않지만, 기존 Announce 수신자는 감싸인 문서의 해당 값을 볼 수 있다.
+
+Inbox·공개 활동 조회의 표시용 복사본은 중첩 bto/bcc도 제거한다.
+`manage_options`가 필요한 Activity Log는 원문 진단을 위해 그대로 표시한다.
+감사는 원본 필드 보존, 바깥 주소 제거, 실제 큐 수신자, 표시용 생략을 각각 검사한다.

@@ -63,6 +63,7 @@ require_once __DIR__ . '/includes/object-view-route.php';
 require_once __DIR__ . '/includes/hashtag-archive.php';
 require_once __DIR__ . '/includes/question-view.php';
 require_once __DIR__ . '/includes/post-settings.php';
+require_once __DIR__ . '/includes/post-attribution.php';
 require_once __DIR__ . '/includes/post-article.php';
 require_once __DIR__ . '/includes/quote-authorizations.php';
 require_once __DIR__ . '/includes/lifecycle.php';

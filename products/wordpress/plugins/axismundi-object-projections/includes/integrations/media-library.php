@@ -395,7 +395,7 @@ function axismundi_op_media_descriptor_visible( bool $visible, int $attachment_i
 function axismundi_op_media_attachment_transform( WP_Post $attachment ) {
 	$id            = (int) $attachment->ID;
 	$mime          = (string) get_post_mime_type( $attachment );
-	$attributed_to = axismundi_op_media_attachment_actor_uri( $attachment );
+	$attributed_to = axismundi_op_post_attributed_to( $attachment, axismundi_op_media_attachment_actor_uri( $attachment ) );
 	$core          = axismundi_op_media_descriptor_core( $attachment );
 	if ( null === $core ) {
 		return new WP_Error( 'ax_op_media_identity', __( 'The attachment has no public object or page URI.', 'axismundi-object-projections' ) );
@@ -556,7 +556,7 @@ function axismundi_op_media_used_in_transform( Axismundi_OP_Media_Used_In $sourc
 	return axismundi_op_assemble_collection( 'used-in', array(
 		'id'           => axismundi_op_media_used_in_url( $attachment ),
 		'type'         => 'OrderedCollection',
-		'attributedTo' => axismundi_op_media_attachment_actor_uri( $attachment ),
+		'attributedTo' => axismundi_op_post_attributed_to( $attachment, axismundi_op_media_attachment_actor_uri( $attachment ) ),
 		'url'          => get_attachment_link( (int) $attachment->ID ),
 	), array( 'total' => count( $items ), 'items' => array_keys( $items ) ) );
 }

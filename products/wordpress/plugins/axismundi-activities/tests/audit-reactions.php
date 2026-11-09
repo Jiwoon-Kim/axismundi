@@ -136,7 +136,7 @@ try {
 	}
 	ax_react_assert( $ax_react_results, 'Dislike has the symmetric REST mutation and returns its own authoritative state and count', $dislike_response instanceof WP_REST_Response && true === $dislike_data['is_disliked'] && 1 === (int) $dislike_data['dislike_count'] );
 
-	axismundi_act_register_interaction_block();
+	if ( ! WP_Block_Type_Registry::get_instance()->is_registered( 'axismundi/interaction' ) ) { axismundi_act_register_interaction_block(); }
 	$markup = do_blocks( '<!-- wp:axismundi/interaction {"type":"like","objectUri":"' . esc_url_raw( $ax_react_object_uri ) . '"} /-->' );
 	$dislike_markup = do_blocks( '<!-- wp:axismundi/interaction {"type":"dislike","objectUri":"' . esc_url_raw( $ax_react_object_uri ) . '"} /-->' );
 	ax_react_assert( $ax_react_results, 'Like and Dislike each render their own Interactivity store, canonical state, and cache bypass', str_contains( $markup, 'data-wp-interactive="axismundi/like-button"' ) && str_contains( $markup, 'data-wp-on--click="actions.toggleLike"' ) && str_contains( $dislike_markup, 'data-wp-interactive="axismundi/dislike-button"' ) && str_contains( $dislike_markup, 'data-wp-on--click="actions.toggleDislike"' ) && str_contains( $dislike_markup, 'aria-pressed="true"' ) && str_contains( str_replace( '\\/', '/', $dislike_markup ), esc_url_raw( $ax_react_object_uri ) ) && defined( 'DONOTCACHEPAGE' ) && true === DONOTCACHEPAGE );

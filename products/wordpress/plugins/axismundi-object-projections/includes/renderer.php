@@ -255,9 +255,10 @@ function axismundi_op_finalize_object( array $object, string $expected_id, bool 
  *
  * @param array<string,mixed> $activity    Activity payload.
  * @param string              $expected_id Ledger Activity URI.
+ * @param bool                $preserve_announced_activity Whether transport verified an inbound original.
  * @return array<string,mixed>|WP_Error
  */
-function axismundi_op_finalize_activity( array $activity, string $expected_id ) {
+function axismundi_op_finalize_activity( array $activity, string $expected_id, bool $preserve_announced_activity = false ) {
 	foreach ( array( 'id', 'type', 'actor' ) as $member ) {
 		if ( ! isset( $activity[ $member ] ) || '' === $activity[ $member ] ) {
 			return new WP_Error( 'ax_op_invalid_activity', __( 'The Activity is missing a required member.', 'axismundi-object-projections' ) );
@@ -267,13 +268,13 @@ function axismundi_op_finalize_activity( array $activity, string $expected_id ) 
 		return new WP_Error( 'ax_op_id_mismatch', __( 'An Activity id must equal its ledger URI.', 'axismundi-object-projections' ) );
 	}
 	/*
-	 * ActivityPub delivery uses bto/bcc to resolve recipients, but neither blind
-	 * address may cross the wire. Transport resolves recipients from the ledger
-	 * before it calls this boundary. A Create may carry its addressing on the
-	 * embedded Object, so remove the two blind members there as well.
+	 * Strip our own blind addressing after recipient resolution. A verified
+	 * inbound original inside an Announce is not our addressing: its origin
+	 * owns that cleanup, and FEP-1b12 requires preserving the forwarded document.
 	 */
 	unset( $activity['bto'], $activity['bcc'] );
-	if ( isset( $activity['object'] ) && is_array( $activity['object'] ) ) {
+	$preserve_object = $preserve_announced_activity && 'Announce' === $activity['type'];
+	if ( ! $preserve_object && isset( $activity['object'] ) && is_array( $activity['object'] ) ) {
 		unset( $activity['object']['bto'], $activity['object']['bcc'] );
 	}
 	unset( $activity['@context'] );

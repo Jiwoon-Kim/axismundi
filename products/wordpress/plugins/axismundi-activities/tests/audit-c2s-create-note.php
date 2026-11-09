@@ -19,7 +19,33 @@ add_action( 'axismundi_act_activity_recorded', $observe, 999 );
 try {
 	$note = array( 'type' => 'Note', 'content' => '<p>Stored body<script>bad()</script></p>', 'summary' => 'CW', 'contentMap' => array( 'ko' => '<p>본문</p>', 'en' => '<p>Body</p>' ), 'tag' => array( array( 'type' => 'Mention', 'href' => $actor->get_uri(), 'name' => '@fixture' ) ), 'attachment' => array( array( 'type' => 'Image', 'url' => 'https://example.test/image.png' ) ), 'to' => array( 'https://www.w3.org/ns/activitystreams#Public' ) );
 	foreach ( array( 'replies', 'likes', 'shares', 'http://fedibird.com/ns#emojiReactions' ) as $field ) { $note[ $field ] = 'https://example.test/untrusted-collection'; }
+	$note['bto'] = $note['bcc'] = array( $actor->get_uri() );
 	$command = array( 'type' => 'Create', 'actor' => $actor->get_uri(), 'object' => $note );
+	$policy = axismundi_op_normative_requirement( 'local-note-attribution' );
+	$assert( is_array( $policy ) && 'LOCAL_POLICY' === $policy['level'] && 'ax_op_local_author' === $policy['enforced_by']['error_code'], 'Existing local Note attribution guard has a product-policy record' );
+	$effect_tables = array( axismundi_act_activities_table(), axismundi_op_local_objects_table(), axismundi_op_objects_table(), axismundi_op_object_index_table(), axismundi_act_inbox_table() );
+	if ( function_exists( 'axismundi_activitypub_bridge_delivery_table' ) ) { $effect_tables[] = axismundi_activitypub_bridge_delivery_table(); }
+	$count_effects = static function () use ( $wpdb, $effect_tables ) : array {
+		$result = array();
+		foreach ( $effect_tables as $table ) { $result[$table] = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i', $table ) ); }
+		return $result;
+	};
+	foreach ( array( 'foreign-scalar' => 'https://example.test/other-author', 'singleton-array' => array( $actor->get_uri() ), 'joint-array' => array( $actor->get_uri(), 'https://example.test/collaborator' ) ) as $case => $attribution ) {
+		$counts = $count_effects(); $event_count = count( $recorded ); $writes = array();
+		$watch_writes = static function ( $sql ) use ( &$writes, $effect_tables ) {
+			if ( preg_match( '/^\s*(INSERT|REPLACE|UPDATE|DELETE)\b/i', $sql ) ) {
+				foreach ( $effect_tables as $table ) { if ( str_contains( $sql, $table ) ) { $writes[] = $sql; break; } }
+			}
+			return $sql;
+		};
+		$invalid = $command; $invalid['object']['attributedTo'] = $attribution;
+		add_filter( 'query', $watch_writes );
+		try { $denied = axismundi_act_submit_outbox( $user, $actor, $invalid, 'attribution-' . wp_generate_uuid4() ); }
+		finally { remove_filter( 'query', $watch_writes ); }
+		$assert( is_wp_error( $denied ) && 'ax_op_local_author' === $denied->get_error_code() && 403 === $denied->get_error_data()['status'], 'The attribution guard, not the type gate, rejects ' . $case );
+		$assert( array() === $writes && $counts === $count_effects() && $event_count === count( $recorded ), 'Rejected attribution allocates no Object, Activity, receipt or delivery and emits no commit: ' . $case );
+	}
+	$command['object']['attributedTo'] = $actor->get_uri();
 	$created = axismundi_act_submit_outbox( $user, $actor, $command, 'create-audit-' . wp_generate_uuid4() );
 	$assert( $created instanceof Axismundi_Activity, 'Create commits local Note and Activity: ' . ( is_wp_error( $created ) ? $created->get_error_message() : '' ) );
 	$uri = $created->get_object_uri(); $uris[] = $uri;
@@ -29,6 +55,8 @@ try {
 	$assert( $actor->get_uri() === axismundi_act_get_object_attribution( $uri ) && is_array( axismundi_op_get_object_by_uri( $uri ) ), 'Registry and stored attribution agree with committed Create' );
 	$assert( ! empty( axismundi_op_mentions_for_object( $uri ) ), 'Mention projection participates' );
 	$document = axismundi_op_transform_object( new Axismundi_OP_Local_Source( $row ) );
+	$assert( $note['bto'] === $created->get_audience()['bto'] && $note['bcc'] === $created->get_audience()['bcc'] && $note['bto'] === $row['document']['bto'] && $note['bcc'] === $row['document']['bcc'], 'Blind addresses remain available to transport and in the stored Note' );
+	$assert( is_array( $document ) && ! array_key_exists( 'bto', $document ) && ! array_key_exists( 'bcc', $document ), 'The public Note document never discloses its blind addresses' );
 	foreach ( array( 'replies' => 'axismundi_op_object_replies_url', 'likes' => 'axismundi_op_object_likes_url', 'shares' => 'axismundi_op_object_shares_url', 'http://fedibird.com/ns#emojiReactions' => 'axismundi_op_object_emoji_reactions_url' ) as $field => $factory ) {
 		$assert( is_array( $document ) && ( $document[ $field ] ?? '' ) === $factory( $uri ), 'Local Note advertises server-owned collection: ' . $field );
 	}
@@ -48,9 +76,10 @@ try {
 	}
 	$post_id = wp_insert_post( array( 'post_type' => 'post', 'post_status' => 'publish', 'post_author' => $user, 'post_title' => 'Unpublished federation fixture' ) );
 	$wp_uri = axismundi_op_post_object_uri( get_post( $post_id ) ); $uris[] = $wp_uri;
-	$assert( null === axismundi_op_get_object_by_uri( $wp_uri ), 'save_post alone cannot enter the Object registry' );
+	$registered = axismundi_op_get_object_by_uri( $wp_uri );
+	$assert( is_array( $registered ) && empty( $registered['attributed_to_uri'] ) && ! axismundi_act_get_object_lifecycle( $wp_uri ), 'Source registry admission does not invent publication or attribution' );
 	$raw = axismundi_op_register_object( array( 'canonical_uri' => $wp_uri, 'source_owner' => 'wordpress-core', 'source_kind' => 'post', 'source_ref' => $post_id, 'as2_type' => 'Article', 'attributed_to_uri' => $actor->get_uri() ) );
-	$assert( is_wp_error( $raw ), 'Direct registry entry cannot bypass the Create gate' );
+	$assert( is_wp_error( $raw ), 'Direct registry entry cannot override source attribution' );
 	$wp_create = axismundi_act_record_activity( array( 'type' => 'Create', 'actor' => $actor->get_uri(), 'object' => $wp_uri ), 'outbound' );
 	$assert( $wp_create instanceof Axismundi_Activity && is_array( axismundi_op_get_object_by_uri( $wp_uri ) ), 'Recorded Create admits the matching WordPress source' );
 	$wp_reply = axismundi_act_submit_outbox( $user, $actor, array( 'type' => 'Note', 'content' => '<p>Reply to WP</p>', 'inReplyTo' => $wp_uri, 'to' => $note['to'] ) );
@@ -59,11 +88,11 @@ try {
 	$assert( $wp_uri === axismundi_op_get_local_object( $reply_uri )['document']['inReplyTo'], 'WordPress reply target is preserved in the local body' );
 	$wp_document = axismundi_op_transform_object( get_post( $post_id ) );
 	$assert( is_array( $wp_document ) && ! empty( $wp_document['replies'] ), 'WordPress parent advertises its replies collection' );
-	$root_request = new WP_REST_Request( 'GET', '/axismundi/v1/objects/replies' );
+	$root_request = new WP_REST_Request( 'GET', '/axismundi/activitypub/objects/replies' );
 	$root_request->set_param( 'object', $wp_uri );
 	$root_response = rest_do_request( $root_request );
 	$root_data = $root_response->get_data();
-	$page_request = new WP_REST_Request( 'GET', '/axismundi/v1/objects/replies' );
+	$page_request = new WP_REST_Request( 'GET', '/axismundi/activitypub/objects/replies' );
 	$page_request->set_param( 'object', $wp_uri ); $page_request->set_param( 'page', 1 );
 	$page_response = rest_do_request( $page_request );
 	$assert( 200 === $root_response->get_status() && $wp_document['replies'] === ( $root_data['id'] ?? '' ) && 200 === $page_response->get_status() && in_array( $reply_uri, $page_response->get_data()['orderedItems'] ?? array(), true ), 'WordPress advertised replies root and page resolve to the C2S child' );

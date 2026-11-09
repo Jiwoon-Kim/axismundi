@@ -59,7 +59,7 @@
 				onChange: ( value ) => update( '_ax_op_content_warning', value ),
 			} ),
 			el( wp.components.SelectControl, {
-				label: wp.i18n.__( 'Audience', 'axismundi-object-projections' ),
+				label: wp.i18n.__( 'Visibility', 'axismundi-object-projections' ),
 				value: visibility,
 				options: [
 					{ label: wp.i18n.__( 'Public', 'axismundi-object-projections' ), value: 'public' },

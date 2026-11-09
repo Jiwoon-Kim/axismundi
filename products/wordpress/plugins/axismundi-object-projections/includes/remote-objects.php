@@ -199,7 +199,7 @@ function axismundi_op_local_object_listing_projection_row( $source ) : ?array {
 		'listing_publicly_listable'  => 'tombstone' !== $status && $visible,
 		// Keep candidate facts explicit: a local source is authoritative even when a
 		// future transform deliberately omits a field from its public representation.
-		'listing_attributed_to_uri'  => (string) ( $payload['attributedTo'] ?? '' ),
+		'listing_attributed_to_uri'  => axismundi_op_local_object_publisher_uri( $payload ),
 		'listing_is_reply'           => ! empty( $payload['inReplyTo'] ),
 	);
 }

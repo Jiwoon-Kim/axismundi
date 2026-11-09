@@ -3,7 +3,7 @@
 defined( 'ABSPATH' ) || exit( 1 );
 $mutations = array(
 	'profile' => array( 'axismundi_actors_admit_community_post', '! axismundi_actors_is_community( $group )', 'false', 'community_store', 'Storage rejects Channel profile too' ),
-	'root-type' => array( 'axismundi_act_admit_community_root', "! in_array( \$object['type'] ?? '', array( 'Page', 'Article' ), true )", 'false', 'community_admit', 'Bare Note is not a root submission' ),
+	'root-type' => array( 'axismundi_act_admit_community_root', "! in_array( \$object['type'] ?? '', \$local ? array( 'Note' ) : array( 'Page', 'Article' ), true )", 'false', 'community_admit', 'Bare Note is not a root submission' ),
 	'moderator' => array( 'axismundi_actors_decide_community_post', "is_wp_error( \$members ) || ! in_array( \$moderator->get_uri(), \$members['items'], true )", 'false', 'community_decide', 'Non-moderator review is refused' ),
 	'approval' => array( 'axismundi_act_review_community_post', "array(), \$decide", 'array(), null', 'community_review', 'Approval and publication commit together' ),
 	'author' => array( 'axismundi_act_review_community_post', "'actor' => \$group->get_uri(), 'object' => \$create->get_payload()", "'actor' => \$group->get_uri(), 'object' => array_replace( \$create->get_payload(), array( 'actor' => \$group->get_uri() ) )", 'community_review', 'Group announcement preserves the Person authored Create' ),

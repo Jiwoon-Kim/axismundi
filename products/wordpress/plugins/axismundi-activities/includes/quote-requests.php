@@ -69,8 +69,8 @@ function axismundi_act_validate_quote_request_instrument( Axismundi_Activity $re
 	if ( ! is_array( $instrument ) || array_is_list( $instrument ) ) {
 		return true;
 	}
-	$attributed_to = axismundi_act_member_uri( $instrument['attributedTo'] ?? '' );
-	if ( '' !== $attributed_to && ! hash_equals( $request->get_actor_uri(), $attributed_to ) ) {
+	$attributed_to = axismundi_act_object_publisher_uri( $instrument );
+	if ( ! empty( $instrument['attributedTo'] ) && ( '' === $attributed_to || ! hash_equals( $request->get_actor_uri(), $attributed_to ) ) ) {
 		return new WP_Error( 'ax_act_quote_instrument_actor', __( 'The inlined quote post is attributed to a different Actor.', 'axismundi-activities' ) );
 	}
 	$quoted = axismundi_act_member_uri( $instrument['quote'] ?? '' );

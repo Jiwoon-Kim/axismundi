@@ -7,17 +7,52 @@
     const parent = document.getElementById('ax-c2s-parent');
     const content = document.getElementById('ax-c2s-content');
     const visibility = document.getElementById('ax-c2s-visibility');
+    const community = document.getElementById('ax-c2s-audience');
+    const communityUri = document.getElementById('ax-c2s-audience-uri');
     const mentions = document.getElementById('ax-c2s-mentions');
     const recipients = document.getElementById('ax-c2s-recipients');
     const extraTo = document.getElementById('ax-c2s-to');
+    const blindTo = document.getElementById('ax-c2s-bto');
+    const blindCc = document.getElementById('ax-c2s-bcc');
     const result = document.getElementById('ax-c2s-result');
     const button = form.querySelector('button[type="submit"], input[type="submit"]');
     const preview = document.getElementById('ax-c2s-preview');
     const requestView = document.getElementById('ax-c2s-request');
     const target = document.getElementById('ax-c2s-target');
     const activityType = document.getElementById('ax-c2s-activity');
-    const createFields = [parent, visibility, mentions, extraTo, recipients];
+    const addressFields = [mentions, extraTo, recipients, blindTo, blindCc].filter(Boolean);
+    const createFields = [parent, visibility, community, communityUri, ...addressFields].filter(Boolean);
     const originalLabel = button.value;
+    const publicUri = 'https://www.w3.org/ns/activitystreams#Public';
+    const lines = value => value.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+    const groupValue = () => (communityUri?.value ?? community?.value ?? '').trim();
+    function presetAddresses(mode, group) {
+        switch (mode) {
+            case 'public': return group ? [[group, publicUri], []] : [[publicUri], [config.followers]];
+            case 'unlisted': return [[group || config.followers], [publicUri]];
+            case 'followers': return [[config.followers], []];
+            default: return [[], []];
+        }
+    }
+    let lastPreset = [[], []];
+    function syncPreset() {
+        const next = presetAddresses(visibility.value, groupValue());
+        [extraTo, recipients].forEach((field, index) => {
+            const manual = lines(field.value).filter(value => !lastPreset[index].includes(value));
+            field.value = [...new Set([...next[index], ...manual])].join('\n');
+        });
+        lastPreset = next;
+    }
+    visibility.addEventListener?.('change', syncPreset);
+    community?.addEventListener?.('change', () => {
+        if (communityUri) communityUri.value = community.value;
+        syncPreset();
+    });
+    communityUri?.addEventListener?.('change', () => {
+        if (community) community.value = groupValue();
+        syncPreset();
+    });
+    syncPreset();
     function syncMode() {
         if (!target) return;
         const updating = activityType.value === 'Update';
@@ -44,10 +79,9 @@
         if (requestView) requestView.hidden = true;
         const escaped = document.createElement('div');
         escaped.textContent = content.value;
-        const publicUri = 'https://www.w3.org/ns/activitystreams#Public';
-        const readActors = field => field.value.split(/\r?\n/).map(value => value.trim()).filter(Boolean).map(value => {
+        const readActors = (field, visible = false) => lines(field.value).map(value => {
             const url = new URL(value);
-            if (!/^https?:$/.test(url.protocol) || url.username || url.password || value === publicUri) throw new Error();
+            if (!/^https?:$/.test(url.protocol) || url.username || url.password || (!visible && value === publicUri)) throw new Error();
             return value;
         });
         const updating = activityType.value === 'Update';
@@ -55,31 +89,40 @@
         if (updating) {
             note = {id: target.value.trim(), type: 'Note', content: content.value};
         } else {
-        let to, cc;
+        let to, cc, bto, bcc;
+        const group = groupValue();
         try {
+            if (group) readActors({value: group});
+            syncPreset();
             mentioned = [...new Set(mentions.value.split(',').map(value => value.trim().toLowerCase()).filter(Boolean))];
-            to = readActors(extraTo);
-            cc = readActors(recipients);
+            to = readActors(extraTo, true);
+            cc = readActors(recipients, true);
+            bto = blindTo ? [...new Set(readActors(blindTo))] : [];
+            bcc = blindCc ? [...new Set(readActors(blindCc))] : [];
         } catch {
             result.textContent = config.invalidActor;
             return;
         }
-        const audience = visibility.value;
-        const presets = {
-            public: [[publicUri], [config.followers, ...mentioned]],
-            unlisted: [[config.followers], [publicUri, ...mentioned]],
-            followers: [[config.followers], mentioned],
-            mentioned: [mentioned, []]
-        };
-        if (!Object.hasOwn(presets, audience)) return;
-        if (audience === 'mentioned' && !mentioned.length) {
+        const visibilityMode = visibility.value;
+        if (!['public', 'unlisted', 'followers', 'mentioned'].includes(visibilityMode)) return;
+        if (group && !['public', 'unlisted'].includes(visibilityMode)) {
+            result.textContent = window.axismundiC2SMentions.communityVisibility;
+            return;
+        }
+        if (group && (bto.length || bcc.length)) {
+            result.textContent = window.axismundiC2SMentions.communityBlindAddress;
+            return;
+        }
+        if (visibilityMode === 'mentioned' && !mentioned.length) {
             result.textContent = window.axismundiC2SMentions.mentionRequired;
             return;
         }
-        const [presetTo, presetCc] = presets[audience];
+        const [presetTo, presetCc] = presetAddresses(visibilityMode, group);
+        (visibilityMode === 'mentioned' ? presetTo : presetCc).push(...mentioned);
         // Explicit To wins over the default Cc for Actors; keep the preset's Public placement.
-        to = [...new Set([...presetTo, ...to.filter(uri => uri !== config.followers)])];
-        cc = [...new Set([...presetCc, ...cc.filter(uri => uri !== config.followers)])].filter(uri => !to.includes(uri));
+        const explicit = uri => uri !== config.followers && uri !== publicUri;
+        to = [...new Set([...presetTo, ...to.filter(explicit)])];
+        cc = [...new Set([...presetCc, ...cc.filter(explicit)])].filter(uri => !to.includes(uri));
         note = {
             type: document.getElementById('ax-c2s-object-type').value,
             content: '<p>' + escaped.innerHTML.replace(/\r?\n/g, '<br>') + '</p>',
@@ -87,6 +130,9 @@
             cc
         };
         if (parent.value.trim()) note.inReplyTo = parent.value.trim();
+        if (bto.length) note.bto = bto;
+        if (bcc.length) note.bcc = bcc;
+        if (group) note.audience = group;
         }
         busy = true;
         button.disabled = true;
@@ -94,7 +140,10 @@
         if (preview) preview.disabled = true;
         parent.readOnly = true;
         content.readOnly = true;
-        visibility.disabled = mentions.readOnly = recipients.readOnly = extraTo.readOnly = true;
+        visibility.disabled = true;
+        addressFields.forEach(field => { field.readOnly = true; });
+        if (community) community.disabled = true;
+        if (communityUri) communityUri.readOnly = true;
         result.textContent = config.busy;
         try {
             if (mentioned.length) {
@@ -166,7 +215,10 @@
                     result.append(document.createElement('br'), link);
                 }
             }
-            if (!updating) form.reset();
+            if (!updating) {
+                form.reset();
+                syncPreset();
+            }
             intent = '';
             retryKey = '';
         } catch (error) {
@@ -177,7 +229,10 @@
             if (preview) preview.disabled = false;
             parent.readOnly = false;
             content.readOnly = false;
-            visibility.disabled = mentions.readOnly = recipients.readOnly = extraTo.readOnly = false;
+            visibility.disabled = false;
+            addressFields.forEach(field => { field.readOnly = false; });
+            if (community) community.disabled = false;
+            if (communityUri) communityUri.readOnly = false;
             if (target) {
                 activityType.disabled = false;
                 const wasHidden = requestView?.hidden;

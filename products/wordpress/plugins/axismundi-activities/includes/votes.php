@@ -177,7 +177,7 @@ function axismundi_act_vote_cycle_count( string $type, string $actor_uri, string
  * @param string          $recipient_actor_uri Optional object owner to address.
  * @return Axismundi_Activity|WP_Error
  */
-function axismundi_act_vote_on_object( string $type, Axismundi_Actor $actor, string $object_uri, string $recipient_actor_uri = '' ) {
+function axismundi_act_vote_on_object( string $type, Axismundi_Actor $actor, string $object_uri, string|array $recipient_actor_uri = '' ) {
 	if ( ! axismundi_act_is_vote_type( $type ) ) {
 		return new WP_Error( 'ax_act_vote_type', __( 'That is not a supported vote activity.', 'axismundi-activities' ) );
 	}
@@ -193,15 +193,12 @@ function axismundi_act_vote_on_object( string $type, Axismundi_Actor $actor, str
 	if ( $existing instanceof Axismundi_Activity ) {
 		return $existing;
 	}
-	$recipient = '' !== $recipient_actor_uri ? axismundi_actors_get_by_uri( $recipient_actor_uri ) : null;
-	if ( '' !== $recipient_actor_uri && ! $recipient instanceof Axismundi_Actor ) {
-		return new WP_Error( 'ax_act_reaction_recipient', __( 'The object owner Actor is unavailable.', 'axismundi-activities' ) );
-	}
+	$recipients = axismundi_act_reaction_recipients( $recipient_actor_uri );
+	if ( is_wp_error( $recipients ) ) { return $recipients; }
 	$payload = array( 'type' => $type, 'actor' => $actor->get_uri(), 'object' => $object );
-	if ( $recipient instanceof Axismundi_Actor && $recipient->get_uri() !== $actor->get_uri() ) {
-		$payload['to'] = array( $recipient->get_uri() );
-	}
-	if ( $recipient instanceof Axismundi_Actor && $recipient->get_uri() === $actor->get_uri() ) {
+	$to = array_values( array_diff( $recipients, array( $actor->get_uri() ) ) );
+	if ( $to ) { $payload['to'] = $to; }
+	if ( in_array( $actor->get_uri(), $recipients, true ) ) {
 		/*
 		 * A self-vote still changes the public representation cached by the Actor's remote
 		 * followers. Addressing only the object owner would address ourselves and leave those
@@ -279,7 +276,7 @@ function axismundi_act_get_dislike_state( string $actor_uri, string $object_uri 
 }
 
 /** Record or return the effective Dislike for one object. */
-function axismundi_act_dislike_object( Axismundi_Actor $actor, string $object_uri, string $recipient_actor_uri = '' ) {
+function axismundi_act_dislike_object( Axismundi_Actor $actor, string $object_uri, string|array $recipient_actor_uri = '' ) {
 	return axismundi_act_vote_on_object( 'Dislike', $actor, $object_uri, $recipient_actor_uri );
 }
 

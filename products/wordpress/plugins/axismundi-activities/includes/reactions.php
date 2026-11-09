@@ -53,7 +53,7 @@ function axismundi_act_like_cycle_count( string $actor_uri, string $object_uri )
 }
 
 /** Record or return the effective Like for one object. */
-function axismundi_act_like_object( Axismundi_Actor $actor, string $object_uri, string $recipient_actor_uri = '' ) {
+function axismundi_act_like_object( Axismundi_Actor $actor, string $object_uri, string|array $recipient_actor_uri = '' ) {
 	return axismundi_act_vote_on_object( 'Like', $actor, $object_uri, $recipient_actor_uri );
 }
 
@@ -179,7 +179,7 @@ function axismundi_act_reaction_cycle_count( string $actor_uri, string $object_u
  * @param string          $recipient_actor_uri Object owner, when known.
  * @return Axismundi_Activity|WP_Error
  */
-function axismundi_act_react_to_object( Axismundi_Actor $actor, string $object_uri, string $content, string $recipient_actor_uri = '' ) {
+function axismundi_act_react_to_object( Axismundi_Actor $actor, string $object_uri, string $content, string|array $recipient_actor_uri = '' ) {
 	$valid  = axismundi_act_validate_reaction_actor( $actor );
 	$object = axismundi_act_uri( $object_uri );
 	if ( is_wp_error( $valid ) ) {
@@ -214,10 +214,8 @@ function axismundi_act_react_to_object( Axismundi_Actor $actor, string $object_u
 		return $existing;
 	}
 
-	$recipient = '' !== $recipient_actor_uri ? axismundi_actors_get_by_uri( $recipient_actor_uri ) : null;
-	if ( '' !== $recipient_actor_uri && ! $recipient instanceof Axismundi_Actor ) {
-		return new WP_Error( 'ax_act_reaction_recipient', __( 'The object owner Actor is unavailable.', 'axismundi-activities' ) );
-	}
+	$recipients = axismundi_act_reaction_recipients( $recipient_actor_uri );
+	if ( is_wp_error( $recipients ) ) { return $recipients; }
 	$payload = array( 'type' => 'EmojiReact', 'actor' => $actor->get_uri(), 'object' => $object, 'content' => $reaction['raw'] );
 	if ( is_array( $tag ) && $declaration['federates'] ) {
 		// The declaration travels with the reaction: without it the receiver has a shortcode
@@ -225,10 +223,9 @@ function axismundi_act_react_to_object( Axismundi_Actor $actor, string $object_u
 		// exception -- it was keyed from this same declaration and then left behind.
 		$payload['tag'] = array( $tag );
 	}
-	if ( $recipient instanceof Axismundi_Actor && $recipient->get_uri() !== $actor->get_uri() ) {
-		$payload['to'] = array( $recipient->get_uri() );
-	}
-	if ( $recipient instanceof Axismundi_Actor && $recipient->get_uri() === $actor->get_uri() ) {
+	$to = array_values( array_diff( $recipients, array( $actor->get_uri() ) ) );
+	if ( $to ) { $payload['to'] = $to; }
+	if ( in_array( $actor->get_uri(), $recipients, true ) ) {
 		$followers = (string) apply_filters( 'axismundi_act_actor_followers_uri', '', $actor );
 		if ( '' !== $followers ) {
 			$payload['cc'] = array( $followers );

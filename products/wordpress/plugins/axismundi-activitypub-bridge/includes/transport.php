@@ -191,14 +191,14 @@ function axismundi_activitypub_bridge_follower_candidates( string $actor_uri ) :
 	return array_values( array_unique( array_map( 'strval', $candidates ) ) );
 }
 
-/** Whether a Create/Update or addressed Delete is a direct submission to a known Group. */
+/** Whether an Activity is a direct submission or follow-up to a known Group. */
 function axismundi_activitypub_bridge_is_direct_group_submission( Axismundi_Activity $activity ) : bool {
 	if ( ! in_array( $activity->get_type(), array( 'Create', 'Update', 'Delete' ), true ) ) {
 		return false;
 	}
 	$payload = $activity->get_payload();
 	$object  = $payload['object'] ?? null;
-	if ( 'Delete' === $activity->get_type() && is_string( $object ) ) { $object = array( 'audience' => $payload['audience'] ?? '' ); }
+	if ( in_array( $activity->get_type(), array( 'Update', 'Delete' ), true ) && is_string( $object ) ) { $object = array( 'audience' => $payload['audience'] ?? '' ); }
 	if ( ! is_array( $object ) ) {
 		return false;
 	}
@@ -307,8 +307,16 @@ function axismundi_activitypub_bridge_queue_outbound( Axismundi_Activity $activi
 	if ( empty( $inboxes ) ) {
 		return;
 	}
+	$document = $activity->get_payload();
+	$embedded = $document['object'] ?? null;
+	$original = 'Announce' === $activity->get_type() && is_array( $embedded ) && is_string( $embedded['id'] ?? null )
+		? axismundi_act_get( $embedded['id'] )
+		: null;
+	$preserve_original = $original instanceof Axismundi_Activity
+		&& 'inbound' === $original->get_direction()
+		&& $original->get_payload() === $embedded;
 	$payload = function_exists( 'axismundi_op_finalize_activity' )
-		? axismundi_op_finalize_activity( $activity->get_payload(), $activity->get_uri() )
+		? axismundi_op_finalize_activity( $document, $activity->get_uri(), $preserve_original )
 		: new WP_Error( 'ax_bridge_activity_renderer', __( 'The Activity JSON-LD renderer is unavailable.', 'axismundi-activitypub-bridge' ) );
 	if ( is_wp_error( $payload ) ) {
 		return;

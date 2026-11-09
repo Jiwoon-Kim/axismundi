@@ -46,11 +46,11 @@ function axismundi_act_record_outbound_quote_request( array $args ) {
 		return new WP_Error( 'ax_act_outbound_quote_instrument', __( 'An outbound QuoteRequest must inline the finalized quoting object.', 'axismundi-activities' ) );
 	}
 	$quoting    = axismundi_act_member_uri( $instrument['id'] ?? '' );
-	$attributed = axismundi_act_member_uri( $instrument['attributedTo'] ?? '' );
+	$attributed = axismundi_act_object_publisher_uri( $instrument );
 	if ( '' === $quoting || '' === $quoted || '' === $author || '' === $target || hash_equals( $quoting, $quoted ) ) {
 		return new WP_Error( 'ax_act_outbound_quote_args', __( 'An outbound QuoteRequest requires distinct quoting and quoted Objects, an author, and a target.', 'axismundi-activities' ) );
 	}
-	if ( '' !== $attributed && ! hash_equals( $author, $attributed ) ) {
+	if ( ! empty( $instrument['attributedTo'] ) && ( '' === $attributed || ! hash_equals( $author, $attributed ) ) ) {
 		return new WP_Error( 'ax_act_outbound_quote_attribution', __( 'The inlined quoting object is attributed to a different Actor.', 'axismundi-activities' ) );
 	}
 	return axismundi_act_record_source_activity(

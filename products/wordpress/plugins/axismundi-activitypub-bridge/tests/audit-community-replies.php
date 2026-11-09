@@ -28,6 +28,17 @@ $community_reply_check = static function ( $group, $people, $users, $root, $remo
 	$check( $uri === axismundi_act_submit_outbox( $users[0], $people[0], $note, 'community-reply-' . $prefix )->get_object_uri(), 'Local reply retry reuses the same Object' );
 	$check( $root['object']['id'] === $wpdb->get_var( $wpdb->prepare( 'SELECT parent_uri FROM %i WHERE child_uri=%s', axismundi_op_thread_edges_table(), $uri ) ), 'C2S reply edge uses Object URIs without CPTs' );
 	$check( null === apply_filters( 'axismundi_act_public_outbox_payload', $created->get_payload(), $created ), 'Community submission stays out of the personal public outbox' );
+	$top_level = array( 'type' => 'Note', 'content' => 'Community root', 'audience' => $group->get_uri(), 'to' => array( $public ) );
+	$wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE subject_actor_uri=%s AND object_actor_uri=%s', axismundi_act_relations_table(), $people[0]->get_uri(), $group->get_uri() ) );
+	$blind_root = axismundi_act_submit_outbox( $users[0], $people[0], $top_level + array( 'bcc' => array( $remote_person->get_uri() ) ) );
+	$check( is_wp_error( $blind_root ) && 'ax_community_blind_address' === $blind_root->get_error_code(), 'Group submissions reject blind addresses instead of silently dropping them' );
+	$root_create = axismundi_act_submit_outbox( $users[0], $people[0], $top_level );
+	$check( $root_create instanceof Axismundi_Activity, 'A managed local Community accepts a top-level C2S Note even before the Person follows it' );
+	$local_root = $root_create->get_object_uri(); $objects[] = $local_root;
+	$check( 'pending' === ( axismundi_actors_get_community_post( $group->get_identity_id(), $local_root )['admission_state'] ?? '' ), 'Top-level C2S Note enters Community review' );
+	$root_announce = $reply_review( $users[0], $people[0], $group, $local_root, true );
+	$check( $root_announce instanceof Axismundi_Activity && $root_announce->get_payload()['object'] === $root_create->get_payload(), 'The Group wraps the top-level Note Create after approval' );
+	$check( null === apply_filters( 'axismundi_act_public_outbox_payload', $root_create->get_payload(), $root_create ), 'The top-level Group submission is not a personal outbox post' );
 	$incoming_uri = $prefix . '/received-comment'; $objects[] = $incoming_uri;
 	$incoming = array( 'id' => $incoming_uri . '/create', 'type' => 'Create', 'actor' => $remote_person->get_uri(), 'to' => array( $group->get_uri() ), 'cc' => array( $public ), 'object' => array( 'id' => $incoming_uri, 'type' => 'Note', 'attributedTo' => $remote_person->get_uri(), 'inReplyTo' => $root['object']['id'], 'audience' => $remote_person->get_uri(), 'cc' => array( $public, $group->get_uri() ), 'content' => 'Incoming reply' ) );
 	$received_comment = axismundi_activitypub_bridge_record_inbox( $incoming, array(), false, $group );
@@ -37,10 +48,13 @@ $community_reply_check = static function ( $group, $people, $users, $root, $remo
 	$forged = $note; $forged['inReplyTo'] = $forged_uri;
 	$check( is_wp_error( $prepare( $forged, $people[0] ) ), 'A parent Group claim alone cannot publish a local Community reply' );
 	$remote_group_uri = $prefix . '/remote-community';
-	$normalized = axismundi_actors_normalize_remote_actor_payload( array( 'id' => $remote_group_uri, 'type' => 'Group', 'preferredUsername' => 'remotecommunity', 'inbox' => $remote_group_uri . '/inbox', 'outbox' => $remote_group_uri . '/outbox' ), $remote_group_uri );
+	$normalized = axismundi_actors_normalize_remote_actor_payload( array( 'id' => $remote_group_uri, 'type' => 'Group', 'preferredUsername' => 'remotecommunity', 'inbox' => $remote_group_uri . '/inbox', 'outbox' => $remote_group_uri . '/outbox', 'attributedTo' => array( $remote_person->get_uri(), array( 'id' => $remote_group_uri . '/moderators', 'type' => 'OrderedCollection' ) ) ), $remote_group_uri );
 	$remote_group = axismundi_actors_upsert_remote( $normalized );
 	$check( $remote_group instanceof Axismundi_Actor, 'Remote Community fixture is cached without platform inference' );
 	$actors[] = $remote_group;
+	$top_level['audience'] = $remote_group_uri;
+	$denied = axismundi_act_submit_outbox( $users[0], $people[0], $top_level );
+	$check( is_wp_error( $denied ) && 'ax_community_audience' === $denied->get_error_code(), 'A forged selection of an unfollowed Group is rejected' );
 	$parent = $prefix . '/remote-comment'; $objects[] = $parent;
 	// Receive either shape: this is not our outbound audience contract.
 	$stored = axismundi_op_store_remote_object( array( 'id' => $parent, 'type' => 'Note', 'attributedTo' => $remote_person->get_uri(), 'audience' => $remote_person->get_uri(), 'to' => array( $public ), 'cc' => array( $remote_group_uri, $remote_person->get_uri() ), 'inReplyTo' => $prefix . '/remote-page', 'content' => 'Incoming Comment' ) );
@@ -52,6 +66,34 @@ $community_reply_check = static function ( $group, $people, $users, $root, $remo
 	$payload = $out->get_payload();
 	$check( ( $payload['object']['audience'] ?? '' ) === $remote_group_uri && $payload['to'] === array( $remote_group_uri ) && in_array( $remote_person->get_uri(), $payload['cc'], true ) && in_array( $public, $payload['cc'], true ), 'Remote reply uses the established outbound addressing' );
 	$check( array( $remote_group_uri . '/inbox' ) === $inboxes( $out ), 'Remote reply delivers only to the Community Inbox' );
+	axismundi_act_write_relation( 'follow', $people[0]->get_uri(), $remote_group_uri, 'outbound', 'accepted', null, null );
+	axismundi_act_write_relation( 'follow', $people[0]->get_uri(), $remote_person->get_uri(), 'outbound', 'accepted', null, null );
+	require_once ABSPATH . 'wp-admin/includes/template.php';
+	add_filter( 'axismundi_actors_account_selection_enabled', '__return_false', PHP_INT_MAX );
+	update_user_meta( $users[0], AXISMUNDI_ACTORS_ACTING_META, $people[0]->get_identity_id() );
+	ob_start();
+	try { axismundi_act_render_composer(); }
+	finally {
+		$composer = ob_get_clean();
+		remove_filter( 'axismundi_actors_account_selection_enabled', '__return_false', PHP_INT_MAX );
+	}
+	$check( str_contains( $composer, 'for="ax-c2s-visibility">Visibility' ) && str_contains( $composer, 'for="ax-c2s-audience">Audience' ), 'The composer renders separate Visibility and Audience fields' );
+	$check( str_contains( $composer, 'type="url" class="large-text" id="ax-c2s-audience-uri"' ), 'The composer always exposes direct Audience URI input' );
+	$positions = array_map( static fn( $field ) => strpos( $composer, 'for="ax-c2s-' . $field . '"' ), array( 'visibility', 'to', 'recipients', 'bto', 'bcc', 'audience' ) );
+	$sorted = $positions;
+	sort( $sorted, SORT_NUMERIC );
+	$check( ! in_array( false, $positions, true ) && $positions === $sorted, 'The composer renders to, cc, bto, bcc and audience in order below Visibility' );
+	$check( str_contains( $composer, '<option value="' . esc_attr( $group->get_uri() ) . '"' ) && str_contains( $composer, '<option value="' . esc_attr( $remote_group_uri ) . '"' ) && ! str_contains( $composer, '<option value="' . esc_attr( $remote_person->get_uri() ) . '"' ), 'The picker lists the managed local Community and followed remote Community but not a followed Person' );
+	$wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE subject_actor_uri=%s AND object_actor_uri=%s', axismundi_act_relations_table(), $people[0]->get_uri(), $remote_person->get_uri() ) );
+	$remote_root = axismundi_act_submit_outbox( $users[0], $people[0], $top_level );
+	$check( $remote_root instanceof Axismundi_Activity, 'A followed remote Group with a typed collection in mixed attribution accepts a root submission' );
+	$objects[] = $remote_root->get_object_uri();
+	$check( array( $remote_group_uri . '/inbox' ) === $inboxes( $remote_root ), 'The top-level remote Note is routed only to the Group Inbox' );
+	$mismatch = axismundi_act_prepare_community_submission( $top_level + array( 'inReplyTo' => $local_root ), $people[0] );
+	$check( is_wp_error( $mismatch ) && 'ax_community_parent' === $mismatch->get_error_code(), 'A selected Community cannot override a different reply parent Community' );
+	$edited_root = axismundi_act_submit_outbox( $users[0], $people[0], array( 'type' => 'Update', 'actor' => $people[0]->get_uri(), 'object' => array( 'id' => $remote_root->get_object_uri(), 'type' => 'Note', 'content' => 'Edited community root' ) ) );
+	$check( $edited_root instanceof Axismundi_Activity && array( $remote_group_uri . '/inbox' ) === $inboxes( $edited_root ), 'Editing a Group Note does not reroute to personal followers' );
+	$wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE subject_actor_uri=%s AND object_actor_uri=%s', axismundi_act_relations_table(), $people[0]->get_uri(), $remote_group_uri ) );
 	$page = $prefix . '/remote-page'; $objects[] = $page;
 	axismundi_op_store_remote_object( array( 'id' => $page, 'type' => 'Page', 'attributedTo' => $remote_person->get_uri(), 'audience' => $remote_group_uri, 'to' => array( $public ), 'name' => 'Remote Page', 'content' => 'Page body' ) );
 	$note['inReplyTo'] = $page;

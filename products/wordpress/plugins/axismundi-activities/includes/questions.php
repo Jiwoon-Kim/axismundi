@@ -192,7 +192,7 @@ function axismundi_act_question_object( array $object ) {
 	if ( $voters < 0 ) {
 		return new WP_Error( 'ax_act_question_voters', __( 'Question voter count cannot be negative.', 'axismundi-activities' ) );
 	}
-	$author = axismundi_act_member_uri( $object['attributedTo'] ?? '' );
+	$author = axismundi_act_object_publisher_uri( $object );
 	if ( '' === $author ) {
 		return new WP_Error( 'ax_act_question_author', __( 'A Question needs attributedTo.', 'axismundi-activities' ) );
 	}
@@ -426,7 +426,7 @@ function axismundi_act_question_vote_candidate( Axismundi_Activity $activity ) :
 		return null;
 	}
 	$actor_uri   = $activity->get_actor_uri();
-	$author_uri  = axismundi_act_member_uri( $object['attributedTo'] ?? '' );
+	$author_uri  = axismundi_act_object_publisher_uri( $object );
 	$object_uri  = axismundi_act_member_uri( $object['id'] ?? '' );
 	$name        = $object['name'] ?? null;
 	$reason      = null;

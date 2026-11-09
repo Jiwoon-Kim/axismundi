@@ -109,6 +109,71 @@ try {
 	$question_object = function_exists( 'axismundi_op_get_object_by_uri' ) ? axismundi_op_get_object_by_uri( $question_uri ) : null;
 	ax_q_assert( $ax_q_results, 'the optional OP adapter references a separately keyed Activities Question', ! function_exists( 'axismundi_op_get_object_by_uri' ) || ( is_array( $question_object ) && 'axismundi-activities' === (string) $question_object['source_owner'] && 'question-ledger' === (string) $question_object['source_kind'] && 'Question' === (string) $question_object['as2_type'] && (int) ( $question['identity_id'] ?? 0 ) === (int) $question_object['source_ref'] ) );
 
+	$operator = 0;
+	foreach ( $wpdb->get_results( 'SELECT identity_id, principal_id FROM ' . axismundi_actors_managers_table() . " WHERE principal_kind='wp_user'", ARRAY_A ) as $manager ) {
+		$composer_actor = axismundi_actors_get_by_identity( (int) $manager['identity_id'] );
+		if ( true === axismundi_act_outbox_authorize( (int) $manager['principal_id'], $composer_actor ) ) {
+			$operator = (int) $manager['principal_id'];
+			break;
+		}
+	}
+	ax_q_assert( $ax_q_results, 'an authorized local outbox is available for the Composer request', $operator > 0 );
+	$requirement = function_exists( 'axismundi_op_normative_requirement' ) ? axismundi_op_normative_requirement( 'question-create-wrapping' ) : null;
+	ax_q_assert( $ax_q_results, 'Question wrapping is recorded as an FEP requirement, not an AS2 restriction', 'FEP_MUST' === ( $requirement['level'] ?? null ) && 'fep-9967-poll' === ( $requirement['conformance_class'] ?? null ) );
+	if ( $operator ) {
+		$previous_user = get_current_user_id();
+		wp_set_current_user( $operator );
+		try {
+			$route = '/axismundi/activitypub/actors/' . $composer_actor->get_uuid() . '/outbox';
+			$post_question = static function ( array $document, string $key ) use ( $route ) : WP_REST_Response {
+				$request = new WP_REST_Request( 'POST', $route );
+				$request->set_header( 'Content-Type', 'application/activity+json' );
+				$request->set_header( 'X-WP-Nonce', wp_create_nonce( 'wp_rest' ) );
+				$request->set_header( 'Idempotency-Key', $key );
+				$request->set_body( wp_json_encode( $document ) );
+				return rest_do_request( $request );
+			};
+			$command = array( 'type' => 'Create', 'actor' => $composer_actor->get_uri(), 'object' => array( 'type' => 'Question', 'to' => array( 'https://www.w3.org/ns/activitystreams#Public' ), 'cc' => array( $composer_actor->get_uri() ) ) );
+			$key = wp_generate_uuid4();
+			$invalid = $post_question( $command, $key );
+			ax_q_assert( $ax_q_results, 'the Composer endpoint preserves the missing-mode error code', 422 === $invalid->get_status() && 'ax_act_question_mode' === $invalid->get_data()['code'] );
+			$command['object']['anyOf'] = axismundi_act_question_option_members( array( 'Tea', 'Tea' ) );
+			$invalid = $post_question( $command, $key );
+			ax_q_assert( $ax_q_results, 'duplicate options are rejected by the existing Question validator', 422 === $invalid->get_status() && 'ax_act_question_option_unique' === $invalid->get_data()['code'] );
+			$command['object']['anyOf'] = axismundi_act_question_option_members( array( 'Tea', 'Coffee' ) );
+			$command['object']['nameMap'] = array( 'en' => '<b>Choose</b>', 'ko' => 'Choice in Korean' );
+			$command['object']['contentMap'] = array( 'en-us' => '<p>Which?</p><script>alert(1)</script>' );
+			$command['object']['summaryMap'] = array( 'en' => '<p>Drinks</p>' );
+			$command['object']['sensitive'] = false;
+			$invalid = $command;
+			$invalid['object']['sensitive'] = 'false';
+			ax_q_assert( $ax_q_results, 'Question rejects string sensitivity rather than coercing it', 'ax_c2s_question_sensitive' === ( $post_question( $invalid, $key )->get_data()['code'] ?? '' ) );
+			$invalid = $command;
+			$invalid['object']['nameMap']['EN'] = 'Duplicate';
+			ax_q_assert( $ax_q_results, 'Question rejects duplicate normalized language keys', 'ax_c2s_question_map' === ( $post_question( $invalid, $key )->get_data()['code'] ?? '' ) );
+			$foreign = array_replace( $command, array( 'actor' => $remote_uri ) );
+			ax_q_assert( $ax_q_results, 'a different Actor cannot submit a Question through this outbox', 403 === $post_question( $foreign, $key )->get_status() );
+			$response = $post_question( $command, $key );
+			$activity_uri = $response->get_headers()['Location'] ?? '';
+			$object_uri = $response->get_data()['object'] ?? '';
+			if ( $activity_uri ) { $ax_q_activity_uris[] = $activity_uri; }
+			$poll = axismundi_act_get_question_by_uri( $object_uri );
+			if ( $poll ) { $ax_q_identity_ids[] = (int) $poll['identity_id']; }
+			$activity = axismundi_act_get( $activity_uri );
+			$stored = $activity instanceof Axismundi_Activity ? $activity->get_payload() : array();
+			$document = $stored['object'] ?? array();
+			ax_q_assert( $ax_q_results, 'Question needs no scalar content and preserves sanitized language maps and explicit false', ! array_key_exists( 'content', $document ) && false === ( $document['sensitive'] ?? null ) && 'Choose' === ( $document['nameMap']['en'] ?? null ) && 'Choice in Korean' === ( $document['nameMap']['ko'] ?? null ) && str_starts_with( $document['contentMap']['en-US'] ?? '', '<p>Which?</p>' ) && ! str_contains( $document['contentMap']['en-US'] ?? '', '<script' ) && '<p>Drinks</p>' === ( $document['summaryMap']['en'] ?? null ) );
+			ax_q_assert( $ax_q_results, 'Composer POST records one wrapped anyOf Question with server updated time', 201 === $response->get_status() && $activity_uri !== $object_uri && 'Create' === ( $stored['type'] ?? '' ) && 'Question' === ( $stored['object']['type'] ?? '' ) && ! empty( $stored['object']['updated'] ) && array( 'Tea', 'Coffee' ) === ( $poll['options'] ?? null ) );
+			ax_q_assert( $ax_q_results, 'Composer Question has no OP local Object row', ! axismundi_op_get_local_object( $object_uri ) );
+			$retry = $post_question( $command, $key );
+			ax_q_assert( $ax_q_results, 'Composer retry returns the original Activity and Question IDs', 201 === $retry->get_status() && $activity_uri === ( $retry->get_headers()['Location'] ?? '' ) && $object_uri === ( $retry->get_data()['object'] ?? '' ) );
+			$command['object']['anyOf'][0]['name'] = 'Water';
+			ax_q_assert( $ax_q_results, 'reusing a retry key for a different Question is rejected', 409 === $post_question( $command, $key )->get_status() );
+		} finally {
+			wp_set_current_user( $previous_user );
+		}
+	}
+
 	$first = $voter instanceof Axismundi_Actor && $author instanceof Axismundi_Actor ? ax_q_vote( $voter, $question_uri, $author->get_uri(), 'Cats' ) : null;
 	if ( $first instanceof Axismundi_Activity ) {
 		$ax_q_activity_uris[] = $first->get_uri();

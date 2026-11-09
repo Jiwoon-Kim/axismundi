@@ -15,6 +15,7 @@ async function run() {
     let submit;
     let showPreview;
     const requestView = {hidden: true, textContent: ''};
+    let changeObjectType, changeActivityType, changeSensitive;
     const preview = {addEventListener(event, handler) { showPreview = handler; }};
     const form = {
         querySelector() { return button; },
@@ -29,18 +30,35 @@ async function run() {
     const mentions = {value: ''};
     const recipients = {value: ''};
     const extraTo = {value: ''};
+    const objectType = {value: 'Note', addEventListener(_, handler) { changeObjectType = handler; }};
+    const activityType = {value: 'Create', addEventListener(_, handler) { changeActivityType = handler; }};
+    const target = {value: ''};
+    const questionMode = {value: 'anyOf'};
+    const questionOptions = {value: 'Tea\nCoffee'};
+    const sensitive = {checked: false, addEventListener(_, handler) { changeSensitive = handler; }};
+    const questionName = {value: ''};
+    const questionSummary = {value: ''};
+    const questionLanguage = {value: ''};
     const blindTo = {value: ''};
     const blindCc = {value: ''};
+    for (const field of [parent, visibility, community, communityUri, mentions, recipients, extraTo, blindTo, blindCc, questionMode, questionOptions, sensitive, questionName, questionSummary, questionLanguage, target]) {
+        const row = {};
+        field.closest = () => row;
+    }
     const followers = 'https://example.test/followers';
     const nodes = {'ax-c2s-composer': form, 'ax-c2s-parent': parent, 'ax-c2s-content': content, 'ax-c2s-result': result, 'ax-c2s-visibility': visibility, 'ax-c2s-audience': community, 'ax-c2s-mentions': mentions, 'ax-c2s-recipients': recipients, 'ax-c2s-bto': blindTo, 'ax-c2s-bcc': blindCc};
     nodes['ax-c2s-audience-uri'] = communityUri;
+    nodes['ax-c2s-sensitive'] = sensitive;
+    nodes['ax-c2s-question-name'] = questionName;
+    nodes['ax-c2s-question-summary'] = questionSummary;
+    nodes['ax-c2s-question-language'] = questionLanguage;
     const calls = [];
     let serial = 0;
     let response = {ok: false, json: async () => ({message: 'Temporary failure'})};
     const context = {
         window: {axismundiC2SComposer: {outbox: 'https://example.test/outbox', followers, nonce: 'test-nonce', success: 'Published', failure: 'Failed', busy: 'Publishing', invalidActor: 'Invalid actor'}, crypto: {randomUUID: () => 'key-' + ++serial}, location: {href: 'https://example.test/admin'}},
         document: {
-            getElementById: id => nodes[id] || {'ax-c2s-preview': preview, 'ax-c2s-request': requestView, 'ax-c2s-to': extraTo, 'ax-c2s-object-type': {value: 'Note'}, 'ax-c2s-activity': {value: 'Create'}}[id],
+            getElementById: id => nodes[id] || {'ax-c2s-preview': preview, 'ax-c2s-request': requestView, 'ax-c2s-to': extraTo, 'ax-c2s-object-type': objectType, 'ax-c2s-question-mode': questionMode, 'ax-c2s-question-options': questionOptions, 'ax-c2s-target': target, 'ax-c2s-activity': activityType}[id],
             createElement: () => ({textContent: '', get innerHTML() { return this.textContent.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }})
         },
         URL,
@@ -164,6 +182,53 @@ async function run() {
     await send();
     const manualGroup = JSON.parse(calls.at(-1).body).object;
     check(manualGroup.audience === communityUri.value && manualGroup.to.includes(communityUri.value) && !manualGroup.cc.includes(followers), 'A manually entered Audience URI replaces personal follower addressing');
+    objectType.value = 'Question';
+    context.window.axismundiC2SMentions.publishQuestionLabel = 'Publish Question';
+    changeObjectType();
+    check(!questionOptions.disabled && !questionOptions.closest().hidden && parent.disabled && community.disabled && button.value === 'Publish Question', 'Question mode exposes choices and disables Note-only fields');
+    check(!content.required, 'Question body is optional');
+    content.value = '';
+    parent.value = 'https://example.test/stale-parent';
+    response = {ok: false, json: async () => ({code: 'ax_act_question_options', message: 'Need two choices'})};
+    await send();
+    const poll = JSON.parse(calls.at(-1).body);
+    check(!('content' in poll.object) && poll.object.sensitive === false, 'Bodyless poll omits content and sends an explicit false boolean');
+    check(poll.type === 'Create' && poll.object.type === 'Question' && !('oneOf' in poll.object), 'Multiple-choice poll sends Create(Question) with anyOf only');
+    check(poll.object.anyOf.map(option => option.name).join(',') === 'Tea,Coffee' && poll.object.anyOf.every(option => option.type === 'Note' && option.replies.totalItems === 0), 'Poll choices become ordered zero-tally option descriptors');
+    check(!('inReplyTo' in poll.object) && !('audience' in poll.object) && !poll.object.to.includes(communityUri.value), 'Question never inherits a stale Note parent or community');
+    check(result.textContent === 'ax_act_question_options: Need two choices', 'Poll validation displays the server error code and message');
+    questionName.value = 'Pick one';
+    questionSummary.value = 'Drinks';
+    sensitive.checked = true;
+    context.window.axismundiC2SMentions.defaultLanguage = 'ko-KR';
+    await send();
+    const automatic = JSON.parse(calls.at(-1).body).object;
+    check(automatic.sensitive === true && automatic.nameMap['ko-KR'] === automatic.name && automatic.summaryMap['ko-KR'] === automatic.summary && !('contentMap' in automatic), 'Automatic language mirrors entered fields and omits the empty body');
+    questionLanguage.value = 'en';
+    content.value = 'Tea < Coffee';
+    await send();
+    const explicitLanguage = JSON.parse(calls.at(-1).body).object;
+    assert.deepEqual(explicitLanguage.nameMap, {en: explicitLanguage.name});
+    assert.deepEqual(explicitLanguage.summaryMap, {en: explicitLanguage.summary});
+    check(explicitLanguage.contentMap.en === explicitLanguage.content && explicitLanguage.content === '<p>Tea &lt; Coffee</p>' && explicitLanguage.anyOf.every(option => !('nameMap' in option)), 'Selected language mirrors scalar content and leaves option names scalar');
+    questionLanguage.value = 'und';
+    await send();
+    const undetermined = JSON.parse(calls.at(-1).body).object;
+    check(undetermined.name === 'Pick one' && undetermined.content && !('nameMap' in undetermined) && !('contentMap' in undetermined) && !('summaryMap' in undetermined), 'Undetermined language keeps only scalar fields');
+    objectType.value = 'Note';
+    changeObjectType();
+    check(content.required && questionOptions.disabled && !sensitive.disabled, 'Note retains required content and the shared sensitive control');
+    await send();
+    check(JSON.parse(calls.at(-1).body).object.sensitive === true, 'Create(Note) sends the same sensitive boolean as Question');
+    activityType.value = 'Update';
+    target.value = 'https://example.test/objects/existing';
+    changeActivityType();
+    await send();
+    check(!('sensitive' in JSON.parse(calls.at(-1).body).object), 'Note Update leaves unchanged sensitivity alone');
+    sensitive.checked = false;
+    changeSensitive();
+    await send();
+    check(JSON.parse(calls.at(-1).body).object.sensitive === false, 'Note Update can explicitly clear sensitivity');
     console.log(`== ${checks} checks, 0 failed ==`);
 }
 run().catch(error => { console.error(error); process.exitCode = 1; });

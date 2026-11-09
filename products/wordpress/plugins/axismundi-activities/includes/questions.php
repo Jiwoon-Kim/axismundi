@@ -247,7 +247,7 @@ function axismundi_act_question_option_members( array $options, array $counts = 
  *
  * @return Axismundi_Activity|WP_Error
  */
-function axismundi_act_create_question( Axismundi_Actor $actor, array $input ) {
+function axismundi_act_create_question( Axismundi_Actor $actor, array $input, string $source = '' ) {
 	if ( ! $actor->is_local() ) {
 		return new WP_Error( 'ax_act_question_actor', __( 'Only a local Actor can author a local Question.', 'axismundi-activities' ) );
 	}
@@ -269,8 +269,9 @@ function axismundi_act_create_question( Axismundi_Actor $actor, array $input ) {
 		'attributedTo' => $actor->get_uri(),
 		$mode          => axismundi_act_question_option_members( $options ),
 		'votersCount'  => 0,
+		'updated'      => gmdate( 'c' ),
 	);
-	foreach ( array( 'content', 'summary', 'endTime', 'to', 'cc', 'tag', 'attachment' ) as $property ) {
+	foreach ( array( 'content', 'summary', 'name', 'contentMap', 'nameMap', 'summaryMap', 'sensitive', 'endTime', 'to', 'cc', 'tag', 'attachment' ) as $property ) {
 		if ( array_key_exists( $property, $input ) ) {
 			$object[ $property ] = $input[ $property ];
 		}
@@ -285,8 +286,114 @@ function axismundi_act_create_question( Axismundi_Actor $actor, array $input ) {
 			$payload[ $property ] = $input[ $property ];
 		}
 	}
-	return axismundi_act_record_activity( $payload, 'outbound' );
+	return axismundi_act_record_source_activity( $payload, 'outbound', $source );
 }
+
+/** Translate the outbox document into a ledger-owned poll, not an OP local Object. */
+function axismundi_act_submit_question( int $user, Axismundi_Actor $actor, array $payload, string $key ) {
+	$object = $payload['object'];
+	if ( ( $payload['actor'] ?? null ) !== $actor->get_uri() || ( $object['attributedTo'] ?? $actor->get_uri() ) !== $actor->get_uri() ) {
+		return new WP_Error( 'ax_c2s_actor_mismatch', 'Question attribution must match the outbox Actor.', array( 'status' => 403 ) );
+	}
+	if ( '' !== $key && ! preg_match( '/^[\x21-\x7e]{1,128}$/D', $key ) ) {
+		return new WP_Error( 'ax_c2s_retry_key', 'Invalid Idempotency-Key.', array( 'status' => 400 ) );
+	}
+	if ( isset( $object['inReplyTo'] ) || isset( $object['audience'] ) || isset( $payload['audience'] ) ) {
+		return new WP_Error( 'ax_c2s_question_scope', 'This outbox accepts standalone Questions only.', array( 'status' => 422 ) );
+	}
+	$modes = array_intersect( array( 'oneOf', 'anyOf' ), array_keys( $object ) );
+	if ( 1 !== count( $modes ) ) {
+		return new WP_Error( 'ax_act_question_mode', 'A Question needs exactly one of oneOf or anyOf.', array( 'status' => 422 ) );
+	}
+	$mode = reset( $modes );
+	$input = array( 'mode' => $mode, 'options' => $object[ $mode ] );
+	foreach ( array( 'content', 'summary', 'name' ) as $field ) {
+		$clean = 'name' === $field ? 'sanitize_text_field' : 'wp_kses_post';
+		if ( array_key_exists( $field, $object ) ) {
+			if ( ! is_string( $object[ $field ] ) ) { return new WP_Error( 'ax_c2s_question_text', 'Question text must be a string.', array( 'status' => 400 ) ); }
+			if ( '' !== trim( $object[ $field ] ) ) { $input[ $field ] = $clean( $object[ $field ] ); }
+		}
+		$map = $field . 'Map';
+		if ( ! array_key_exists( $map, $object ) ) { continue; }
+		if ( ! is_array( $object[ $map ] ) || array_is_list( $object[ $map ] ) ) {
+			return new WP_Error( 'ax_c2s_question_map', 'Question language maps must be keyed objects.', array( 'status' => 400 ) );
+		}
+		$languages = array();
+		foreach ( $object[ $map ] as $language => $value ) {
+			$language = is_string( $language ) ? axismundi_actors_normalize_language_tag( $language ) : '';
+			if ( '' === $language || ! is_string( $value ) || isset( $languages[ $language ] ) ) {
+				return new WP_Error( 'ax_c2s_question_map', 'Invalid or duplicate Question language map entry.', array( 'status' => 400 ) );
+			}
+			$languages[ $language ] = true;
+			$input[ $map ][ $language ] = $clean( $value );
+		}
+		ksort( $input[ $map ] );
+	}
+	if ( array_key_exists( 'sensitive', $object ) ) {
+		if ( ! is_bool( $object['sensitive'] ) ) { return new WP_Error( 'ax_c2s_question_sensitive', 'Question sensitive must be a boolean.', array( 'status' => 400 ) ); }
+		$input['sensitive'] = $object['sensitive'];
+	}
+	if ( isset( $object['endTime'] ) ) {
+		$end = axismundi_act_datetime( $object['endTime'] );
+		if ( ! $end ) { return new WP_Error( 'ax_c2s_question_end', 'Invalid Question endTime.', array( 'status' => 400 ) ); }
+		$input['endTime'] = str_replace( ' ', 'T', $end ) . 'Z';
+	}
+	foreach ( array( 'to', 'cc', 'bto', 'bcc' ) as $field ) {
+		if ( isset( $payload[ $field ], $object[ $field ] ) && $payload[ $field ] !== $object[ $field ] ) {
+			return new WP_Error( 'ax_c2s_audience_conflict', 'Create and Question addressing must agree.', array( 'status' => 400 ) );
+		}
+		$value = $object[ $field ] ?? $payload[ $field ] ?? array();
+		$values = is_array( $value ) ? $value : array( $value );
+		foreach ( $values as $uri ) {
+			if ( ! is_string( $uri ) || '' === axismundi_act_uri( $uri ) || ( in_array( $field, array( 'bto', 'bcc' ), true ) && 'https://www.w3.org/ns/activitystreams#Public' === $uri ) ) {
+				return new WP_Error( 'ax_c2s_question_address', 'Question recipients must be HTTP(S) URIs; blind recipients cannot be Public.', array( 'status' => 400 ) );
+			}
+		}
+		$input[ $field ] = array_values( array_unique( $values ) );
+	}
+	if ( isset( $object['tag'] ) ) {
+		if ( ! is_array( $object['tag'] ) || ! array_is_list( $object['tag'] ) ) { return new WP_Error( 'ax_c2s_question_tags', 'Question mentions must be a list.', array( 'status' => 400 ) ); }
+		foreach ( $object['tag'] as $tag ) {
+			if ( ! is_array( $tag ) || 'Mention' !== ( $tag['type'] ?? null ) || ! is_string( $tag['href'] ?? null ) || '' === axismundi_act_uri( $tag['href'] ) || ! is_string( $tag['name'] ?? null ) ) {
+				return new WP_Error( 'ax_c2s_question_tags', 'Question tags must be Mention descriptors.', array( 'status' => 400 ) );
+			}
+			$input['tag'][] = array( 'type' => 'Mention', 'href' => $tag['href'], 'name' => sanitize_text_field( $tag['name'] ) );
+		}
+	}
+	$options = axismundi_act_question_options( $input['options'] );
+	if ( is_wp_error( $options ) ) { $options->add_data( array( 'status' => 422 ) ); return $options; }
+	$input['options'] = $options;
+	$intent = hash( 'sha256', wp_json_encode( array( 'Question', $input ) ) );
+	return axismundi_act_submission_lock( array( 'source_owner' => 'axismundi-activities', 'source_kind' => 'outbox', 'source_ref' => $actor->get_identity_id() ), static function () use ( $user, $actor, $key, $input, $intent ) {
+		global $wpdb;
+		$allowed = axismundi_act_outbox_authorize( $user, $actor );
+		if ( is_wp_error( $allowed ) ) { return $allowed; }
+		$prefix = '' === $key ? '' : 'ap-c2s:' . $actor->get_identity_id() . ':' . $user . ':' . hash( 'sha256', $key );
+		$source = '' === $prefix ? '' : $prefix . ':' . $intent;
+		if ( '' !== $prefix ) {
+			$row = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM %i WHERE actor_uri_hash=%s AND (source_event_key=%s OR source_event_key LIKE %s)', axismundi_act_activities_table(), hash( 'sha256', $actor->get_uri() ), $prefix, $wpdb->esc_like( $prefix . ':' ) . '%' ), ARRAY_A );
+			if ( $row ) {
+				return $row['source_event_key'] === $source ? axismundi_act_hydrate( $row ) : new WP_Error( 'ax_c2s_retry_conflict', 'Idempotency-Key already identifies different input.', array( 'status' => 409 ) );
+			}
+		}
+		return axismundi_act_create_question( $actor, $input, $source );
+	} );
+}
+
+add_action( 'init', static function () : void {
+	if ( ! function_exists( 'axismundi_op_register_normative_requirement' ) ) { return; }
+	axismundi_op_register_normative_requirement( 'question-create-wrapping', array(
+		'subject'           => 'Question publication',
+		'level'             => 'FEP_MUST',
+		'conformance_class' => 'fep-9967-poll',
+		'source'            => 'https://codeberg.org/fediverse/fep/src/branch/main/fep/9967/fep-9967.md',
+		'kind'              => 'outbound-construction',
+		'enforced_by'       => array(
+			'producer' => 'includes/questions.php::axismundi_act_create_question',
+			'audit'    => 'axismundi-activities/tests/audit-questions.php',
+		),
+	) );
+} );
 
 /**
  * Author one local FEP-9967 Vote Create(Note) directly from the ledger.

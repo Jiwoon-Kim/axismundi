@@ -20,12 +20,26 @@
     const requestView = document.getElementById('ax-c2s-request');
     const target = document.getElementById('ax-c2s-target');
     const activityType = document.getElementById('ax-c2s-activity');
+    const objectType = document.getElementById('ax-c2s-object-type');
+    const questionMode = document.getElementById('ax-c2s-question-mode');
+    const questionOptions = document.getElementById('ax-c2s-question-options');
+    const sensitive = document.getElementById('ax-c2s-sensitive');
+    const questionName = document.getElementById('ax-c2s-question-name');
+    const questionSummary = document.getElementById('ax-c2s-question-summary');
+    const questionLanguage = document.getElementById('ax-c2s-question-language');
+    const questionFields = [questionMode, questionOptions, questionName, questionSummary, questionLanguage].filter(Boolean);
+    const escapeContent = value => {
+        const escaped = document.createElement('div');
+        escaped.textContent = value;
+        return '<p>' + escaped.innerHTML.replace(/\r?\n/g, '<br>') + '</p>';
+    };
+    const isQuestion = () => activityType.value === 'Create' && objectType.value === 'Question';
     const addressFields = [mentions, extraTo, recipients, blindTo, blindCc].filter(Boolean);
     const createFields = [parent, visibility, community, communityUri, ...addressFields].filter(Boolean);
     const originalLabel = button.value;
     const publicUri = 'https://www.w3.org/ns/activitystreams#Public';
     const lines = value => value.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
-    const groupValue = () => (communityUri?.value ?? community?.value ?? '').trim();
+    const groupValue = () => isQuestion() ? '' : (communityUri?.value ?? community?.value ?? '').trim();
     function presetAddresses(mode, group) {
         switch (mode) {
             case 'public': return group ? [[group, publicUri], []] : [[publicUri], [config.followers]];
@@ -60,34 +74,47 @@
         target.disabled = !updating;
         target.required = updating;
         createFields.forEach(field => {
-            field.disabled = updating;
-            field.closest('tr').hidden = updating;
+            const hidden = updating || (isQuestion() && [parent, community, communityUri].includes(field));
+            field.disabled = hidden;
+            field.closest('tr').hidden = hidden;
         });
-        button.value = updating ? window.axismundiC2SMentions.updateLabel : originalLabel;
+        questionFields.forEach(field => {
+            field.disabled = !isQuestion();
+            field.closest('tr').hidden = !isQuestion();
+        });
+        objectType.disabled = updating;
+        if (updating) objectType.value = 'Note';
+        content.required = !isQuestion();
+        button.value = updating ? window.axismundiC2SMentions.updateLabel
+            : isQuestion() ? window.axismundiC2SMentions.publishQuestionLabel : originalLabel;
+        syncPreset();
         if (requestView) requestView.hidden = true;
     }
     if (target) {
         if (target.value) content.value = window.axismundiC2SMentions.editContent;
         activityType.addEventListener('change', syncMode);
+        objectType.addEventListener('change', syncMode);
         syncMode();
     }
     let intent = '';
     let retryKey = '';
     let busy = false;
+    let sensitiveChanged = false;
+    sensitive.addEventListener('change', () => { sensitiveChanged = true; });
     async function prepare(previewOnly) {
         if (busy || !form.reportValidity()) return;
         if (requestView) requestView.hidden = true;
-        const escaped = document.createElement('div');
-        escaped.textContent = content.value;
         const readActors = (field, visible = false) => lines(field.value).map(value => {
             const url = new URL(value);
             if (!/^https?:$/.test(url.protocol) || url.username || url.password || (!visible && value === publicUri)) throw new Error();
             return value;
         });
         const updating = activityType.value === 'Update';
+        const question = isQuestion();
         let mentioned = [], note;
         if (updating) {
             note = {id: target.value.trim(), type: 'Note', content: content.value};
+            if (sensitiveChanged) note.sensitive = sensitive.checked;
         } else {
         let to, cc, bto, bcc;
         const group = groupValue();
@@ -124,18 +151,34 @@
         to = [...new Set([...presetTo, ...to.filter(explicit)])];
         cc = [...new Set([...presetCc, ...cc.filter(explicit)])].filter(uri => !to.includes(uri));
         note = {
-            type: document.getElementById('ax-c2s-object-type').value,
-            content: '<p>' + escaped.innerHTML.replace(/\r?\n/g, '<br>') + '</p>',
+            type: objectType.value,
+            sensitive: sensitive.checked,
             to,
             cc
         };
-        if (parent.value.trim()) note.inReplyTo = parent.value.trim();
+        if (!question || content.value.trim()) note.content = escapeContent(content.value);
+        if (question) {
+            note[questionMode.value] = lines(questionOptions.value).map(name => ({
+                type: 'Note', name, replies: {type: 'Collection', totalItems: 0}
+            }));
+            if (questionName.value.trim()) note.name = questionName.value.trim();
+            if (questionSummary.value.trim()) note.summary = escapeContent(questionSummary.value);
+            const language = questionLanguage.value.trim() || window.axismundiC2SMentions.defaultLanguage;
+            if (language && language.toLowerCase() !== 'und') {
+                for (const property of ['name', 'content', 'summary']) {
+                    if (note[property]) note[property + 'Map'] = {[language]: note[property]};
+                }
+            }
+        } else if (parent.value.trim()) note.inReplyTo = parent.value.trim();
         if (bto.length) note.bto = bto;
         if (bcc.length) note.bcc = bcc;
         if (group) note.audience = group;
         }
         busy = true;
         button.disabled = true;
+        objectType.disabled = true;
+        sensitive.disabled = true;
+        questionFields.forEach(field => { field.disabled = true; });
         if (target) activityType.disabled = target.disabled = true;
         if (preview) preview.disabled = true;
         parent.readOnly = true;
@@ -200,7 +243,7 @@
             const response = await fetch(config.outbox, request);
             if (!response.ok) {
                 const error = await response.json().catch(function () { return {}; });
-                throw new Error(error.message || config.failure);
+                throw new Error(question && error.code ? error.code + ': ' + (error.message || config.failure) : error.message || config.failure);
             }
             result.textContent = config.success;
             const created = await response.json().catch(() => null);
@@ -217,6 +260,7 @@
             }
             if (!updating) {
                 form.reset();
+                sensitiveChanged = false;
                 syncPreset();
             }
             intent = '';
@@ -226,6 +270,8 @@
         } finally {
             busy = false;
             button.disabled = false;
+            objectType.disabled = false;
+            sensitive.disabled = false;
             if (preview) preview.disabled = false;
             parent.readOnly = false;
             content.readOnly = false;

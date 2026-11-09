@@ -11,6 +11,9 @@ domain/range는 타입 추론의 근거이지 자동 거부 조건이 아니다.
 이유만으로 입력 거부가 구현되었다고 주장하지 않는다. 정책은 기존
 `axismundi_op_register_normative_requirement()`로 등록하고 실제 검사와 감사 위치를
 `enforced_by`에 기록한다. 제품 정책은 `LOCAL_POLICY`이며 AS2의 MUST로 표시하지 않는다.
+특정 FEP의 필수 요구는 `FEP_MUST`로 기록한다. 예를 들어
+`question-create-wrapping`은 [FEP-9967](https://codeberg.org/fediverse/fep/src/branch/main/fep/9967/fep-9967.md)
+투표 발행에만 적용하며, AS2의 단독 Question 수신을 금지하지 않는다.
 
 ## 이번 보정
 

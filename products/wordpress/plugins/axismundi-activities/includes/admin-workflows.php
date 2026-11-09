@@ -180,8 +180,23 @@ function axismundi_act_render_composer() : void {
 	if ( $edit ) { $actor = $author; }
 	echo '<p><strong>' . esc_html( $actor->get_display_name() ) . '</strong> <code>' . esc_html( $actor->get_uri() ) . '</code></p>';
 	echo '<label for="ax-c2s-activity">' . esc_html__( 'Activity', 'axismundi-activities' ) . '</label> <select id="ax-c2s-activity"><option value="Create">Create</option><option value="Update"' . selected( (bool) $edit, true, false ) . '>Update</option></select> ';
-	echo '<label for="ax-c2s-object-type">' . esc_html__( 'Object type', 'axismundi-activities' ) . '</label> <select id="ax-c2s-object-type"><option value="Note">Note</option></select>';
-	echo '<form id="ax-c2s-composer"><table class="form-table"><tr><th><label for="ax-c2s-parent">' . esc_html__( 'Parent Object URI (optional)', 'axismundi-activities' ) . '</label></th><td><input class="large-text" type="url" id="ax-c2s-parent"></td></tr><tr><th><label for="ax-c2s-content">' . esc_html__( 'Note', 'axismundi-activities' ) . '</label></th><td><textarea class="large-text" id="ax-c2s-content" rows="8" required></textarea></td></tr>';
+	echo '<label for="ax-c2s-object-type">' . esc_html__( 'Object type', 'axismundi-activities' ) . '</label> <select id="ax-c2s-object-type"><option value="Note">Note</option><option value="Question">Question</option></select>';
+	echo '<form id="ax-c2s-composer"><table class="form-table"><tr><th><label for="ax-c2s-parent">' . esc_html__( 'Parent Object URI (optional)', 'axismundi-activities' ) . '</label></th><td><input class="large-text" type="url" id="ax-c2s-parent"></td></tr><tr><th><label for="ax-c2s-content">' . esc_html__( 'Content', 'axismundi-activities' ) . '</label></th><td><textarea class="large-text" id="ax-c2s-content" rows="8" required></textarea></td></tr>';
+	echo '<tr hidden><th><label for="ax-c2s-question-mode">' . esc_html__( 'Poll mode', 'axismundi-activities' ) . '</label></th><td><select id="ax-c2s-question-mode" disabled><option value="oneOf">' . esc_html__( 'Single choice', 'axismundi-activities' ) . '</option><option value="anyOf">' . esc_html__( 'Multiple choices', 'axismundi-activities' ) . '</option></select></td></tr>';
+	echo '<tr hidden><th><label for="ax-c2s-question-options">' . esc_html__( 'Poll options (one per line)', 'axismundi-activities' ) . '</label></th><td><textarea class="large-text" id="ax-c2s-question-options" rows="4" disabled></textarea></td></tr>';
+	echo '<tr hidden><th><label for="ax-c2s-question-name">' . esc_html__( 'Title', 'axismundi-activities' ) . '</label></th><td><input class="large-text" id="ax-c2s-question-name" type="text" disabled></td></tr>';
+	echo '<tr hidden><th><label for="ax-c2s-question-summary">' . esc_html__( 'Summary', 'axismundi-activities' ) . '</label></th><td><textarea class="large-text" id="ax-c2s-question-summary" rows="2" disabled></textarea></td></tr>';
+	echo '<tr><th><label for="ax-c2s-sensitive">' . esc_html__( 'Sensitive content', 'axismundi-activities' ) . '</label></th><td><input type="checkbox" id="ax-c2s-sensitive"' . checked( ! empty( $edit['document']['sensitive'] ), true, false ) . '></td></tr>';
+	$default_language = axismundi_op_default_language_for_user( get_current_user_id() );
+	$language_label = 'user' === $default_language['source'] ? __( 'User language', 'axismundi-activities' ) : __( 'Site default', 'axismundi-activities' );
+	/* translators: 1: language source, 2: BCP-47 language tag. */
+	$automatic_language = sprintf( __( 'Automatic (%1$s: %2$s)', 'axismundi-activities' ), $language_label, $default_language['language'] );
+	echo '<tr hidden><th><label for="ax-c2s-question-language">' . esc_html__( 'Language', 'axismundi-activities' ) . '</label></th><td><input class="regular-text" id="ax-c2s-question-language" type="text" list="ax-c2s-language-options" placeholder="' . esc_attr( $automatic_language ) . '" disabled>';
+	echo '<datalist id="ax-c2s-language-options">';
+	foreach ( axismundi_op_language_options() as $language ) {
+		echo '<option value="' . esc_attr( $language['value'] ) . '" label="' . esc_attr( $language['label'] ) . '"></option>';
+	}
+	echo '</datalist></td></tr>';
 	echo '<tr hidden><th><label for="ax-c2s-target">' . esc_html__( 'Object URI', 'axismundi-activities' ) . '</label></th><td><input type="url" class="large-text" id="ax-c2s-target" value="' . esc_attr( $edit['object_uri'] ?? '' ) . '"' . ( $edit ? ' readonly' : '' ) . '></td></tr>';
 	echo '<tr><th><label for="ax-c2s-visibility">' . esc_html__( 'Visibility', 'axismundi-activities' ) . '</label></th><td><select id="ax-c2s-visibility" required><option value="">' . esc_html__( 'Select visibility', 'axismundi-activities' ) . '</option>';
 	foreach ( array( 'public' => __( 'Public', 'axismundi-activities' ), 'unlisted' => __( 'Quiet public', 'axismundi-activities' ), 'followers' => __( 'Followers', 'axismundi-activities' ), 'mentioned' => __( 'Mentioned only', 'axismundi-activities' ) ) as $value => $label ) {
@@ -221,6 +236,8 @@ function axismundi_act_render_composer() : void {
 		'actor' => $actor->get_uri(),
 		'editContent' => $edit['document']['content'] ?? '',
 		'updateLabel' => __( 'Update Note', 'axismundi-activities' ),
+		'publishQuestionLabel' => __( 'Publish Question', 'axismundi-activities' ),
+		'defaultLanguage' => $default_language['language'],
 		'activityLabel' => __( 'Activity URI:', 'axismundi-activities' ),
 		'objectLabel' => __( 'Object URI:', 'axismundi-activities' ),
 		'mentionRequired' => __( 'Mentioned only requires at least one mentioned Actor.', 'axismundi-activities' ),
@@ -229,5 +246,5 @@ function axismundi_act_render_composer() : void {
 		'url' => rest_url( 'axismundi/v1/actors/mention-search' ),
 		'unresolved' => __( 'Could not resolve every mention. Use comma-separated handles of known Actors.', 'axismundi-activities' ),
 	) );
-	wp_add_inline_script( 'axismundi-c2s-composer', 'window.axismundiC2SComposer = ' . wp_json_encode( array( 'outbox' => axismundi_op_actor_outbox_url( $actor ), 'followers' => axismundi_op_actor_followers_url( $actor ), 'nonce' => wp_create_nonce( 'wp_rest' ), 'success' => __( 'Note published to the outbox.', 'axismundi-activities' ), 'failure' => __( 'Submission failed. Retry without changing the Note.', 'axismundi-activities' ), 'busy' => __( 'Publishing...', 'axismundi-activities' ), 'invalidActor' => __( 'Enter an absolute HTTP or HTTPS Actor URI on each line.', 'axismundi-activities' ) ) ) . ';', 'before' );
+	wp_add_inline_script( 'axismundi-c2s-composer', 'window.axismundiC2SComposer = ' . wp_json_encode( array( 'outbox' => axismundi_op_actor_outbox_url( $actor ), 'followers' => axismundi_op_actor_followers_url( $actor ), 'nonce' => wp_create_nonce( 'wp_rest' ), 'success' => __( 'Activity saved to the outbox.', 'axismundi-activities' ), 'failure' => __( 'Submission failed. Retry without changing the input.', 'axismundi-activities' ), 'busy' => __( 'Publishing...', 'axismundi-activities' ), 'invalidActor' => __( 'Enter an absolute HTTP or HTTPS Actor URI on each line.', 'axismundi-activities' ) ) ) . ';', 'before' );
 }

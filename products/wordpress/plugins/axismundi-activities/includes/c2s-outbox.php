@@ -46,6 +46,9 @@ function axismundi_act_submit_outbox( int $user_id, Axismundi_Actor $actor, arra
 	$allowed = axismundi_act_outbox_authorize( $user_id, $actor );
 	if ( is_wp_error( $allowed ) ) { return $allowed; }
 	$type = $payload['type'] ?? null;
+	if ( 'Create' === $type && is_array( $payload['object'] ?? null ) && 'Question' === ( $payload['object']['type'] ?? null ) ) {
+		return axismundi_act_submit_question( $user_id, $actor, $payload, $retry_key );
+	}
 	if ( in_array( $type, array( 'Add', 'Remove', 'https://www.w3.org/ns/activitystreams#Add', 'https://www.w3.org/ns/activitystreams#Remove' ), true ) ) {
 		$group = is_string( $payload['target'] ?? null ) ? axismundi_actors_moderators_group_for_uri( $payload['target'] ) : null;
 		if ( $group ) { $payload['type'] = axismundi_act_type( $type ); return axismundi_act_submit_moderators( $user_id, $actor, $group, $payload, $retry_key ); }
@@ -57,7 +60,7 @@ function axismundi_act_submit_outbox( int $user_id, Axismundi_Actor $actor, arra
 	$reaction_actor = axismundi_act_validate_reaction_actor( $actor );
 	if ( is_wp_error( $reaction_actor ) ) { return new WP_Error( 'ax_c2s_actor', $reaction_actor->get_error_message(), array( 'status' => 403 ) ); }
 	if ( ! is_string( $type ) || ! in_array( $type, array( 'Like', 'Undo', 'https://www.w3.org/ns/activitystreams#Like', 'https://www.w3.org/ns/activitystreams#Undo' ), true ) ) {
-		return new WP_Error( 'ax_c2s_not_implemented', 'This outbox accepts Like, Undo(Like), Create(Note), bare Note and Delete(local Object).', array( 'status' => 422 ) );
+		return new WP_Error( 'ax_c2s_not_implemented', 'This outbox accepts Like, Undo(Like), Create(Note), Create(Question), bare Note and local Note edits.', array( 'status' => 422 ) );
 	}
 	$type = axismundi_act_type( $type );
 	if ( ! is_string( $payload['actor'] ?? null ) || ! hash_equals( $actor->get_uri(), $payload['actor'] ) ) {

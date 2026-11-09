@@ -17,9 +17,9 @@ require_once WP_PLUGIN_DIR . '/axismundi-actors/includes/managed-groups.php';
 require_once WP_PLUGIN_DIR . '/axismundi-activities/includes/repository.php';
 require_once WP_PLUGIN_DIR . '/axismundi-activities/includes/relations.php';
 require_once WP_PLUGIN_DIR . '/axismundi-activities/includes/local-social.php';
-require_once __DIR__ . '/../includes/repository.php';
-require_once __DIR__ . '/../includes/topics.php';
-require_once __DIR__ . '/../includes/memberships.php';
+// Load the plugin as it loads itself; a curated subset drifts from its own require list.
+require_once __DIR__ . '/../axismundi-forum.php';
+// is_admin() is false under CLI, so the admin surface is required explicitly.
 require_once __DIR__ . '/../includes/admin.php';
 
 axismundi_forum_install();
@@ -82,6 +82,8 @@ try {
 		'a disabled managed Group is not a public community',
 		$group instanceof Axismundi_Actor && ! axismundi_forum_is_community( $group_id )
 	);
+	// Auto-join reads the operator's acting Actor, so the operator must exist before publishing.
+	wp_set_current_user( $owner );
 	axismundi_actors_set_status( $group_id, 'public' );
 	$group = axismundi_actors_get_by_identity( $group_id );
 	ax_fc_assert(

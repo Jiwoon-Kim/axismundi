@@ -571,6 +571,24 @@ function axismundi_op_enqueue_post_editor_settings() : void {
 			'default' => $default_language,
 		)
 	);
+	$post = get_post();
+	if ( $post instanceof WP_Post && 'post' === $post->post_type && current_user_can( 'edit_post', $post->ID ) ) {
+		$user_id = get_current_user_id();
+		$accounts = array();
+		foreach ( axismundi_actors_accounts_for_user( $user_id ) as $actor ) {
+			if ( ! $actor->is_local() ) { continue; }
+			$accounts[] = array(
+				'value'      => $actor->get_uri(),
+				'label'      => $actor->get_display_name(),
+				'canPublish' => 'public' === $actor->get_status() && axismundi_actors_can_act_as( $actor, $user_id ),
+			);
+		}
+		wp_localize_script(
+			'axismundi-op-post-settings',
+			'axismundiPostAttribution',
+			array( 'accounts' => $accounts )
+		);
+	}
 	wp_set_script_translations( 'axismundi-op-post-settings', 'axismundi-object-projections' );
 	axismundi_op_enqueue_mention_autocomplete();
 	/*

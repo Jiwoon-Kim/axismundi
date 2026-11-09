@@ -152,16 +152,46 @@ add_action( 'init', static function () : void {
 	}
 } );
 
+add_action( 'rest_api_init', static function () : void {
+	register_rest_field(
+		'post',
+		'axismundi_attribution',
+		array(
+			'get_callback'    => static function ( array $data ) : ?array {
+				$id = (int) ( $data['id'] ?? 0 );
+				if ( ! $id || ! current_user_can( 'edit_post', $id ) ) { return null; }
+				return array(
+					'publisher' => axismundi_op_stored_post_attribution( $id ),
+				);
+			},
+			'update_callback' => static function ( array $value, WP_Post $post ) {
+				if ( 'post' !== $post->post_type ) { return true; }
+				return axismundi_op_set_post_attribution( $post->ID, $value['publisher'], get_current_user_id() );
+			},
+			'schema'          => array(
+				'type'                 => 'object',
+				'context'              => array( 'edit' ),
+				'additionalProperties' => false,
+				'properties'           => array(
+					'publisher' => array( 'type' => 'string', 'required' => true ),
+				),
+			),
+		)
+	);
+} );
+
 add_action( 'add_meta_boxes', static function () : void {
+	$screen = get_current_screen();
 	foreach ( array( 'post', 'attachment' ) as $type ) {
-		add_meta_box( 'ax-op-attribution', __( 'Publishing Account', 'axismundi-object-projections' ), 'axismundi_op_post_attribution_box', $type, 'side' );
+		if ( 'post' === $type && $screen && $screen->is_block_editor() ) { continue; }
+		add_meta_box( 'ax-op-attribution', 'attributedTo', 'axismundi_op_post_attribution_box', $type, 'side' );
 	}
 } );
 
 function axismundi_op_post_attribution_box( WP_Post $post ) : void {
 	$current = axismundi_op_stored_post_attribution( $post->ID );
 	wp_nonce_field( 'ax_op_attribution_' . $post->ID, 'ax_op_attribution_nonce' );
-	echo '<select name="ax_op_attributed_to" aria-label="' . esc_attr__( 'Publishing Account', 'axismundi-object-projections' ) . '">';
+	echo '<p><label for="ax-op-publisher">' . esc_html__( 'Publishing Account', 'axismundi-object-projections' ) . '</label></p><select id="ax-op-publisher" name="ax_op_attributed_to" style="max-width:100%">';
 	printf( '<option value="" %s>%s</option>', selected( $current, '', false ), esc_html__( 'Unattributed', 'axismundi-object-projections' ) );
 	$choices = axismundi_actors_accounts_for_user( get_current_user_id() );
 	$seen = false;
@@ -174,16 +204,7 @@ function axismundi_op_post_attribution_box( WP_Post $post ) : void {
 		printf( '<option value="%s" selected>%s</option>', esc_attr( $current ), esc_html( $current ) );
 	}
 	echo '</select>';
-	$co_attributed = axismundi_op_stored_post_co_attribution( $post->ID );
-	echo '<p><label for="ax-op-co-attributed">' . esc_html__( 'Co-attributed Accounts', 'axismundi-object-projections' ) . '</label></p><select multiple size="4" style="width:100%;max-width:100%" id="ax-op-co-attributed" name="ax_op_co_attributed_to[]">';
-	$local_choices = array();
-	foreach ( $choices as $actor ) {
-		if ( ! $actor->is_local() ) { continue; }
-		$local_choices[] = $actor->get_uri();
-		printf( '<option value="%s" %s>%s</option>', esc_attr( $actor->get_uri() ), selected( in_array( $actor->get_uri(), $co_attributed, true ), true, false ), esc_html( $actor->get_display_name() ) );
-	}
-	$additional = array_values( array_diff( $co_attributed, $local_choices ) );
-	echo '</select><p><label for="ax-op-additional-attribution">' . esc_html__( 'Additional attribution URIs', 'axismundi-object-projections' ) . '</label></p><textarea style="width:100%;max-width:100%" rows="3" id="ax-op-additional-attribution" name="ax_op_additional_attribution">' . esc_textarea( implode( "\n", $additional ) ) . '</textarea><p>' . esc_html__( 'Joint attribution does not verify collaborator consent or grant publishing access.', 'axismundi-object-projections' ) . '</p><p>' . esc_html__( 'Changes to previously delivered copies may not be reflected on remote servers.', 'axismundi-object-projections' ) . '</p>';
+	echo '<p>' . esc_html__( 'Changes to previously delivered copies may not be reflected on remote servers.', 'axismundi-object-projections' ) . '</p>';
 }
 
 function axismundi_op_save_post_attribution( int $post_id, WP_Post $post ) : void {
@@ -196,18 +217,7 @@ function axismundi_op_save_post_attribution( int $post_id, WP_Post $post ) : voi
 		set_transient( 'ax_op_attribution_error_' . get_current_user_id(), __( 'Invalid publishing Account URI.', 'axismundi-object-projections' ), MINUTE_IN_SECONDS );
 		return;
 	}
-	$others = array();
-	if ( isset( $_POST['ax_op_co_attributed_to'] ) && ! is_array( $_POST['ax_op_co_attributed_to'] ) ) {
-		set_transient( 'ax_op_attribution_error_' . get_current_user_id(), __( 'Invalid attribution selection.', 'axismundi-object-projections' ), MINUTE_IN_SECONDS ); return;
-	}
-	$selected = isset( $_POST['ax_op_co_attributed_to'] ) ? array_map( static fn( $member ) => is_string( $member ) ? sanitize_text_field( wp_unslash( $member ) ) : null, $_POST['ax_op_co_attributed_to'] ) : array();
-	if ( count( $selected ) > 32 || in_array( null, $selected, true ) ) {
-		set_transient( 'ax_op_attribution_error_' . get_current_user_id(), __( 'Invalid attribution selection.', 'axismundi-object-projections' ), MINUTE_IN_SECONDS ); return;
-	}
-	$others = array_values( $selected );
-	$additional = isset( $_POST['ax_op_additional_attribution'] ) && is_string( $_POST['ax_op_additional_attribution'] ) ? sanitize_textarea_field( wp_unslash( $_POST['ax_op_additional_attribution'] ) ) : '';
-	foreach ( preg_split( '/\R/', $additional ) as $member ) { if ( '' !== trim( $member ) ) { $others[] = trim( $member ); } }
-	$result = axismundi_op_set_post_attribution( $post_id, $uri, get_current_user_id(), $others );
+	$result = axismundi_op_set_post_attribution( $post_id, $uri, get_current_user_id() );
 	if ( is_wp_error( $result ) ) { set_transient( 'ax_op_attribution_error_' . get_current_user_id(), $result->get_error_message(), MINUTE_IN_SECONDS ); }
 }
 add_action( 'save_post', 'axismundi_op_save_post_attribution', 20, 2 );

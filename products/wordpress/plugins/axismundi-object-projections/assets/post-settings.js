@@ -47,6 +47,7 @@
 		return el(
 			Panel,
 			{ name: 'axismundi-federation', title: wp.i18n.__( 'Federation', 'axismundi-object-projections' ) },
+			window.axismundiPostAttribution ? el( PostAttribution, { config: window.axismundiPostAttribution } ) : null,
 			el( wp.components.CheckboxControl, {
 				label: wp.i18n.__( 'Sensitive content', 'axismundi-object-projections' ),
 				checked: sensitive,
@@ -94,6 +95,41 @@
 					{ label: wp.i18n.__( 'Just me', 'axismundi-object-projections' ), value: 'me' },
 				],
 				onChange: ( value ) => update( '_ax_op_quote_policy', value ),
+			} )
+		);
+	}
+
+	function PostAttribution( { config } ) {
+		const { accounts } = config;
+		const { attribution, saving } = wp.data.useSelect( ( select ) => {
+			const editor = select( 'core/editor' );
+			return {
+				attribution: editor.getEditedPostAttribute( 'axismundi_attribution' ),
+				saving: editor.isSavingPost(),
+			};
+		}, [] );
+		const { editPost } = wp.data.useDispatch( 'core/editor' );
+		if ( ! attribution ) {
+			return null;
+		}
+		const { publisher } = attribution;
+		const __ = wp.i18n.__;
+		const publisherOptions = [
+			{ value: '', label: __( 'Unattributed', 'axismundi-object-projections' ) },
+			...accounts.filter( ( account ) => account.canPublish ),
+		];
+		if ( publisher && ! publisherOptions.some( ( account ) => account.value === publisher ) ) {
+			publisherOptions.push( { value: publisher, label: publisher, disabled: true } );
+		}
+		return el(
+			'fieldset',
+			{ disabled: saving, style: { margin: '0 0 16px', minWidth: 0 } },
+			el( 'legend', null, 'attributedTo' ),
+			el( wp.components.SelectControl, {
+				label: __( 'Publishing Account', 'axismundi-object-projections' ),
+				options: publisherOptions,
+				value: publisher,
+				onChange: ( value ) => editPost( { axismundi_attribution: { publisher: value } } ),
 			} )
 		);
 	}

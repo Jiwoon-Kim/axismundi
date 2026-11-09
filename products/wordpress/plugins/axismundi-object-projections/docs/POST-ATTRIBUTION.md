@@ -26,8 +26,10 @@ edit_attachment도 색인 갱신과 저장 경로에 연결한다.
 
 ## 변경
 
-편집 화면의 Publishing Account 상자와
-`axismundi_op_set_post_attribution(postId, actorUri, userId)`가 같은 서비스를 쓴다.
+글 편집기는 Federation의 `attributedTo`를 Save draft / Publish와 함께 저장한다.
+첨부 편집기는 사이드바의 `attributedTo`를 기본 Update에서 저장한다.
+두 경로 모두 `axismundi_op_set_post_attribution(postId, actorUri, userId)`를 쓴다.
+공동귀속 편집은 상호운용 확인 전까지 화면에서 숨기고, 기존 값은 보존한다.
 WP edit_post 권한과 대상 로컬 활성 Actor의 can_act_as 권한을 각각 검사한다.
 일반 REST meta 쓰기는 열지 않는다. 임의의 Account URI를 meta 권한만으로
 주입할 수 없도록 show_in_rest=false이며, 서버 통합은 명시 서비스로 변경한다.

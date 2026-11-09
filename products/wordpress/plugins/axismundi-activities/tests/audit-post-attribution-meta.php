@@ -54,6 +54,20 @@ try {
 	remove_filter( 'axismundi_op_post_attribution_changed', $failure, 1 );
 	$assert( is_wp_error( $failed ) && $actors[1]->get_uri() === axismundi_op_post_actor_uri( $post ), 'Failed Update rolls back current attribution' );
 	$assert( is_wp_error( axismundi_op_set_post_attribution( $id, '', $users[0] ) ) && $actors[1]->get_uri() === axismundi_op_post_actor_uri( $post ), 'Unpublishable reassignment rolls back metadata' );
+	$draft_id = wp_insert_post( array( 'post_type' => 'post', 'post_status' => 'draft', 'post_title' => 'REST attribution fixture' ) );
+	$posts[] = $draft_id;
+	$draft_uri = axismundi_op_post_object_uri( get_post( $draft_id ) );
+	$uris[] = $draft_uri;
+	$assert( true === axismundi_op_set_post_attribution( $draft_id, $actors[0]->get_uri(), $users[0], array( $actors[2]->get_uri() ) ), 'Draft starts with an existing co-attribution' );
+	$request = new WP_REST_Request( 'POST', '/wp/v2/posts/' . $draft_id );
+	$request->set_body_params( array( 'axismundi_attribution' => array( 'publisher' => $actors[1]->get_uri() ) ) );
+	$response = rest_do_request( $request );
+	$assert( 200 === $response->get_status() && $actors[1]->get_uri() === axismundi_op_stored_post_attribution( $draft_id ), 'Block editor REST save persists the selected Actor' );
+	$assert( array( $actors[2]->get_uri() ) === axismundi_op_stored_post_co_attribution( $draft_id ) && ! axismundi_act_get_object_lifecycle( $draft_uri ), 'Draft save preserves hidden co-attribution without a Create' );
+	$request = new WP_REST_Request( 'POST', '/wp/v2/posts/' . $draft_id );
+	$request->set_body_params( array( 'status' => 'publish', 'axismundi_attribution' => array( 'publisher' => $actors[0]->get_uri() ) ) );
+	$response = rest_do_request( $request );
+	$assert( 200 === $response->get_status() && 'publish' === get_post_status( $draft_id ) && $actors[0]->get_uri() === axismundi_op_stored_post_attribution( $draft_id ) && empty( $GLOBALS['axismundi_act_attribution_only_saves'][$draft_id] ), 'Explicit Publish with a changed Actor is not an attribution-only save' );
 	$attachment = wp_insert_post( array( 'post_type' => 'attachment', 'post_status' => 'inherit', 'post_mime_type' => 'image/png', 'post_title' => 'Media attribution fixture', 'post_author' => $users[0] ) );
 	$posts[] = $attachment;
 	update_post_meta( $attachment, '_wp_attached_file', 'fixture.png' );
@@ -63,6 +77,18 @@ try {
 	$assert( true === axismundi_op_set_post_attribution( $attachment, $actors[1]->get_uri(), $users[0] ), 'Attachment accepts independent publishing attribution' );
 	$assert( ! axismundi_act_get_object_lifecycle( $media_uri ) && is_array( axismundi_op_get_object_by_uri( $media_uri ) ), 'Attachment enters registry without Create' );
 	$assert( $actors[1]->get_uri() === axismundi_op_attachment_actor_uri( $media ) && (int) $media->post_author === $users[0], 'Upload user remains separate from attribution' );
+	$assert( true === axismundi_op_set_post_attribution( $attachment, $actors[1]->get_uri(), $users[0], array( $actors[2]->get_uri() ) ), 'Attachment starts with an existing co-attribution' );
+	$previous_post = $_POST;
+	try {
+		$_POST = array(
+			'ax_op_attribution_nonce' => wp_create_nonce( 'ax_op_attribution_' . $attachment ),
+			'ax_op_attributed_to'     => $actors[0]->get_uri(),
+		);
+		do_action( 'edit_attachment', $attachment );
+	} finally {
+		$_POST = $previous_post;
+	}
+	$assert( $actors[0]->get_uri() === axismundi_op_stored_post_attribution( $attachment ) && array( $actors[2]->get_uri() ) === axismundi_op_stored_post_co_attribution( $attachment ), 'Attachment Update preserves hidden co-attribution' );
 	// Absence of Activities must not remove source attribution; neither reader has a ledger filter.
 	$assert( false === has_filter( 'axismundi_op_local_object_attribution', 'axismundi_act_local_object_attribution' ) && $actors[1]->get_uri() === axismundi_op_post_actor_uri( $post ), 'OP does not use a ledger attribution provider' );
 	$legacy = wp_insert_post( array( 'post_type' => 'post', 'post_status' => 'publish', 'post_title' => 'Legacy attribution fixture', 'post_content' => 'legacy' ) );

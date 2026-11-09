@@ -185,6 +185,14 @@ function axismundi_act_on_object_publish_candidate( WP_Post $post, string $objec
 }
 add_action( 'axismundi_op_object_publish_candidate', 'axismundi_act_on_object_publish_candidate', 10, 4 );
 
+// An explicit block-editor Publish is not an attribution-only save.
+add_action( 'rest_after_insert_post', static function ( WP_Post $post, WP_REST_Request $request ) : void {
+	$attribution = $request->get_param( 'axismundi_attribution' );
+	if ( 'publish' === $request->get_param( 'status' ) && ! empty( $attribution['publisher'] ) ) {
+		unset( $GLOBALS['axismundi_act_attribution_only_saves'][$post->ID] );
+	}
+}, 39, 2 );
+
 /** Resolve the explicit list-table action and, for Update, its current snapshot. */
 function axismundi_act_post_list_publication( WP_Post $post ) : array {
 	if ( ! current_user_can( 'edit_post', $post->ID ) || ! axismundi_act_post_lifecycle_applies( $post ) || ! axismundi_op_post_article_visible( $post ) ) {

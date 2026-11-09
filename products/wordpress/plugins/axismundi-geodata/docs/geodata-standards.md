@@ -3,6 +3,11 @@
 How the plugin's geography model relates to external standards, and the rules for
 the administrative and place-type vocabularies. Companion to `map-strategy.md`.
 
+For the proposed independent Place store and spatial query experiment, see
+[Spatial Feature experiment](spatial-feature-experiment.md).
+For the product direction and deferred integrations, see
+[Geodata direction](geodata-direction.md).
+
 ## Guiding principles
 
 1. **Administrative and place vocabularies have different baselines.** `geo_area`

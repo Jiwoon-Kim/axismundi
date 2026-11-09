@@ -51,7 +51,7 @@ function axismundi_op_register_vocabulary_term( string $term, array $args ) {
 		|| $entry['jsonld_container'] !== ( $semantic['jsonld_container'] ?? null ) ) ) {
 		return new WP_Error( 'ax_op_term_semantics', 'Context registrations cannot replace imported vocabulary semantics.' );
 	}
-	foreach ( array( 'runtime_cardinality', 'spec_domain', 'spec_range', 'rdf_functional', 'parents', 'category' ) as $field ) {
+	foreach ( array( 'runtime_cardinality', 'spec_domain', 'spec_range', 'subproperty_of', 'rdf_functional', 'parents', 'category' ) as $field ) {
 		if ( $semantic && array_key_exists( $field, $args ) && $args[ $field ] !== ( $semantic[ $field ] ?? null ) ) {
 			return new WP_Error( 'ax_op_term_semantics', 'Context registrations cannot override existing semantic constraints.' );
 		}

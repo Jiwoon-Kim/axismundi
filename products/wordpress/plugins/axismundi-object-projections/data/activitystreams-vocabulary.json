@@ -95,7 +95,15 @@
     "hreflang": "language-tag",
     "height": "number",
     "width": "number",
-    "actor": "iri-or-object",
+    "actor": {
+      "value_shape": "iri-or-object",
+      "runtime_cardinality": "one-or-many",
+      "spec_domain": ["https://www.w3.org/ns/activitystreams#Activity"],
+      "spec_range": ["https://www.w3.org/ns/activitystreams#Object", "https://www.w3.org/ns/activitystreams#Link"],
+      "subproperty_of": ["https://www.w3.org/ns/activitystreams#attributedTo"],
+      "source": { "specification": "https://www.w3.org/TR/activitystreams-vocabulary/", "anchor": "#dfn-actor", "ontology": "https://www.w3.org/ns/activitystreams-owl", "context": "https://www.w3.org/ns/activitystreams" },
+      "implementation_notes": "The subproperty relation applies to the Activity itself, not to its object's attributedTo. It grants neither object authority nor collaborator consent."
+    },
     "object": { "value_shape": "iri-or-object", "source": { "specification": "https://www.w3.org/TR/activitystreams-vocabulary/", "anchor": "#dfn-object-term" } },
     "target": "iri-or-object",
     "result": "iri-or-object",
@@ -111,8 +119,24 @@
     "radius": "number",
     "units": "string",
     "describes": "iri-or-object",
-    "subject": "iri-or-object",
-    "relationship": { "value_shape": "string", "source": { "specification": "https://www.w3.org/TR/activitystreams-vocabulary/", "anchor": "#dfn-relationship-term" } },
+    "subject": {
+      "value_shape": "iri-or-object",
+      "rdf_functional": true,
+      "spec_domain": ["https://www.w3.org/ns/activitystreams#Relationship"],
+      "spec_range": ["https://www.w3.org/ns/activitystreams#Link", "https://www.w3.org/ns/activitystreams#Object"],
+      "subproperty_of": ["http://www.w3.org/1999/02/22-rdf-syntax-ns#subject"],
+      "semantic_family": "rdf-reification",
+      "source": { "specification": "https://www.w3.org/TR/activitystreams-vocabulary/", "anchor": "#dfn-subject", "ontology": "https://www.w3.org/ns/activitystreams-owl", "context": "https://www.w3.org/ns/activitystreams" },
+      "implementation_notes": "OWL functional semantics are not a JSON array-rejection rule. Runtime input policy remains unspecified until a Relationship authoring profile is implemented."
+    },
+    "relationship": {
+      "value_shape": "iri-or-object",
+      "spec_domain": ["https://www.w3.org/ns/activitystreams#Relationship"],
+      "spec_range": ["http://www.w3.org/1999/02/22-rdf-syntax-ns#Property"],
+      "subproperty_of": ["http://www.w3.org/1999/02/22-rdf-syntax-ns#predicate"],
+      "semantic_family": "rdf-reification",
+      "source": { "specification": "https://www.w3.org/TR/activitystreams-vocabulary/", "anchor": "#dfn-relationship-term", "ontology": "https://www.w3.org/ns/activitystreams-owl", "context": "https://www.w3.org/ns/activitystreams" }
+    },
     "formerType": "type",
     "deleted": "timestamp",
     "totalItems": "number",

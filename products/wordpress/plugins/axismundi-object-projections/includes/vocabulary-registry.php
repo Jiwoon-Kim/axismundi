@@ -47,7 +47,7 @@ function axismundi_op_vocabulary_snapshot() {
 			return new WP_Error( 'ax_op_vocabulary_snapshot', __( 'A vocabulary property definition is invalid.', 'axismundi-object-projections' ) );
 		}
 		$data['properties'][ $term ] = array_merge(
-			array( 'iri' => 'https://www.w3.org/ns/activitystreams#' . $term, 'status' => 'standard', 'provenance' => 'as2-core', 'source' => array( 'specification' => $source, 'anchor' => '#dfn-' . strtolower( $term ) ), 'spec_domain' => array(), 'spec_range' => array(), 'rdf_functional' => null, 'runtime_cardinality' => 'unspecified', 'jsonld_container' => null, 'semantic_family' => 'unspecified', 'index_hint' => 'none', 'implementation_notes' => '' ),
+			array( 'iri' => 'https://www.w3.org/ns/activitystreams#' . $term, 'status' => 'standard', 'provenance' => 'as2-core', 'source' => array( 'specification' => $source, 'anchor' => '#dfn-' . strtolower( $term ) ), 'spec_domain' => array(), 'spec_range' => array(), 'subproperty_of' => array(), 'rdf_functional' => null, 'runtime_cardinality' => 'unspecified', 'jsonld_container' => null, 'semantic_family' => 'unspecified', 'index_hint' => 'none', 'implementation_notes' => '' ),
 			is_array( $definition ) ? $definition : array(),
 			array( 'value_shape' => $shape )
 		);

@@ -48,8 +48,10 @@
 	inline-size: var(--ax-media-folder-tree-width, 240px);
 }
 
+/* Core positions the list itself unless the browser uses a Load more wrapper. */
 .media-modal .attachments-browser.has-ax-media-folder-tree > .media-toolbar,
-.media-modal .attachments-browser.has-ax-media-folder-tree > .attachments-wrapper,
+.media-modal .attachments-browser.has-ax-media-folder-tree.has-load-more > .attachments-wrapper,
+.media-modal .attachments-browser.has-ax-media-folder-tree:not(.has-load-more) .attachments,
 .media-modal .attachments-browser.has-ax-media-folder-tree > .uploader-inline {
 	margin-inline-start: var(--ax-media-folder-tree-width, 240px);
 }

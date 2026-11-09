@@ -630,7 +630,8 @@
 
 	function registerAttachmentDraggable( attachment, browser ) {
 		var $attachment = $( attachment );
-		if ( ! $attachment.length || $attachment.hasClass( 'ui-draggable' ) ) {
+		// The editor picker loads media views without the Library's drag scripts.
+		if ( typeof $attachment.draggable !== 'function' || ! $attachment.length || $attachment.hasClass( 'ui-draggable' ) ) {
 			return;
 		}
 		var options = {

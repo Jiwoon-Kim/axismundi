@@ -94,14 +94,37 @@ $draft 키워드          ≡   대응물 없음 — 아래 참조
 발행 이력은 원장에서만 확인한다. 즉 우리에게는 JMAP 의 `$draft` 에 해당하는
 객체측 플래그가 없고, 이 계약은 그것을 만들지 않는다.
 
-플래그를 두면 안 되는 이유 둘:
+**권위가 둘이 되기 때문이다.** `publicly_readable`(`local-objects.php:128`)은 같은
+문서에서 쓰기 시점에 유도한 값이라 성질이 다르다. `sent` 는 다른 테이블의 나중
+사건에서 유도되므로 어긋날 수 있고, 어긋났을 때 어느 쪽이 맞는지 정할 근거가 없다.
 
-1. **sent 는 불리언이 아니다.** 같은 객체에 Create → Delete → Create 가 쌓인다
-   (`post-lifecycle.php:21` "initial or post-Delete Create"). 질문은 "보냈나"가 아니라
-   "최신 lifecycle 이 무엇이냐"다.
-2. **권위가 둘이 된다.** `publicly_readable`(`local-objects.php:128`)은 같은 문서에서
-   쓰기 시점에 유도한 값이라 성질이 다르다. `sent` 는 다른 테이블의 나중 사건에서
-   유도되므로 어긋날 수 있고, 어긋났을 때 어느 쪽이 맞는지 정할 근거가 없다.
+**단 재생성 가능한 투영에 두는 것은 다르다.** 금지 대상은 로컬객체 행의 저장 상태이고,
+`wp_ax_object_index`(`op/includes/remote-objects.php:40-52`, 주석이 "rebuildable Object
+listing projection")에 유도 컬럼을 두는 것은 권위를 늘리지 않는다. 판정 기준은
+**"재생성 명령이 있고 그것이 원장을 읽는가"** 다.
+
+```sql
+-- 현재 컬럼: object_uri_hash(PK) · publicly_listable · object_status · source
+--            attributed_to_uri_hash · is_reply · has_group_context · primary_group_uri_hash
+-- 추가할 것:  federated tinyint(1)      Create 이력이 있는가
+```
+
+**불리언으로 충분하다** — 아래 "한 URI 에 Create 는 한 번" 이 성립하므로 lifecycle
+타입 컬럼이 필요 없다. `object_status`(active|tombstone)가 존재 축을,
+`federated`(0|1)가 발행 축을 맡는다.
+
+```txt
+Not federated   federated = 0 인 조회 필터다. 저장 상태가 아니다
+pending         사용자가 발행을 요청·예약해 제출 작업이 실제로 생겼을 때만 붙인다.
+                Create 가 없다는 이유로 자동으로 걸면 "사이트에만 올리려던 글" 과
+                "발행 대기열" 이 한 컬럼에 섞인다
+배달 대기·실패   제출 이후의 전송 상태이며 Bridge 소유다. 활동 초안이 아니다
+```
+
+갱신 지점과 재빌드 비용은 미측정이다 — 지금 `refresh_object_listing_projection()`
+(`remote-objects.php:216-228`)은 객체 변경 때 호출된다(`post-attribution.php:109`).
+원장 기록 시에도 호출돼야 하며 `axismundi_act_activity_recorded` 훅이 이미 있다
+(`activities/includes/post-attribution.php:39` 가 선례다).
 
 `published_at`(`local-objects.php:129`)은 **할당 시각**이지 Create 가 원장에 닿은
 시점이 아니다. 지금 sent 표시는 없다.
@@ -173,28 +196,29 @@ reader 클로저가 정한다. 소유자는 전부 본다 — AP 5.1 대로다.
 결과는 "이 객체가 살아 있나" 에만 답한다. "이 액터가 이것을 수정할 수 있나" 는
 제출 시 소스 어댑터가 따로 답해야 한다. 목록은 후보 탐색용이다.
 
-### 같은 URI 가 여러 Create 에 걸리는지는 소스마다 다르다
+### 한 URI 에 Create 는 한 번이다 — Create → Delete → Create 는 금지다
 
 ```php
 // op/includes/local-objects.php:51-52   로컬객체 — UUID 할당
 home_url( '/objects/' . strtolower( $uuid ) )
-// 삭제 후 재게시는 새 wp_generate_uuid4() → 새 URI. 같은 URI 를 재사용하지 않는다
+// 삭제 후 재게시는 새 wp_generate_uuid4() → 새 URI
 
 // op/includes/post-article.php:97-98    wp_posts — post ID 유도
 add_query_arg( 'p', (int) $post->ID, home_url( '/' ) )
-// ?p=123 은 안정적이다. 같은 URI 에 Delete → Create 가 쌓인다
-// post-lifecycle.php:21 "Record an initial or post-Delete Create"
+// Delete 는 영구삭제뿐이고, 그 뒤 Create 는 구조적으로 도달하지 않는다:
+//   activities/includes/post-lifecycle.php:295
+//     add_filter( 'pre_delete_post', … )          wp_delete_post 의 영구삭제 경로
+//   op/includes/lifecycle.php:86,93               Create 후보가 나오는 유일한 지점
+//     add_action( 'wp_after_insert_post', … )     행이 사라지면 그 ID 로 다시 발화 못 한다
+//   WP AUTO_INCREMENT 는 post ID 를 재사용하지 않는다
 ```
 
-따라서 `post-lifecycle.php:201-204` 의 Delete-뒤-Create 분기는 잔재가 아니라
-**그 소스에서 필요한 것**이다. "삭제 후 재게시면 새 id" 는 로컬객체에서만 맞다.
+따라서 `post-lifecycle.php:201-204` 의 Delete-뒤-Create 분기는 **방어 코드**이며
+도달 경로가 없다. 그 분기를 근거로 "같은 URI 에 Create 가 쌓인다" 고 설계하지 말 것.
 
 ```txt
-발행 이력 목록       같은 URI 가 두 번 나오는 것이 정상이다 — 두 번 발행한 것이 사실
-Update 대상 선택기   후보는 URI 당 하나다. 접기 로직이 아니라 위 ① 의 lifecycle
-                    판정이 이미 그것을 한다(최신이 Delete 면 제외, Create 면 유효).
-                    목록에 같은 URI 가 두 번 보이는 것은 표현 문제이므로
-                    표시 단계에서 중복을 제거한다 — 판정에 섞지 않는다
+발행 이력 목록       URI 당 Create 한 건
+Update 대상 선택기   접기 로직이 필요 없다. 위 ① 의 lifecycle 판정으로 충분하다
 ```
 
 ### `actor` 와 `attributedTo` 를 같은 뜻으로 쓰지 않는다
@@ -304,6 +328,56 @@ RFC 5322 §3.6.3 두 번째 방식과 같은 구조다 — bcc 당사자에게 *
 숨겨야 하는 것은 **공동 수신자 명단**뿐이고(5322.txt:1300 "addresses ... not to be
 revealed to other recipients"), `:683` 이 그것을 한다. 뷰어가 to/cc 가 빈 액티비티를
 보고 자기가 bto/bcc 였음을 추론하는 것은 누출이 아니다.
+
+## 결정 ⑤ soft deletion 은 채택하지 않는다
+
+로컬객체의 `Delete` 는 영구삭제다. FEP-4f05 의 **hard delete 절은 이미 준수**하고
+있으며(`fep-4f05.md:39` "the object MUST no longer have an ActivityPub representation",
+410 이 "a more explicit signal"), soft delete 절을 **구현하지 않는 선택**이다.
+비표준이 아니라 고르지 않은 선택지다.
+
+```php
+// op/includes/local-objects.php:197-199   현재 동작
+$document = array( 'id' => …, 'type' => 'Tombstone', 'formerType' => …, 'deleted' => … );
+$wpdb->update( …, array( 'object_type' => 'Tombstone', 'document_json' => $json, … ) );
+```
+
+**직전 상태 스냅샷이 우리 저장소에 없다**는 것이 이유다. 발신 원장은 참조만 남긴다.
+
+```php
+// activities/includes/c2s-local-object.php:82
+$activity = array( 'type' => $type, 'actor' => …, 'object' => $uri );
+// :111
+// Match the existing local WP lifecycle convention: object URI, not a second authoritative body.
+// :90  문서를 싣는 경우는 하나뿐
+if ( $group && 'Group' === $group->get_type() ) { $activity['object'] = $document; }
+//     "Group forwarding must preserve a creation snapshot, including after local deletion."
+```
+
+```txt
+inbound    원격 payload 를 그대로 저장(axismundi_op_store_remote_object).
+           S2S Update 가 complete 라서 스냅샷이 자연히 남는다
+outbound   원장은 참조. 본문은 wp_ax_local_objects.document_json 한 곳이고
+           Delete 가 그것을 Tombstone 으로 덮는다
+```
+
+FEP-4f05 도 본문을 주지 않는다 — `fep-4f05.md:90` "Implementors are free to handle a
+soft deletion in the way they prefer". 연합 쪽 의미만 정의하고 보관 규칙은 구현자에게
+맡긴다.
+
+열려면 세 가지가 선행한다. 지금은 비용으로 판단해 열지 않는다.
+
+```txt
+① 보관 위치   (A) document_json 을 덮지 않고 Tombstone 을 투영 시점에 만든다
+                  — "삭제했는데 서버에 본문이 남는다" 를 제품으로 약속하게 되고
+                    개인정보용 hard delete 가 따로 필요해진다
+              (B) Update·Delete 원장 payload 에 완전 문서를 싣는다
+                  — :90 선례와 같은 모양이고 S2S complete 와 일치하나 원장이 커지며
+                    :111 의 "second authoritative body" 금지와 정면으로 부딪친다
+② soft/hard 구분을 명시값으로 저장
+③ 410 ⊥ 200 분기   FEP-4f05 soft 는 SHOULD 200 + Tombstone 이고, 우리 로컬객체는
+                  의도적으로 410 이다. 현재 한 경로이므로 그 결정을 다시 열어야 한다
+```
 
 ## 미결
 

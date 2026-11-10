@@ -9,6 +9,28 @@ defined( 'ABSPATH' ) || exit;
 
 /** Search public local Actors and already-cached remote Actors. */
 function axismundi_actors_search_mentionable( string $search, int $limit = 10 ) : array {
+	return axismundi_actors_query_public_actor_search( $search, $limit );
+}
+
+/** Local assignment search. Cross-workspace results are opt-in and require a search term. */
+function axismundi_actors_search_assignable( string $search, int $user_id, bool $allow_other_local = false ) : array {
+	$search = trim( ltrim( trim( $search ), '@' ) );
+	$limit = 20;
+	if ( '' !== $search && $allow_other_local && user_can( $user_id, 'manage_options' ) ) {
+		return axismundi_actors_query_public_actor_search( $search, $limit, true );
+	}
+	$allowed = array_values( array_filter( axismundi_actors_acting_actor_options( $user_id ), static fn( $actor ) => 'public' === $actor->get_status() ) );
+	if ( '' === $search ) {
+		return array_slice( $allowed, 0, $limit );
+	}
+	return axismundi_actors_query_public_actor_search( $search, $limit, true, array_map( static fn( $actor ) => $actor->get_identity_id(), $allowed ) );
+}
+
+/** Shared search query; a supplied identity allowlist is applied before LIMIT. */
+function axismundi_actors_query_public_actor_search( string $search, int $limit, bool $local_only = false, ?array $allowed_ids = null ) : array {
+	if ( array() === $allowed_ids ) {
+		return array();
+	}
 	global $wpdb;
 	$search     = trim( $search );
 	$limit      = max( 1, min( 20, $limit ) );
@@ -28,12 +50,24 @@ function axismundi_actors_search_mentionable( string $search, int $limit = 10 ) 
 	 */
 	$where = "i.status = 'public' AND (i.origin = 'remote' OR (a.local_handle_key IS NOT NULL AND a.handle_locked_at IS NOT NULL))";
 	$args  = array( $identities, $actors );
+	if ( $local_only ) {
+		$where = "i.status = 'public' AND i.origin = 'local' AND a.local_handle_key IS NOT NULL AND a.handle_locked_at IS NOT NULL";
+	}
+	if ( null !== $allowed_ids ) {
+		$where .= ' AND i.id IN (' . implode( ', ', array_fill( 0, count( $allowed_ids ), '%d' ) ) . ')';
+		array_push( $args, ...$allowed_ids );
+	}
 	if ( '' !== $search ) {
 		$like   = '%' . $wpdb->esc_like( ltrim( $search, '@' ) ) . '%';
 		$where .= ' AND (a.preferred_username LIKE %s OR a.display_name LIKE %s OR i.canonical_uri LIKE %s OR EXISTS (SELECT 1 FROM %i ad WHERE ad.identity_id = i.id AND ad.address LIKE %s))';
 		array_push( $args, $like, $like, $like, $addresses, $like );
 	}
-	$sql    = "SELECT i.*, a.* FROM %i i INNER JOIN %i a ON a.identity_id = i.id WHERE {$where} ORDER BY CASE WHEN i.origin = 'local' THEN 0 ELSE 1 END, a.display_name ASC, a.preferred_username ASC LIMIT %d";
+	$order = "CASE WHEN i.origin = 'local' THEN 0 ELSE 1 END";
+	if ( $local_only && '' !== $search ) {
+		$order = 'CASE WHEN a.preferred_username = %s THEN 0 ELSE 1 END';
+		$args[] = $search;
+	}
+	$sql = "SELECT i.*, a.* FROM %i i INNER JOIN %i a ON a.identity_id = i.id WHERE {$where} ORDER BY {$order}, a.display_name ASC, a.preferred_username ASC, i.id ASC LIMIT %d";
 	$args[] = $limit;
 	// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- assembled clause; every table and value is prepared.
 	$rows = (array) $wpdb->get_results( $wpdb->prepare( $sql, ...$args ), ARRAY_A );

@@ -50,6 +50,11 @@ try {
 	$assert( $created instanceof Axismundi_Activity, 'Create commits local Note and Activity: ' . ( is_wp_error( $created ) ? $created->get_error_message() : '' ) );
 	$uri = $created->get_object_uri(); $uris[] = $uri;
 	$row = axismundi_op_get_local_object( $uri );
+	$assert( 1 === (int) ( axismundi_op_get_object_listing_projection( $uri )['federated'] ?? 0 ), 'Committed outbound Create sets the publication projection' );
+	$wpdb->update( axismundi_op_object_index_table(), array( 'federated' => 0 ), array( 'object_uri_hash' => hash( 'sha256', $uri ) ) );
+	$start = hrtime( true );
+	$assert( axismundi_op_rebuild_object_publication_projection() && 1 === (int) ( axismundi_op_get_object_listing_projection( $uri )['federated'] ?? 0 ), 'Publication projection rebuild repairs a stale bit from the ledger' );
+	printf( "Publication projection rebuild: %.2f ms\n", ( hrtime( true ) - $start ) / 1e6 );
 	$assert( is_array( $row ) && $uri !== $created->get_uri() && str_contains( $uri, '/objects/' ), 'Object and Create have independent server identities' );
 	$assert( $row['document']['id'] === $row['document']['url'] && ! str_contains( $row['document_json'], '<script' ) && count( $row['document']['contentMap'] ) === 2, 'Sanitized current document preserves language maps and unified URL' );
 	$assert( $actor->get_uri() === axismundi_act_get_object_attribution( $uri ) && is_array( axismundi_op_get_object_by_uri( $uri ) ), 'Registry and stored attribution agree with committed Create' );
@@ -77,6 +82,7 @@ try {
 	$post_id = wp_insert_post( array( 'post_type' => 'post', 'post_status' => 'publish', 'post_author' => $user, 'post_title' => 'Unpublished federation fixture' ) );
 	$wp_uri = axismundi_op_post_object_uri( get_post( $post_id ) ); $uris[] = $wp_uri;
 	$registered = axismundi_op_get_object_by_uri( $wp_uri );
+	$assert( false === axismundi_act_has_outbound_create( $wp_uri ), 'Locally published WordPress source has no outbound Create by default' );
 	$assert( is_array( $registered ) && empty( $registered['attributed_to_uri'] ) && ! axismundi_act_get_object_lifecycle( $wp_uri ), 'Source registry admission does not invent publication or attribution' );
 	$raw = axismundi_op_register_object( array( 'canonical_uri' => $wp_uri, 'source_owner' => 'wordpress-core', 'source_kind' => 'post', 'source_ref' => $post_id, 'as2_type' => 'Article', 'attributed_to_uri' => $actor->get_uri() ) );
 	$assert( is_wp_error( $raw ), 'Direct registry entry cannot override source attribution' );

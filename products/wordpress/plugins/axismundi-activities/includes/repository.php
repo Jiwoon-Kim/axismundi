@@ -707,6 +707,17 @@ function axismundi_act_get_by_object( string $object_uri, int $limit = 50 ) : ar
 	return axismundi_act_get_by_reference( 'object', $object_uri, $limit );
 }
 
+/** Whether a canonical Object has ever had an outbound Create in this ledger. */
+function axismundi_act_has_outbound_create( string $object_uri ) : ?bool {
+	global $wpdb;
+	$uri = axismundi_act_uri( $object_uri );
+	if ( '' === $uri || AXISMUNDI_ACT_DB_VERSION !== (string) get_option( AXISMUNDI_ACT_DB_VERSION_OPTION, '' ) ) {
+		return null;
+	}
+	$found = $wpdb->get_var( $wpdb->prepare( "SELECT 1 FROM %i WHERE object_uri_hash = %s AND object_uri = %s AND direction = 'outbound' AND activity_type = 'Create' LIMIT 1", axismundi_act_activities_table(), hash( 'sha256', $uri ), $uri ) );
+	return '' === $wpdb->last_error ? null !== $found : null;
+}
+
 /** Latest effective Create, Update, or Delete for one object URI. */
 function axismundi_act_get_object_lifecycle( string $object_uri ) : ?Axismundi_Activity {
 	global $wpdb;

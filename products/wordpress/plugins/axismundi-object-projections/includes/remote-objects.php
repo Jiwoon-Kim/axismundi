@@ -12,7 +12,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_OP_DB_VERSION            = '16';
+const AXISMUNDI_OP_DB_VERSION            = '17';
 const AXISMUNDI_OP_DB_VERSION_OPTION     = 'ax_object_projections_db_version';
 const AXISMUNDI_OP_DELETE_RECONCILE_OPTION = 'ax_object_projections_pending_delete_reconcile';
 const AXISMUNDI_OP_REMOTE_PAYLOAD_MAX    = 1048576;
@@ -41,6 +41,7 @@ function axismundi_op_install_object_index_schema() : bool {
 			object_uri_hash char(64) NOT NULL,
 			publicly_listable tinyint(1) NOT NULL DEFAULT 0,
 			object_status varchar(12) NOT NULL DEFAULT 'active',
+			federated tinyint(1) NOT NULL DEFAULT 0,
 			source varchar(12) NOT NULL DEFAULT 'remote',
 			attributed_to_uri_hash char(64) DEFAULT NULL,
 			is_reply tinyint(1) NOT NULL DEFAULT 0,
@@ -65,6 +66,7 @@ function axismundi_op_install_object_index_schema() : bool {
 	}
 	return in_array( 'publicly_listable', $columns, true )
 		&& in_array( 'object_status', $columns, true )
+		&& in_array( 'federated', $columns, true )
 		&& in_array( 'source', $columns, true )
 		&& in_array( 'attributed_to_uri_hash', $columns, true )
 		&& in_array( 'is_reply', $columns, true )
@@ -129,6 +131,13 @@ function axismundi_op_write_object_listing_projection( string $object_uri, array
 	$listable = array_key_exists( 'listing_publicly_listable', $row )
 		? ! empty( $row['listing_publicly_listable'] )
 		: axismundi_op_remote_object_is_publicly_listable( $row );
+	$federated = null;
+	if ( 'local' === $source ) {
+		$federated = function_exists( 'axismundi_act_has_outbound_create' ) ? axismundi_act_has_outbound_create( $object_uri ) : null;
+		if ( null === $federated ) {
+			$federated = ! empty( axismundi_op_get_object_listing_projection( $object_uri )['federated'] );
+		}
+	}
 	return false !== $wpdb->replace(
 		axismundi_op_object_index_table(),
 		array(
@@ -144,6 +153,7 @@ function axismundi_op_write_object_listing_projection( string $object_uri, array
 			 * table, which is what this projection exists to avoid.
 			 */
 			'object_status'          => (string) ( $row['object_status'] ?? 'active' ),
+			'federated'              => (int) $federated,
 			/*
 			 * Which store answers for this row, so each writer can prune only its own share.
 			 *
@@ -159,9 +169,54 @@ function axismundi_op_write_object_listing_projection( string $object_uri, array
 			'primary_group_uri_hash' => '' !== $primary ? hash( 'sha256', $primary ) : null,
 			'updated_at'             => current_time( 'mysql', true ),
 		),
-		array( '%s', '%d', '%s', '%s', '%s', '%d', '%d', '%s', '%s' )
+		array( '%s', '%d', '%s', '%d', '%s', '%s', '%d', '%d', '%s', '%s' )
 	);
 }
+
+/** Recalculate the derived publication bit using indexed Object lookups in the ledger. */
+function axismundi_op_rebuild_object_publication_projection() : bool {
+	global $wpdb;
+	if ( ! function_exists( 'axismundi_act_has_outbound_create' )
+		|| AXISMUNDI_ACT_DB_VERSION !== (string) get_option( AXISMUNDI_ACT_DB_VERSION_OPTION, '' ) ) {
+		return false;
+	}
+	return false !== $wpdb->query( $wpdb->prepare(
+		"UPDATE %i i SET i.federated = EXISTS (SELECT 1 FROM %i a
+		 WHERE a.object_uri_hash = i.object_uri_hash AND a.direction = 'outbound' AND a.activity_type = 'Create')
+		 WHERE i.source = 'local'",
+		axismundi_op_object_index_table(),
+		axismundi_act_activities_table()
+	) );
+}
+
+function axismundi_op_finish_object_publication_upgrade() : void {
+	if ( AXISMUNDI_OP_DB_VERSION === (string) get_option( AXISMUNDI_OP_DB_VERSION_OPTION, '' )
+		&& '1' === get_option( 'ax_op_object_publication_rebuild' )
+		&& axismundi_op_rebuild_object_publication_projection() ) {
+		delete_option( 'ax_op_object_publication_rebuild' );
+	}
+}
+add_action( 'init', 'axismundi_op_finish_object_publication_upgrade', 102 );
+
+/** Refresh after Activities commits; a failed/rolled-back Create cannot mark an Object. */
+function axismundi_op_observe_outbound_create( Axismundi_Activity $activity ) : void {
+	global $wpdb;
+	if ( 'outbound' !== $activity->get_direction() || 'Create' !== $activity->get_type() ) {
+		return;
+	}
+	$uri = $activity->get_object_uri();
+	$existing = axismundi_op_get_object_listing_projection( $uri );
+	if ( 'local' === ( $existing['source'] ?? '' ) ) {
+		$wpdb->update( axismundi_op_object_index_table(), array( 'federated' => 1 ), array( 'object_uri_hash' => hash( 'sha256', $uri ), 'source' => 'local' ), array( '%d' ), array( '%s', '%s' ) );
+		return;
+	}
+	$source = '' !== $uri ? axismundi_op_resolve_source_by_uri( $uri ) : null;
+	$row = null !== $source ? axismundi_op_local_object_listing_projection_row( $source ) : null;
+	if ( is_array( $row ) ) {
+		axismundi_op_write_object_listing_projection( $uri, $row );
+	}
+}
+add_action( 'axismundi_act_activity_recorded', 'axismundi_op_observe_outbound_create', 35 );
 
 /**
  * Describe one local source through its registered transformer without making a public route.
@@ -425,6 +480,9 @@ function axismundi_op_install() : bool {
 	}
 	if ( $valid && version_compare( $previous_version, '15', '<' ) && function_exists( 'axismundi_op_backfill_remote_object_identities' ) ) {
 		$valid = axismundi_op_backfill_remote_object_identities();
+	}
+	if ( $valid && version_compare( $previous_version, '17', '<' ) ) {
+		update_option( 'ax_op_object_publication_rebuild', '1', false );
 	}
 	if ( $valid ) {
 		update_option( AXISMUNDI_OP_DB_VERSION_OPTION, AXISMUNDI_OP_DB_VERSION, false );

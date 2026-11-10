@@ -380,6 +380,92 @@ soft deletion in the way they prefer". 연합 쪽 의미만 정의하고 보관 
                   의도적으로 410 이다. 현재 한 경로이므로 그 결정을 다시 열어야 한다
 ```
 
+## 결정 ⑥ outbox POST 는 입구 하나다 — 참조형과 신규 생성을 거기서 가른다
+
+세 문장이 이 결정을 고정한다.
+
+```txt
+AP §6.2    "When a Create activity is posted, the actor of the activity SHOULD be
+           copied onto the object's attributedTo field."
+AP §6.2.1  "The server MUST accept a valid ActivityStreams object that isn't a
+           subtype of Activity in the POST request to the outbox."
+           "The server then MUST attach this object as the object of a Create Activity."
+           "For non-transient objects, the server MUST attach an id to both the
+           wrapping Create and its wrapped Object."
+AS2 §3.1   { "type": "Create", "actor": "…/martin",
+             "object": "http://example.org/foo.jpg" }     ← object 가 참조다
+```
+
+§6.2.1 은 "Create 없이 보내면 Create 가 없다" 는 뜻이 **아니다**. 서버가 반드시
+Create 를 만들고 양쪽에 id 를 붙인다. 그 Create 의 actor 는 §6 의 인증 규칙상
+outbox 소유자이고, §6.2 가 그 actor 를 `attributedTo` 로 복사한다. 즉 bare object
+제출은 다른 존재론이 아니라 클라이언트 편의다.
+
+### 분기는 `object` 자리에서 난다
+
+```txt
+참조형   object = 이미 있는 URI
+         → 레지스트리가 소스를 해석하고(thread-edges.php:405
+           axismundi_op_resolve_source_by_uri, 필터 기반), 소스 어댑터가 문서를
+           공급한다. 결정 ① 의 일반형이다.
+         → 참조된 객체에는 새 id 를 붙이지 않는다. §6.2.1 의 MUST 는 서버가
+           만드는 객체에 대한 것이지 지명된 객체에 대한 것이 아니다.
+신규     id 없는 Create(object) 또는 bare object
+         → /objects/{uuid} 를 발급한다. 결정 ① 의 특수형(B)이다.
+```
+
+해석되지 않는 URI, 또는 principal 이 발행할 수 없는 소스는 **거부한다**. 지어내지
+않는다.
+
+### 신규 객체는 `wp_posts` 에 만들지 않는다 — 이유는 타입이 아니라 소유권이다
+
+`type` 만으로 `post_type` 을 정할 수 없는 것은 맞다(`Article` 은 `post` 일 수도,
+Forum 의 `topic` 일 수도 있다). 그러나 그것은 증상이고, 거기서 멈추면 "클라이언트가
+`post_type` 을 같이 보내면 된다" 는 잘못된 해결이 열린다.
+
+`wp_posts` 의 행은 제품이 소유한다. outbox 가 거기에 행을 만들면 OP/Activities 가
+다른 제품의 저장소에 쓰는 writer 가 되고, 레지스트리가 URI→소스를 해석하는 이유
+자체가 사라진다. 소유자가 정하는 것은 `post_type` 만이 아니다 — `post_author`(WP
+사용자다), 분류, 편집 상태, 제품별 불변식이 전부 그쪽에 있고 C2S 제출물은 그중
+아무것도 들고 오지 않는다. 제출한 액터가 WP 사용자에 대응되지 않을 수도 있다.
+
+`/objects/{uuid}` 영역이 존재하는 이유가 이것이다. **outbox 가 스스로 소유하는
+저장소.** 신규 생성은 자기 땅에만 하고, 남의 땅에 있는 것은 URI 로 지명해서 주인에게
+문서를 받는다. 소스 어댑터가 Event 를 거부한 근거(coexistence guard)와 같은 모양이다.
+
+### 네임스페이스 — 쪼개지 않는다
+
+`PROTOCOL-ROUTE-NAMESPACES.md` 의 surface 기준을 그대로 적용한다. AS2 문서를
+주고받고 프로토콜이 규율하면 AP 네임스페이스, 앱 조회 결과면 `axismundi/v1`
+(`/hashtags/{id}/members` 가 이름과 달리 후자로 남은 선례).
+
+결정적인 것은 **§6.2.1 의 bare object 와 AS2 §3.1 의 참조형이 스펙상 같은
+엔드포인트**라는 점이다. 페이로드 모양에 따라 네임스페이스를 가르면 스펙이 하나로
+정의한 입구를 둘로 쪼개는 것이고, 그것은 "AP 로 통합" 보다도 "axismundi API 로
+분리" 보다도 나쁘다. 그러므로 쓰기 표면은 outbox 하나로 두고, 후보 목록 같은
+조회는 `axismundi/v1` 에 남긴다(AS2 문서가 아니다).
+
+AP C2S 자체로 얻는 상호호환은 거의 없다 — 클라이언트 생태계가 사실상 없다. 채택
+근거는 외부 호환이 아니라 **입구가 하나라는 것**이다.
+
+### 측정 — 지금 있는 것과 없는 것
+
+```txt
+있다   컴포저의 새 Note       outbox 로 실제 POST, bare object → 서버가 Create 로 감쌈
+없다   참조형 object 수용      outbox 가 { type: Create, object: "<uri>" } 를 받지 않는다
+```
+
+All Posts 의 `Submit Create` 는 **outbox POST 가 아니다**. `submit_c2s()` 가 받는
+것은 AS2 문서가 아니라 로컬 명령이고(`operation` / `post_id` / `expected_version`),
+Minimal Activity 모양은 제출물이 아니라 원장에 기록될 때 만들어진다. 여기서 "C2S" 는
+서비스 이름이지 ActivityPub 의 C2S 와이어가 아니다 — "이미 C2S 로 동작한다" 고 읽지
+말 것.
+
+§6.2 의 복사는 구현돼 있다. `activities/includes/post-attribution.php:18`
+`axismundi_act_store_recorded_post_attribution()` 이 **최초 Create 한 번만**
+actor 를 postmeta 로 쓴다. 권위 동결 이후 `get_object_attribution()` 도 같은 원장
+값을 읽으므로 postmeta 는 같은 값의 캐시이고, 둘은 갈릴 수 없다.
+
 ## 미결
 
 ```txt

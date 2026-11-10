@@ -5,7 +5,7 @@ defined( 'ABSPATH' ) || exit;
 add_action( 'admin_menu', 'axismundi_act_register_admin_outbox', 11 );
 
 function axismundi_act_register_admin_outbox() : void {
-	add_submenu_page( axismundi_actors_accounts_menu_slug(), __( 'Outbox', 'axismundi-activities' ), __( 'Outbox', 'axismundi-activities' ), 'edit_posts', 'axismundi-outbox', 'axismundi_act_render_admin_outbox' );
+	add_submenu_page( axismundi_actors_accounts_menu_slug(), __( 'Sent', 'axismundi-activities' ), __( 'Sent', 'axismundi-activities' ), 'edit_posts', 'axismundi-outbox', 'axismundi_act_render_admin_outbox' );
 }
 
 function axismundi_act_admin_outbox_date( $value ) : string {
@@ -110,7 +110,7 @@ function axismundi_act_render_admin_outbox() : void {
 		wp_die( esc_html__( 'You cannot access this page.', 'axismundi-activities' ) );
 	}
 	$actor = axismundi_act_admin_publisher();
-	echo '<div class="wrap"><h1>' . esc_html__( 'Outbox', 'axismundi-activities' ) . '</h1>';
+	echo '<div class="wrap"><h1>' . esc_html__( 'Sent', 'axismundi-activities' ) . '</h1>';
 	axismundi_act_admin_account_switcher();
 	if ( is_wp_error( $actor ) ) {
 		echo '<p>' . esc_html( $actor->get_error_message() ) . '</p></div>';
@@ -119,14 +119,15 @@ function axismundi_act_render_admin_outbox() : void {
 	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only, Actor-authorized filters.
 	$input = wp_unslash( $_GET );
 	$admin_url = axismundi_actors_account_admin_url( 'axismundi-outbox' );
-	$history = 'collection' !== ( $input['view'] ?? ( isset( $input['collection_page'] ) ? 'collection' : 'history' ) );
+	$requested_view = $input['view'] ?? ( isset( $input['collection_page'] ) ? 'collection' : 'history' );
+	$current_view = in_array( $requested_view, array( 'created', 'collection' ), true ) ? $requested_view : 'history';
 	echo '<nav class="nav-tab-wrapper">';
-	foreach ( array( 'history' => __( 'Activity history', 'axismundi-activities' ), 'collection' => __( 'Collection', 'axismundi-activities' ) ) as $view => $label ) {
-		$current = $history === ( 'history' === $view );
+	foreach ( array( 'history' => __( 'All', 'axismundi-activities' ), 'created' => __( 'Created', 'axismundi-activities' ), 'collection' => __( 'Collection', 'axismundi-activities' ) ) as $view => $label ) {
+		$current = $current_view === $view;
 		echo '<a class="nav-tab' . ( $current ? ' nav-tab-active" aria-current="page' : '' ) . '" href="' . esc_url( add_query_arg( 'view', $view, $admin_url ) ) . '">' . esc_html( $label ) . '</a>';
 	}
 	echo '</nav>';
-	if ( ! $history ) {
+	if ( 'collection' === $current_view ) {
 		$cursor = is_string( $input['cursor'] ?? null ) ? sanitize_text_field( $input['cursor'] ) : '';
 		$page = '1' === ( $input['collection_page'] ?? '' );
 		if ( (string) $actor->get_identity_id() !== ( $input['actor'] ?? '' ) ) {
@@ -153,7 +154,7 @@ function axismundi_act_render_admin_outbox() : void {
 		echo '<pre style="white-space:pre-wrap;overflow-wrap:anywhere">' . esc_html( wp_json_encode( $collection, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) ) . '</pre></div>';
 		return;
 	}
-	$type = sanitize_text_field( is_string( $input['activity_type'] ?? null ) ? $input['activity_type'] : '' );
+	$type = 'created' === $current_view ? 'Create' : sanitize_text_field( is_string( $input['activity_type'] ?? null ) ? $input['activity_type'] : '' );
 	$target = sanitize_text_field( is_string( $input['target'] ?? null ) ? $input['target'] : '' );
 	$page = (string) $actor->get_identity_id() === ( $input['actor'] ?? '' ) && is_string( $input['paged'] ?? null ) ? max( 1, (int) $input['paged'] ) : 1;
 	$from = axismundi_act_admin_outbox_date( $input['from'] ?? '' );
@@ -167,15 +168,17 @@ function axismundi_act_render_admin_outbox() : void {
 	?>
 	<form method="get" action="<?php echo esc_url( admin_url( 'admin.php' ) ); ?>">
 		<input type="hidden" name="page" value="axismundi-outbox">
-		<input type="hidden" name="view" value="history">
+		<input type="hidden" name="view" value="<?php echo esc_attr( $current_view ); ?>">
 		<input type="hidden" name="actor" value="<?php echo esc_attr( $actor->get_identity_id() ); ?>">
 		<div class="tablenav top" style="height:auto"><div class="alignleft actions">
+		<?php if ( 'history' === $current_view ) : ?>
 		<label><?php esc_html_e( 'Activity type', 'axismundi-activities' ); ?> <input name="activity_type" list="ax-outbox-types" value="<?php echo esc_attr( $type ); ?>"></label>
 		<datalist id="ax-outbox-types">
 			<?php foreach ( array( 'Like', 'Create', 'Update', 'Delete', 'Follow', 'Announce', 'Undo', 'Block', 'Add', 'Remove' ) as $suggestion ) : ?>
 				<option value="<?php echo esc_attr( $suggestion ); ?>"></option>
 			<?php endforeach; ?>
 		</datalist>
+		<?php endif; ?>
 		<label><?php esc_html_e( 'Object URI', 'axismundi-activities' ); ?> <input name="target" value="<?php echo esc_attr( $target ); ?>"></label>
 		<label><?php esc_html_e( 'From (UTC)', 'axismundi-activities' ); ?> <input type="date" name="from" value="<?php echo esc_attr( $from ); ?>"></label>
 		<label><?php esc_html_e( 'Through (UTC)', 'axismundi-activities' ); ?> <input type="date" name="through" value="<?php echo esc_attr( $through ); ?>"></label>
@@ -212,7 +215,7 @@ function axismundi_act_render_admin_outbox() : void {
 	</table>
 	</div>
 	<?php
-	$url = add_query_arg( array( 'view' => 'history', 'actor' => $actor->get_identity_id(), 'activity_type' => rawurlencode( $type ), 'target' => rawurlencode( $target ), 'from' => $from, 'through' => $through ), $admin_url );
+	$url = add_query_arg( array( 'view' => $current_view, 'actor' => $actor->get_identity_id(), 'activity_type' => rawurlencode( $type ), 'target' => rawurlencode( $target ), 'from' => $from, 'through' => $through ), $admin_url );
 	axismundi_act_admin_outbox_pagination( $page, $result['pages'], $result['total'], $url );
 	echo '</div>';
 }

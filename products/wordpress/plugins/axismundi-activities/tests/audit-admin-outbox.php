@@ -131,6 +131,8 @@ try {
 	$assert( $query === array_replace( $query, $filters + array( 'paged' => '3', 'view' => 'history' ) ), 'Navigation keeps actor and every filter' );
 	$assert( ! str_contains( $html, 'name="paged"' ) && str_contains( $render( $filters ), 'aria-current="page">1' ), 'Submitting filters starts from page one' );
 	$assert( str_contains( $render( $filters + array( 'paged' => '4' ) ), 'No matching activities.' ), 'Out-of-range page is empty and not an error' );
+	$created = $render( array( 'view' => 'created', 'activity_type' => 'Update' ) + $filters );
+	$assert( str_contains( $created, '<h1>Sent</h1>' ) && str_contains( $created, '53 activities' ) && ! str_contains( $created, '/wrong-type' ) && ! str_contains( $created, 'name="activity_type"' ), 'Sent Created fixes the activity type to Create' );
 	$collection = $render( array( 'view' => 'collection', 'actor' => $identity ) );
 	$assert( str_contains( $collection, 'Open public Outbox JSON' ) && str_contains( $collection, 'OrderedCollection' ) && ! str_contains( $collection, 'Activity history pages' ), 'Collection still renders ActivityPub JSON' );
 

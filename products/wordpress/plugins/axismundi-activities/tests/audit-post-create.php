@@ -110,10 +110,27 @@ try {
 	$after_republish_types = array_map( static fn( Axismundi_Activity $activity ) : string => $activity->get_type(), $after_republish );
 	ax_create_assert( $ax_create_results, 'draft and republish preserve the original Create without federation withdrawal', 1 === count( $after_republish ) && array( 'Create' ) === $after_republish_types );
 
+	if ( EMPTY_TRASH_DAYS ) {
+		$trashed = wp_trash_post( $post_id );
+		$restored = wp_untrash_post( $post_id );
+		wp_update_post( array( 'ID' => $post_id, 'post_status' => 'publish' ) );
+		$after_trash = axismundi_act_get_by_object( $object_uri );
+		ax_create_assert( $ax_create_results, 'WordPress Trash and restore keep the original Create without recording Delete', $trashed && $restored && 1 === count( $after_trash ) && $create->get_uri() === $after_trash[0]->get_uri() );
+	}
+
 	$delete = axismundi_act_record_activity( array( 'type' => 'Delete', 'actor' => $actor_uri, 'object' => $object_uri ), 'outbound' );
-	wp_update_post( array( 'ID' => $post_id, 'post_title' => 'Create bridge resurrected' ) );
+	wp_update_post( array( 'ID' => $post_id, 'post_title' => 'Create bridge edited after Delete' ) );
+	$deleted_post = get_post( $post_id );
+	$editor_retry = axismundi_act_record_post_create( $deleted_post, $object_uri, $actor_uri );
+	$snapshot_retry = axismundi_act_record_object_commit( axismundi_op_transform_object( $deleted_post ) );
+	$ledger_retry = axismundi_act_record_activity( array( 'type' => 'Create', 'actor' => $actor_uri, 'object' => $object_uri ), 'outbound' );
+	foreach ( array( 'post' => $editor_retry, 'snapshot' => $snapshot_retry, 'ledger' => $ledger_retry ) as $path => $retry ) {
+		ax_create_assert( $ax_create_results, "a deleted URI rejects a new Create via the {$path} path", is_wp_error( $retry ) && 'ax_act_object_deleted' === $retry->get_error_code() );
+	}
+	$replay = axismundi_act_record_activity( $create_payload, 'outbound' );
+	ax_create_assert( $ax_create_results, 'replaying the existing immutable Create does not record a new one after Delete', $replay instanceof Axismundi_Activity && $create->get_uri() === $replay->get_uri() );
 	$after_delete = axismundi_act_get_by_object( $object_uri );
-	ax_create_assert( $ax_create_results, 'an explicitly recorded Delete starts a new lifecycle generation and permits one resurrection Create', $delete instanceof Axismundi_Activity && 3 === count( $after_delete ) && 'Create' === $after_delete[0]->get_type() );
+	ax_create_assert( $ax_create_results, 'editing after Delete leaves the ledger unchanged and offers no list publication action', $delete instanceof Axismundi_Activity && 2 === count( $after_delete ) && 'Delete' === $after_delete[0]->get_type() && array() === axismundi_act_post_list_publication( $deleted_post ) );
 
 	$permanent_id = (int) wp_insert_post( array( 'post_type' => 'post', 'post_status' => 'publish', 'post_author' => $author_id, 'post_title' => 'Permanent delete bridge' ) );
 	$permanent_post = $permanent_id > 0 ? get_post( $permanent_id ) : null;

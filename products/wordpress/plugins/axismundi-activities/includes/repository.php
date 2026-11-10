@@ -709,13 +709,33 @@ function axismundi_act_get_by_object( string $object_uri, int $limit = 50 ) : ar
 
 /** Whether a canonical Object has ever had an outbound Create in this ledger. */
 function axismundi_act_has_outbound_create( string $object_uri ) : ?bool {
+	return axismundi_act_has_outbound_object_event( $object_uri, 'Create' );
+}
+
+/** Whether this URI has a durable outbound Delete, regardless of its latest effective row. */
+function axismundi_act_has_outbound_delete( string $object_uri ) : ?bool {
+	return axismundi_act_has_outbound_object_event( $object_uri, 'Delete' );
+}
+
+function axismundi_act_has_outbound_object_event( string $object_uri, string $activity_type ) : ?bool {
 	global $wpdb;
 	$uri = axismundi_act_uri( $object_uri );
 	if ( '' === $uri || AXISMUNDI_ACT_DB_VERSION !== (string) get_option( AXISMUNDI_ACT_DB_VERSION_OPTION, '' ) ) {
 		return null;
 	}
-	$found = $wpdb->get_var( $wpdb->prepare( "SELECT 1 FROM %i WHERE object_uri_hash = %s AND object_uri = %s AND direction = 'outbound' AND activity_type = 'Create' LIMIT 1", axismundi_act_activities_table(), hash( 'sha256', $uri ), $uri ) );
+	$found = $wpdb->get_var( $wpdb->prepare( "SELECT 1 FROM %i WHERE object_uri_hash = %s AND object_uri = %s AND direction = 'outbound' AND activity_type = %s LIMIT 1", axismundi_act_activities_table(), hash( 'sha256', $uri ), $uri, $activity_type ) );
 	return '' === $wpdb->last_error ? null !== $found : null;
+}
+
+/** First outbound Create authority. Empty means never created; null means unavailable. */
+function axismundi_act_outbound_create_actor( string $object_uri ) : ?string {
+	global $wpdb;
+	$uri = axismundi_act_uri( $object_uri );
+	if ( '' === $uri || AXISMUNDI_ACT_DB_VERSION !== (string) get_option( AXISMUNDI_ACT_DB_VERSION_OPTION, '' ) ) {
+		return null;
+	}
+	$actor = $wpdb->get_var( $wpdb->prepare( "SELECT actor_uri FROM %i WHERE object_uri_hash = %s AND object_uri = %s AND direction = 'outbound' AND activity_type = 'Create' ORDER BY id ASC LIMIT 1", axismundi_act_activities_table(), hash( 'sha256', $uri ), $uri ) );
+	return '' === $wpdb->last_error ? (string) $actor : null;
 }
 
 /** Latest effective Create, Update, or Delete for one object URI. */
@@ -742,15 +762,13 @@ function axismundi_act_get_object_lifecycle( string $object_uri ) : ?Axismundi_A
  * attribution off the latest lifecycle row would hand the page to that contributor on the
  * next save.
  *
- * Core posts and attachments use their explicitly stored postmeta when available. Legacy
- * sources without that metadata retain the Create fallback until explicit migration.
+ * A core post's first outbound Create fixes its authority. Before Create, and for
+ * attachments, explicit postmeta provides the source attribution.
  * For those sources, attribution is taken from the Create that began the current generation. A
  * withdrawn Object has no attribution to report: a later publication starts a new
  * generation and resolves its identity afresh.
  *
- * This is a projection of what the ledger holds today, where a Create's actor and its
- * `attributedTo` are necessarily the same value. Once an Update may carry a different
- * actor, `attributedTo` has to be stored in its own column rather than inferred here.
+ * This reads one authority, not the Object's potentially multi-valued attribution set.
  *
  * @param string $object_uri Canonical Object URI.
  * @return string Attributed Actor URI, or an empty string when nothing is committed.
@@ -760,6 +778,12 @@ function axismundi_act_get_object_attribution( string $object_uri ) : string {
 	$uri = axismundi_act_uri( $object_uri );
 	if ( function_exists( 'axismundi_act_attribution_post_source' ) && function_exists( 'axismundi_op_stored_post_attribution' ) ) {
 		$post = axismundi_act_attribution_post_source( $uri );
+		if ( $post && 'post' === $post->post_type ) {
+			$creator = axismundi_act_outbound_create_actor( $uri );
+			if ( null !== $creator && '' !== $creator ) {
+				return $creator;
+			}
+		}
 		if ( $post && metadata_exists( 'post', $post->ID, AXISMUNDI_OP_ATTRIBUTED_TO_META ) ) {
 			return axismundi_op_stored_post_attribution( $post->ID );
 		}
@@ -1481,6 +1505,17 @@ function axismundi_act_record_source_activity( array $payload, string $direction
 			return is_wp_error( $commit_result ) ? $commit_result : new WP_Error( 'ax_act_write', 'The Activity transaction could not commit.' );
 		}
 		return axismundi_act_hydrate( $existing );
+	}
+
+	// Local policy applies to new writes, not replay of an already committed Activity.
+	if ( 'outbound' === $direction && 'Create' === $normalized['activity_type'] && ! empty( $normalized['object_uri'] ) ) {
+		$deleted = axismundi_act_has_outbound_delete( $normalized['object_uri'] );
+		if ( false !== $deleted ) {
+			$wpdb->query( 'ROLLBACK' );
+			return $deleted
+				? new WP_Error( 'ax_act_object_deleted', __( 'A deleted Object URI cannot be created again.', 'axismundi-activities' ) )
+				: new WP_Error( 'ax_act_object_history', __( 'The Object publication history is unavailable.', 'axismundi-activities' ) );
+		}
 	}
 
 	if ( 'Undo' === $normalized['activity_type'] && ! empty( $normalized['object_uri'] ) ) {

@@ -91,14 +91,15 @@ try {
 	$first_create = axismundi_act_record_object_commit( $object, $publisher->get_uri() );
 	$assert( $first_create instanceof Axismundi_Activity, 'A joint Object lifecycle can be committed with an explicit publisher' );
 	$old_create = $first_create->get_payload();
-	$changed = axismundi_op_set_post_attribution( $post_id, $publisher->get_uri(), $user, array( $reactor->get_uri() ) );
+	$changed = axismundi_op_set_post_attribution( $post_id, $publisher->get_uri(), $user, array( $collaborator->get_uri(), $reactor->get_uri() ) );
 	$latest = axismundi_act_get_object_lifecycle( $uri );
 	$assert( true === $changed && $latest && 'Update' === $latest->get_type() && $publisher->get_uri() === $latest->get_actor_uri() && in_array( $reactor->get_uri(), $latest->get_payload()['object']['attributedTo'], true ), 'Changing collaborators emits Update under the unchanged publisher Account' );
 	$assert( $old_create === axismundi_act_get( $first_create->get_uri() )->get_payload(), 'Joint attribution edits do not rewrite the original Create' );
-	$assert( true === axismundi_op_set_post_attribution( $post_id, $publisher->get_uri(), $user, array( $collaborator->get_uri() ) ), 'Collaborator reassignment can be restored through the same authorized mutation service' );
+	$removal = axismundi_op_set_post_attribution( $post_id, $publisher->get_uri(), $user, array( $collaborator->get_uri() ) );
+	$assert( is_wp_error( $removal ) && 'ax_op_attribution_removal' === $removal->get_error_code(), 'Removing a published collaborator is rejected' );
 	if ( class_exists( 'Axismundi_Note_Source' ) && function_exists( 'axismundi_forum_note_reply_parent_actor_uris' ) ) {
 		$reply_source = new Axismundi_Note_Source( array( 'in_reply_to_uri' => $uri ), null );
-		$assert( 2 === count( axismundi_forum_note_reply_parent_actor_uris( $reply_source ) ), 'Retired Note reply adapter retains every parent author as a recipient' );
+		$assert( 3 === count( axismundi_forum_note_reply_parent_actor_uris( $reply_source ) ), 'Retired Note reply adapter retains every parent author as a recipient' );
 	}
 	if ( function_exists( 'axismundi_forum_submitted_object_community_group' ) ) {
 		$group_uri = 'https://example.com/groups/joint-' . wp_generate_uuid4();

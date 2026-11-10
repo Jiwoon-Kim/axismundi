@@ -49,13 +49,26 @@ function axismundi_act_record_object_commit( array $object, string $publisher_ur
 	if ( '' === $object_uri || '' === $actor_uri || 'Tombstone' === (string) ( $object['type'] ?? '' ) ) {
 		return new WP_Error( 'ax_act_object_snapshot', __( 'A local lifecycle commit requires a complete active Object snapshot.', 'axismundi-activities' ) );
 	}
+	$post = axismundi_act_attribution_post_source( $object_uri );
+	if ( $post && 'post' === $post->post_type ) {
+		$creator = axismundi_act_outbound_create_actor( $object_uri );
+		if ( null === $creator || ( '' !== $creator && $creator !== $actor_uri ) ) {
+			return new WP_Error( 'ax_act_object_actor', __( 'The post must be committed under its original publishing Actor.', 'axismundi-activities' ) );
+		}
+		if ( '' !== $creator && array_diff( axismundi_op_post_attribution_uris( $post, $creator ), array_column( $members, 'uri' ) ) ) {
+			return new WP_Error( 'ax_act_object_attribution', __( 'A post Update cannot remove an existing attribution member.', 'axismundi-activities' ) );
+		}
+	}
 
 	$latest      = axismundi_act_get_object_lifecycle( $object_uri );
+	if ( $latest && 'Delete' === $latest->get_type() ) {
+		return new WP_Error( 'ax_act_object_deleted', __( 'A deleted Object URI cannot be created again.', 'axismundi-activities' ) );
+	}
 	$fingerprint = axismundi_act_lifecycle_fingerprint( $object );
 	if ( '' === $fingerprint ) {
 		return new WP_Error( 'ax_act_object_snapshot', __( 'The local Object snapshot could not be normalized.', 'axismundi-activities' ) );
 	}
-	if ( $latest instanceof Axismundi_Activity && 'Delete' !== $latest->get_type() ) {
+	if ( $latest instanceof Axismundi_Activity ) {
 		$previous = $latest->get_payload()['object'] ?? null;
 		if ( is_array( $previous )
 			&& hash_equals( $latest->get_actor_uri(), $actor_uri )
@@ -64,7 +77,7 @@ function axismundi_act_record_object_commit( array $object, string $publisher_ur
 		}
 	}
 
-	$type       = $latest instanceof Axismundi_Activity && 'Delete' !== $latest->get_type() ? 'Update' : 'Create';
+	$type       = $latest instanceof Axismundi_Activity ? 'Update' : 'Create';
 	$generation = $latest instanceof Axismundi_Activity ? $latest->get_uri() : 'initial';
 	$audience   = axismundi_act_audience( $object );
 	$payload    = array(

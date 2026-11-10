@@ -221,8 +221,11 @@ receiver has no way to apply our partial.
 A contributor revising an Organization's Article emits `Update.actor = contributor`,
 `attributedTo = Organization`, and the Object stays the Organization's.
 
-Changing `attributedTo` is a separate, explicitly authorised reassignment. It is never a side
-effect of an edit.
+For core WordPress posts, the assigned publisher can change before the first outbound
+`Create`. Afterwards, that `Create.actor` fixes publication authority and existing
+`attributedTo` members cannot be removed. An explicit, authorised joint-attribution addition
+can publish an `Update` under the original Actor. Neither `Update.actor` nor `Announce.actor`
+is itself evidence that an Actor should be added to the Object's attribution.
 
 ### Delete
 

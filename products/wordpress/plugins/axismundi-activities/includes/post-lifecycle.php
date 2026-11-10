@@ -18,7 +18,7 @@
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Record an initial or post-Delete Create for one projected Core Post.
+ * Record the initial Create for one projected Core Post.
  *
  * The Object URI is checked against the projection, because the identity of the source is what
  * Object Projections owns. The Actor is not resolved here: it arrives already decided and
@@ -35,8 +35,17 @@ function axismundi_act_record_post_create( WP_Post $post, string $object_uri, st
 	if ( '' === $actor_uri ) {
 		return new WP_Error( 'ax_act_post_actor', __( 'The post has no identity to publish under.', 'axismundi-activities' ) );
 	}
+	$deleted = axismundi_act_has_outbound_delete( $object_uri );
+	if ( false !== $deleted ) {
+		return $deleted
+			? new WP_Error( 'ax_act_object_deleted', __( 'A deleted Object URI cannot be created again.', 'axismundi-activities' ) )
+			: new WP_Error( 'ax_act_object_history', __( 'The Object publication history is unavailable.', 'axismundi-activities' ) );
+	}
 	$lifecycle = axismundi_act_get_object_lifecycle( $object_uri );
-	if ( $lifecycle instanceof Axismundi_Activity && 'Delete' !== $lifecycle->get_type() ) {
+	if ( $lifecycle instanceof Axismundi_Activity ) {
+		if ( 'Delete' === $lifecycle->get_type() ) {
+			return new WP_Error( 'ax_act_object_deleted', __( 'A deleted Object URI cannot be created again.', 'axismundi-activities' ) );
+		}
 		if ( $scheduled_intent ) {
 			return new WP_Error( 'ax_act_pending_existing', 'This Object already has an active lifecycle; no scheduled Create was made.' );
 		}
@@ -55,8 +64,7 @@ function axismundi_act_record_post_create( WP_Post $post, string $object_uri, st
 		}
 	}
 
-	$generation = $lifecycle instanceof Axismundi_Activity ? $lifecycle->get_uri() : 'initial';
-	$event_key  = 'wp-post-create:' . $object_uri . ':after:' . $generation;
+	$event_key = 'wp-post-create:' . $object_uri . ':after:initial';
 	$activity   = axismundi_act_record_source_activity(
 		array(
 			'type'   => 'Create',
@@ -199,9 +207,15 @@ function axismundi_act_post_list_publication( WP_Post $post ) : array {
 		return array();
 	}
 	$uri = axismundi_op_post_object_uri( $post );
+	if ( false !== axismundi_act_has_outbound_delete( $uri ) ) {
+		return array();
+	}
 	$latest = axismundi_act_get_object_lifecycle( $uri );
-	if ( ! $latest || 'Delete' === $latest->get_type() ) {
+	if ( ! $latest ) {
 		return array( 'Create' );
+	}
+	if ( 'Delete' === $latest->get_type() ) {
+		return array();
 	}
 	$actor = axismundi_actors_get_by_uri( axismundi_act_get_object_attribution( $uri ) );
 	if ( ! $actor instanceof Axismundi_Actor || ! $actor->is_local() || 'public' !== $actor->get_status() || ! axismundi_actors_can_act_as( $actor, get_current_user_id() ) ) {
@@ -227,13 +241,6 @@ function axismundi_act_post_list_publication( WP_Post $post ) : array {
 
 function axismundi_act_post_list_publication_button( WP_Post $post ) : void {
 	$publication = axismundi_act_post_list_publication( $post );
-	if ( 'Create' !== ( $publication[0] ?? '' ) && axismundi_act_post_lifecycle_applies( $post ) && function_exists( 'axismundi_actors_get_by_uri' ) ) {
-		$uri = axismundi_act_get_object_attribution( axismundi_op_post_object_uri( $post ) );
-		$actor = '' !== $uri ? axismundi_actors_get_by_uri( $uri ) : null;
-		if ( $actor instanceof Axismundi_Actor && '' !== $actor->get_preferred_username() ) {
-			printf( ' <span class="axismundi-post-attribution">%s</span> ', esc_html( '@' . $actor->get_preferred_username() ) );
-		}
-	}
 	if ( ! $publication ) {
 		return;
 	}
@@ -251,6 +258,27 @@ add_action( 'admin_footer-edit.php', static function () : void {
 	}
 } );
 
+/** The list-table command uses the active account, never the editor's attribution-first resolver. */
+function axismundi_act_submit_post_list_create( WP_Post $post ) {
+	$user_id = get_current_user_id();
+	$actor = function_exists( 'axismundi_actors_workspace_publisher' ) ? axismundi_actors_workspace_publisher( $user_id ) : null;
+	if ( ! $actor instanceof Axismundi_Actor ) {
+		return new WP_Error( 'ax_act_post_list_actor', __( 'Select an active publishing Account before submitting this post.', 'axismundi-activities' ) );
+	}
+	if ( ! axismundi_op_attribution_lock( $post->ID ) ) {
+		return new WP_Error( 'ax_act_post_list_busy', __( 'Attribution is being changed. Try again.', 'axismundi-activities' ) );
+	}
+	try {
+		$result = axismundi_act_submit_c2s( $user_id, $actor->get_identity_id(), axismundi_act_post_command( $post, 'Create' ), array( 'surface' => 'post-list' ) );
+		if ( is_wp_error( $result ) && 'ax_act_c2s_attribution' === $result->get_error_code() ) {
+			return new WP_Error( 'ax_act_post_list_actor_mismatch', __( 'The active Account does not match the assigned Actor. Switch to the assigned Account and try again.', 'axismundi-activities' ) );
+		}
+		return $result;
+	} finally {
+		axismundi_op_attribution_lock( $post->ID, true );
+	}
+}
+
 function axismundi_act_handle_post_list_publication() : void {
 	$post_id = absint( $_GET['post_id'] ?? 0 );
 	$post = $post_id ? get_post( $post_id ) : null;
@@ -263,9 +291,9 @@ function axismundi_act_handle_post_list_publication() : void {
 	if ( ( $publication[0] ?? '' ) !== $operation ) {
 		wp_die( esc_html__( 'There is no matching change to publish.', 'axismundi-activities' ), '', array( 'response' => 409 ) );
 	}
-	$result = 'Create' === $operation ? axismundi_act_submit_post_operation( $post, 'Create' ) : axismundi_act_record_object_commit( $publication[1] );
+	$result = 'Create' === $operation ? axismundi_act_submit_post_list_create( $post ) : axismundi_act_record_object_commit( $publication[1] );
 	if ( ! $result instanceof Axismundi_Activity ) {
-		wp_die( esc_html( is_wp_error( $result ) ? $result->get_error_message() : __( 'No publishing Actor is available.', 'axismundi-activities' ) ) );
+		wp_die( esc_html( is_wp_error( $result ) ? $result->get_error_message() : __( 'No publishing Actor is available.', 'axismundi-activities' ) ), '', array( 'response' => 409, 'back_link' => true ) );
 	}
 	wp_safe_redirect( admin_url( 'edit.php' ) );
 	exit;

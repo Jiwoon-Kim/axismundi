@@ -23,6 +23,15 @@ function axismundi_act_store_recorded_post_attribution( Axismundi_Activity $acti
 	$object = $activity->get_payload()['object'] ?? null;
 	$members = is_array( $object ) && isset( $object['attributedTo'] ) ? axismundi_op_normalize_attribution_uris( $object['attributedTo'] ) : array();
 	if ( is_wp_error( $members ) ) { do_action( 'axismundi_act_post_attribution_write_failed', $members, $activity ); return; }
+	if ( 'post' === $post->post_type ) {
+		// Updates project the attribution already stored by the source mutation, not the other way around.
+		if ( 'Create' !== $activity->get_type() || axismundi_act_outbound_create_actor( $activity->get_object_uri() ) !== $activity->get_actor_uri() ) {
+			return;
+		}
+		$result = axismundi_op_store_post_attribution( $post, $activity->get_actor_uri(), $members ?: null );
+		if ( is_wp_error( $result ) ) { do_action( 'axismundi_act_post_attribution_write_failed', $result, $activity ); }
+		return;
+	}
 	$uri = axismundi_op_stored_post_attribution( $post->ID );
 	if ( ! in_array( $uri, $members, true ) ) { $uri = ''; }
 	if ( '' === $uri && in_array( $activity->get_actor_uri(), $members, true ) ) { $uri = $activity->get_actor_uri(); }
@@ -38,8 +47,8 @@ function axismundi_act_store_recorded_post_attribution( Axismundi_Activity $acti
 }
 add_action( 'axismundi_act_activity_recorded', 'axismundi_act_store_recorded_post_attribution', 5 );
 
-/** Explicit, authorized reassignment emits Update, not a new Create or a rewritten old row. */
-function axismundi_act_publish_post_attribution_change( $result, WP_Post $post, string $old, string $uri, int $user_id, array $old_others = array(), array $new_others = array(), bool $unpublished_only = false ) {
+/** Authorized attribution changes emit Update without rewriting the original Create. */
+function axismundi_act_publish_post_attribution_change( $result, WP_Post $post, string $old, string $uri, int $user_id, array $old_others = array(), array $new_others = array(), bool $unpublished_only = false, bool $allow_federated_update = true ) {
 	if ( is_wp_error( $result ) ) { return $result; }
 	$object_uri = 'attachment' === $post->post_type ? axismundi_op_core_attachment_uri( $post ) : axismundi_op_post_object_uri( $post );
 	if ( $unpublished_only ) {
@@ -55,6 +64,9 @@ function axismundi_act_publish_post_attribution_change( $result, WP_Post $post, 
 		$GLOBALS['axismundi_act_attribution_only_saves'][$post->ID] = true;
 		return $result;
 	}
+	if ( ! $allow_federated_update ) {
+		return new WP_Error( 'ax_act_attribution_confirm_update', __( 'Reload the actor picker and confirm the federated Update before changing attribution.', 'axismundi-activities' ), array( 'status' => 409 ) );
+	}
 	if ( '' === $uri ) { return new WP_Error( 'ax_act_attribution_empty', 'Choose a publishing Account for an already announced Object.', array( 'status' => 409 ) ); }
 	$actor = axismundi_actors_get_by_uri( $uri );
 	if ( ! user_can( $user_id, 'edit_post', $post->ID ) || ! $actor || ! axismundi_actors_can_act_as( $actor, $user_id ) ) {
@@ -67,7 +79,7 @@ function axismundi_act_publish_post_attribution_change( $result, WP_Post $post, 
 	$recorded = axismundi_act_record_object_commit( $object, $uri );
 	return is_wp_error( $recorded ) ? $recorded : $result;
 }
-add_filter( 'axismundi_op_post_attribution_changed', 'axismundi_act_publish_post_attribution_change', 10, 8 );
+add_filter( 'axismundi_op_post_attribution_changed', 'axismundi_act_publish_post_attribution_change', 10, 9 );
 
 /** Explicit bounded migration: default is read-only; ambiguous history is never guessed. */
 function axismundi_act_migrate_post_attribution( bool $apply = false, int $after = 0, int $limit = 100 ) : array {

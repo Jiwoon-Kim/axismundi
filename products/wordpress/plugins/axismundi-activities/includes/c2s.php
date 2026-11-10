@@ -158,8 +158,8 @@ function axismundi_act_c2s_publish( WP_Post $post, string $object_uri, int $prin
 
 	/*
 	 * A committed Object keeps the Actor it is attributed to. A second submission naming a
-	 * different identity is a reassignment, which needs its own authorisation and is not a
-	 * side effect of saving, so it is refused rather than quietly applied.
+	 * different identity is refused. For core posts, the first outbound Create fixes that
+	 * identity; before Create, the stored assignment is the proposed publisher.
 	 */
 	$attributed = axismundi_act_get_object_attribution( $object_uri );
 	if ( '' !== $attributed && ! hash_equals( $attributed, $actor->get_uri() ) ) {
@@ -205,7 +205,7 @@ function axismundi_act_c2s_withdraw( WP_Post $post, string $object_uri, int $pri
 		return new WP_Error( 'ax_act_c2s_attribution', __( 'That identity is not the one this object is attributed to.', 'axismundi-activities' ) );
 	}
 	if ( ! axismundi_actors_can_act_as( $actor, $principal_user_id ) ) {
-		return new WP_Error( 'ax_act_c2s_permission', __( 'This account may not withdraw an object published by that identity.', 'axismundi-activities' ) );
+		return new WP_Error( 'ax_act_c2s_permission', __( 'This account may not withdraw this object as that Actor.', 'axismundi-activities' ) );
 	}
 	return axismundi_act_record_object_delete( $object_uri, $attributed );
 }

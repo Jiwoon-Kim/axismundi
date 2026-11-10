@@ -2,6 +2,7 @@
 /** Current attribution and immutable history regression; disposable local fixtures only. */
 defined( 'ABSPATH' ) || exit( 1 );
 require_once ABSPATH . 'wp-admin/includes/user.php';
+require_once ABSPATH . 'wp-admin/includes/screen.php';
 require_once WP_PLUGIN_DIR . '/axismundi-object-projections/includes/admin-publishing-filters.php';
 global $wpdb;
 $checks = 0;
@@ -47,17 +48,25 @@ try {
 	$assert( str_contains( $bulk_url, 'ax_publisher_skipped=1' ) && $actors[0]->get_uri() === axismundi_op_stored_post_attribution( $id )
 		&& $create->get_uri() === axismundi_act_get_object_lifecycle( $uri )->get_uri(), 'Bulk assignment skips a published post without recording Update' );
 	$original = $create->get_payload();
-	$assert( true === axismundi_op_set_post_attribution( $id, $actors[1]->get_uri(), $users[0] ), 'Published attribution may change to another authorized Account' );
+	$replacement = axismundi_op_admin_assign_list_actor( $id, $actors[1]->get_uri(), $users[0], true );
+	$assert( is_wp_error( $replacement ) && 'ax_op_attribution_frozen' === $replacement->get_error_code()
+		&& $actors[0]->get_uri() === axismundi_op_stored_post_attribution( $id )
+		&& $create->get_uri() === axismundi_act_get_object_lifecycle( $uri )->get_uri(), 'Published authority replacement is rejected before changing the source or ledger' );
+	$assert( true === axismundi_op_set_post_attribution( $id, $actors[0]->get_uri(), $users[0], array( $actors[1]->get_uri() ) ), 'The original publisher can add a joint attribution' );
 	$latest = axismundi_act_get_object_lifecycle( $uri );
-	$assert( $latest && 'Update' === $latest->get_type() && $actors[1]->get_uri() === ( $latest->get_payload()['object']['attributedTo'] ?? '' ), 'Reassignment emits Update with current attribution' );
+	$assert( $latest && 'Update' === $latest->get_type() && $actors[0]->get_uri() === $latest->get_actor_uri()
+		&& array( $actors[0]->get_uri(), $actors[1]->get_uri() ) === ( $latest->get_payload()['object']['attributedTo'] ?? null ), 'An addition emits Update under the original Create Actor' );
 	$assert( $original === axismundi_act_get( $create->get_uri() )->get_payload(), 'Old Create remains byte-equivalent history' );
-	$assert( $actors[1]->get_uri() === axismundi_act_get_object_attribution( $uri ), 'Current lifecycle authorization follows source metadata' );
+	$assert( $actors[0]->get_uri() === axismundi_act_get_object_attribution( $uri ), 'Current lifecycle authorization follows the original Create' );
 	$failure = static fn() => new WP_Error( 'fixture', 'Publication failure' );
 	add_filter( 'axismundi_op_post_attribution_changed', $failure, 1 );
-	$failed = axismundi_op_set_post_attribution( $id, $actors[0]->get_uri(), $users[0] );
+	$failed = axismundi_op_set_post_attribution( $id, $actors[0]->get_uri(), $users[0], array( $actors[1]->get_uri(), $actors[2]->get_uri() ) );
 	remove_filter( 'axismundi_op_post_attribution_changed', $failure, 1 );
-	$assert( is_wp_error( $failed ) && $actors[1]->get_uri() === axismundi_op_post_actor_uri( $post ), 'Failed Update rolls back current attribution' );
-	$assert( is_wp_error( axismundi_op_set_post_attribution( $id, '', $users[0] ) ) && $actors[1]->get_uri() === axismundi_op_post_actor_uri( $post ), 'Unpublishable reassignment rolls back metadata' );
+	$assert( is_wp_error( $failed ) && array( $actors[1]->get_uri() ) === axismundi_op_stored_post_co_attribution( $id ), 'Failed Update rolls back the joint addition' );
+	$removed = axismundi_op_set_post_attribution( $id, $actors[0]->get_uri(), $users[0], array() );
+	$assert( is_wp_error( $removed ) && 'ax_op_attribution_removal' === $removed->get_error_code(), 'Published co-attribution cannot be removed' );
+	$cleared = axismundi_op_set_post_attribution( $id, '', $users[0] );
+	$assert( is_wp_error( $cleared ) && 'ax_op_attribution_frozen' === $cleared->get_error_code(), 'Published authority cannot be cleared' );
 	$draft_id = wp_insert_post( array( 'post_type' => 'post', 'post_status' => 'draft', 'post_title' => 'REST attribution fixture' ) );
 	$posts[] = $draft_id;
 	$draft_uri = axismundi_op_post_object_uri( get_post( $draft_id ) );
@@ -78,7 +87,59 @@ try {
 	$media = get_post( $attachment );
 	$media_uri = axismundi_op_core_attachment_uri( $media );
 	$uris[] = $media_uri;
+	$columns = apply_filters( 'manage_media_columns', array( 'title' => 'File', 'parent' => 'Uploaded to', 'date' => 'Date' ), false );
+	$assert( array( 'title', 'parent', 'ax_attributed_to', 'date' ) === array_keys( $columns ), 'Media list places attribution after Uploaded to' );
+	$render = static function ( string $hook, ...$args ) : string {
+		ob_start();
+		try {
+			do_action( $hook, ...$args );
+			return (string) ob_get_contents();
+		} finally {
+			ob_end_clean();
+		}
+	};
+	$unassigned = $render( 'manage_media_custom_column', 'ax_attributed_to', $attachment );
+	$assert( str_contains( $unassigned, esc_html__( 'Unassigned', 'axismundi-object-projections' ) ) && str_contains( $unassigned, 'aria-controls="find-actors"' ), 'Unassigned media shows an Assign action without inferring attribution from the uploader' );
+	$default_options = axismundi_op_admin_list_actor_options( $attachment, $users[0], '' );
+	$assert( count( $default_options ) <= 20 && in_array( $actors[0]->get_uri(), array_column( $default_options, 'uri' ), true )
+		&& ! in_array( $actors[2]->get_uri(), array_column( $default_options, 'uri' ), true ), 'Administrator default picker is bounded to accessible actors' );
+	$admin_options = axismundi_op_admin_list_actor_options( $attachment, $users[0], '@' . $actors[2]->get_preferred_username() );
+	$assert( $actors[2]->get_uri() === ( $admin_options[0]['uri'] ?? '' ) && $admin_options[0]['adminAssignment'], 'Administrator handle search marks cross-workspace results as assignment only' );
+	$assert( true === axismundi_op_admin_assign_list_actor( $attachment, $actors[2]->get_uri(), $users[0] )
+		&& $actors[2]->get_uri() === axismundi_op_stored_post_attribution( $attachment )
+		&& ! axismundi_act_get_object_lifecycle( $media_uri ), 'Administrator can assign a verified unpublished attachment without publishing' );
+	$regular_attachment = wp_insert_post( array( 'post_type' => 'attachment', 'post_status' => 'inherit', 'post_mime_type' => 'image/png', 'post_author' => $users[1] ) );
+	$posts[] = $regular_attachment;
+	$uris[] = axismundi_op_core_attachment_uri( get_post( $regular_attachment ) );
+	$regular_user = new WP_User( $users[1] );
+	$regular_user->set_role( 'author' );
+	wp_set_current_user( $users[1] );
+	try {
+		$regular_options = axismundi_op_admin_list_actor_options( $regular_attachment, $users[1], $actors[2]->get_preferred_username() );
+		$assert( $actors[2]->get_uri() === ( $regular_options[0]['uri'] ?? '' ) && ! $regular_options[0]['adminAssignment']
+			&& array() === axismundi_op_admin_list_actor_options( $regular_attachment, $users[1], $actors[0]->get_preferred_username() )
+			&& is_wp_error( axismundi_op_admin_list_actor_options( $attachment, $users[1], '' ) ), 'Regular picker searches only accessible actors and requires media edit permission' );
+		$assert( is_wp_error( axismundi_op_admin_assign_list_actor( $regular_attachment, $actors[0]->get_uri(), $users[1] ) )
+			&& is_wp_error( axismundi_op_admin_assign_list_actor( $attachment, $actors[2]->get_uri(), $users[1] ) ), 'Assignment rejects a forged actor and media the user cannot edit' );
+		$assert( true === axismundi_op_admin_assign_list_actor( $regular_attachment, $actors[2]->get_uri(), $users[1] ), 'Regular user can assign an accessible actor to their media' );
+	} finally {
+		wp_set_current_user( $users[0] );
+	}
+	$regular_create = axismundi_act_record_source_activity( array( 'type' => 'Create', 'actor' => $actors[2]->get_uri(), 'object' => end( $uris ) ), 'outbound', 'media-picker-fixture:' . wp_generate_uuid4() );
+	$assert( $regular_create instanceof Axismundi_Activity
+		&& array() === axismundi_op_admin_list_actor_options( $regular_attachment, $users[0], $actors[2]->get_preferred_username() )
+		&& is_wp_error( axismundi_op_admin_assign_list_actor( $regular_attachment, $actors[2]->get_uri(), $users[0] ) ), 'Published media does not permit cross-workspace search or assignment' );
 	$assert( true === axismundi_op_set_post_attribution( $attachment, $actors[1]->get_uri(), $users[0] ), 'Attachment accepts independent publishing attribution' );
+	$cell = $render( 'manage_media_custom_column', 'ax_attributed_to', $attachment );
+	$assert( str_contains( $cell, esc_html( axismundi_actors_acting_actor_label( $actors[1] ) ) ) && str_contains( $cell, esc_attr( $actors[1]->get_uri() ) ), 'Media column renders the assigned Actor' );
+	$previous_screen = $GLOBALS['current_screen'] ?? null;
+	try {
+		set_current_screen( 'upload' );
+		$controls = $render( 'restrict_manage_posts', 'attachment', 'bar' );
+		$assert( str_contains( $controls, 'name="ax_publishing_actor"' ) && str_contains( $controls, 'name="ax_not_federated"' ), 'Media list filter controls render in the core bar' );
+	} finally {
+		$GLOBALS['current_screen'] = $previous_screen;
+	}
 	$assert( ! axismundi_act_get_object_lifecycle( $media_uri ) && is_array( axismundi_op_get_object_by_uri( $media_uri ) ), 'Attachment enters registry without Create' );
 	$assert( $actors[1]->get_uri() === axismundi_op_attachment_actor_uri( $media ) && (int) $media->post_author === $users[0], 'Upload user remains separate from attribution' );
 	$legacy = wp_insert_post( array( 'post_type' => 'post', 'post_status' => 'draft', 'post_title' => 'Unindexed publishing fixture', 'post_author' => $users[0] ) );
@@ -91,8 +152,39 @@ try {
 		return array_map( 'intval', $query->posts );
 	};
 	$assert( array( $legacy ) === $search( 'post', array( $legacy, $id ), 'unassigned', true ), 'Unassigned and Not federated include an eligible post without a registry row' );
-	$assert( array( $id ) === $search( 'post', array( $legacy, $id ), (string) $actors[1]->get_identity_id(), false, array( 'author' => $users[0] ) ), 'Actor and native author filters intersect' );
-	$assert( ! $search( 'post', array( $id ), (string) $actors[1]->get_identity_id(), true ), 'Not federated excludes a published object after attribution changes' );
+	$assert( array() === axismundi_op_admin_list_actor_options( $legacy, $users[0], $actors[2]->get_preferred_username() )
+		&& is_wp_error( axismundi_op_admin_assign_list_actor( $legacy, $actors[2]->get_uri(), $users[0] ) ), 'Post picker never grants the media-only administrator exception' );
+	add_filter( 'axismundi_actors_account_selection_enabled', '__return_false', PHP_INT_MAX );
+	try {
+		update_user_meta( $users[0], AXISMUNDI_ACTORS_ACTING_META, $actors[0]->get_identity_id() );
+		foreach ( array( false, true ) as $preassigned ) {
+			$list_id = wp_insert_post( array( 'post_type' => 'post', 'post_status' => 'publish', 'post_title' => 'List Create fixture', 'post_content' => 'body' ) );
+			$posts[] = $list_id;
+			$list_post = get_post( $list_id );
+			$list_uri = axismundi_op_post_object_uri( $list_post );
+			$uris[] = $list_uri;
+			if ( $preassigned ) {
+				$assert( true === axismundi_op_set_post_attribution( $list_id, $actors[1]->get_uri(), $users[0], array( $actors[0]->get_uri() ) ), 'List Create fixture has a distinct authority and co-author' );
+				$cell = $render( 'axismundi_op_post_federation_actions', $list_post );
+				$handles = axismundi_actors_mention_handle( $actors[1] ) . ', ' . axismundi_actors_mention_handle( $actors[0] );
+				$assert( str_contains( $cell, esc_html__( 'Attributed to', 'axismundi-object-projections' ) . '<br>' )
+					&& str_contains( $cell, esc_html( $handles ) )
+					&& str_contains( $cell, 'data-current-actor="' . esc_attr( $actors[1]->get_uri() ) . '"' ), 'Post list renders all handles below the label but Assign still selects only the authority' );
+				$mismatch = axismundi_act_submit_post_list_create( $list_post );
+				$assert( is_wp_error( $mismatch ) && 'ax_act_post_list_actor_mismatch' === $mismatch->get_error_code() && ! axismundi_act_get_object_lifecycle( $list_uri ), 'Acting co-author cannot submit as the assigned authority' );
+				update_user_meta( $users[0], AXISMUNDI_ACTORS_ACTING_META, $actors[1]->get_identity_id() );
+			}
+			$expected_actor = $actors[ $preassigned ? 1 : 0 ]->get_uri();
+			$created = axismundi_act_submit_post_list_create( $list_post );
+			$assert( $created instanceof Axismundi_Activity && 'Create' === $created->get_type() && $expected_actor === $created->get_actor_uri()
+				&& $expected_actor === axismundi_op_stored_post_attribution( $list_id ), $preassigned ? 'Matching authority can submit Create with a co-author' : 'Unassigned list Create stores the acting Actor as authority' );
+		}
+	} finally {
+		remove_filter( 'axismundi_actors_account_selection_enabled', '__return_false', PHP_INT_MAX );
+		delete_user_meta( $users[0], AXISMUNDI_ACTORS_ACTING_META );
+	}
+	$assert( array( $id ) === $search( 'post', array( $legacy, $id ), (string) $actors[0]->get_identity_id(), false, array( 'author' => $users[0] ) ), 'Actor and native author filters intersect' );
+	$assert( ! $search( 'post', array( $id ), (string) $actors[0]->get_identity_id(), true ), 'Not federated excludes a published object after attribution changes' );
 	$assert( ! $search( 'post', array( $legacy, $id ), (string) $actors[2]->get_identity_id() ), 'Unauthorized Actor filter returns no rows' );
 	$assert( array( $attachment ) === $search( 'attachment', array( $attachment ), (string) $actors[1]->get_identity_id(), true, array( 'post_status' => 'inherit' ) ), 'Media attachment supports both filters' );
 	$old_request = $_REQUEST;
@@ -119,7 +211,7 @@ try {
 	}
 	$assert( $actors[0]->get_uri() === axismundi_op_stored_post_attribution( $attachment ) && array( $actors[2]->get_uri() ) === axismundi_op_stored_post_co_attribution( $attachment ), 'Attachment Update preserves hidden co-attribution' );
 	// Absence of Activities must not remove source attribution; neither reader has a ledger filter.
-	$assert( false === has_filter( 'axismundi_op_local_object_attribution', 'axismundi_act_local_object_attribution' ) && $actors[1]->get_uri() === axismundi_op_post_actor_uri( $post ), 'OP does not use a ledger attribution provider' );
+	$assert( false === has_filter( 'axismundi_op_local_object_attribution', 'axismundi_act_local_object_attribution' ) && $actors[0]->get_uri() === axismundi_op_post_actor_uri( $post ), 'OP does not use a ledger attribution provider' );
 	$legacy = wp_insert_post( array( 'post_type' => 'post', 'post_status' => 'publish', 'post_title' => 'Legacy attribution fixture', 'post_content' => 'legacy' ) );
 	$posts[] = $legacy;
 	$legacy_post = get_post( $legacy );
@@ -136,6 +228,8 @@ try {
 	axismundi_op_store_post_attribution( $legacy_post, $actors[1]->get_uri() );
 	$report = axismundi_act_migrate_post_attribution( true, $legacy - 1, 1 );
 	$assert( array( $legacy ) === $report['conflicts'] && $actors[1]->get_uri() === axismundi_op_stored_post_attribution( $legacy ), 'Migration never overwrites conflicting metadata' );
+	$assert( $actors[0]->get_uri() === axismundi_act_get_object_attribution( $legacy_uri )
+		&& is_wp_error( axismundi_op_set_post_attribution( $legacy, $actors[1]->get_uri(), $users[0] ) ), 'Conflicting legacy metadata cannot override Create authority' );
 	echo "PASS $checks attribution checks\n";
 } finally {
 	remove_filter( 'pre_http_request', $stop_http );

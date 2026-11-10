@@ -205,16 +205,17 @@ home_url( '/objects/' . strtolower( $uuid ) )
 
 // op/includes/post-article.php:97-98    wp_posts — post ID 유도
 add_query_arg( 'p', (int) $post->ID, home_url( '/' ) )
-// Delete 는 영구삭제뿐이고, 그 뒤 Create 는 구조적으로 도달하지 않는다:
-//   activities/includes/post-lifecycle.php:295
-//     add_filter( 'pre_delete_post', … )          wp_delete_post 의 영구삭제 경로
-//   op/includes/lifecycle.php:86,93               Create 후보가 나오는 유일한 지점
-//     add_action( 'wp_after_insert_post', … )     행이 사라지면 그 ID 로 다시 발화 못 한다
-//   WP AUTO_INCREMENT 는 post ID 를 재사용하지 않는다
+// WordPress 의 휴지통이 아니라 영구삭제 경로가 outbound Delete 를 기록한다.
 ```
 
-따라서 `post-lifecycle.php:201-204` 의 Delete-뒤-Create 분기는 **방어 코드**이며
-도달 경로가 없다. 그 분기를 근거로 "같은 URI 에 Create 가 쌓인다" 고 설계하지 말 것.
+**LOCAL_POLICY:** outbound Delete 가 기록된 URI 에 새 outbound Create 를 기록하지
+않는다. ActivityPub 의 URI 재사용 금지 조항이나 DB ID 할당 방식에 의존하는 규칙이
+아니다. 같은 URI 의 기존 Create 를 멱등하게 다시 읽는 것은 새 Create 가 아니다.
+
+서로 다른 WordPress 글에 같은 ID 가 할당되어 URI 가 충돌하는 경우는 별도의 식별자
+할당 문제다. 이 정책은 그 충돌을 해결하지 않는다. 로컬 오브젝트를 새로 만들 때는
+새 UUID 를 할당한다. `Undo(Delete)` 를 도입하더라도 기존 객체 복원은 새 Create 와
+별개이며, 여기서는 복원을 구현하지 않는다.
 
 ```txt
 발행 이력 목록       URI 당 Create 한 건

@@ -47,9 +47,9 @@ Actor URI + Activity + Object URI
 12. Actor activation and local social actions require `edit_posts`; Subscriber accounts are
     read-only and cannot acquire social write access merely by retaining an Actor row.
 13. Automatic Core Post publication is keyed by a stable source event and lifecycle state,
-    not by callback count. An effective Create/Update suppresses another Create; an effective
-    Delete permits one resurrection Create. Object Projections emits candidates and this
-    ledger owns deduplication.
+    not by callback count. An effective Create/Update suppresses another Create. A recorded
+    outbound Delete blocks a new Create for that URI by local policy. Object Projections
+    emits candidates and the ledger owns deduplication.
 14. The official ActivityPub plugin and Axismundi must never publish two Create activities
     for one post. Axismundi fails closed while the official scheduler owns the lifecycle;
     an adapter may transfer ownership only after suppressing that scheduler path.

@@ -33,12 +33,192 @@ function axismundi_op_admin_publishing_controls( array $selection ) : void {
 
 function axismundi_op_admin_publishing_list_controls( $post_type, string $which ) : void {
 	$screen = get_current_screen();
-	if ( 'top' === $which && $screen && in_array( $screen->id, array( 'edit-post', 'upload' ), true ) ) {
+	$positions = array( 'edit-post' => 'top', 'upload' => 'bar' );
+	if ( $screen && $which === ( $positions[ $screen->id ] ?? null ) ) {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only filters.
 		axismundi_op_admin_publishing_controls( axismundi_op_admin_publishing_selection( wp_unslash( $_GET ) ) );
 	}
 }
 add_action( 'restrict_manage_posts', 'axismundi_op_admin_publishing_list_controls', 10, 2 );
+
+function axismundi_op_admin_media_columns( array $columns ) : array {
+	$attribution = array( 'ax_attributed_to' => __( 'Attributed to', 'axismundi-object-projections' ) );
+	$parent = array_search( 'parent', array_keys( $columns ), true );
+	if ( false === $parent ) {
+		return $columns + $attribution;
+	}
+
+	return array_slice( $columns, 0, $parent + 1, true ) + $attribution + array_slice( $columns, $parent + 1, null, true );
+}
+add_filter( 'manage_media_columns', 'axismundi_op_admin_media_columns' );
+
+function axismundi_op_admin_media_attribution_column( string $column, int $post_id ) : void {
+	if ( 'ax_attributed_to' !== $column ) {
+		return;
+	}
+
+	$attachment = get_post( $post_id );
+	if ( ! $attachment || 'attachment' !== $attachment->post_type ) {
+		return;
+	}
+
+	axismundi_op_admin_render_actor_assignment( $attachment, axismundi_op_attachment_actor_uri( $attachment ) );
+}
+add_action( 'manage_media_custom_column', 'axismundi_op_admin_media_attribution_column', 10, 2 );
+
+function axismundi_op_admin_render_actor_assignment( WP_Post $post, string $uri, bool $assignable = true ) : void {
+	$is_post = 'post' === $post->post_type;
+	$uris = $is_post ? axismundi_op_post_attribution_uris( $post, $uri ) : ( '' !== $uri ? array( $uri ) : array() );
+	$labels = array();
+	foreach ( $uris as $member ) {
+		$actor = function_exists( 'axismundi_actors_get_by_uri' ) ? axismundi_actors_get_by_uri( $member ) : null;
+		$label = '';
+		if ( $actor instanceof Axismundi_Actor ) {
+			$label = $is_post ? axismundi_actors_mention_handle( $actor ) : axismundi_actors_acting_actor_label( $actor );
+		}
+		$labels[] = '' !== $label ? $label : $member;
+	}
+	printf(
+		'<span data-assigned-actor title="%s" style="overflow-wrap: anywhere">%s</span>',
+		esc_attr( implode( ', ', $uris ) ),
+		esc_html( $labels ? implode( ', ', $labels ) : __( 'Unassigned', 'axismundi-object-projections' ) )
+	);
+
+	if ( $assignable && 'trash' !== $post->post_status && current_user_can( 'edit_post', $post->ID ) && function_exists( 'axismundi_actors_search_assignable' ) ) {
+		printf(
+			'<br><button type="button" class="button-link ax-assign-list-actor" aria-haspopup="dialog" aria-controls="find-actors" data-post-id="%d" data-post-type="%s" data-current-actor="%s">%s</button>',
+			$post->ID,
+			esc_attr( $post->post_type ),
+			esc_attr( $uri ),
+			esc_html__( 'Assign', 'axismundi-object-projections' )
+		);
+	}
+}
+add_action( 'axismundi_op_post_federation_actions', static function ( WP_Post $post ) : void {
+	$creator = function_exists( 'axismundi_act_outbound_create_actor' ) ? axismundi_act_outbound_create_actor( axismundi_op_post_object_uri( $post ) ) : '';
+	$uri = $creator ?: axismundi_op_stored_post_attribution( $post->ID );
+	echo '<div class="ax-post-actor-assignment">' . esc_html__( 'Attributed to', 'axismundi-object-projections' ) . '<br>';
+	axismundi_op_admin_render_actor_assignment( $post, $uri, '' === $creator );
+	echo '</div>';
+}, 5 );
+
+function axismundi_op_admin_actor_assignment_source( int $post_id, int $user_id ) {
+	$post = $post_id > 0 ? get_post( $post_id ) : null;
+	if ( ! $post || ! in_array( $post->post_type, array( 'post', 'attachment' ), true ) || 'trash' === $post->post_status || ! user_can( $user_id, 'edit_post', $post_id ) ) {
+		return new WP_Error( 'ax_op_actor_assignment', __( 'You cannot edit this item.', 'axismundi-object-projections' ), array( 'status' => 403 ) );
+	}
+	return $post;
+}
+
+function axismundi_op_admin_list_actor_options( int $post_id, int $user_id, string $search ) {
+	$post = axismundi_op_admin_actor_assignment_source( $post_id, $user_id );
+	if ( is_wp_error( $post ) ) { return $post; }
+	if ( ! function_exists( 'axismundi_actors_search_assignable' ) ) {
+		return array();
+	}
+	$search = trim( ltrim( trim( $search ), '@' ) );
+	$allow_other_local = 'attachment' === $post->post_type && '' !== $search && user_can( $user_id, 'manage_options' ) && function_exists( 'axismundi_act_has_outbound_create' )
+		&& false === axismundi_act_has_outbound_create( axismundi_op_core_attachment_uri( $post ) );
+	return array_map(
+		static fn( $actor ) => array(
+			'uri' => $actor->get_uri(),
+			'label' => axismundi_actors_acting_actor_label( $actor ),
+			'handle' => '' !== $actor->get_display_name() ? axismundi_actors_mention_handle( $actor ) : '',
+			'type' => $actor->get_type(),
+			'adminAssignment' => $allow_other_local && ! axismundi_actors_can_act_as( $actor, $user_id ),
+		),
+		axismundi_actors_search_assignable( $search, $user_id, $allow_other_local )
+	);
+}
+
+function axismundi_op_admin_actor_picker_screen() : bool {
+	$screen = get_current_screen();
+	return $screen && function_exists( 'axismundi_actors_search_assignable' )
+		&& ( 'edit-post' === $screen->id || ( 'upload' === $screen->id && 'list' === ( $GLOBALS['mode'] ?? '' ) ) );
+}
+
+function axismundi_op_admin_list_actor_dialog() : void {
+	if ( ! axismundi_op_admin_actor_picker_screen() ) {
+		return;
+	}
+	?>
+	<dialog id="find-actors" aria-labelledby="find-actors-head">
+		<form id="find-actors-form">
+			<header>
+				<h2 id="find-actors-head"><?php esc_html_e( 'Assign to a local actor', 'axismundi-object-projections' ); ?></h2>
+				<button type="button" class="button-link" data-close aria-label="<?php esc_attr_e( 'Close', 'axismundi-object-projections' ); ?>"><span class="dashicons dashicons-no-alt" aria-hidden="true"></span></button>
+			</header>
+			<div class="ax-find-actors-results">
+				<label class="screen-reader-text" for="find-actors-input"><?php esc_html_e( 'Search actors', 'axismundi-object-projections' ); ?></label>
+				<input id="find-actors-input" type="search" placeholder="<?php esc_attr_e( 'Search actors', 'axismundi-object-projections' ); ?>" autofocus>
+				<table class="widefat striped" hidden>
+					<thead><tr><th scope="col"><?php esc_html_e( 'Actor', 'axismundi-object-projections' ); ?></th><th scope="col"><?php esc_html_e( 'Type', 'axismundi-object-projections' ); ?></th></tr></thead>
+					<tbody></tbody>
+				</table>
+				<p data-loading role="status" hidden><?php esc_html_e( 'Loading actors...', 'axismundi-object-projections' ); ?></p>
+				<p data-empty hidden><?php esc_html_e( 'No matching actors.', 'axismundi-object-projections' ); ?></p>
+				<label data-update-warning hidden><input type="checkbox" name="confirm_update" value="1"> <?php esc_html_e( 'Changing the assigned actor will publish a federated Update.', 'axismundi-object-projections' ); ?></label>
+				<p data-error role="alert" hidden></p>
+			</div>
+			<footer>
+				<?php wp_nonce_field( 'ax_op_assign_list_actor', 'nonce', false ); ?>
+				<button type="submit" class="button button-primary" disabled><?php esc_html_e( 'Select', 'axismundi-object-projections' ); ?></button>
+			</footer>
+		</form>
+	</dialog>
+	<?php
+}
+add_action( 'admin_footer-upload.php', 'axismundi_op_admin_list_actor_dialog' );
+add_action( 'admin_footer-edit.php', 'axismundi_op_admin_list_actor_dialog' );
+
+add_action( 'admin_enqueue_scripts', static function () : void {
+	if ( ! axismundi_op_admin_actor_picker_screen() ) {
+		return;
+	}
+	$plugin = dirname( __DIR__ ) . '/axismundi-object-projections.php';
+	wp_enqueue_script( 'axismundi-op-media-actor', plugins_url( 'assets/media-actor.js', $plugin ), array( 'wp-i18n' ), AXISMUNDI_OP_VERSION, true );
+	wp_set_script_translations( 'axismundi-op-media-actor', 'axismundi-object-projections' );
+	wp_enqueue_style( 'axismundi-op-media-actor', plugins_url( 'assets/media-actor.css', $plugin ), array(), AXISMUNDI_OP_VERSION );
+} );
+
+add_action( 'wp_ajax_ax_op_search_list_actors', static function () : void {
+	if ( ! check_ajax_referer( 'ax_op_assign_list_actor', 'nonce', false ) ) {
+		wp_send_json_error( __( 'The session expired. Reload the page and try again.', 'axismundi-object-projections' ), 403 );
+	}
+	$post_id = is_string( $_POST['post_id'] ?? null ) ? absint( $_POST['post_id'] ) : 0;
+	$search = is_string( $_POST['search'] ?? null ) ? sanitize_text_field( wp_unslash( $_POST['search'] ) ) : '';
+	$result = axismundi_op_admin_list_actor_options( $post_id, get_current_user_id(), $search );
+	if ( is_wp_error( $result ) ) {
+		wp_send_json_error( $result->get_error_message(), $result->get_error_data()['status'] ?? 500 );
+	}
+	$post = get_post( $post_id );
+	$lifecycle = 'post' === $post->post_type && function_exists( 'axismundi_act_get_object_lifecycle' )
+		? axismundi_act_get_object_lifecycle( axismundi_op_post_object_uri( $post ) ) : null;
+	wp_send_json_success( array( 'actors' => $result, 'warnUpdate' => $lifecycle && 'Delete' !== $lifecycle->get_type() ) );
+} );
+
+function axismundi_op_admin_assign_list_actor( int $post_id, string $uri, int $user_id, bool $confirm_update = false ) {
+	$post = axismundi_op_admin_actor_assignment_source( $post_id, $user_id );
+	if ( is_wp_error( $post ) ) { return $post; }
+	if ( '' === $uri ) {
+		return new WP_Error( 'ax_op_actor_assignment', __( 'Choose an actor.', 'axismundi-object-projections' ), array( 'status' => 400 ) );
+	}
+	$media = 'attachment' === $post->post_type;
+	return axismundi_op_set_post_attribution( $post_id, $uri, $user_id, null, false, $media, $media || $confirm_update );
+}
+
+add_action( 'wp_ajax_ax_op_assign_list_actor', static function () : void {
+	if ( ! check_ajax_referer( 'ax_op_assign_list_actor', 'nonce', false ) ) {
+		wp_send_json_error( __( 'The session expired. Reload the page and try again.', 'axismundi-object-projections' ), 403 );
+	}
+	$post_id = is_string( $_POST['post_id'] ?? null ) ? absint( $_POST['post_id'] ) : 0;
+	$uri = is_string( $_POST['actor'] ?? null ) ? wp_unslash( $_POST['actor'] ) : '';
+	$result = axismundi_op_admin_assign_list_actor( $post_id, $uri, get_current_user_id(), '1' === ( $_POST['confirm_update'] ?? '' ) );
+	if ( is_wp_error( $result ) ) {
+		wp_send_json_error( $result->get_error_message(), $result->get_error_data()['status'] ?? 500 );
+	}
+	wp_send_json_success();
+} );
 
 /** The grid passes its URL query variables to the core attachment AJAX request. */
 function axismundi_op_admin_publishing_grid_controls() : void {

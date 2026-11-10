@@ -39,9 +39,16 @@ function axismundi_act_store_recorded_post_attribution( Axismundi_Activity $acti
 add_action( 'axismundi_act_activity_recorded', 'axismundi_act_store_recorded_post_attribution', 5 );
 
 /** Explicit, authorized reassignment emits Update, not a new Create or a rewritten old row. */
-function axismundi_act_publish_post_attribution_change( $result, WP_Post $post, string $old, string $uri, int $user_id ) {
+function axismundi_act_publish_post_attribution_change( $result, WP_Post $post, string $old, string $uri, int $user_id, array $old_others = array(), array $new_others = array(), bool $unpublished_only = false ) {
 	if ( is_wp_error( $result ) ) { return $result; }
 	$object_uri = 'attachment' === $post->post_type ? axismundi_op_core_attachment_uri( $post ) : axismundi_op_post_object_uri( $post );
+	if ( $unpublished_only ) {
+		if ( false !== axismundi_act_has_outbound_create( $object_uri ) ) {
+			return new WP_Error( 'ax_act_attribution_published', __( 'Publication changed during bulk assignment.', 'axismundi-activities' ), array( 'status' => 409 ) );
+		}
+		$GLOBALS['axismundi_act_attribution_only_saves'][$post->ID] = true;
+		return $result;
+	}
 	$latest = axismundi_act_get_object_lifecycle( $object_uri );
 	if ( ! $latest || 'Delete' === $latest->get_type() ) {
 		// Editing only the Account field must not turn a subsequent WP save into first publication.
@@ -60,7 +67,7 @@ function axismundi_act_publish_post_attribution_change( $result, WP_Post $post, 
 	$recorded = axismundi_act_record_object_commit( $object, $uri );
 	return is_wp_error( $recorded ) ? $recorded : $result;
 }
-add_filter( 'axismundi_op_post_attribution_changed', 'axismundi_act_publish_post_attribution_change', 10, 5 );
+add_filter( 'axismundi_op_post_attribution_changed', 'axismundi_act_publish_post_attribution_change', 10, 8 );
 
 /** Explicit bounded migration: default is read-only; ambiguous history is never guessed. */
 function axismundi_act_migrate_post_attribution( bool $apply = false, int $after = 0, int $limit = 100 ) : array {

@@ -111,7 +111,7 @@ function axismundi_op_store_post_attribution( WP_Post $post, string $uri, ?array
 }
 
 /** Public mutation service: WP editing and Account operating grants are separate checks. */
-function axismundi_op_set_post_attribution( int $post_id, string $uri, int $user_id, ?array $co_attributed_to = null ) {
+function axismundi_op_set_post_attribution( int $post_id, string $uri, int $user_id, ?array $co_attributed_to = null, bool $unpublished_only = false ) {
 	$post = $post_id > 0 ? get_post( $post_id ) : null;
 	if ( ! $post instanceof WP_Post || ! user_can( $user_id, 'edit_post', $post_id ) ) {
 		return new WP_Error( 'ax_op_attribution_permission', 'You cannot edit this source.', array( 'status' => 403 ) );
@@ -122,6 +122,12 @@ function axismundi_op_set_post_attribution( int $post_id, string $uri, int $user
 	}
 	if ( ! axismundi_op_attribution_lock( $post_id ) ) { return new WP_Error( 'ax_op_attribution_busy', 'Attribution is being changed.', array( 'status' => 409 ) ); }
 	try {
+	if ( $unpublished_only ) {
+		$object_uri = 'attachment' === $post->post_type ? axismundi_op_core_attachment_uri( $post ) : axismundi_op_post_object_uri( $post );
+		if ( ! function_exists( 'axismundi_act_has_outbound_create' ) || false !== axismundi_act_has_outbound_create( $object_uri ) ) {
+			return new WP_Error( 'ax_op_attribution_published', __( 'Only verified unpublished objects can be assigned in bulk.', 'axismundi-object-projections' ), array( 'status' => 409 ) );
+		}
+	}
 	$old = axismundi_op_stored_post_attribution( $post_id );
 	$old_others = axismundi_op_stored_post_co_attribution( $post_id );
 	$new_others = axismundi_op_normalize_attribution_uris( $co_attributed_to ?? $old_others );
@@ -131,7 +137,7 @@ function axismundi_op_set_post_attribution( int $post_id, string $uri, int $user
 	$existed = metadata_exists( 'post', $post_id, AXISMUNDI_OP_ATTRIBUTED_TO_META );
 	$result = axismundi_op_store_post_attribution( $post, $uri, $new_others );
 	if ( is_wp_error( $result ) ) { return $result; }
-	$result = apply_filters( 'axismundi_op_post_attribution_changed', true, $post, $old, $uri, $user_id, $old_others, $new_others );
+	$result = apply_filters( 'axismundi_op_post_attribution_changed', true, $post, $old, $uri, $user_id, $old_others, $new_others, $unpublished_only );
 	if ( is_wp_error( $result ) ) {
 		// Do not roll back over an independently committed newer choice.
 		if ( axismundi_op_stored_post_attribution( $post_id ) === $uri && axismundi_op_stored_post_co_attribution( $post_id ) === $new_others ) {

@@ -84,6 +84,7 @@ require_once __DIR__ . '/includes/local-objects.php';
 require_once __DIR__ . '/includes/local-object-route.php';
 if ( is_admin() ) {
 	require_once __DIR__ . '/includes/admin.php';
+	require_once __DIR__ . '/includes/admin-publishing-filters.php';
 }
 
 /** Install the remote-object observation and lease schema. */

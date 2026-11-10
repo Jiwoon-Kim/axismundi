@@ -2,6 +2,7 @@
 /** Current attribution and immutable history regression; disposable local fixtures only. */
 defined( 'ABSPATH' ) || exit( 1 );
 require_once ABSPATH . 'wp-admin/includes/user.php';
+require_once WP_PLUGIN_DIR . '/axismundi-object-projections/includes/admin-publishing-filters.php';
 global $wpdb;
 $checks = 0;
 $assert = static function ( $ok, string $label ) use ( &$checks ) : void {
@@ -42,6 +43,9 @@ try {
 	$assert( is_wp_error( axismundi_op_set_post_attribution( $id, $actors[0]->get_uri(), 0 ) ), 'Anonymous cannot mutate attribution' );
 	$create = axismundi_act_record_object_commit( axismundi_op_transform_object( $post ) );
 	$assert( $create instanceof Axismundi_Activity && 'Create' === $create->get_type(), 'Publication records Create' );
+	$bulk_url = apply_filters( 'handle_bulk_actions-edit-post', admin_url( 'edit.php' ), 'ax_assign_publisher_' . $actors[1]->get_identity_id(), array( $id ) );
+	$assert( str_contains( $bulk_url, 'ax_publisher_skipped=1' ) && $actors[0]->get_uri() === axismundi_op_stored_post_attribution( $id )
+		&& $create->get_uri() === axismundi_act_get_object_lifecycle( $uri )->get_uri(), 'Bulk assignment skips a published post without recording Update' );
 	$original = $create->get_payload();
 	$assert( true === axismundi_op_set_post_attribution( $id, $actors[1]->get_uri(), $users[0] ), 'Published attribution may change to another authorized Account' );
 	$latest = axismundi_act_get_object_lifecycle( $uri );
@@ -77,6 +81,31 @@ try {
 	$assert( true === axismundi_op_set_post_attribution( $attachment, $actors[1]->get_uri(), $users[0] ), 'Attachment accepts independent publishing attribution' );
 	$assert( ! axismundi_act_get_object_lifecycle( $media_uri ) && is_array( axismundi_op_get_object_by_uri( $media_uri ) ), 'Attachment enters registry without Create' );
 	$assert( $actors[1]->get_uri() === axismundi_op_attachment_actor_uri( $media ) && (int) $media->post_author === $users[0], 'Upload user remains separate from attribution' );
+	$legacy = wp_insert_post( array( 'post_type' => 'post', 'post_status' => 'draft', 'post_title' => 'Unindexed publishing fixture', 'post_author' => $users[0] ) );
+	$posts[] = $legacy;
+	$legacy_uri = axismundi_op_post_object_uri( get_post( $legacy ) );
+	$uris[] = $legacy_uri;
+	$wpdb->delete( axismundi_op_objects_table(), array( 'source_owner' => 'wordpress-core', 'source_kind' => 'post', 'source_ref' => $legacy ) );
+	$search = static function ( string $type, array $ids, string $actor, bool $unpublished = false, array $extra = array() ) : array {
+		$query = new WP_Query( $extra + array( 'fields' => 'ids', 'post_type' => $type, 'post_status' => 'any', 'post__in' => $ids, 'ax_op_publishing_selection' => array( 'actor' => $actor, 'unpublished' => $unpublished ) ) );
+		return array_map( 'intval', $query->posts );
+	};
+	$assert( array( $legacy ) === $search( 'post', array( $legacy, $id ), 'unassigned', true ), 'Unassigned and Not federated include an eligible post without a registry row' );
+	$assert( array( $id ) === $search( 'post', array( $legacy, $id ), (string) $actors[1]->get_identity_id(), false, array( 'author' => $users[0] ) ), 'Actor and native author filters intersect' );
+	$assert( ! $search( 'post', array( $id ), (string) $actors[1]->get_identity_id(), true ), 'Not federated excludes a published object after attribution changes' );
+	$assert( ! $search( 'post', array( $legacy, $id ), (string) $actors[2]->get_identity_id() ), 'Unauthorized Actor filter returns no rows' );
+	$assert( array( $attachment ) === $search( 'attachment', array( $attachment ), (string) $actors[1]->get_identity_id(), true, array( 'post_status' => 'inherit' ) ), 'Media attachment supports both filters' );
+	$old_request = $_REQUEST;
+	try {
+		$_REQUEST['query'] = array( 'ax_publishing_actor' => (string) $actors[1]->get_identity_id(), 'ax_not_federated' => '1' );
+		$grid_args = apply_filters( 'ajax_query_attachments_args', array( 'post_type' => 'attachment', 'post_status' => 'inherit', 'post__in' => array( $attachment ), 'fields' => 'ids' ) );
+		$assert( array( $attachment ) === array_map( 'intval', ( new WP_Query( $grid_args ) )->posts ), 'Media grid AJAX propagates both filters' );
+	} finally {
+		$_REQUEST = $old_request;
+	}
+	$bulk_url = apply_filters( 'handle_bulk_actions-edit-post', admin_url( 'edit.php' ), 'ax_assign_publisher_' . $actors[1]->get_identity_id(), array( $legacy ) );
+	$assert( str_contains( $bulk_url, 'ax_publisher_assigned=1' ) && $actors[1]->get_uri() === axismundi_op_stored_post_attribution( $legacy )
+		&& ! axismundi_act_get_object_lifecycle( $legacy_uri ), 'Bulk assignment registers an unpublished post without emitting an activity' );
 	$assert( true === axismundi_op_set_post_attribution( $attachment, $actors[1]->get_uri(), $users[0], array( $actors[2]->get_uri() ) ), 'Attachment starts with an existing co-attribution' );
 	$previous_post = $_POST;
 	try {

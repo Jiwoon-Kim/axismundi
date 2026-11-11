@@ -1,6 +1,6 @@
 <?php
 /**
- * Read-only ActivityPub Bridge transport inspector.
+ * ActivityPub Bridge transport inspector and controls.
  *
  * @package AxismundiActivityPubBridge
  */
@@ -64,6 +64,54 @@ function axismundi_activitypub_bridge_requested_delivery_retry() {
 	$id = isset( $_POST['ax_bridge_delivery_id'] ) ? absint( $_POST['ax_bridge_delivery_id'] ) : 0;
 	check_admin_referer( 'ax_bridge_retry_delivery_' . $id );
 	return axismundi_activitypub_bridge_retry_failed_delivery( $id );
+}
+
+function axismundi_activitypub_bridge_requested_delivery_cancel() {
+	if ( ! isset( $_POST['ax_bridge_cancel_delivery'] ) ) {
+		return null;
+	}
+	$id = isset( $_POST['ax_bridge_delivery_id'] ) ? absint( $_POST['ax_bridge_delivery_id'] ) : 0;
+	check_admin_referer( 'ax_bridge_cancel_delivery_' . $id );
+	return axismundi_activitypub_bridge_cancel_delivery( $id );
+}
+
+function axismundi_activitypub_bridge_render_delivery_details( int $id, int $offset, string $url ) : void {
+	$report = axismundi_activitypub_bridge_delivery_report( $id, $offset );
+	if ( is_wp_error( $report ) ) {
+		echo esc_html( $report->get_error_message() );
+		return;
+	}
+	echo '<p>' . esc_html( axismundi_activitypub_bridge_report_counts( $report['counts'] ) ) . '</p>';
+	?>
+	<table class="widefat striped">
+		<thead><tr>
+			<th scope="col"><?php esc_html_e( 'Inbox', 'axismundi-activitypub-bridge' ); ?></th>
+			<th scope="col"><?php esc_html_e( 'Status', 'axismundi-activitypub-bridge' ); ?></th>
+			<th scope="col"><?php esc_html_e( 'HTTP', 'axismundi-activitypub-bridge' ); ?></th>
+			<th scope="col"><?php esc_html_e( 'Attempt', 'axismundi-activitypub-bridge' ); ?></th>
+			<th scope="col"><?php esc_html_e( 'Updated (UTC)', 'axismundi-activitypub-bridge' ); ?></th>
+			<th scope="col"><?php esc_html_e( 'Error', 'axismundi-activitypub-bridge' ); ?></th>
+		</tr></thead>
+		<tbody>
+		<?php foreach ( $report['inboxes'] as $inbox => $state ) : ?>
+			<tr><td><code style="overflow-wrap:anywhere"><?php echo esc_html( $inbox ); ?></code></td>
+			<td><?php echo esc_html( $state['state'] ); ?></td>
+			<td><?php echo esc_html( (string) ( ( $state['httpStatus'] ?? 0 ) ?: '—' ) ); ?></td>
+			<td><?php echo esc_html( (string) ( $state['attempt'] ?? '—' ) ); ?></td>
+			<td><?php echo esc_html( $state['updatedAt'] ?? '—' ); ?></td>
+			<td><?php echo esc_html( ( $state['errorCode'] ?? '' ) ?: '—' ); ?></td></tr>
+		<?php endforeach; ?>
+		</tbody>
+	</table>
+	<p>
+		<?php if ( $offset > 0 ) : ?>
+			<a class="button" href="<?php echo esc_url( add_query_arg( 'delivery_offset', max( 0, $offset - 50 ), $url ) ); ?>"><?php esc_html_e( 'Previous', 'axismundi-activitypub-bridge' ); ?></a>
+		<?php endif; ?>
+		<?php if ( $offset + 50 < $report['total'] ) : ?>
+			<a class="button" href="<?php echo esc_url( add_query_arg( 'delivery_offset', $offset + 50, $url ) ); ?>"><?php esc_html_e( 'Next', 'axismundi-activitypub-bridge' ); ?></a>
+		<?php endif; ?>
+	</p>
+	<?php
 }
 
 /** Compact classification counts for one report axis. */
@@ -203,12 +251,18 @@ function axismundi_activitypub_bridge_render_activity_rows( string $direction ) 
 	}
 }
 
-/** Render read-only endpoint, ledger, and transport queue state. */
+/** Render endpoint, ledger, and transport queue state. */
 function axismundi_activitypub_bridge_render_admin_page() : void {
 	if ( ! current_user_can( 'manage_options' ) ) {
 		wp_die( esc_html__( 'You cannot inspect federation transport.', 'axismundi-activitypub-bridge' ), '', array( 'response' => 403 ) );
 	}
 	$retry_result = axismundi_activitypub_bridge_requested_delivery_retry();
+	$cancel_result = axismundi_activitypub_bridge_requested_delivery_cancel();
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only pagination on an administrator screen.
+	$details = isset( $_GET['delivery'] ) && is_string( $_GET['delivery'] ) ? absint( $_GET['delivery'] ) : 0;
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only pagination on an administrator screen.
+	$offset = isset( $_GET['delivery_offset'] ) && is_string( $_GET['delivery_offset'] ) ? absint( $_GET['delivery_offset'] ) : 0;
+	$queue_url = admin_url( 'tools.php?page=axismundi-activitypub-bridge' );
 	$queue = axismundi_activitypub_bridge_delivery_jobs( 100 );
 	$legacy_report = axismundi_activitypub_bridge_requested_legacy_report();
 	$legacy_import = axismundi_activitypub_bridge_requested_legacy_import();
@@ -226,6 +280,11 @@ function axismundi_activitypub_bridge_render_admin_page() : void {
 			<div class="notice notice-success inline"><p><?php esc_html_e( 'The failed delivery was queued for retry.', 'axismundi-activitypub-bridge' ); ?></p></div>
 		<?php elseif ( is_wp_error( $retry_result ) ) : ?>
 			<div class="notice notice-error inline"><p><?php echo esc_html( $retry_result->get_error_message() ); ?></p></div>
+		<?php endif; ?>
+		<?php if ( true === $cancel_result ) : ?>
+			<div class="notice notice-success inline"><p><?php esc_html_e( 'Transport canceled. The Activity record is unchanged.', 'axismundi-activitypub-bridge' ); ?></p></div>
+		<?php elseif ( is_wp_error( $cancel_result ) ) : ?>
+			<div class="notice notice-error inline"><p><?php echo esc_html( $cancel_result->get_error_message() ); ?></p></div>
 		<?php endif; ?>
 
 		<?php axismundi_activitypub_bridge_render_legacy_scan( $legacy_report, $legacy_import ); ?>
@@ -266,13 +325,14 @@ function axismundi_activitypub_bridge_render_admin_page() : void {
 		<table class="widefat striped"><thead><tr><th><?php esc_html_e( 'Activity', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Actor', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Object', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Status', 'axismundi-activitypub-bridge' ); ?></th></tr></thead><tbody><?php axismundi_activitypub_bridge_render_activity_rows( 'outbound' ); ?></tbody></table>
 
 		<h2><?php esc_html_e( 'Transport queue', 'axismundi-activitypub-bridge' ); ?></h2>
-		<table class="widefat striped"><thead><tr><th><?php esc_html_e( 'Activity', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Sender', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Status', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Attempt', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Last error', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Action', 'axismundi-activitypub-bridge' ); ?></th></tr></thead><tbody>
-		<?php if ( empty( $queue ) ) : ?><tr><td colspan="6"><?php esc_html_e( 'No transport jobs.', 'axismundi-activitypub-bridge' ); ?></td></tr><?php endif; ?>
+		<table class="widefat striped"><thead><tr><th><?php esc_html_e( 'Activity', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Sender', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Status', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Undo status', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Attempt', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Last error', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Action', 'axismundi-activitypub-bridge' ); ?></th></tr></thead><tbody>
+		<?php if ( empty( $queue ) ) : ?><tr><td colspan="7"><?php esc_html_e( 'No transport jobs.', 'axismundi-activitypub-bridge' ); ?></td></tr><?php endif; ?>
 		<?php foreach ( $queue as $job ) : ?>
 			<tr>
 				<td><code><?php echo esc_html( (string) $job->activity_uri ); ?></code></td>
 				<td><code><?php echo esc_html( (string) $job->actor_uri ); ?></code></td>
 				<td><?php echo esc_html( (string) $job->status ); ?></td>
+				<td><?php echo esc_html( (string) $job->undo_status ); ?></td>
 				<td><?php echo esc_html( (string) $job->attempt ); ?></td>
 				<td><?php echo esc_html( (string) $job->last_error ); ?></td>
 				<td>
@@ -282,9 +342,20 @@ function axismundi_activitypub_bridge_render_admin_page() : void {
 						<input type="hidden" name="ax_bridge_delivery_id" value="<?php echo esc_attr( (string) $job->id ); ?>">
 						<?php submit_button( __( 'Retry', 'axismundi-activitypub-bridge' ), 'small', 'ax_bridge_retry_delivery', false ); ?>
 					</form>
-				<?php else : ?>—<?php endif; ?>
+				<?php endif; ?>
+				<?php if ( 'pending' === $job->undo_status && 'clear' === $job->send_evidence && null === $job->lock_token && in_array( $job->status, array( 'queued', 'retrying', 'failed' ), true ) ) : ?>
+					<form method="post">
+						<?php wp_nonce_field( 'ax_bridge_cancel_delivery_' . (int) $job->id ); ?>
+						<input type="hidden" name="ax_bridge_delivery_id" value="<?php echo esc_attr( (string) $job->id ); ?>">
+						<?php submit_button( __( 'Cancel delivery', 'axismundi-activitypub-bridge' ), 'small', 'ax_bridge_cancel_delivery', false ); ?>
+					</form>
+				<?php endif; ?>
+				<a href="<?php echo esc_url( $details === (int) $job->id ? $queue_url : add_query_arg( 'delivery', (int) $job->id, $queue_url ) . '#ax-delivery-details' ); ?>"><?php echo esc_html( $details === (int) $job->id ? __( 'Hide Inbox details', 'axismundi-activitypub-bridge' ) : __( 'Inbox details', 'axismundi-activitypub-bridge' ) ); ?></a>
 				</td>
 			</tr>
+			<?php if ( $details === (int) $job->id ) : ?>
+				<tr id="ax-delivery-details"><td colspan="7"><?php axismundi_activitypub_bridge_render_delivery_details( $details, $offset, add_query_arg( 'delivery', $details, $queue_url ) . '#ax-delivery-details' ); ?></td></tr>
+			<?php endif; ?>
 		<?php endforeach; ?>
 		</tbody></table>
 	</div>

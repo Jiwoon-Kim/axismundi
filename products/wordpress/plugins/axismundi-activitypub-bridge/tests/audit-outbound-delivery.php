@@ -324,9 +324,10 @@ try {
 	remove_filter( 'axismundi_activitypub_bridge_delivery_batch_size', $one, 99 );
 	unset( $GLOBALS['ax_bridge_delivery_mock_codes'] );
 	$mixed = axismundi_activitypub_bridge_get_delivery( (int) $mixed_id );
-	$states = json_decode( $mixed->delivery_status_json, true );
-	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'a permanent failure survives a later accepted batch on another host', 'failed' === $mixed->status && 'failed' === $states[ $mixed_inboxes[0] ]['state'] && 410 === $states[ $mixed_inboxes[0] ]['httpStatus'] && 'accepted' === $states[ $mixed_inboxes[1] ]['state'] );
 	$saved_user = get_current_user_id();
+	wp_set_current_user( $ax_bridge_delivery_user );
+	$states = axismundi_activitypub_bridge_delivery_report( (int) $mixed_id )['inboxes'];
+	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'a permanent failure survives a later accepted batch on another host', 'failed' === $mixed->status && 'failed' === $states[ $mixed_inboxes[0] ]['state'] && 410 === $states[ $mixed_inboxes[0] ]['httpStatus'] && 'accepted' === $states[ $mixed_inboxes[1] ]['state'] );
 	wp_set_current_user( 0 );
 	$forbidden = axismundi_activitypub_bridge_delivery_report( (int) $mixed_id );
 	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'anonymous readers cannot enumerate delivery recipients', is_wp_error( $forbidden ) && 'ax_bridge_delivery_forbidden' === $forbidden->get_error_code() );
@@ -341,15 +342,43 @@ try {
 	$GLOBALS['ax_bridge_delivery_mock_codes'] = array( $mixed_inboxes[1] => 503 );
 	$GLOBALS['ax_bridge_delivery_http_urls'] = array();
 	add_filter( 'pre_http_request', 'ax_bridge_delivery_http_mock', 99, 3 );
+	$writes = array( 0, 0 );
+	$count_writes = static function ( $sql ) use ( &$writes ) {
+		$writes[0] += (int) ( str_starts_with( ltrim( $sql ), 'INSERT INTO' ) && str_contains( $sql, axismundi_activitypub_bridge_delivery_recipients_table() ) );
+		$writes[1] += (int) ( str_starts_with( ltrim( $sql ), 'UPDATE' ) && str_contains( $sql, 'delivery_status_json' ) );
+		return $sql;
+	};
+	add_filter( 'query', $count_writes );
 	axismundi_activitypub_bridge_process_delivery( (int) $retry_id, 1 );
 	$mid_retry = axismundi_activitypub_bridge_get_delivery( (int) $retry_id );
-	$mid_states = json_decode( $mid_retry->delivery_status_json, true );
+	wp_set_current_user( $ax_bridge_delivery_user );
+	$mid_states = axismundi_activitypub_bridge_delivery_report( (int) $retry_id )['inboxes'];
+	wp_set_current_user( get_users( array( 'role' => 'administrator', 'number' => 1, 'fields' => 'ID' ) )[0] );
+	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'first acceptance latches final before fanout completes', 'final' === $mid_retry->undo_status && 'retrying' === $mid_retry->status );
+	// The mixed job has no ambiguous send or active lease to mask a missing final-state guard.
+	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'the final cancellation fixture is otherwise eligible', 'failed' === $mixed->status && 'clear' === $mixed->send_evidence && null === $mixed->lock_token );
+	$final_cancel = axismundi_activitypub_bridge_cancel_delivery( (int) $mixed_id );
+	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'an administrator cannot cancel after first acceptance', is_wp_error( $final_cancel ) && 'ax_bridge_cannot_unsend' === $final_cancel->get_error_code() );
+	$cancel_payload = $payload;
+	$cancel_payload['id'] = home_url( '/activities/' . wp_generate_uuid4() . '/' );
+	$cancel_payload['object'] = 'https://example.com/objects/' . wp_generate_uuid4();
+	$ax_bridge_delivery_social_uris[] = $cancel_payload['id'];
+	$cancel_activity = axismundi_act_record_activity( $cancel_payload, 'outbound' );
+	if ( is_wp_error( $cancel_activity ) ) { WP_CLI::warning( $cancel_activity->get_error_message() ); }
+	$cancel_id = axismundi_activitypub_bridge_find_delivery( $cancel_payload['id'] );
+	$ax_bridge_delivery_ids[] = $cancel_id;
+	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'an unsent and unlocked job can be canceled', true === axismundi_activitypub_bridge_cancel_delivery( $cancel_id ) && 'canceled' === axismundi_activitypub_bridge_get_delivery( $cancel_id )->undo_status );
+	$ledger_after_cancel = axismundi_act_get( $cancel_payload['id'] );
+	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'canceling transport leaves Activity effective status unchanged', $cancel_activity instanceof Axismundi_Activity && $ledger_after_cancel instanceof Axismundi_Activity && $cancel_activity->get_effective_status() === $ledger_after_cancel->get_effective_status() );
 	$wpdb->update( $table, array( 'available_at' => current_time( 'mysql', true ) ), array( 'id' => $retry_id ) );
 	unset( $GLOBALS['ax_bridge_delivery_mock_codes'] );
 	axismundi_activitypub_bridge_process_delivery( (int) $retry_id, 2 );
+	remove_filter( 'query', $count_writes );
+	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'one recipient write per HTTP attempt and no status blob rewrites', array( 3, 0 ) === $writes );
 	remove_filter( 'pre_http_request', 'ax_bridge_delivery_http_mock', 99 );
 	$end_retry = axismundi_activitypub_bridge_get_delivery( (int) $retry_id );
-	$end_states = json_decode( $end_retry->delivery_status_json, true );
+	$end_states = axismundi_activitypub_bridge_delivery_report( (int) $retry_id )['inboxes'];
+	wp_set_current_user( $saved_user );
 	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'transient failure retries only the pending Inbox and preserves previous acceptance', 'retrying' === $mid_retry->status && 'accepted' === $mid_states[ $mixed_inboxes[0] ]['state'] && 'queued' === $mid_states[ $mixed_inboxes[1] ]['state'] && 'delivered' === $end_retry->status && 1 === $end_states[ $mixed_inboxes[0] ]['attempt'] && 2 === $end_states[ $mixed_inboxes[1] ]['attempt'] && array( $mixed_inboxes[0], $mixed_inboxes[1], $mixed_inboxes[1] ) === $GLOBALS['ax_bridge_delivery_http_urls'] );
 	$provisional_payload = array( 'id' => $provisional_uri, 'type' => 'Like', 'actor' => $local->get_uri(), 'object' => 'https://example.com/objects/provisional', 'to' => array( $remote_uri ) );
 	$provisional_source = wp_insert_post(
@@ -409,6 +438,7 @@ try {
 			wp_clear_scheduled_hook( AXISMUNDI_ACTIVITYPUB_BRIDGE_DELIVERY_HOOK, array( $delivery_id, $attempt ) );
 		}
 		$wpdb->delete( axismundi_activitypub_bridge_delivery_table(), array( 'id' => $delivery_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB
+		$wpdb->delete( axismundi_activitypub_bridge_delivery_recipients_table(), array( 'delivery_id' => $delivery_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB
 	}
 	foreach ( array_unique( $ax_bridge_delivery_sources ) as $source_id ) {
 		if ( $source_id > 0 ) {

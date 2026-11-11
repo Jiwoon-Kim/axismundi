@@ -3,8 +3,8 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.1
 Requires PHP: 8.1
-Requires Plugins: activitypub
-Stable tag: 0.1.3
+Requires Plugins: activitypub, axismundi-actors, axismundi-object-projections, axismundi-activities
+Stable tag: 0.1.4
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, federation, compatibility, adapter
@@ -116,17 +116,14 @@ check, and this plugin only handles what that plugin has already verified.
 
 == Changelog ==
 
-= 0.1.3 =
+= 0.1.4 =
+* First public release.
 * Own the advertised Actor and shared Inbox POST endpoints under axismundi/activitypub, retaining previous POST receivers without redirects.
 * Delegate Inbox collection GET representations to Object Projections.
-* Record per-Inbox delivery outcomes, distinguishing HTTP acceptance from downstream processing.
+* Inspect paginated per-Inbox outcomes and cancel unclaimed deliveries when no recipient could have accepted them. Cancellation leaves the Activity ledger unchanged.
 * Add a shared Inbox collection disclosure setting, enabled by default, without backfilling historical receipt provenance.
 
-= 0.1.0 =
-* First release.
-* Composes with the official ActivityPub plugin instead of reimplementing it: that plugin owns
-  the inbox route and HTTP Signature verification, and this one takes over afterwards to record
-  the verified Activity in the Axismundi ledger rather than letting it be stored twice.
+* Delegate HTTP Signature verification to the official ActivityPub plugin and record verified Activities in the Axismundi ledger.
 * A transport queue of its own for outbound delivery, with an atomic single-worker claim, a
   bounded widening retry schedule, a dead-letter state, and a one-shot administrator retry.
 * Outbound requests are signed by the official plugin's filter using keys read from its key
@@ -138,4 +135,3 @@ check, and this plugin only handles what that plugin has already verified.
   WebFinger self link, and sends nothing, so that no remote server caches a keyless document.
 * Migration of provisional and legacy outbox jobs into the transport queue without deleting
   their source rows.
-* Read-only administrator inspection of the transport queue.

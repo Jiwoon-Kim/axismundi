@@ -7,7 +7,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACTIVITYPUB_BRIDGE_DELIVERY_DB_VERSION        = '2';
+const AXISMUNDI_ACTIVITYPUB_BRIDGE_DELIVERY_DB_VERSION        = '3';
 const AXISMUNDI_ACTIVITYPUB_BRIDGE_DELIVERY_DB_VERSION_OPTION = 'ax_activitypub_bridge_delivery_db_version';
 const AXISMUNDI_ACTIVITYPUB_BRIDGE_DELIVERY_HOOK              = 'axismundi_activitypub_bridge_process_delivery';
 const AXISMUNDI_ACTIVITYPUB_BRIDGE_LEGACY_POST_TYPE           = 'ax_ap_delivery';
@@ -24,12 +24,18 @@ function axismundi_activitypub_bridge_delivery_table() : string {
 	return $wpdb->prefix . 'ax_ap_deliveries';
 }
 
+function axismundi_activitypub_bridge_delivery_recipients_table() : string {
+	global $wpdb;
+	return $wpdb->prefix . 'ax_ap_delivery_recipients';
+}
+
 /** Create or upgrade the private delivery spool and record only a verified version. */
 function axismundi_activitypub_bridge_install_delivery_table() : bool {
 	global $wpdb;
 	require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 
 	$table   = axismundi_activitypub_bridge_delivery_table();
+	$recipients = axismundi_activitypub_bridge_delivery_recipients_table();
 	$charset = $wpdb->get_charset_collate();
 	dbDelta(
 		"CREATE TABLE {$table} (
@@ -42,7 +48,8 @@ function axismundi_activitypub_bridge_install_delivery_table() : bool {
 			payload_json longtext NOT NULL,
 			inboxes_json longtext NOT NULL,
 			pending_inboxes_json longtext NOT NULL,
-			delivery_status_json longtext NULL,
+			undo_status varchar(10) NOT NULL DEFAULT 'pending',
+			send_evidence varchar(10) NOT NULL DEFAULT 'clear',
 			status varchar(16) NOT NULL,
 			attempt smallint(5) unsigned NOT NULL DEFAULT 0,
 			available_at datetime NOT NULL,
@@ -57,6 +64,20 @@ function axismundi_activitypub_bridge_install_delivery_table() : bool {
 			KEY locked_at (locked_at)
 		) ENGINE=InnoDB {$charset};"
 	);
+	dbDelta(
+		"CREATE TABLE {$recipients} (
+			delivery_id bigint(20) unsigned NOT NULL,
+			inbox_hash char(64) NOT NULL,
+			inbox text NOT NULL,
+			state varchar(12) NOT NULL,
+			http_status smallint(5) unsigned NOT NULL DEFAULT 0,
+			attempt smallint(5) unsigned NOT NULL DEFAULT 0,
+			error_code varchar(64) NOT NULL DEFAULT '',
+			updated_at datetime NOT NULL,
+			UNIQUE KEY recipient (delivery_id,inbox_hash),
+			KEY job_state (delivery_id,state)
+		) ENGINE=InnoDB {$charset};"
+	);
 
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Trusted table identifier.
 	$columns = $wpdb->get_col( "SHOW COLUMNS FROM {$table}" );
@@ -65,13 +86,26 @@ function axismundi_activitypub_bridge_install_delivery_table() : bool {
 	$status  = $wpdb->get_row( $wpdb->prepare( 'SHOW TABLE STATUS LIKE %s', $wpdb->esc_like( $table ) ), ARRAY_A );
 	$needed  = array(
 		'id', 'activity_uri', 'activity_uri_hash', 'actor_uri', 'actor_uri_hash', 'key_id',
-		'payload_json', 'inboxes_json', 'pending_inboxes_json', 'delivery_status_json', 'status', 'attempt',
+		'payload_json', 'inboxes_json', 'pending_inboxes_json', 'undo_status', 'send_evidence', 'status', 'attempt',
 		'available_at', 'lock_token', 'locked_at', 'last_error', 'created_at', 'updated_at',
 	);
 	$valid = empty( array_diff( $needed, $columns ) )
 		&& ! empty( $indexes )
 		&& 0 === (int) $indexes[0]['Non_unique']
 		&& 'InnoDB' === (string) ( $status['Engine'] ?? '' );
+	$recipient_columns = $wpdb->get_col( $wpdb->prepare( 'SHOW COLUMNS FROM %i', $recipients ) );
+	$recipient_indexes = $wpdb->get_results( $wpdb->prepare( "SHOW INDEX FROM %i WHERE Key_name = 'recipient'", $recipients ), ARRAY_A );
+	usort( $recipient_indexes, static fn( $a, $b ) => (int) $a['Seq_in_index'] <=> (int) $b['Seq_in_index'] );
+	$recipient_status = $wpdb->get_row( $wpdb->prepare( 'SHOW TABLE STATUS LIKE %s', $wpdb->esc_like( $recipients ) ), ARRAY_A );
+	$valid = $valid && 'InnoDB' === ( $recipient_status['Engine'] ?? '' )
+		&& empty( array_diff( array( 'delivery_id', 'inbox_hash', 'inbox', 'state', 'http_status', 'attempt', 'error_code', 'updated_at' ), $recipient_columns ) )
+		&& array( 'delivery_id', 'inbox_hash' ) === array_column( $recipient_indexes, 'Column_name' )
+		&& 0 === (int) $recipient_indexes[0]['Non_unique'];
+	if ( $valid && in_array( 'delivery_status_json', $columns, true ) ) {
+		// Old diagnostics are disposable, but the old spool cannot prove that nothing was sent.
+		$valid = false !== $wpdb->query( $wpdb->prepare( "UPDATE %i SET send_evidence = 'uncertain' WHERE send_evidence = 'clear'", $table ) )
+			&& false !== $wpdb->query( $wpdb->prepare( 'ALTER TABLE %i DROP COLUMN delivery_status_json', $table ) );
+	}
 	if ( $valid ) {
 		update_option( AXISMUNDI_ACTIVITYPUB_BRIDGE_DELIVERY_DB_VERSION_OPTION, AXISMUNDI_ACTIVITYPUB_BRIDGE_DELIVERY_DB_VERSION, false );
 	}
@@ -290,7 +324,7 @@ function axismundi_activitypub_bridge_retry_failed_delivery( int $id ) {
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Trusted table identifier.
 	$updated = $wpdb->query(
 		$wpdb->prepare(
-			"UPDATE {$table} SET status = 'retrying', attempt = 0, delivery_status_json = NULL, pending_inboxes_json = inboxes_json, available_at = %s, last_error = '', lock_token = NULL, locked_at = NULL, updated_at = %s WHERE id = %d AND status = 'failed' AND lock_token IS NULL",
+			"UPDATE {$table} SET status = 'retrying', attempt = 0, pending_inboxes_json = inboxes_json, available_at = %s, last_error = '', lock_token = NULL, locked_at = NULL, updated_at = %s WHERE id = %d AND status = 'failed' AND undo_status <> 'canceled' AND lock_token IS NULL",
 			$now,
 			$now,
 			$id
@@ -311,6 +345,20 @@ function axismundi_activitypub_bridge_retry_failed_delivery( int $id ) {
 		return is_wp_error( $scheduled ) ? $scheduled : new WP_Error( 'ax_bridge_delivery_retry_schedule', __( 'The retry worker could not be scheduled.', 'axismundi-activitypub-bridge' ) );
 	}
 	return true;
+}
+
+/** Cancel transport only, atomically excluding a worker claim or unconfirmed send. */
+function axismundi_activitypub_bridge_cancel_delivery( int $id ) {
+	global $wpdb;
+	if ( ! current_user_can( 'manage_options' ) ) {
+		return new WP_Error( 'ax_bridge_delivery_forbidden', __( 'Delivery access denied.', 'axismundi-activitypub-bridge' ), array( 'status' => 403 ) );
+	}
+	$changed = axismundi_activitypub_bridge_delivery_ready() ? $wpdb->query( $wpdb->prepare(
+		"UPDATE %i SET undo_status = 'canceled', status = 'canceled', updated_at = %s
+		 WHERE id = %d AND undo_status = 'pending' AND lock_token IS NULL AND send_evidence = 'clear' AND status IN ('queued', 'retrying', 'failed')",
+		axismundi_activitypub_bridge_delivery_table(), current_time( 'mysql', true ), $id
+	) ) : false;
+	return 1 === $changed ? true : new WP_Error( 'ax_bridge_cannot_unsend', __( 'This delivery cannot be safely canceled.', 'axismundi-activitypub-bridge' ), array( 'status' => 409 ) );
 }
 
 /** Bounded peer error detail for transport diagnostics. */
@@ -403,14 +451,46 @@ function axismundi_activitypub_bridge_touch_delivery_claim( int $id, string $tok
 	$table = axismundi_activitypub_bridge_delivery_table();
 	$now   = current_time( 'mysql', true );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Trusted table identifier.
-	$changed = $wpdb->query( $wpdb->prepare( "UPDATE {$table} SET locked_at = %s, updated_at = %s WHERE id = %d AND lock_token = %s", $now, $now, $id, $token ) );
+	$changed = $wpdb->query( $wpdb->prepare( "UPDATE {$table} SET locked_at = %s, updated_at = %s, send_evidence = IF(send_evidence = 'clear', 'inflight', 'uncertain') WHERE id = %d AND lock_token = %s", $now, $now, $id, $token ) );
 	if ( 1 === $changed ) {
 		return true;
 	}
 	// MySQL reports zero changed rows when a same-second heartbeat writes identical values.
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Trusted table identifier.
 	$owner = $wpdb->get_var( $wpdb->prepare( "SELECT lock_token FROM {$table} WHERE id = %d", $id ) );
-	return is_string( $owner ) && hash_equals( $token, $owner );
+	return 0 === $changed && is_string( $owner ) && hash_equals( $token, $owner );
+}
+
+/** One recipient write and the first acceptance latch are committed together under the lease. */
+function axismundi_activitypub_bridge_record_recipient( int $id, string $token, string $inbox, string $state, int $code, string $error ) : bool {
+	global $wpdb;
+	$table = axismundi_activitypub_bridge_delivery_table();
+	if ( false === $wpdb->query( 'START TRANSACTION' ) ) { return false; }
+	$owner = $wpdb->get_var( $wpdb->prepare( 'SELECT lock_token FROM %i WHERE id = %d FOR UPDATE', $table, $id ) );
+	$now = current_time( 'mysql', true );
+	// LOCAL_POLICY: Latch final on the first Inbox acceptance; JMAP does not require an immediate transition.
+	$accepted = 'accepted' === $state;
+	// A timeout or server error cannot prove the peer did not process the request.
+	$definite = $accepted || ( $code >= 400 && $code < 500 && 408 !== $code );
+	if ( ! is_string( $owner ) || ! hash_equals( $token, $owner )
+		|| false === $wpdb->query( $wpdb->prepare(
+			"INSERT INTO %i (delivery_id,inbox_hash,inbox,state,http_status,attempt,error_code,updated_at)
+			 VALUES (%d,%s,%s,%s,%d,1,%s,%s)
+			 ON DUPLICATE KEY UPDATE http_status=IF(state='accepted' AND VALUES(state)<>'accepted',http_status,VALUES(http_status)),
+			 error_code=IF(state='accepted' AND VALUES(state)<>'accepted',error_code,VALUES(error_code)),
+			 state=IF(state='accepted',state,VALUES(state)), attempt=LEAST(attempt+1,65535), updated_at=VALUES(updated_at)",
+			axismundi_activitypub_bridge_delivery_recipients_table(), $id, hash( 'sha256', $inbox ), $inbox, $state, $code, substr( $error, 0, 64 ), $now
+		) )
+		|| false === $wpdb->query( $wpdb->prepare(
+			"UPDATE %i SET undo_status=IF(%d=1,'final',undo_status),
+			 send_evidence=IF(send_evidence='inflight',%s,send_evidence) WHERE id=%d AND lock_token=%s",
+			$table, (int) $accepted, $definite ? 'clear' : 'uncertain', $id, $token
+		) )
+		|| false === $wpdb->query( 'COMMIT' ) ) {
+		$wpdb->query( 'ROLLBACK' );
+		return false;
+	}
+	return true;
 }
 
 /** Complete one transport job without changing the authoritative Activity ledger. */
@@ -540,8 +620,6 @@ function axismundi_activitypub_bridge_process_delivery( int $id, int $attempt = 
 		$retry        = array();
 		$errors       = array();
 		$key_recovery = false;
-		$states = json_decode( (string) ( $job->delivery_status_json ?? '' ), true );
-		$states = is_array( $states ) ? $states : array();
 		foreach ( $batch as $inbox ) {
 			if ( ! axismundi_activitypub_bridge_touch_delivery_claim( $id, $token ) ) {
 				return;
@@ -566,17 +644,8 @@ function axismundi_activitypub_bridge_process_delivery( int $id, int $attempt = 
 			$code = is_wp_error( $response ) ? 0 : (int) wp_remote_retrieve_response_code( $response );
 			$retryable = axismundi_activitypub_bridge_delivery_should_retry( $response, $code );
 			$accepted = ! is_wp_error( $response ) && $code >= 200 && $code < 300;
-			$states[ $inbox ] = array(
-				'state' => $accepted ? 'accepted' : ( $retryable ? 'queued' : 'failed' ),
-				'httpStatus' => $code,
-				'attempt' => (int) ( $states[ $inbox ]['attempt'] ?? 0 ) + 1,
-				'updatedAt' => current_time( 'mysql', true ),
-				'errorCode' => is_wp_error( $response ) ? sanitize_key( $response->get_error_code() ) : '',
-			);
-			// Persist each observation while the lease is held, not only the last batch.
-			$table = axismundi_activitypub_bridge_delivery_table();
-			$saved = $wpdb->query( $wpdb->prepare( "UPDATE {$table} SET delivery_status_json = %s WHERE id = %d AND lock_token = %s", wp_json_encode( $states ), $id, $token ) );
-			if ( 1 !== $saved ) {
+			$state = $accepted ? 'accepted' : ( $retryable ? 'queued' : 'failed' );
+			if ( ! axismundi_activitypub_bridge_record_recipient( $id, $token, $inbox, $state, $code, is_wp_error( $response ) ? sanitize_key( $response->get_error_code() ) : '' ) ) {
 				return;
 			}
 			if ( $retryable ) {
@@ -599,19 +668,10 @@ function axismundi_activitypub_bridge_process_delivery( int $id, int $attempt = 
 			return;
 		}
 
-		// Record the final attempt before the terminal transition.
-		$failed_before = false;
-		foreach ( $states as &$state ) {
-			if ( 'queued' === $state['state'] ) {
-				$state['state'] = 'unknown';
-			}
-			$failed_before = $failed_before || 'accepted' !== $state['state'];
-		}
-		unset( $state );
+		$failed_before = $wpdb->get_var( $wpdb->prepare( "SELECT 1 FROM %i WHERE delivery_id = %d AND state IN ('failed','queued') LIMIT 1", axismundi_activitypub_bridge_delivery_recipients_table(), $id ) );
 		if ( $failed_before && empty( $errors ) ) {
 			$errors[] = 'At least one Inbox was not accepted in an earlier batch.';
 		}
-		$wpdb->query( $wpdb->prepare( "UPDATE {$table} SET delivery_status_json = %s WHERE id = %d AND lock_token = %s", wp_json_encode( $states ), $id, $token ) );
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Trusted table identifier.
 		$wpdb->query( $wpdb->prepare( "UPDATE {$table} SET attempt = %d, pending_inboxes_json = %s WHERE id = %d AND lock_token = %s", $attempt, wp_json_encode( $retry ), $id, $token ) );
 		axismundi_activitypub_bridge_finish_delivery( $id, $token, empty( $errors ) ? 'delivered' : 'failed', implode( '; ', $errors ) );
@@ -622,7 +682,8 @@ function axismundi_activitypub_bridge_process_delivery( int $id, int $attempt = 
 add_action( AXISMUNDI_ACTIVITYPUB_BRIDGE_DELIVERY_HOOK, 'axismundi_activitypub_bridge_process_delivery', 10, 2 );
 
 /** Private transport read surface; Activity documents never carry these recipients. */
-function axismundi_activitypub_bridge_delivery_report( int $id ) {
+function axismundi_activitypub_bridge_delivery_report( int $id, int $offset = 0 ) {
+	global $wpdb;
 	$job = axismundi_activitypub_bridge_get_delivery( $id );
 	if ( ! $job ) {
 		return new WP_Error( 'ax_bridge_delivery_missing', 'Delivery not found.', array( 'status' => 404 ) );
@@ -632,17 +693,36 @@ function axismundi_activitypub_bridge_delivery_report( int $id ) {
 	if ( ! $allowed ) {
 		return new WP_Error( 'ax_bridge_delivery_forbidden', 'Delivery access denied.', array( 'status' => 403 ) );
 	}
-	$known = json_decode( (string) ( $job->delivery_status_json ?? '' ), true );
-	$known = is_array( $known ) ? $known : array();
+	$recipients = (array) json_decode( $job->inboxes_json, true );
+	$active = in_array( $job->status, array( 'queued', 'retrying' ), true );
+	$table = axismundi_activitypub_bridge_delivery_recipients_table();
+	$page = array_slice( $recipients, max( 0, $offset ), 50 );
+	$known = array();
+	if ( $page ) {
+		$placeholders = implode( ',', array_fill( 0, count( $page ), '%s' ) );
+		$hashes = array_map( static fn( $inbox ) => hash( 'sha256', $inbox ), $page );
+		$known = array_column( $wpdb->get_results( $wpdb->prepare(
+			"SELECT inbox,state,http_status AS httpStatus,attempt,error_code AS errorCode,updated_at AS updatedAt FROM %i WHERE delivery_id = %d AND inbox_hash IN ({$placeholders})",
+			$table, $id, ...$hashes
+		), ARRAY_A ), null, 'inbox' );
+	}
 	$states = array();
 	$counts = array( 'accepted' => 0, 'queued' => 0, 'failed' => 0, 'unknown' => 0 );
-	foreach ( (array) json_decode( $job->inboxes_json, true ) as $inbox ) {
-		// Legacy completion cannot establish a per-Inbox outcome retrospectively.
-		$state = $known[ $inbox ] ?? array( 'state' => in_array( $job->status, array( 'queued', 'retrying' ), true ) ? 'queued' : 'unknown' );
-		$states[ $inbox ] = $state;
-		$counts[ $state['state'] ]++;
+	$total_known = 0;
+	foreach ( $wpdb->get_results( $wpdb->prepare( 'SELECT state, COUNT(*) AS n FROM %i WHERE delivery_id = %d GROUP BY state', $table, $id ), ARRAY_A ) as $bucket ) {
+		$state = ! $active && 'queued' === $bucket['state'] ? 'unknown' : $bucket['state'];
+		$counts[ $state ] += (int) $bucket['n'];
+		$total_known += (int) $bucket['n'];
 	}
-	return array( 'activity' => $job->activity_uri, 'status' => $job->status, 'counts' => $counts, 'inboxes' => $states );
+	$fallback = $active ? 'queued' : 'unknown';
+	$counts[ $fallback ] += max( 0, count( $recipients ) - $total_known );
+	foreach ( $page as $inbox ) {
+		$state = $known[ $inbox ] ?? array( 'state' => $fallback );
+		if ( ! $active && 'queued' === $state['state'] ) { $state['state'] = 'unknown'; }
+		if ( isset( $state['attempt'] ) ) { $state['attempt'] = (int) $state['attempt']; $state['httpStatus'] = (int) $state['httpStatus']; }
+		$states[ $inbox ] = $state;
+	}
+	return array( 'activity' => $job->activity_uri, 'status' => $job->status, 'undoStatus' => $job->undo_status, 'counts' => $counts, 'inboxes' => $states, 'total' => count( $recipients ) );
 }
 
 /** Recent Bridge transport jobs for read-only administration. */
@@ -653,8 +733,7 @@ function axismundi_activitypub_bridge_delivery_jobs( int $limit = 100 ) : array 
 	}
 	$table = axismundi_activitypub_bridge_delivery_table();
 	$limit = max( 1, min( 200, $limit ) );
-	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Trusted table identifier.
-	return $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} ORDER BY created_at DESC, id DESC LIMIT %d", $limit ) );
+	return $wpdb->get_results( $wpdb->prepare( 'SELECT id,activity_uri,actor_uri,status,undo_status,send_evidence,lock_token,attempt,last_error FROM %i ORDER BY created_at DESC, id DESC LIMIT %d', $table, $limit ) );
 }
 
 /** Remove scheduled events for one provisional CPT delivery. */
@@ -686,12 +765,13 @@ function axismundi_activitypub_bridge_apply_migrated_delivery_state( int $id, st
 			'status'               => $status,
 			'attempt'              => max( 0, $attempt ),
 			'pending_inboxes_json' => wp_json_encode( $pending ),
+			'send_evidence'        => 'uncertain',
 			'last_error'           => substr( $error, 0, 4000 ),
 			'available_at'         => $now,
 			'updated_at'           => $now,
 		),
 		array( 'id' => $id ),
-		array( '%s', '%d', '%s', '%s', '%s', '%s' ),
+		array( '%s', '%d', '%s', '%s', '%s', '%s', '%s' ),
 		array( '%d' )
 	);
 	if ( false !== $ok && in_array( $status, array( 'queued', 'retrying' ), true ) ) {

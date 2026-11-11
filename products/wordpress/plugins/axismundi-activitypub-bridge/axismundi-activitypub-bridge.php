@@ -3,10 +3,10 @@
  * Plugin Name:       Axismundi ActivityPub Bridge
  * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi/tree/main/products/wordpress/plugins/axismundi-activitypub-bridge
  * Description:       Compatibility boundary between Axismundi's URI-keyed domain stores and the official ActivityPub plugin's S2S transport.
- * Version:           0.1.3
+ * Version:           0.1.4
  * Requires at least: 6.7
  * Requires PHP:      8.1
- * Requires Plugins:  activitypub
+ * Requires Plugins:  activitypub, axismundi-actors, axismundi-object-projections, axismundi-activities
  * Author:            KIM JIWOON
  * Author URI:        https://designbusan.ai.kr
  * License:           GPL-3.0-or-later
@@ -26,14 +26,12 @@
  * request. Those keys are that plugin's, read into memory per request; the queue never holds
  * key material.
  *
- * `Requires Plugins` names only `activitypub`, whose slug exists. The three Axismundi
- * dependencies are added once their wordpress.org slugs are real -- a header naming a slug that
- * is not there blocks activation instead of explaining anything.
+ * WordPress declares both the transport provider and the Axismundi domain dependencies.
  */
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACTIVITYPUB_BRIDGE_VERSION = '0.1.3';
+const AXISMUNDI_ACTIVITYPUB_BRIDGE_VERSION = '0.1.4';
 const AXISMUNDI_ACTIVITYPUB_BRIDGE_REWRITE_VERSION = 1;
 const AXISMUNDI_ACTIVITYPUB_BRIDGE_INBOX_RETRY_AFTER = 60;
 

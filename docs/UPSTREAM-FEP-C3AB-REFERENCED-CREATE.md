@@ -1,14 +1,15 @@
 # Draft — FEP-c3ab: Referencing Existing Objects in ActivityPub Client-to-Server Create
 
-> 상태: **미제출** (2026-11-12 작성, 같은 날 리뷰 반영).
+> 상태: **PR 대기** (2026-11-12). 토론 개설됨 —
+> https://socialhub.activitypub.rocks/t/fep-c3ab-referencing-existing-objects-in-client-to-server-create/8983
+> (게시본 되읽기 일치, SHA-256 `a2582412…`). `dateReceived`·`discussionsTo` 채움. 포크의 `fep-c3ab` 브랜치에
+> 커밋 후 PR 만 남았다.
 >
 > 슬러그 `c3ab` = `sha256("Referencing Existing Objects in ActivityPub Client-to-Server Create")[:4]`.
 > 2026-11-12 기준 등록된 150개 식별자와 **충돌 없음** 확인. **제목을 바꾸면 슬러그가 바뀐다.**
 >
 > 제출 절차: fork → `./scripts/new_proposal.py "<제목>"`(슬러그·디렉터리·템플릿을 만들어 준다. 손으로 만들지 말 것)
 > → 본문 작성 → `dateReceived` 설정 → SocialHub 토론 개설 → `discussionsTo` 채움 → PR.
->
-> **`dateReceived` 와 `discussionsTo` 는 제출일·토론 URL 로 교체할 것.**
 >
 > 본문 원칙 — 계약 ⑥의 분리를 그대로 따른다:
 >
@@ -54,10 +55,10 @@
 ---
 slug: "c3ab"
 authors:
-  - "Ji-woon <kimjiwoon75@gmail.com>"
+  - "Jiwoon Kim <kimjiwoon75@gmail.com>"
 status: DRAFT
-dateReceived: 1970-01-01
-discussionsTo: https://socialhub.activitypub.rocks/
+dateReceived: 2026-11-12
+discussionsTo: https://socialhub.activitypub.rocks/t/fep-c3ab-referencing-existing-objects-in-client-to-server-create/8983
 ---
 # FEP-c3ab: Referencing Existing Objects in ActivityPub Client-to-Server Create
 

@@ -1,21 +1,17 @@
-# Draft — SocialHub topic: C2S `Create` for an already-hosted object
+# Draft — SocialHub topic: FEP-c3ab
 
-> 상태: **미게시** (2026-11-11 작성). [SocialHub ActivityPub 카테고리](https://socialhub.activitypub.rocks/c/activitypub/5)에 올릴 토론 글.
-> FEP 제출 전 단계다 — FEP 저장소 안내가 **토론 주제 개설 → `discussionsTo` 링크 추가 → PR** 순서를 요구한다.
-> 합의를 기다릴 필요는 없고, 같은 날 PR까지 가도 된다(FEP-a4ed는 `DRAFT` 등록 후에도 저자가 토론을 이어가게 한다).
+> 상태: **게시됨** 2026-11-12 —
+> https://socialhub.activitypub.rocks/t/fep-c3ab-referencing-existing-objects-in-client-to-server-create/8983
+> `--posted` 되읽기 일치(SHA-256 `a2582412…`). Discourse 가 마크업을 고쳐 쓴 흔적 없음.
+> [SocialHub ActivityPub 카테고리](https://socialhub.activitypub.rocks/c/activitypub/5)에 올린다 —
+> FEP 저장소 README 9단계가 지목하는 곳이다. FEP 전용 카테고리(`/c/standards/fep/54`)도 활발하지만,
+> README 가 안내하는 쪽을 따른다.
 >
-> **FEP 슬러그는 이 토론 제목이 아니라 FEP 제목에서 계산한다**
-> (`echo -n "<FEP title>" | sha256sum | cut -c-4`). 제목을 확정한 뒤 계산할 것.
+> 순서: **이 글을 먼저 게시** → URL 을 `fep-c3ab.md` 의 `discussionsTo` 에 넣고 `dateReceived` 설정
+> → `git add -- fep/c3ab/fep-c3ab.md` → 포크에 푸시 → PR. 게시 시점엔 PR 링크가 없으므로,
+> 글 하나만 읽고도 판단할 수 있게 썼다.
 >
-> 인용 검증(2026-11-11, 전부 원문 확인):
->
-> - AP §6 — `"Servers MUST return a 201 Created HTTP code"`, 클라이언트 `id` 무시 후 새 `id` 생성
-> - AP §6.2.1 — 비-Activity 객체 수용 MUST, `Create`로 감싸기 MUST, 비일시적 객체면 **양쪽에** `id` 부착 MUST,
->   객체의 `to`/`bto`/`cc`/`bcc`/`audience`를 Create로 복사 MUST
-> - AS2 §3.1 Minimal Activity — `object`가 URI 참조인 예제
-> - [MediaUpload 위키](https://www.w3.org/wiki/SocialCG/ActivityPub/MediaUpload) — `Create` 감싸기는 **MAY**,
->   `Location`은 **객체**를 가리킴(§6.2.1 주석은 Create를 가리킨다 — 기존 지침끼리 어긋나는 지점).
->   "last edited on 24 October 2017" — 멈춘 제안 문서다.
+> 제목에 `FEP-c3ab` 를 넣는다. 그래야 나중에 PR 과 연결된다.
 >
 > 게시 전 검증:
 >
@@ -27,35 +23,46 @@
 >   --candidate <본문 파일>
 > ```
 >
-> 게시 후 되읽기 일치 확인(`--posted`)까지 하고 상태 줄을 갱신할 것.
+> 게시 후 `--posted` 로 되읽기 일치를 확인하고 상태 줄을 갱신할 것.
+> 실패 diff 를 보려면 이 머신에서는 `PYTHONIOENCODING=utf-8` 이 필요하다.
 
 ## Title
 
-`C2S outbox: Create for an object the server already hosts`
+`FEP-c3ab: Referencing existing objects in client-to-server Create`
 
 ## Body (Discourse Markdown — paste as is)
 
-Most C2S discussion assumes the object is born with its activity: a client posts a `Note`, the server wraps it, and both get fresh ids. But a large class of servers already hold the object before any activity exists — anything backed by a CMS. A WordPress post has a canonical URL, an author, an audience and a revision history long before anyone decides to federate it.
+I have written a draft FEP and would like comment before opening the pull request.
 
-For that case the client has nothing new to submit. It wants to say "publish this one", naming it:
+**The situation.** Client-to-server submission is described for an object that is born with its activity: a client posts a `Note`, the server wraps it in a `Create`, and both are given identifiers. Where federation is added to a content store that already exists, the order is reversed, and that is the normal case for a content management system. The store assigns an identifier, an author and an audience when the content is written; a plugin or module adds federation later; so an object can sit there for years before any actor decides to publish it. Publishing older content, publishing selectively, and publishing under one of several actors are then ordinary requests.
+
+For those servers the client has nothing new to submit. It wants to name something the server already hosts:
 
 ```json
-{ "type": "Create", "actor": "https://example.org/actors/alice",
-  "object": "https://example.org/?p=123" }
+{
+  "@context": "https://www.w3.org/ns/activitystreams",
+  "type": "Create",
+  "actor": "https://example.org/actors/alice",
+  "object": "https://example.org/articles/123"
+}
 ```
 
-That shape is ordinary AS2 — it is the Minimal Activity example in AS2 §3.1, where `object` is a plain URI. What I cannot find is guidance on what a server should do when it receives one for an object it already hosts.
+The syntax is not new — this is the shape of the Minimal Activity example, with both properties as URIs. What is missing is what an outbox should do with it. Section 6.2.1 is written throughout for an object the server is about to create, including the requirement to attach an identifier to the wrapped object, and says nothing about one that already has an identifier. `w3c/activitypub#438` asks a neighbouring question and has been open since 2024. `MediaUpload` reached for the same shape in 2017 and has not been edited since.
 
-ActivityPub §6.2.1 covers the adjacent case well, but every rule in it is written for an object the server is about to create: it must accept a non-Activity object, it must wrap it in a `Create`, and for non-transient objects it "MUST attach an id to both the wrapping Create and its wrapped Object". None of that tells you what to do with an object that already has one. (This is close to w3c/activitypub#438, which asks the same question about an inner object's id.)
+**What the draft says.** Most of it follows from roles the specifications already define: do not give the referenced object a new identifier; take the activity's addressing from the object rather than from the request; reject a request that carries its own `to`/`cc`/`bto`/`bcc`/`audience` rather than ignoring it, because ignoring it lets a client believe it published narrowly when it did not; refuse a reference the server cannot resolve rather than creating something to satisfy it; and check two permissions separately — permission to submit to that outbox, and permission for that actor to publish that object.
 
-So, four questions:
+**The part I think is new.** Because such a submission carries no document, `actor` and `object` describe it completely, so a server can recognise a repeat as a retry. That is not generally possible in client-to-server: two submissions carrying identical documents may be two genuine posts. It does depend on the server's own policy — if a server lets the same actor publish the same object more than once, the reference alone does not distinguish a retry from a new publication — but where that policy exists, the submission is idempotent and the server records nothing the second time.
 
-1. **Is a referenced `Create` a legitimate C2S submission at all**, or should publishing an existing object be out-of-band?
-2. **Addressing.** §6.2.1 requires copying the object's `to`/`bto`/`cc`/`bcc`/`audience` onto the Create. For a referenced object the server can read those itself. Should addressing supplied in the request be merged, ignored, or refused? Silently ignoring it seems worst: a client that believed it was publishing to a narrow audience would get the object's existing one.
-3. **Re-submission.** §6 says servers "MUST return a 201 Created HTTP code". If a server records at most one `Create` per object, what should a second identical submission return? 201 claims a creation that did not happen.
-4. **Prior art.** The [MediaUpload](https://www.w3.org/wiki/SocialCG/ActivityPub/MediaUpload) proposal is the only place I found where the object exists before the activity. There the `Create` wrapping is a MAY, and `Location` points at the *object*, while §6.2.1 says it should point at the *Create*. That page was last edited in 2017.
+Which produces the one place the draft departs from a MUST. Section 6 requires `201 Created`. When the server recorded nothing, `201` asserts a creation that did not happen, so the draft recommends `200 OK` with the existing activity's `Location`. The same reasoning extends to a `Delete` naming an object by URI, with the complication that a deletion after an `Undo(Delete)` is a new transition rather than a retry.
 
-We have this running in a WordPress implementation and are happy to write it up as a FEP if the shape is useful to others. What we settled on, as one data point rather than a proposal: the referenced object never gets a new id; addressing in the request is refused rather than ignored; and a repeat submission by the same actor returns `200` with the `Location` of the original `Create`, recording nothing new. The `200` is a deliberate departure from the §6 `201` requirement, and if there is a better answer to question 3 I would rather adopt it than document a deviation.
+**What it deliberately leaves alone.** How many `Create` activities one object may have, and who may publish them. A server may record one and treat its actor as the publishing authority; a server may accept one from each of several actors and call the object jointly published. Both should be able to implement this.
 
-I am mainly interested in whether others have hit this and what they did.
+**Questions.**
+
+1. Is a referenced `Create` a reasonable client-to-server submission at all, or should publishing an existing object stay out of band?
+2. Is rejecting request-side addressing right, or does someone have a case for merging it?
+3. Is `200` on a recognised retry acceptable as a documented exception, or is there a better answer I have not found?
+4. Has anyone hit this already and solved it differently? I would rather adopt an existing answer than add one.
+
+We have this implemented in a WordPress plugin set and covered by tests; it is not in a released version yet. Draft text follows in the pull request once there is a discussion link to point at.
 <!-- end of body -->

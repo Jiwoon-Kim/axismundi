@@ -465,11 +465,20 @@ Minimal Activity 모양은 제출물이 아니라 원장에 기록될 때 만들
 요청 처리 중 변경을 검사하되, 사용자가 이전에 본 버전은 보장하지 않는다. 어드민은
 기존 폼의 버전 검사를 유지한다.
 
-참조형 요청의 수신자는 기존 글 설정과 멘션 해석으로만 계산한다. 요청에
-`to`, `cc`, `bto`, `bcc`, `audience`가 있으면 거부한다. 새 Create 는
-`201`과 활동의 `Location`을 반환한다. 권한과 삭제 이력을 확인한 뒤, 같은 액터가
-같은 URI 를 재제출하면 키 없이도 최초 outbound Create(`id ASC`)를
-`200`과 기존 `Location`으로 반환한다. 새 활동이나 Update 를 기록하지 않는다.
+[ActivityPub §6](https://www.w3.org/TR/activitypub/#client-to-server-interactions)은
+outbox 제출 성공에 `201 Created`를 요구하고, 비일시적 활동의 `Location`에
+서버가 발급한 활동 ID 를 싣도록 한다. 아래는 표준 요구가 아니라 Axismundi 정책이다.
+
+- **LOCAL_POLICY: 멱등 재제출.** 권한과 삭제 이력을 확인한 뒤, 같은 액터가 같은 URI 를
+  재제출하면 키 없이도 최초 outbound Create(`id ASC`)를 `200`과 기존
+  `Location`으로 반환한다. 새 활동이나 Update 를 기록하지 않으므로, 새 리소스가
+  생겼다고 응답하는 대신 §6 의 `201` 요구에서 명시적으로 벗어난다.
+- **LOCAL_POLICY: 주소 필드 거부.** 참조형 요청의 수신자는 기존 글 설정과 멘션
+  해석으로만 계산한다. `to`, `cc`, `bto`, `bcc`, `audience`가 있으면
+  거부한다. [주소 복사 프리머](https://www.w3.org/wiki/ActivityPub/Primer/Copying_addresses_between_Activity_and_object)는
+  인라인 객체를 다루며 이 참조형 정책을 규정하지 않는다.
+- **LOCAL_POLICY: 액터 명시.** 참조형 Create 의 `actor`는 필수이며 인증된 outbox
+  소유 액터와 일치해야 한다. ActivityPub §6 의 제출 형식 요구에 이 검사는 없다.
 
 §6.2 의 복사는 구현돼 있다. `activities/includes/post-attribution.php:18`
 `axismundi_act_store_recorded_post_attribution()` 이 **최초 Create 한 번만**

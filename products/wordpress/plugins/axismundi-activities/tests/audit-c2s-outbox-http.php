@@ -9,6 +9,8 @@ $assert = static function ( bool $ok, string $label ) use ( &$checks ) : void {
 };
 $users = array();
 $actors = array();
+$reference_post_id = 0;
+$reference_uri = '';
 $original_user = get_current_user_id();
 $cookies = $_COOKIE;
 $ledger_before = $wpdb->get_results( 'SELECT * FROM ' . axismundi_act_activities_table() . ' ORDER BY id', ARRAY_A );
@@ -174,6 +176,56 @@ try {
 	axismundi_actors_liked_form( $owner );
 	$form = ob_get_clean();
 	$assert( str_contains( $form, 'Publish my liked collection' ) && str_contains( $form, 'private-addressed Likes' ) && ! str_contains( $form, "checked='checked'" ), 'Native settings form reflects private state and explicit URI disclosure consent' );
+
+	( new WP_User( $users[0] ) )->set_role( 'author' );
+	( new WP_User( $users[1] ) )->set_role( 'author' );
+	$other_password = WP_Application_Passwords::create_new_application_password( $users[1], array( 'name' => 'Reference Create audit' ) );
+	$assert( is_array( $other_password ), 'Reference Create alternate principal can authenticate' );
+	$other_auth = array( 'Authorization' => 'Basic ' . base64_encode( get_userdata( $users[1] )->user_login . ':' . $other_password[0] ) );
+	$other_path = 'actors/' . $other->get_uuid() . '/outbox';
+	remove_action( 'axismundi_op_object_publish_candidate', 'axismundi_act_on_object_publish_candidate', 10 );
+	try {
+		$reference_post_id = wp_insert_post( array(
+			'post_type' => 'post', 'post_status' => 'publish', 'post_author' => $users[0],
+			'post_title' => 'Reference Create audit', 'post_content' => 'Existing WordPress body',
+			'meta_input' => array( AXISMUNDI_OP_POST_VISIBILITY_META => 'followers' ),
+		) );
+	} finally {
+		add_action( 'axismundi_op_object_publish_candidate', 'axismundi_act_on_object_publish_candidate', 10, 4 );
+	}
+	$assert( $reference_post_id > 0, 'Reference Create has an existing post source' );
+	$reference_uri = axismundi_op_post_object_uri( get_post( $reference_post_id ) );
+	$assert( false === axismundi_act_has_outbound_create( $reference_uri ), 'Reference fixture has not yet federated' );
+	$reference = array( 'type' => 'Create', 'actor' => $owner->get_uri(), 'object' => $reference_uri, 'id' => 'https://example.test/ignored-reference-id' );
+	$other_reference = array_replace( $reference, array( 'actor' => $other->get_uri() ) );
+	$denied = $request( $other_path, $other_reference, $other_auth );
+	$assert( 403 === $denied[0] && 'ax_act_c2s_capability' === ( $denied[1]['code'] ?? '' ), 'An outbox operator without post edit capability cannot publish the reference' );
+	$missing = $request( $path, array_replace( $reference, array( 'object' => 'https://example.test/unresolved' ) ), $auth );
+	$assert( 404 === $missing[0] && 'ax_c2s_reference_source' === ( $missing[1]['code'] ?? '' ), 'Unknown source URI is rejected' );
+	foreach ( array( 'to', 'cc', 'bto', 'bcc', 'audience' ) as $field ) {
+		$addressed = $request( $path, $reference + array( $field => null ), $auth );
+		$assert( 400 === $addressed[0] && 'ax_c2s_reference_addressing' === ( $addressed[1]['code'] ?? '' ), "Reference rejects the {$field} field even when empty" );
+	}
+	$new_reference = $request( $path, $reference, $auth );
+	$reference_location = (string) ( $new_reference[2]['location'] ?? '' );
+	$committed = axismundi_act_get( $reference_location );
+	$assert( 201 === $new_reference[0] && $reference_uri === ( $new_reference[1]['object'] ?? '' ) && $reference['id'] !== $reference_location
+		&& $committed instanceof Axismundi_Activity && $reference_uri === $committed->get_object_uri()
+		&& array( axismundi_op_actor_followers_url( $owner ) ) === $committed->get_payload()['to']
+		&& ! axismundi_op_get_local_object( $reference_uri ), 'Reference creates a server-assigned activity with source audience and no new local object' );
+	$newer = axismundi_act_record_activity( array( 'type' => 'Update', 'actor' => $owner->get_uri(), 'object' => $reference_uri ), 'outbound' );
+	$history = count( axismundi_act_get_by_object( $reference_uri ) );
+	$retry = $request( $path, array_replace( $reference, array( 'id' => 'https://example.test/different-client-id' ) ), $auth );
+	$assert( $newer instanceof Axismundi_Activity && 200 === $retry[0] && $reference_location === (string) ( $retry[2]['location'] ?? '' )
+		&& $history === count( axismundi_act_get_by_object( $reference_uri ) ), 'Keyless replay returns the first Create, not the newer Update, without writing' );
+	$denied = $request( $other_path, $other_reference, $other_auth );
+	$assert( 403 === $denied[0] && 'ax_act_c2s_capability' === ( $denied[1]['code'] ?? '' ), 'Replay still requires post edit capability' );
+	( new WP_User( $users[1] ) )->set_role( 'editor' );
+	$wrong_actor = $request( $other_path, $other_reference, $other_auth );
+	$assert( 403 === $wrong_actor[0] && 'ax_act_c2s_attribution' === ( $wrong_actor[1]['code'] ?? '' ), 'Another authorized editor cannot replay as a different Actor' );
+	$delete = axismundi_act_record_object_delete( $reference_uri, $owner->get_uri() );
+	$after_delete = $request( $path, $reference, $auth );
+	$assert( $delete instanceof Axismundi_Activity && 409 === $after_delete[0] && 'ax_act_object_deleted' === ( $after_delete[1]['code'] ?? '' ), 'Delete history blocks reference replay' );
 } finally {
 	foreach ( $actors as $actor ) {
 		$uri = $actor->get_uri();
@@ -191,6 +243,11 @@ try {
 			$wpdb->delete( $table, array( 'identity_id' => $id ) );
 		}
 		$wpdb->delete( axismundi_actors_identities_table(), array( 'id' => $id ) );
+	}
+	if ( $reference_post_id > 0 ) {
+		wp_delete_post( $reference_post_id, true );
+		$wpdb->delete( axismundi_op_objects_table(), array( 'canonical_uri' => $reference_uri ) );
+		axismundi_op_delete_object_listing_projection( $reference_uri );
 	}
 	wp_set_current_user( $original_user );
 	$_COOKIE = $cookies;

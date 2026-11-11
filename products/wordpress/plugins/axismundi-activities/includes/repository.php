@@ -729,13 +729,19 @@ function axismundi_act_has_outbound_object_event( string $object_uri, string $ac
 
 /** First outbound Create authority. Empty means never created; null means unavailable. */
 function axismundi_act_outbound_create_actor( string $object_uri ) : ?string {
+	$row = axismundi_act_first_outbound_create_row( $object_uri );
+	return null === $row ? null : (string) ( $row['actor_uri'] ?? '' );
+}
+
+/** First by ledger insertion, not published time. Empty means absent; null means unavailable. */
+function axismundi_act_first_outbound_create_row( string $object_uri ) : ?array {
 	global $wpdb;
 	$uri = axismundi_act_uri( $object_uri );
 	if ( '' === $uri || AXISMUNDI_ACT_DB_VERSION !== (string) get_option( AXISMUNDI_ACT_DB_VERSION_OPTION, '' ) ) {
 		return null;
 	}
-	$actor = $wpdb->get_var( $wpdb->prepare( "SELECT actor_uri FROM %i WHERE object_uri_hash = %s AND object_uri = %s AND direction = 'outbound' AND activity_type = 'Create' ORDER BY id ASC LIMIT 1", axismundi_act_activities_table(), hash( 'sha256', $uri ), $uri ) );
-	return '' === $wpdb->last_error ? (string) $actor : null;
+	$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM %i WHERE object_uri_hash = %s AND object_uri = %s AND direction = 'outbound' AND activity_type = 'Create' ORDER BY id ASC LIMIT 1", axismundi_act_activities_table(), hash( 'sha256', $uri ), $uri ), ARRAY_A );
+	return '' === $wpdb->last_error ? ( $row ?? array() ) : null;
 }
 
 /** Latest effective Create, Update, or Delete for one object URI. */

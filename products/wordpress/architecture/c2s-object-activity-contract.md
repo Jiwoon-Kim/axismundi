@@ -452,14 +452,24 @@ AP C2S 자체로 얻는 상호호환은 거의 없다 — 클라이언트 생태
 
 ```txt
 있다   컴포저의 새 Note       outbox 로 실제 POST, bare object → 서버가 Create 로 감쌈
-없다   참조형 object 수용      outbox 가 { type: Create, object: "<uri>" } 를 받지 않는다
+있다   참조형 Core WP 글      outbox 가 { type: Create, object: "<uri>" } 를 받아 기존 글 발행 명령을 호출
 ```
 
 All Posts 의 `Submit Create` 는 **outbox POST 가 아니다**. `submit_c2s()` 가 받는
 것은 AS2 문서가 아니라 로컬 명령이고(`operation` / `post_id` / `expected_version`),
 Minimal Activity 모양은 제출물이 아니라 원장에 기록될 때 만들어진다. 여기서 "C2S" 는
 서비스 이름이지 ActivityPub 의 C2S 와이어가 아니다 — "이미 C2S 로 동작한다" 고 읽지
-말 것.
+말 것. Outbox 는 프로토콜 어댑터이며 어드민은 서비스를 직접 호출한다.
+
+참조형 요청에는 클라이언트 버전 선행조건이 없다. 서버가 읽은 글의 버전을 명령에 넘겨
+요청 처리 중 변경을 검사하되, 사용자가 이전에 본 버전은 보장하지 않는다. 어드민은
+기존 폼의 버전 검사를 유지한다.
+
+참조형 요청의 수신자는 기존 글 설정과 멘션 해석으로만 계산한다. 요청에
+`to`, `cc`, `bto`, `bcc`, `audience`가 있으면 거부한다. 새 Create 는
+`201`과 활동의 `Location`을 반환한다. 권한과 삭제 이력을 확인한 뒤, 같은 액터가
+같은 URI 를 재제출하면 키 없이도 최초 outbound Create(`id ASC`)를
+`200`과 기존 `Location`으로 반환한다. 새 활동이나 Update 를 기록하지 않는다.
 
 §6.2 의 복사는 구현돼 있다. `activities/includes/post-attribution.php:18`
 `axismundi_act_store_recorded_post_attribution()` 이 **최초 Create 한 번만**

@@ -41,11 +41,15 @@ function axismundi_act_outbox_same_intent( array $stored, array $submitted ) : b
 	return wp_json_encode( $canonical( $stored ) ) === wp_json_encode( $canonical( $submitted ) );
 }
 
-/** Submit an explicit Like or Undo(Like); never reinterpret Undo as "unlike current". */
-function axismundi_act_submit_outbox( int $user_id, Axismundi_Actor $actor, array $payload, string $retry_key = '' ) {
+/** Submit to the limited C2S surface; referenced posts report replay separately. */
+function axismundi_act_submit_outbox( int $user_id, Axismundi_Actor $actor, array $payload, string $retry_key = '', bool &$replayed = false ) {
+	$replayed = false;
 	$allowed = axismundi_act_outbox_authorize( $user_id, $actor );
 	if ( is_wp_error( $allowed ) ) { return $allowed; }
 	$type = $payload['type'] ?? null;
+	if ( 'Create' === $type && is_string( $payload['object'] ?? null ) ) {
+		return axismundi_act_submit_referenced_post( $user_id, $actor, $payload, $replayed );
+	}
 	if ( 'Create' === $type && is_array( $payload['object'] ?? null ) && 'Question' === ( $payload['object']['type'] ?? null ) ) {
 		return axismundi_act_submit_question( $user_id, $actor, $payload, $retry_key );
 	}
@@ -98,6 +102,81 @@ function axismundi_act_submit_outbox( int $user_id, Axismundi_Actor $actor, arra
 	} );
 }
 
+/** Publish an existing core post without letting the request change its identity or audience. */
+function axismundi_act_submit_referenced_post( int $user_id, Axismundi_Actor $actor, array $payload, bool &$replayed ) {
+	if ( ! is_string( $payload['actor'] ?? null ) || ! hash_equals( $actor->get_uri(), $payload['actor'] ) ) {
+		return new WP_Error( 'ax_c2s_actor_mismatch', 'The submitted actor must match the outbox Actor.', array( 'status' => 403 ) );
+	}
+	foreach ( array( 'to', 'cc', 'bto', 'bcc', 'audience' ) as $field ) {
+		if ( array_key_exists( $field, $payload ) ) {
+			return new WP_Error( 'ax_c2s_reference_addressing', 'A referenced post uses its existing audience settings.', array( 'status' => 400 ) );
+		}
+	}
+	$uri = $payload['object'];
+	$post = function_exists( 'axismundi_op_resolve_source_by_uri' ) ? axismundi_op_resolve_source_by_uri( $uri ) : null;
+	if ( ! $post instanceof WP_Post || 'post' !== $post->post_type || ! hash_equals( axismundi_op_post_object_uri( $post ), $uri ) ) {
+		return new WP_Error( 'ax_c2s_reference_source', 'The URI does not identify a supported local post.', array( 'status' => 404 ) );
+	}
+	if ( ! user_can( $user_id, 'edit_post', $post->ID ) ) {
+		return new WP_Error( 'ax_act_c2s_capability', 'This account may not act on that post.', array( 'status' => 403 ) );
+	}
+	if ( ! axismundi_act_post_lifecycle_applies( $post ) || ! axismundi_op_post_article_visible( $post ) ) {
+		return new WP_Error( 'ax_c2s_reference_projection', 'This post is not available for publication.', array( 'status' => 422 ) );
+	}
+	if ( ! axismundi_op_attribution_lock( $post->ID ) ) {
+		return new WP_Error( 'ax_c2s_reference_busy', 'Publication or attribution is in progress. Retry the request.', array( 'status' => 409 ) );
+	}
+	try {
+		$deleted = axismundi_act_has_outbound_delete( $uri );
+		$first = axismundi_act_first_outbound_create_row( $uri );
+		if ( true === $deleted ) {
+			return new WP_Error( 'ax_act_object_deleted', 'A deleted Object URI cannot be created again.', array( 'status' => 409 ) );
+		}
+		if ( null === $deleted || null === $first ) {
+			return new WP_Error( 'ax_act_object_history', 'The Object publication history is unavailable.', array( 'status' => 503 ) );
+		}
+		if ( $first ) {
+			if ( ! hash_equals( $first['actor_uri'], $actor->get_uri() ) ) {
+				return new WP_Error( 'ax_act_c2s_attribution', 'This object was created by another Actor.', array( 'status' => 403 ) );
+			}
+			$replayed = true;
+			return axismundi_act_hydrate( $first );
+		}
+		// Only a new ledger insertion fires this hook, even if another adapter wins the Create race.
+		$recorded = null;
+		$observe = static function ( Axismundi_Activity $activity ) use ( $uri, &$recorded ): void {
+			if ( 'Create' === $activity->get_type() && 'outbound' === $activity->get_direction() && $uri === $activity->get_object_uri() ) {
+				$recorded = $activity->get_uri();
+			}
+		};
+		add_action( 'axismundi_act_activity_recorded', $observe );
+		try {
+			wp_cache_delete( $post->ID, 'posts' );
+			$result = axismundi_act_submit_c2s( $user_id, $actor->get_identity_id(), axismundi_act_post_command( $post, 'Create' ), array( 'surface' => 'outbox-reference' ) );
+		} finally {
+			remove_action( 'axismundi_act_activity_recorded', $observe );
+		}
+		if ( is_wp_error( $result ) ) {
+			$code = $result->get_error_code();
+			$status = 'ax_act_c2s_attribution' === $code ? 403 : ( in_array( $code, array( 'ax_act_c2s_stale', 'ax_act_object_deleted' ), true ) ? 409 : 422 );
+			$result->add_data( array( 'status' => $status ), $code );
+			return $result;
+		}
+		if ( $result instanceof Axismundi_Activity && $recorded === $result->get_uri() ) {
+			return $result;
+		}
+		// The shared command can return the latest lifecycle event on a concurrent replay.
+		$first = axismundi_act_first_outbound_create_row( $uri );
+		if ( $first && hash_equals( $first['actor_uri'], $actor->get_uri() ) && false === axismundi_act_has_outbound_delete( $uri ) ) {
+			$replayed = true;
+			return axismundi_act_hydrate( $first );
+		}
+		return new WP_Error( 'ax_c2s_reference_conflict', 'No matching Create could be recorded.', array( 'status' => 409 ) );
+	} finally {
+		axismundi_op_attribution_lock( $post->ID, true );
+	}
+}
+
 /** HTTP adapter: permission uses URL parameters, never JSON-shadowed route parameters. */
 function axismundi_act_post_actor_outbox( WP_REST_Request $request ) {
 	$permission = axismundi_act_outbox_permission( $request );
@@ -117,10 +196,11 @@ function axismundi_act_post_actor_outbox( WP_REST_Request $request ) {
 	if ( ! $actor instanceof Axismundi_Actor ) {
 		return new WP_Error( 'ax_c2s_forbidden', 'The outbox Actor is unavailable.', array( 'status' => 403 ) );
 	}
-	$activity = axismundi_act_submit_outbox( get_current_user_id(), $actor, $payload, (string) $request->get_header( 'Idempotency-Key' ) );
+	$replayed = false;
+	$activity = axismundi_act_submit_outbox( get_current_user_id(), $actor, $payload, (string) $request->get_header( 'Idempotency-Key' ), $replayed );
 	if ( is_wp_error( $activity ) ) { return $activity; }
 	$object_uri = in_array( $activity->get_type(), array( 'Create', 'Update' ), true ) ? axismundi_act_member_uri( $activity->get_payload()['object'] ?? null ) : '';
-	return new WP_REST_Response( '' !== $object_uri ? array( 'object' => $object_uri ) : null, 201, array( 'Location' => $activity->get_uri(), 'Cache-Control' => 'no-store' ) );
+	return new WP_REST_Response( '' !== $object_uri ? array( 'object' => $object_uri ) : null, $replayed ? 200 : 201, array( 'Location' => $activity->get_uri(), 'Cache-Control' => 'no-store' ) );
 }
 
 function axismundi_act_register_c2s_outbox() : void {

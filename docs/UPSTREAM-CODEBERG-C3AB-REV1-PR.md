@@ -1,8 +1,17 @@
 # Draft — Codeberg PR: FEP-c3ab revision 1
 
-> 상태: **미제출.** 브랜치는 푸시됨 — `Jiwoon-Kim:fep-c3ab-rev1` = `9b87341`, upstream/main 위 커밋 2개.
+> 상태: **미제출.** 브랜치는 푸시됨 — `Jiwoon-Kim:fep-c3ab-rev1` = `f4ffc10`, upstream/main 위 커밋 3개.
 > 열 곳: https://codeberg.org/fediverse/fep/compare/main...Jiwoon-Kim:fep-c3ab-rev1
 > 제출 뒤 tracking issue https://codeberg.org/fediverse/fep/issues/985 에 PR 링크 한 줄.
+>
+> **본문의 모든 주장은 `git diff upstream/main..HEAD` 로 대조했다**(2026-11-13). 첫 초안에는
+> 문서에 없는 변경이 둘 있었다 — FEP-aef6 인용과 `w3c/activitypub#381`·`#485` 인용. 검증기는
+> 소스↔후보 일치만 보고 후보↔현실은 보지 않으므로, 외부 글이 변경 내용을 서술할 때는 diff
+> 대조가 따로 필요하다.
+>
+> silverpill 에게 답글 #5 에서 한 약속(FEP-aef6 을 adjacent work 로 인용)은 `f4ffc10` 에서
+> 지켰다. aef6 은 저자 개인 저장소에 있고 `fediverse/fep` 에 등록돼 있지 않다 —
+> https://codeberg.org/silverpill/feps/src/branch/main/aef6/fep-aef6.md
 >
 > 본문의 근거는 토론 글이다 — #3 trwnh(201·Announce·주소), #2/#7 silverpill(FEP-aef6·엄격성),
 > 그리고 소유자가 제기한 §6.2.1 적용 범위. 토론에서 아직 답이 오지 않은 질문(trwnh 의
@@ -42,11 +51,11 @@ This revises FEP-c3ab from the [discussion topic](https://socialhub.activitypub.
 
 - The summary now says the proposal answers two separable questions — referencing an existing object, and responding to a submission the outbox recognises as a retry — because the thread showed they were being read as one.
 - `201` is stated as being about the activity, not the object. `@trwnh` was right that the draft blurred this, and a `Delete` sequence makes it sharpest.
-- The response question is no longer presented as specific to a referenced `Create`. Any outbox that recognises a retry and records nothing new faces it; `Follow`, `Like` and `Block` are the familiar cases. Which submissions count as retries is left alone, since `w3c/activitypub#381` and `#485` are still open on it.
+- The response question is no longer presented as specific to a referenced `Create`. Any outbox that recognises a retry and records nothing new faces it; `Follow`, `Like` and `Block` are the familiar cases. How to recognise a retry for those is left undefined.
 - A section says why `Create` rather than `Announce`, which the draft had simply not answered, and when `Announce` is the better fit.
-- FEP-aef6 is cited as adjacent work after `@silverpill` pointed to it.
+- FEP-aef6 is cited as adjacent work, after `@silverpill` pointed to it. Its `Notify` answers a `Request` so an object can be retrieved without an always-on HTTP server; the subject is retrieval rather than publication.
 
-**What is not in this revision.** The draft previously refused any request-side addressing. `@trwnh`'s framing — the activity's addressing as a subset of the object's — is better, but the comparison is not a subset of URI lists: an object addressed to `Public` and a request naming one actor is narrower in effect while sharing no addresses at all. I would rather leave that open than write a test I cannot defend, so the rule is unchanged here.
+**What is not in this revision.** The draft previously refused any request-side addressing. `@trwnh`'s framing — the activity's addressing as a subset of the object's — is better, but the comparison is not a subset of URI lists: an object addressed to `Public` and a request naming one actor is narrower in effect while sharing no addresses at all. I would rather leave that open than write a test I cannot defend, so the rule is unchanged here. The draft also still recommends `200 OK` with the existing activity's `Location` for a recognised retry; whether to replay the original `201 Created` response instead remains open.
 
 **Scope, made explicit.** The requirements now say what they apply to: a URI identifying an existing `Object` the server hosts, of a type the proposal covers.
 

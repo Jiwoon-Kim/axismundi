@@ -221,6 +221,8 @@ The following rules apply to both URI-referenced `Create` and [`Delete`][AP-Dele
 
 Announcing an object's existence and recording its first federated publication are different purposes, and neither is always the better one. `Announce` serves the first. This proposal serves the second: the `Create` records that an actor published the object, without replacing the attribution the object already carries. A server can use that record to track publication history, while later `Update` and `Delete` activities still target the object itself.
 
+[FEP-aef6][FEP-aef6] reaches for a third type in a neighbouring shape: a `Notify` whose `object` already exists, sent in answer to a `Request`, so that an object can be retrieved without an always-on HTTP server. Its subject is retrieval rather than publication, so it is cited here as adjacent work rather than as an alternative — though what this proposal says about an object keeping the identifier it already has would read much the same under either activity.
+
 Nothing about this requires the object to be new. An object may be written long beforehand and the `Create` sent later; that is the ordinary case for a content store that predates its federation. The object keeps its existing `published` timestamp, if any, while the activity carries the time of the federated publication.
 
 The same actor may legitimately update the same object many times. Actor and object identifiers alone cannot identify an `Update` retry; how to identify such retries is outside this proposal.
@@ -258,6 +260,7 @@ Only `Create` is implemented. A referenced `Delete` follows the same shape but h
 - [C2S Create activity has unspecified behavior wrt assigning an ID to the inner object][issue438], 2024
 - SocialCG, [ActivityPub MediaUpload][MediaUpload], 2017
 - [FEP-4f05: Soft Deletion][FEP-4f05]
+- silverpill, [FEP-aef6: Asynchronous Object Retrieval][FEP-aef6]
 
 [ActivityPub]: https://www.w3.org/TR/activitypub/
 [AP-Identifiers]: https://www.w3.org/TR/activitypub/#obj-id
@@ -275,6 +278,7 @@ Only `Create` is implemented. A referenced `Delete` follows the same shape but h
 [AS2]: https://www.w3.org/TR/activitystreams-core/
 [AS2-Minimal]: https://www.w3.org/TR/activitystreams-core/#example-1
 [FEP-4f05]: https://codeberg.org/fediverse/fep/src/branch/main/fep/4f05/fep-4f05.md
+[FEP-aef6]: https://codeberg.org/silverpill/feps/src/branch/main/aef6/fep-aef6.md
 [issue438]: https://github.com/w3c/activitypub/issues/438
 [MediaUpload]: https://www.w3.org/wiki/SocialCG/ActivityPub/MediaUpload
 

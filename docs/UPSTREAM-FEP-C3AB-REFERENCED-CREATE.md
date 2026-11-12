@@ -10,6 +10,11 @@
 > ```txt
 > 확정   Why Create and not Announce 절        ← 이미 반영함. trwnh·Steve Bate 가 같은
 >                                                제안을 했고 본문에 답이 없음을 인정했다.
+> 확정   published 두 시간선 분리               ← 반영함. 객체는 저작 시각, 활동은 발행 시각.
+>                                                코드는 이미 그렇다(repository.php:1287).
+>                                                WP 코어 선례: media.php:303 이 업로드 경로의
+>                                                연월만 부모 글 날짜로 쓰고 attachment 의
+>                                                post_date 는 업로드 시각으로 둔다.
 > 미정   요구사항 8 (재시도 응답)              trwnh 가 "원래 201 재생" 을 뜻했는지에 달림.
 >                                                재생이면 8 을 교체, 아니면 RFC 9110 근거로 유지.
 > 미정   요구사항 4·5 (주소)                   좁히기는 허용해야 한다(수긍함). 검증 테스트가
@@ -164,7 +169,7 @@ The same replay rule applies to a URI-referenced [Delete][AP-Delete]: a retry of
 
 Announcing an object's existence and recording its first federated publication are different purposes, and neither is always the better one. `Announce` serves the first. This proposal serves the second: the `Create` records that an actor published the object, without replacing the attribution the object already carries. A server can use that record to track publication history, while later `Update` and `Delete` activities still target the object itself.
 
-Nothing about this requires the object to be new. An object may be written long beforehand and the `Create` sent later, carrying its own `published` date; that is the ordinary case for a content store that predates its federation.
+Nothing about this requires the object to be new. An object may be written long beforehand and the `Create` sent later; that is the ordinary case for a content store that predates its federation. The two carry different times and should keep them: the object keeps the `published` date it was written with, while the activity carries the time the publication actually happened. Backdating the activity to the object's date would assert that a publication occurred when it did not, and would bury the activity for receivers that order by it.
 
 The same reasoning is why `Update` is not treated this way. The same actor may legitimately update the same object many times, so a repeated `Update` is not a retry, and the question this proposal answers does not arise for it.
 

@@ -20,6 +20,12 @@
 > 검토   Notify(FEP-aef6) 인용 위치            silverpill 이 발행까지 의도했는지 되물어 둠.
 > ```
 >
+> **게시된 답글 #6 에 같은 오류가 하나 나가 있다.** "That record is what establishes
+> `attributedTo` and what later `Update` and `Delete` activities refer back to" — 요구사항 1
+> (기존 귀속을 대체·확장 금지)과 어긋나고, `Update`·`Delete` 는 와이어에서 **객체를 target**
+> 하지 Create 활동을 가리키지 않는다. 정정 글을 따로 올리지는 말고, 다음 답글에서 자연스럽게
+> 바로잡을 것 — 지적이 먼저 오면 그대로 수긍하면 된다.
+>
 > **개정 PR 절차**: 포크를 업스트림 main 으로 동기화 → 새 브랜치(`fep-c3ab-rev1`) → 이 본문으로
 > 파일 교체 → 검증기 대조 → PR. 포크에 반쯤 쓴 파일을 두지 않는다.
 >
@@ -156,7 +162,7 @@ The same replay rule applies to a URI-referenced [Delete][AP-Delete]: a retry of
 
 ## Why `Create` and not `Announce`
 
-`Announce` is a reasonable choice when the goal is to draw attention to an object, and for an object that has already been published it is the better one. The goal here is narrower: to record that an actor published this object to the fediverse for the first time. That record is what establishes the object's `attributedTo`, and what a later `Update` or `Delete` refers back to.
+Announcing an object's existence and recording its first federated publication are different purposes, and neither is always the better one. `Announce` serves the first. This proposal serves the second: the `Create` records that an actor published the object, without replacing the attribution the object already carries. A server can use that record to track publication history, while later `Update` and `Delete` activities still target the object itself.
 
 Nothing about this requires the object to be new. An object may be written long beforehand and the `Create` sent later, carrying its own `published` date; that is the ordinary case for a content store that predates its federation.
 

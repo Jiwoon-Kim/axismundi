@@ -1,6 +1,8 @@
 # Draft — Codeberg PR: FEP-c3ab revision 1
 
-> 상태: **미제출.** 브랜치는 푸시됨 — `Jiwoon-Kim:fep-c3ab-rev1` = `f4ffc10`, upstream/main 위 커밋 3개.
+> 상태: **제출됨** — https://codeberg.org/fediverse/fep/pulls/986 (2026-11-13, 소유자가 열었다).
+> 브랜치 `Jiwoon-Kim:fep-c3ab-rev1` = `5117fb3`, upstream/main 위 커밋 4개.
+> **PR 본문은 커밋 3개 시점의 것이라 갱신이 필요하다** — 아래 본문이 `5117fb3` 과 맞는 판이다.
 > 열 곳: https://codeberg.org/fediverse/fep/compare/main...Jiwoon-Kim:fep-c3ab-rev1
 > 제출 뒤 tracking issue https://codeberg.org/fediverse/fep/issues/985 에 PR 링크 한 줄.
 >
@@ -57,10 +59,10 @@ This revises FEP-c3ab from the [discussion topic](https://socialhub.activitypub.
 
 **What is not in this revision.** The draft previously refused any request-side addressing. `@trwnh`'s framing — the activity's addressing as a subset of the object's — is better, but the comparison is not a subset of URI lists: an object addressed to `Public` and a request naming one actor is narrower in effect while sharing no addresses at all. I would rather leave that open than write a test I cannot defend, so the rule is unchanged here. The draft also still recommends `200 OK` with the existing activity's `Location` for a recognised retry; whether to replay the original `201 Created` response instead remains open.
 
-**Scope, made explicit.** The requirements now say what they apply to: a URI identifying an existing `Object` the server hosts, of a type the proposal covers.
+**Scope, made explicit.** The requirements now say what they apply to: a URI identifying an existing `Object` the server hosts and publishes as content — one that is neither an actor type, nor a `Collection` or `CollectionPage`, nor a `Link`.
 
 - `Link` is disjoint from `Object`, so Section 6.2.1's acceptance requirement does not reach a standalone `Link`, and this proposal does not define publishing one — a `Mention` included. Naming something by URI does not make the reference a `Link` either.
 - Section 6.2.1 governs direct submission, which is why actor types and `Collection` are reachable in client-to-server at all. A URI reference can name one of those too. The proposal does not say what a referenced `Create` should mean for them: it is written from an implementation of the object types only, and I would rather implement and measure that case than specify it from the outside.
 - `Delete` shares only the retry rules. What a referenced `Delete` requires, how it is addressed, and what becomes of the object are left to ActivityPub and to the server.
-- An object may carry no addressing at all. A server must then refuse the submission or record the activity without adding addressing; it must not choose an audience the object never stated. Recording and delivering stay separate, and who may read the activity in the outbox collection is not decided here.
+- An object may carry no addressing at all. A server must then refuse the submission or record the activity without adding addressing; it must not choose an audience the object never stated. Recording and delivering stay separate, and so do addressing and retrievability: an object with no addressing may still be world-readable over HTTP — an actor document ordinarily is — so absence of addressing is neither a grant nor a restriction on who may fetch the object. Who may read the activity in the outbox collection is not decided here either.
 <!-- end of body -->

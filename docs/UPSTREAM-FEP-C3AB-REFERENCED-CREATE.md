@@ -203,7 +203,7 @@ When a server accepts a URI-referenced `Create`:
 
 4. **Addressing.** The server MUST take the activity's addressing from the addressing the referenced object already carries. Recipients are then computed from that addressing by the ordinary delivery rules; this proposal does not change them. Some objects carry no addressing at all, and a server MUST NOT invent one. It MUST either refuse the submission, or record the activity without adding addressing. Recording it is still a creation, so the response rules below apply unchanged; an activity with no recipients is simply not delivered.
 
-   Addressing governs delivery, and says nothing about whether the object can be retrieved. An object carrying no addressing may still be world-readable over HTTP — an actor document ordinarily is, with no `to` or `cc` anywhere in it — so a server MUST NOT read the absence of addressing as either a grant or a restriction on who may fetch the object, and MUST NOT choose an audience the object never stated. Who may read the recorded activity in the [outbox collection][AP-Outbox] is likewise not decided here.
+   The absence of addressing on the referenced object does not by itself grant or restrict access to that object. Conversely, an object being publicly retrievable does not supply recipients for the new activity: a server MUST NOT choose an audience the object never stated. [ActivityPub's rules for public addressing][AP-Public] are unchanged by this proposal, and who may read the recorded activity in the [outbox collection][AP-Outbox] is not decided here.
 
 5. **Addressing in the request is rejected, not ignored.** If the request carries `to`, `cc`, `bto`, `bcc` or `audience`, the server MUST reject the submission. Ignoring those properties and publishing to the object's existing, possibly wider audience would let a client believe it had published narrowly.
 
@@ -274,6 +274,7 @@ Only `Create` is implemented. A referenced `Delete` follows the same shape but h
 [AS2-Mention]: https://www.w3.org/TR/activitystreams-vocabulary/#dfn-mention
 [AS2-Base-Types]: https://www.w3.org/TR/activitystreams-vocabulary/#base-types
 [AP-Outbox]: https://www.w3.org/TR/activitypub/#outbox
+[AP-Public]: https://www.w3.org/TR/activitypub/#public-addressing
 [AS2-Actor-Types]: https://www.w3.org/TR/activitystreams-vocabulary/#actor-types
 [JMAP-Session]: https://www.rfc-editor.org/rfc/rfc8620.html#section-2
 [AP-Delete]: https://www.w3.org/TR/activitypub/#delete-activity-outbox

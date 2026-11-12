@@ -31,9 +31,9 @@ A server implementing this draft MUST provide a public discovery document at `/.
 
 ### Session representation
 
-An authenticated `GET` to the Session endpoint MUST return an AS2 extension object as `application/activity+json`. The object MUST have the extension type `Session`, which is a subtype of `as:Object` — it describes a state rather than an action, so it is neither an `Activity` nor, despite carrying a list, a `Collection` — and an AS2 `url` giving the endpoint at which the client can request a fresh view. It MUST NOT carry an AS2 `id`: the endpoint returns a view of the caller's authorization, not an independently identified object. The requirement that objects carry global identifiers applies to objects distributed by the protocol, and a Session is never distributed. The response MUST include `Cache-Control: private, no-store`.
+An authenticated `GET` to the Session endpoint MUST return an AS2 extension object as `application/activity+json`. The object MUST have the extension type `Session`, which is a subtype of `as:Object` — it describes a state rather than an action, so it is neither an `Activity` nor, despite carrying a list, a `Collection` — and an AS2 `url` giving the endpoint at which the client can request a fresh view. A Session is an authenticated discovery response defined by this extension, for the use of a client-to-server client alone. It MUST NOT carry an AS2 `id`, MUST NOT be submitted to an ActivityPub outbox, and MUST NOT be delivered to an ActivityPub inbox. Its `url` identifies the endpoint, not an individual snapshot: the endpoint returns a view of the caller's authorization rather than an independently identified object. The response MUST include `Cache-Control: private, no-store`.
 
-The Session MUST NOT be accepted for outbox publication or delivered through S2S. Its `url` does not make it available to ordinary federated object fetches. A request without valid authentication MUST NOT receive a Session representation.
+Its `url` does not make it available to ordinary federated object fetches, and a request without valid authentication MUST NOT receive a Session representation.
 
 ### Available actors and operations
 

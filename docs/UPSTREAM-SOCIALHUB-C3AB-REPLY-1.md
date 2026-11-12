@@ -1,7 +1,7 @@
 # Draft — SocialHub replies (FEP-c3ab topic)
 
-> 상태: **게시됨** 2026-11-13 — B=#5(silverpill), A=#6(trwnh).
-> 되읽기 일치: B `b303977e…`, A `0b0325fd…`. Discourse 가 고쳐 쓴 흔적 없음.
+> 상태: **게시됨** 2026-11-13 — B=#5(silverpill), A=#6(trwnh), C=#8(silverpill, 정렬 제안 답).
+> 되읽기 일치: B `b303977e…`, A `0b0325fd…`, C `a9602e11…`. Discourse 가 고쳐 쓴 흔적 없음.
 > 대상: https://socialhub.activitypub.rocks/t/fep-c3ab-referencing-existing-objects-in-client-to-server-create/8983
 >
 > **답글을 둘로 나눈다.** 하나로 묶으면 950단어 한 덩어리가 되고, Discourse 는 글마다
@@ -95,3 +95,18 @@ On rejecting request-side addressing being an implementation detail: I think you
 
 The harder half is that I am no longer sure what the invariant should be. trwnh's framing in the next post — the activity's addressing as a subset of the object's — is better than what the draft says, but the comparison is not a subset of URI lists: an object addressed to `Public` and a request naming one actor is narrower in effect while sharing no addresses at all. I would rather leave that open for now than write a test I cannot defend.
 <!-- end of body B -->
+
+## Body C — reply to post 7 (silverpill)
+
+Thank you — and yes, I would like to align where the shapes really are the same.
+
+In aef6 as written, `Request` asks for an object and `Notify` delivers it. In c3ab, the client asks its own server to publish an object the server already hosts, and the outbox response identifies the publication activity. Even if we chose a different activity type for that publication, the retry question would remain: if the server records no new activity, how should it identify the one it already recorded? The draft proposes `200 OK` with the existing activity URI in `Location`. That is the part I care most about getting agreement on, and it does not depend on what the activity is called.
+
+On the name, your distinction is the crux. `Notify` means "there is an object here, but it was created earlier"; `Create` means "this object has been created". Both are true of my case from different sides — the object was written in a content store years ago, and this server has never published it. What the activity records is the latter: the first federated publication of that object by that actor. The authoring timeline and the publication timeline are different, and `Create` is accurate on the one the activity is about. There is a practical half too: an activity type receivers do not implement is generally dropped, and the point of this case is getting existing content onto the network.
+
+I should correct something I put badly in my earlier reply, since it belongs here: I wrote that the `Create` "establishes `attributedTo`". That is wrong and contradicts the draft's own first requirement. A referenced `Create` must not replace or extend attribution the object already carries; it records the publication, and later `Update` and `Delete` activities target the object, not that record.
+
+Where your shape is clearly right is delivering an object a requester cannot fetch — which is not as remote from me as I assumed, since a followers-only object is not retrievable by `GET` from us either.
+
+So the alignment I would find useful is narrower than the activity name: both of us describe an activity whose `object` already exists and must keep the identifier it has. That rule should read the same whichever activity carries it, and I would happily take wording from yours.
+<!-- end of body C -->

@@ -122,8 +122,9 @@ slug: "c3ab"
 authors:
   - "Jiwoon Kim <kimjiwoon75@gmail.com>"
 status: DRAFT
-dateReceived: 2026-11-12
 discussionsTo: https://socialhub.activitypub.rocks/t/fep-c3ab-referencing-existing-objects-in-client-to-server-create/8983
+dateReceived: 2026-11-12
+trackingIssue: https://codeberg.org/fediverse/fep/issues/985
 ---
 # FEP-c3ab: Referencing Existing Objects in ActivityPub Client-to-Server Create
 
@@ -158,7 +159,7 @@ Note what decides the status code. The object already existing does not make the
 
 The rules here are written for a URI-referenced `Create` or `Delete`, which Activity Streams lists under both Content Management and Relationship Management, so the target may be an article or a relationship without changing anything. The same response pattern can be used for other client-to-server activities — `Follow`, `Like`, `Block` and `Undo` among them — wherever a server recognises a retry and records nothing new. How to recognise a retry for those is not defined here.
 
-The proposal does not specify how many such activities an object may have, or who may publish one. Nor does it address naming an actor: a submission may reference any object the server hosts, but whether an actor should be the subject of a referenced `Create` is a separate question, and servers generally create and publish actors by other means.
+The proposal does not specify how many such activities an object may have, or who may publish one. Nor does it cover actor types. [Section 6.2.1][AP-Bare-Object] obliges an outbox to accept any non-`Activity` `Object` submitted directly to it, so a client-to-server implementation already has to answer for a `Person`, a `Group` or a `Collection` as well as an `Article`. Section 6.2.1 says nothing about references, but a URI can name one of those just as easily, and that case does need an answer eventually. This proposal is written from an implementation of the [object types][AS2-Object-Types] only — a list that does not include `Collection`, which is a core type — and the author has not examined the [actor types][AS2-Actor-Types] closely enough to say what a referenced `Create` should mean for one, and would rather implement and measure that than guess at it here.
 
 ## The situation
 
@@ -188,7 +189,11 @@ The proposal uses the existing ActivityStreams roles of [actor and object in a M
 
 ### Referenced Create
 
-A server MAY accept a `Create` activity whose `object` is a string URI. When it does:
+A server MAY accept a `Create` activity whose `object` is a string URI identifying an existing `Object` the server hosts, of a type this proposal covers.
+
+[Section 6.2.1][AP-Bare-Object] requires an outbox to accept a valid non-`Activity` `Object` submitted directly to it. `Link` is [disjoint from `Object`][AS2-Base-Types], so that requirement does not reach a standalone `Link`, and nothing here defines the publication of one either. A [`Mention`][AS2-Mention] is a `Link`: the resource its `href` points to is distinct from the link itself, and this proposal does not define what it means to publish the `Mention` itself. AS2 does permit a `Link` as the value of `as:object`, so such a submission is not malformed by type alone; it is simply outside what is specified here. Nor does naming something by URI make the reference a `Link` — the URI string is the reference form this proposal defines, and what matters is the object it resolves to.
+
+When a server accepts a URI-referenced `Create`:
 
 1. **The request is a request to publish, not to edit.** The server MUST NOT alter the referenced object's content or addressing to satisfy it, and MUST NOT replace or extend its existing attribution. If the object has no existing attribution, the server SHOULD initialise `attributedTo` from `Create.actor`, consistent with [ActivityPub Section 6.2][AP-Create].
 
@@ -196,7 +201,7 @@ A server MAY accept a `Create` activity whose `object` is a string URI. When it 
 
 3. **Two permissions, checked separately.** The authenticated request must be permitted to submit to that outbox, and the outbox's actor must be permitted to publish that object. A server MUST refuse when either is absent, and MUST NOT treat the first as implying the second. The authorisation mechanism is implementation-defined; attribution alone does not establish publication authority under this proposal.
 
-4. **Addressing.** The server MUST take the activity's addressing from the addressing the referenced object already carries. Recipients are then computed from that addressing by the ordinary delivery rules; this proposal does not change them.
+4. **Addressing.** The server MUST take the activity's addressing from the addressing the referenced object already carries. Recipients are then computed from that addressing by the ordinary delivery rules; this proposal does not change them. Some objects carry no addressing at all, and a server MUST NOT invent one. It MUST either refuse the submission, or record the activity without adding addressing. Recording it is still a creation, so the response rules below apply unchanged; an activity with no recipients is simply not delivered. What a server MUST NOT do is choose an audience the object never stated. Who may then read that activity in the [outbox collection][AP-Outbox] is a separate question this proposal does not decide.
 
 5. **Addressing in the request is rejected, not ignored.** If the request carries `to`, `cc`, `bto`, `bcc` or `audience`, the server MUST reject the submission. Ignoring those properties and publishing to the object's existing, possibly wider audience would let a client believe it had published narrowly.
 
@@ -204,7 +209,7 @@ A server MAY accept a `Create` activity whose `object` is a string URI. When it 
 
 ### Replay of a referenced Create or Delete
 
-The following rules apply to both URI-referenced `Create` and [`Delete`][AP-Delete]. The publication-specific rules above do not define deletion behaviour or Delete addressing.
+The following rules apply to both URI-referenced `Create` and [`Delete`][AP-Delete]. For `Delete`, they are all this proposal defines: whether to accept a referenced `Delete` at all, what authority it requires, how it is addressed, and what becomes of the object are left to [ActivityPub][AP-Delete] and to the server. The rules above are for `Create` only.
 
 7. **Repeated submissions are idempotent.** When an authorised submission repeats the same publication or deletion transition for the same actor and object, the server SHOULD return the previously recorded activity without recording or delivering another. A server MUST NOT answer one actor's submission with an activity recorded for another. If more than one transition of the same type is possible for that actor and object, the reference alone does not distinguish a retry from a new transition.
 
@@ -260,6 +265,11 @@ Only `Create` is implemented. A referenced `Delete` follows the same shape but h
 [HTTP-Created]: https://www.rfc-editor.org/rfc/rfc9110.html#section-15.3.2
 [AP-Create]: https://www.w3.org/TR/activitypub/#create-activity-outbox
 [AP-Bare-Object]: https://www.w3.org/TR/activitypub/#object-without-create
+[AS2-Object-Types]: https://www.w3.org/TR/activitystreams-vocabulary/#object-types
+[AS2-Mention]: https://www.w3.org/TR/activitystreams-vocabulary/#dfn-mention
+[AS2-Base-Types]: https://www.w3.org/TR/activitystreams-vocabulary/#base-types
+[AP-Outbox]: https://www.w3.org/TR/activitypub/#outbox
+[AS2-Actor-Types]: https://www.w3.org/TR/activitystreams-vocabulary/#actor-types
 [JMAP-Session]: https://www.rfc-editor.org/rfc/rfc8620.html#section-2
 [AP-Delete]: https://www.w3.org/TR/activitypub/#delete-activity-outbox
 [AS2]: https://www.w3.org/TR/activitystreams-core/

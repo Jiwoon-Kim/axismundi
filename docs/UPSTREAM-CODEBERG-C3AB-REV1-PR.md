@@ -6,7 +6,9 @@
 > 검증기는 Codeberg 를 모르므로 `--github` 대신 API 의 `body` 를 저장해 `--posted` 로 돌린다:
 > `curl -sS https://codeberg.org/api/v1/repos/fediverse/fep/issues/986` 의 `.body`.
 >
-> 아래 **Issue 985 comment** 는 아직 미게시.
+> 아래 **Issue 985 comment** 도 게시됨 —
+> https://codeberg.org/fediverse/fep/issues/985#issuecomment-27687793
+> 되읽기 일치(`16155a29…`). 코멘트는 API 의 `issues/comments/<id>` 로 받는다.
 > 열 곳: https://codeberg.org/fediverse/fep/compare/main...Jiwoon-Kim:fep-c3ab-rev1
 > 제출 뒤 tracking issue https://codeberg.org/fediverse/fep/issues/985 에 PR 링크 한 줄.
 >

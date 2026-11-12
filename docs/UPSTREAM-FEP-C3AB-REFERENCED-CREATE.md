@@ -10,6 +10,23 @@
 > ```txt
 > 확정   Why Create and not Announce 절        ← 이미 반영함. trwnh·Steve Bate 가 같은
 >                                                제안을 했고 본문에 답이 없음을 인정했다.
+> 확정   Delete·Update·Undo 범위 근거         소유자 판단(2026-11-13):
+>                                              - 5.8.1 은 FEP-4f05 soft deletion 의
+>                                                Undo(Delete) 까지 C2S 관점에서 포함한다.
+>                                              - **C2S Update 는 멱등성을 확인할 방법이 없다**
+>                                                → 범위 밖. 같은 액터가 같은 객체를 여러 번
+>                                                정당하게 고칠 수 있다.
+>                                              - Delete 재시도까지가 우리 범위. Undo(Delete)
+>                                                이후의 재삭제는 **새 전이라 201**.
+>                                              - **Undo(Create) 는 의미상 불가능**하다 —
+>                                                객체가 이미 전달됐다. 되돌리는 수단은 Delete
+>                                                뿐이고, 그래서 4f05 의 Undo(Delete) 가
+>                                                "복원" 이지 "생성 취소" 가 아니다.
+> 할일   본문에서 Create 전용 / 공유 규칙 분리  codex 지적. 귀속 보존·발행 주소 결정은
+>                                              참조형 Create 전용이고, "새 활동이면 201,
+>                                              확인된 재시도면 200+기존 URI" 는 Create·Delete
+>                                              공유 규칙이다. AS2 §5.8 분류는 범위의 근거이지
+>                                              재시도 판정 규칙 자체가 아니다.
 > 확정   AS2 §5.8 로 범위 긋기                 ← 반영함. Create·Delete 는 5.8.1 Content
 >                                                Management 와 5.8.10 Relationship Management
 >                                                **양쪽에** 들어 있다. 그래서 "콘텐츠든 관계든"

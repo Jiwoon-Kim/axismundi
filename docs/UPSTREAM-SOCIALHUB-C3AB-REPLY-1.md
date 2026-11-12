@@ -110,3 +110,16 @@ Where your shape is clearly right is delivering an object a requester cannot fet
 
 So the alignment I would find useful is narrower than the activity name: both of us describe an activity whose `object` already exists and must keep the identifier it has. That rule should read the same whichever activity carries it, and I would happily take wording from yours.
 <!-- end of body C -->
+
+## Body D — topic-level summary (posted as #9)
+
+> **게시 전 검증을 거치지 않았다.** 인라인으로 쓴 글을 바로 올렸다. 아래는 게시본을
+> 그대로 되읽어 보존한 것이고, 앞으로는 짧은 글도 초안 파일을 먼저 만들 것.
+
+This discussion helped me see that FEP-c3ab is answering two separate questions:
+
+1. **Referencing an existing object.** When `Create.object` is a URI for an object the server already hosts, how should the outbox handle the object's identifier, attribution, and addressing?
+2. **Responding to a recognised retry.** If the outbox has already recorded the activity for this submission and records nothing new, what should it return? The draft proposes `200 OK` with the existing activity URI in `Location`. The first submission still gets `201 Created` with the new activity URI.
+
+`Create` versus `Announce` or `Notify` is a question about how to express the publication. It doesn't settle the retry question. I've revised the summary in my working draft to make that distinction explicit.
+<!-- end of body D -->

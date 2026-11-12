@@ -10,6 +10,16 @@
 > ```txt
 > 확정   Why Create and not Announce 절        ← 이미 반영함. trwnh·Steve Bate 가 같은
 >                                                제안을 했고 본문에 답이 없음을 인정했다.
+> 확정   AS2 §5.8 로 범위 긋기                 ← 반영함. Create·Delete 는 5.8.1 Content
+>                                                Management 와 5.8.10 Relationship Management
+>                                                **양쪽에** 들어 있다. 그래서 "콘텐츠든 관계든"
+>                                                으로 한 줄에 그어진다. 나머지(Like·Follow·
+>                                                Block·Undo)는 응답 원칙만 적용 가능, 재시도
+>                                                판정은 범위 밖. 섹션 제목은 "Motivations" 가
+>                                                아니라 "Activity Type Motivating Use Cases".
+> 확정   액터는 범위 밖 명시                    §6.2.1 이 비-Activity 객체 전부를 받으므로
+>                                                Person/Group 도 문법상 대상이 된다. 참조형
+>                                                Create 의 주제가 될지는 별개 질문으로 둔다.
 > 확정   Summary 에 두 제안 분리 명시          ← 반영함. 토론에서 세 사람이 전부 (1)에
 >                                                답하는 동안 우리는 (2)를 묻고 있었다.
 >                                                (1) 기존 객체 참조 처리 (2) 재시도 응답.
@@ -129,7 +139,9 @@ The second is the one this proposal exists for, and it survives a change of acti
 
 Note what decides the status code. The object already existing does not make the first submission a retry: that request records a new activity and gets `201`. A later identical submission gets `200` because the *activity* already exists and this request recorded nothing — not because the object does.
 
-The proposal does not specify how many such activities an object may have, or who may publish one.
+The rules here are written for a URI-referenced `Create` or `Delete`, which Activity Streams lists under both Content Management and Relationship Management, so the target may be an article or a relationship without changing anything. The same response pattern can be used for other client-to-server activities — `Follow`, `Like`, `Block` and `Undo` among them — wherever a server recognises a retry and records nothing new. How to recognise a retry for those is not defined here.
+
+The proposal does not specify how many such activities an object may have, or who may publish one. Nor does it address naming an actor: a submission may reference any object the server hosts, but whether an actor should be the subject of a referenced `Create` is a separate question, and servers generally create and publish actors by other means.
 
 ## The situation
 

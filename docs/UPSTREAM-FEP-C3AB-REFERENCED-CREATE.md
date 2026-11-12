@@ -10,6 +10,10 @@
 > ```txt
 > 확정   Why Create and not Announce 절        ← 이미 반영함. trwnh·Steve Bate 가 같은
 >                                                제안을 했고 본문에 답이 없음을 인정했다.
+> 확정   Summary 에 두 제안 분리 명시          ← 반영함. 토론에서 세 사람이 전부 (1)에
+>                                                답하는 동안 우리는 (2)를 묻고 있었다.
+>                                                (1) 기존 객체 참조 처리 (2) 재시도 응답.
+>                                                (2)는 활동 타입과 무관하다는 것까지 적었다.
 > 확정   published 두 시간선 분리               ← 반영함. 객체는 저작 시각, 활동은 발행 시각.
 >                                                코드는 이미 그렇다(repository.php:1287).
 >                                                WP 코어 선례: media.php:303 이 업로드 경로의
@@ -113,9 +117,17 @@ For those servers the client has nothing new to submit. It wants to name an obje
 }
 ```
 
-The syntax is already defined by ActivityStreams — this is the shape of the Minimal Activity example, with both properties given as URIs rather than inlined documents. This proposal specifies how an outbox handles the `object` reference: identifiers, addressing, refusal, and repeated submissions.
+The syntax is already defined by ActivityStreams — this is the shape of the Minimal Activity example, with both properties given as URIs rather than inlined documents. What is missing is what an outbox should do with it.
 
-A reference names an existing object rather than asking the server to create another one. Where the same actor's submission names the same publication transition, a retry can return the activity already recorded for that transition.
+**There are two separable proposals here, and it is worth saying which is which.**
+
+1. **Referencing an existing object.** When `Create.object` is a URI the server already hosts, what happens to the object's identifier, its existing attribution, and its addressing. This is specific to a submission that names something rather than carrying it.
+
+2. **Responding to a retry.** When a server recognises a submission as one it has already recorded and creates no new activity, what status and `Location` it returns. This is not specific to `Create` at all: the same question arises for any submission a server deduplicates, `Follow` and `Like` among them.
+
+The second is the one this proposal exists for, and it survives a change of activity type — if the publication were expressed as something other than a `Create`, the retry contract would read the same. The first is what makes a referenced submission well defined in the first place, so both are specified here.
+
+Note what decides the status code. The object already existing does not make the first submission a retry: that request records a new activity and gets `201`. A later identical submission gets `200` because the *activity* already exists and this request recorded nothing — not because the object does.
 
 The proposal does not specify how many such activities an object may have, or who may publish one.
 

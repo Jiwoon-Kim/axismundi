@@ -1,8 +1,12 @@
 # Draft — Codeberg PR: FEP-c3ab revision 1
 
-> 상태: **제출됨** — https://codeberg.org/fediverse/fep/pulls/986 (2026-11-13, 소유자가 열었다).
-> 브랜치 `Jiwoon-Kim:fep-c3ab-rev1` = `e0edd5a`, upstream/main 위 커밋 5개.
-> **PR 본문은 커밋 3개 시점의 것이라 갱신이 필요하다** — 아래 본문이 `5117fb3` 과 맞는 판이다.
+> 상태: **게시됨** — https://codeberg.org/fediverse/fep/pulls/986 (2026-11-13, 소유자가 열었다).
+> 브랜치 `Jiwoon-Kim:fep-c3ab-rev1` = `e0edd5a`, upstream/main 위 커밋 5개. 본문은 커밋 3개
+> 시점으로 올라갔다가 교체했고, 되읽어 바이트 일치 확인(`fdf2e004…`).
+> 검증기는 Codeberg 를 모르므로 `--github` 대신 API 의 `body` 를 저장해 `--posted` 로 돌린다:
+> `curl -sS https://codeberg.org/api/v1/repos/fediverse/fep/issues/986` 의 `.body`.
+>
+> 아래 **Issue 985 comment** 는 아직 미게시.
 > 열 곳: https://codeberg.org/fediverse/fep/compare/main...Jiwoon-Kim:fep-c3ab-rev1
 > 제출 뒤 tracking issue https://codeberg.org/fediverse/fep/issues/985 에 PR 링크 한 줄.
 >
@@ -66,3 +70,10 @@ This revises FEP-c3ab from the [discussion topic](https://socialhub.activitypub.
 - `Delete` shares only the retry rules. What a referenced `Delete` requires, how it is addressed, and what becomes of the object are left to ActivityPub and to the server.
 - An object may carry no addressing at all. A server must then refuse the submission or record the activity without adding addressing; it must not choose an audience the object never stated. Recording and delivering stay separate. The absence of addressing on the referenced object does not by itself grant or restrict access to that object; conversely, an object being publicly retrievable does not supply recipients for the new activity. ActivityPub's rules for public addressing remain unchanged, and who may read the activity in the outbox collection is not decided here.
 <!-- end of body -->
+
+## Issue 985 comment (Codeberg Markdown — paste as is)
+
+Revision 1 is open as #986.
+
+It separates the two questions the [discussion](https://socialhub.activitypub.rocks/t/fep-c3ab-referencing-existing-objects-in-client-to-server-create/8983) showed were being read as one — referencing an existing object, and responding to a submission the outbox recognises as a retry — and bounds the scope by object type. Two questions raised there are left open rather than settled: whether request-side addressing may narrow the object's, and whether a recognised retry should replay the original `201 Created` instead of answering `200 OK`.
+<!-- end of issue 985 comment -->

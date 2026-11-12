@@ -255,7 +255,7 @@ try {
 	ax_profile_assert( $ax_profile_results, 'the local handle alias opts out of Core trailing-slash canonicalization', false === axismundi_actors_handle_alias_canonical_redirect( 'https://example.test/@alice_profile/' ) );
 	$GLOBALS['axismundi_actors_profile_actor'] = $ax_previous_current_actor;
 	$GLOBALS['wp_query'] = $ax_previous_query;
-	$ax_profile_results[] = ( static function () use ( $ax_profile_group ) : bool {
+	$ax_profile_results[] = ( static function () use ( $ax_profile_group, &$ax_profile_ids ) : bool {
 		/*
 		 * A profile address read back to the Actor it belongs to.
 		 *
@@ -316,6 +316,34 @@ try {
 			)
 		);
 		$remote_id = $remote instanceof Axismundi_Actor ? $remote->get_identity_id() : 0;
+		$group_uri = 'https://example.com/c/ax_url_carol';
+		$remote_group = axismundi_actors_upsert_remote(
+			array(
+				'uri'                => $group_uri,
+				'actor_type'         => 'Group',
+				'preferred_username' => 'ax_url_carol',
+				'endpoints'          => array( 'inbox' => $group_uri . '/inbox', 'outbox' => $group_uri . '/outbox' ),
+				'payload'            => array( 'id' => $group_uri, 'type' => 'Group', 'preferredUsername' => 'ax_url_carol' ),
+			)
+		);
+		if ( $remote_group instanceof Axismundi_Actor ) {
+			$ax_profile_ids[] = $remote_group->get_identity_id();
+		}
+		$acct = 'ax_url_carol@example.com';
+		$group_url = home_url( '/group/@' . $acct );
+		$report(
+			'a cached remote Group uses its UUID before verification and its Group hub afterwards',
+			$remote_id > 0
+				&& $remote_group instanceof Axismundi_Actor
+				&& home_url( '/actors/' . $remote_group->get_uuid() ) === axismundi_actors_profile_hub_url( $remote_group )
+				&& axismundi_actors_record_verified_acct_address( $remote_id, $acct )
+				&& axismundi_actors_record_verified_acct_address( $remote_group->get_identity_id(), $acct )
+				&& home_url( '/@' . $acct ) === axismundi_actors_profile_hub_url( $remote )
+				&& $group_url === axismundi_actors_profile_hub_url( $remote_group )
+				&& $group_url . '/followers' === axismundi_actors_follow_collection_url( $remote_group, 'followers' )
+				&& $group_uri === axismundi_actors_resolve_request_actor( '', $acct, 'Group' )?->get_uri()
+				&& $uri === axismundi_actors_resolve_request_actor( '', $acct, 'Person' )?->get_uri()
+		);
 		$found     = axismundi_actors_get_by_profile_url( 'https://Example.Com/@ax_url_carol' );
 		$report(
 			'a cached remote actor answers from the address people open, not from its id',

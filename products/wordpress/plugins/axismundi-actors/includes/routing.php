@@ -253,7 +253,8 @@ function axismundi_actors_profile_hub_url( Axismundi_Actor $actor ) : string {
 	$acct = function_exists( 'axismundi_actors_primary_acct_address' ) ? axismundi_actors_primary_acct_address( $actor ) : '';
 	if ( '' !== $acct ) {
 		// Keep the acct separator readable while safely encoding any other path bytes.
-		return home_url( '/@' . str_replace( '%40', '@', rawurlencode( $acct ) ) );
+		$prefix = 'Group' === $actor->get_type() ? '/group/@' : '/@';
+		return home_url( $prefix . str_replace( '%40', '@', rawurlencode( $acct ) ) );
 	}
 	// Slashless, matching both the published identity URI and the `@handle` hub. Minting
 	// the trailing-slash variant here would hand out a link that only redirects.

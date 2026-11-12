@@ -1,6 +1,10 @@
 # SocialHub draft
 
-Status: unpublished discussion draft. No FEP number has been assigned.
+Status: **게시됨** 2026-11-13 — https://socialhub.activitypub.rocks/t/pre-fep-activitypub-c2s-session-discovery-and-multi-actor-access/8990 (post 31661).
+되읽기 일치 `265800e1…`. Discourse 가 고쳐 쓴 흔적 없음. FEP 번호는 아직 없다.
+
+> 되읽기: `curl -sS https://socialhub.activitypub.rocks/posts/<id>.json` 의 `.raw`.
+> 글 id 는 `t/<topic>.json` 의 `post_stream.posts[0].id`.
 
 Topic title: **Pre-FEP: ActivityPub C2S Session Discovery and Multi-Actor Access**
 

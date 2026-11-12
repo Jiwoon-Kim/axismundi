@@ -51,8 +51,8 @@
 > 미정   요구사항 4·5 (주소)                   좁히기는 허용해야 한다(수긍함). 검증 테스트가
 >                                                URI 목록 subset 이 아니라서 아직 못 쓴다.
 >                                                Public 객체 + 단일 액터 배달이 반례.
-> 검토   Why this needs writing down            "deliberate departure" 보다 "요구가 쓰이지
->                                                않은 경우" 프레이밍이 강하다. 답글 #6 참조.
+> 반영   Why this needs writing down            새 활동이 없는 재시도를 §6이 따로 다루지 않음을 명시.
+> 반영   규칙 분리                             Create 전용 처리와 Create·Delete 공통 재시도 규칙.
 > 검토   Notify(FEP-aef6) 인용 위치            silverpill 이 발행까지 의도했는지 되물어 둠.
 > ```
 >
@@ -154,7 +154,7 @@ The syntax is already defined by ActivityStreams — this is the shape of the Mi
 
 The second is the one this proposal exists for, and it survives a change of activity type — if the publication were expressed as something other than a `Create`, the retry contract would read the same. The first is what makes a referenced submission well defined in the first place, so both are specified here.
 
-Note what decides the status code. The object already existing does not make the first submission a retry: that request records a new activity and gets `201`. A later identical submission gets `200` because the *activity* already exists and this request recorded nothing — not because the object does.
+Note what decides the status code. The object already existing does not make the first submission a retry: that request records a new activity and gets `201`. A later submission recognised as a retry gets `200` because the *activity* already exists and this request recorded nothing, not because the object does.
 
 The rules here are written for a URI-referenced `Create` or `Delete`, which Activity Streams lists under both Content Management and Relationship Management, so the target may be an article or a relationship without changing anything. The same response pattern can be used for other client-to-server activities — `Follow`, `Like`, `Block` and `Undo` among them — wherever a server recognises a retry and records nothing new. How to recognise a retry for those is not defined here.
 
@@ -182,17 +182,19 @@ The gap has been visible for some time without closing. `MediaUpload` reached fo
 
 The proposal uses the existing ActivityStreams roles of [actor and object in a Minimal Activity][AS2-Minimal]. It preserves the object's [global identifier][AP-Identifiers] and follows the distinction between attribution and addressing in [ActivityPub Section 6.2][AP-Create]. If a server uses a Create record to register publication of an object URI, returning that record on a retry preserves the registration rather than creating a second one. The global identifier requirement does not itself mandate one Create per object.
 
-The explicit departure from an ActivityPub MUST is the response to a recognised retry: [Section 6][AP-C2S] requires `201 Created`, but this proposal recommends `200 OK` when no new activity is recorded. Documenting that exception gives servers and clients an agreed way to distinguish a new activity from a replay.
+[ActivityPub Section 6][AP-C2S] requires `201 Created` and does not separately address a recognised retry that records no new activity. [HTTP Semantics][HTTP-Created] describes `201` in terms of a request creating a new resource. This proposal recommends `200 OK` for the no-new-activity case, explicitly documenting the exception to Section 6 so clients can distinguish a new activity from a replay.
 
 ## Requirements
 
+### Referenced Create
+
 A server MAY accept a `Create` activity whose `object` is a string URI. When it does:
 
-1. **The request is a request to publish, not to edit.** The server MUST NOT alter the referenced object's content, attribution or addressing in order to satisfy it. Section 6.2 recommends copying a `Create`'s `actor` onto the object's `attributedTo`; on this path that recommendation is satisfied only where the object carries no attribution yet. A server MUST NOT use it to replace or extend attribution the object already carries.
+1. **The request is a request to publish, not to edit.** The server MUST NOT alter the referenced object's content or addressing to satisfy it, and MUST NOT replace or extend its existing attribution. If the object has no existing attribution, the server SHOULD initialise `attributedTo` from `Create.actor`, consistent with [ActivityPub Section 6.2][AP-Create].
 
 2. **Identifiers.** The server MUST NOT assign a new identifier to the referenced object. The requirement to attach an identifier applies to objects the server creates, not to objects it is asked to name. The new `Create` activity is itself a new object and receives an identifier as usual.
 
-3. **Two permissions, checked separately.** The authenticated request must be permitted to submit to that outbox, and the outbox's actor must be permitted to publish that object. A server MUST refuse when either is absent, and MUST NOT treat the first as implying the second.
+3. **Two permissions, checked separately.** The authenticated request must be permitted to submit to that outbox, and the outbox's actor must be permitted to publish that object. A server MUST refuse when either is absent, and MUST NOT treat the first as implying the second. The authorisation mechanism is implementation-defined; attribution alone does not establish publication authority under this proposal.
 
 4. **Addressing.** The server MUST take the activity's addressing from the addressing the referenced object already carries. Recipients are then computed from that addressing by the ordinary delivery rules; this proposal does not change them.
 
@@ -200,19 +202,23 @@ A server MAY accept a `Create` activity whose `object` is a string URI. When it 
 
 6. **Unresolvable references.** If the URI does not resolve to an object the server hosts, the server MUST refuse the submission. It MUST NOT create an object to satisfy the reference.
 
-7. **Repeated submissions are idempotent.** When an authorised submission repeats the same publication transition for the same actor and object, the server SHOULD return the previously recorded activity without recording or delivering another. A server MUST NOT answer one actor's submission with an activity recorded for another. A reference identifies the object; if the server permits more than one publication by the same actor, the reference alone does not distinguish a retry from a new publication.
+### Replay of a referenced Create or Delete
 
-8. **Responding to a retry.** Where a new activity is recorded the response is `201 Created` with its identifier in the `Location` header, as for any other submission. Where none is recorded, `201 Created` would assert a creation that did not happen; a server SHOULD answer `200 OK` instead, with the existing activity's identifier in `Location`. Section 6 requires `201 Created` for submissions without qualification, so this is a deliberate departure, and it is confined to the case where the server has determined that it created nothing.
+The following rules apply to both URI-referenced `Create` and [`Delete`][AP-Delete]. The publication-specific rules above do not define deletion behaviour or Delete addressing.
 
-The same replay rule applies to a URI-referenced [Delete][AP-Delete]: a retry of the same effective deletion SHOULD return the existing Delete without recording or delivering another. [FEP-4f05][FEP-4f05] describes restoring a soft-deleted object using `Undo(Delete)`, not a new Create. A deletion after restoration can be a new transition and receive `201 Created`; a delayed retry of the earlier deletion must not be mistaken for that new transition. Servers that support both need a way to distinguish them, such as a request identifier or a lifecycle precondition.
+7. **Repeated submissions are idempotent.** When an authorised submission repeats the same publication or deletion transition for the same actor and object, the server SHOULD return the previously recorded activity without recording or delivering another. A server MUST NOT answer one actor's submission with an activity recorded for another. If more than one transition of the same type is possible for that actor and object, the reference alone does not distinguish a retry from a new transition.
+
+8. **Responding to a retry.** Where a new activity is recorded the response is `201 Created` with its identifier in the `Location` header. For a recognised retry under rule 7, the server SHOULD answer `200 OK` with the existing activity's identifier in `Location`. This exception to [ActivityPub Section 6][AP-C2S] applies only to that successful replay, not to a refused submission.
+
+[FEP-4f05][FEP-4f05] describes restoring a soft-deleted object using `Undo(Delete)`, not a new Create. A deletion after restoration can be a new transition and receive `201 Created`; a delayed retry of the earlier deletion must not be mistaken for that new transition. Servers that support both need a way to distinguish them, such as a request identifier or a lifecycle precondition.
 
 ## Why `Create` and not `Announce`
 
 Announcing an object's existence and recording its first federated publication are different purposes, and neither is always the better one. `Announce` serves the first. This proposal serves the second: the `Create` records that an actor published the object, without replacing the attribution the object already carries. A server can use that record to track publication history, while later `Update` and `Delete` activities still target the object itself.
 
-Nothing about this requires the object to be new. An object may be written long beforehand and the `Create` sent later; that is the ordinary case for a content store that predates its federation. The two carry different times and should keep them: the object keeps the `published` date it was written with, while the activity carries the time the publication actually happened. Backdating the activity to the object's date would assert that a publication occurred when it did not, and would bury the activity for receivers that order by it.
+Nothing about this requires the object to be new. An object may be written long beforehand and the `Create` sent later; that is the ordinary case for a content store that predates its federation. The object keeps its existing `published` timestamp, if any, while the activity carries the time of the federated publication.
 
-The same reasoning is why `Update` is not treated this way. The same actor may legitimately update the same object many times, so a repeated `Update` is not a retry, and the question this proposal answers does not arise for it.
+The same actor may legitimately update the same object many times. Actor and object identifiers alone cannot identify an `Update` retry; how to identify such retries is outside this proposal.
 
 ## What this does not specify
 
@@ -222,7 +228,15 @@ Deletion and restoration semantics beyond the replay rule, re-use of an identifi
 
 ## Implementation notes
 
-Axismundi records at most one `Create` per object and treats its actor as that object's publishing authority. That constraint is its own, not part of this proposal, and it is what makes every repeat submission by the same actor a retry: there is never a second creation to record. A submission naming an object another actor created is refused as an authority violation rather than answered idempotently, which is the distinction requirement 7 draws.
+Axismundi originally supported multiple actors per user so people could switch profiles without signing out. It later drew on account discovery in the [JMAP Session object][JMAP-Session] to describe which actor accounts are available to the authenticated user.
+
+This separation also fits the [ActivityPub C2S object submission model][AP-Bare-Object], which is not limited to content types: `Person` and `Group` are also non-Activity object types. Submitting an actor object is distinct from provisioning an operable account or granting access to its outbox. Neither this proposal nor ActivityPub requires JMAP Session discovery or specifies account provisioning for such submissions.
+
+Axismundi distinguishes the authenticated WordPress user from the selected publishing actor. Its account access policy determines whether the user may act as that actor. For a referenced WordPress post it also checks the user's `edit_post` capability for that post and enforces the post's publication and attribution policy. This uses WordPress's existing access controls, including delegated editing, rather than treating the post's author field or ActivityStreams attribution as an access-control list.
+
+When a post has no stored attribution, Axismundi uses the actor of its first recorded `Create` to initialise attribution in WordPress post metadata after the activity commits. If the post already has a stored publishing actor, its URI must exactly match `Create.actor`; membership in the co-attribution list is not sufficient. Co-attribution and the WordPress post author are preserved.
+
+Axismundi records at most one `Create` per object and uses its actor as the publication authority. This makes an otherwise valid repeat submission from that actor a replay, while a submission by a different actor is refused rather than given the existing activity. These are implementation choices; the proposal does not require Axismundi's account model, storage layout, or one-Create limit.
 
 A request that carries addressing is answered with `400`, and a URI that does not resolve to a local object with `404`, so that a client can tell a malformed submission from one naming something the server does not have.
 
@@ -243,7 +257,10 @@ Only `Create` is implemented. A referenced `Delete` follows the same shape but h
 [ActivityPub]: https://www.w3.org/TR/activitypub/
 [AP-Identifiers]: https://www.w3.org/TR/activitypub/#obj-id
 [AP-C2S]: https://www.w3.org/TR/activitypub/#client-to-server-interactions
+[HTTP-Created]: https://www.rfc-editor.org/rfc/rfc9110.html#section-15.3.2
 [AP-Create]: https://www.w3.org/TR/activitypub/#create-activity-outbox
+[AP-Bare-Object]: https://www.w3.org/TR/activitypub/#object-without-create
+[JMAP-Session]: https://www.rfc-editor.org/rfc/rfc8620.html#section-2
 [AP-Delete]: https://www.w3.org/TR/activitypub/#delete-activity-outbox
 [AS2]: https://www.w3.org/TR/activitystreams-core/
 [AS2-Minimal]: https://www.w3.org/TR/activitystreams-core/#example-1

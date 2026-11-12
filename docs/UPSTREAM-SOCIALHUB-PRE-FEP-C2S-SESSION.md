@@ -2,7 +2,9 @@
 
 Status: unpublished discussion draft. No FEP number has been assigned.
 
-Topic title: **Pre-FEP: ActivityPub Client-to-Server Session Discovery**
+Topic title: **Pre-FEP: ActivityPub C2S Session Discovery and Multi-Actor Access**
+
+> `Access` rather than `Accounts`: the draft defines no account model, and the point is that one credential may act for several actors. `for Multi-Actor Credentials` was rejected because it reads as excluding single-actor credentials, which get the same response shape.
 
 <!-- BEGIN SOCIALHUB BODY -->
 ## Summary

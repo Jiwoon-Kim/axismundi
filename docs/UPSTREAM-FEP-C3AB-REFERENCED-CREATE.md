@@ -1,6 +1,29 @@
 # Draft — FEP-c3ab: Referencing Existing Objects in ActivityPub Client-to-Server Create
 
-> 상태: **PR 대기** (2026-11-12). 토론 개설됨 —
+> 상태: **머지됨, 개정 대기** (2026-11-13). `fediverse/fep` PR #984 머지, DRAFT 등록,
+> 트래킹 이슈 #985. 아래 본문은 **머지된 것보다 앞서 있다** — `Why Create and not Announce`
+> 절이 추가됐고 아직 PR 하지 않았다. 그래서 지금 검증기로 업스트림 파일과 대조하면
+> 불일치가 정상이다.
+>
+> **개정 대기 목록** (토론 8983 의 답을 보고 묶어서 PR 한 번에):
+>
+> ```txt
+> 확정   Why Create and not Announce 절        ← 이미 반영함. trwnh·Steve Bate 가 같은
+>                                                제안을 했고 본문에 답이 없음을 인정했다.
+> 미정   요구사항 8 (재시도 응답)              trwnh 가 "원래 201 재생" 을 뜻했는지에 달림.
+>                                                재생이면 8 을 교체, 아니면 RFC 9110 근거로 유지.
+> 미정   요구사항 4·5 (주소)                   좁히기는 허용해야 한다(수긍함). 검증 테스트가
+>                                                URI 목록 subset 이 아니라서 아직 못 쓴다.
+>                                                Public 객체 + 단일 액터 배달이 반례.
+> 검토   Why this needs writing down            "deliberate departure" 보다 "요구가 쓰이지
+>                                                않은 경우" 프레이밍이 강하다. 답글 #6 참조.
+> 검토   Notify(FEP-aef6) 인용 위치            silverpill 이 발행까지 의도했는지 되물어 둠.
+> ```
+>
+> **개정 PR 절차**: 포크를 업스트림 main 으로 동기화 → 새 브랜치(`fep-c3ab-rev1`) → 이 본문으로
+> 파일 교체 → 검증기 대조 → PR. 포크에 반쯤 쓴 파일을 두지 않는다.
+>
+> 이전 기록 — 토론 개설됨:
 > https://socialhub.activitypub.rocks/t/fep-c3ab-referencing-existing-objects-in-client-to-server-create/8983
 > (게시본 되읽기 일치, SHA-256 `a2582412…`). `dateReceived`·`discussionsTo` 채움. 포크의 `fep-c3ab` 브랜치에
 > 커밋 후 PR 만 남았다.
@@ -130,6 +153,14 @@ A server MAY accept a `Create` activity whose `object` is a string URI. When it 
 8. **Responding to a retry.** Where a new activity is recorded the response is `201 Created` with its identifier in the `Location` header, as for any other submission. Where none is recorded, `201 Created` would assert a creation that did not happen; a server SHOULD answer `200 OK` instead, with the existing activity's identifier in `Location`. Section 6 requires `201 Created` for submissions without qualification, so this is a deliberate departure, and it is confined to the case where the server has determined that it created nothing.
 
 The same replay rule applies to a URI-referenced [Delete][AP-Delete]: a retry of the same effective deletion SHOULD return the existing Delete without recording or delivering another. [FEP-4f05][FEP-4f05] describes restoring a soft-deleted object using `Undo(Delete)`, not a new Create. A deletion after restoration can be a new transition and receive `201 Created`; a delayed retry of the earlier deletion must not be mistaken for that new transition. Servers that support both need a way to distinguish them, such as a request identifier or a lifecycle precondition.
+
+## Why `Create` and not `Announce`
+
+`Announce` is a reasonable choice when the goal is to draw attention to an object, and for an object that has already been published it is the better one. The goal here is narrower: to record that an actor published this object to the fediverse for the first time. That record is what establishes the object's `attributedTo`, and what a later `Update` or `Delete` refers back to.
+
+Nothing about this requires the object to be new. An object may be written long beforehand and the `Create` sent later, carrying its own `published` date; that is the ordinary case for a content store that predates its federation.
+
+The same reasoning is why `Update` is not treated this way. The same actor may legitimately update the same object many times, so a repeated `Update` is not a retry, and the question this proposal answers does not arise for it.
 
 ## What this does not specify
 

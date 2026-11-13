@@ -1,5 +1,5 @@
 {
-  "core": "WordPress/WordPress#7.1.2",
+  "core": "WordPress/WordPress#7.1.4",
   "testsEnvironment": false,
   "themes": [
     "./products/wordpress/themes/omphalos",

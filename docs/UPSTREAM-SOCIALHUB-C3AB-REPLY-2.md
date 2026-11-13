@@ -64,3 +64,15 @@ That is why the `Create` does not establish attribution or addressing: both alre
 
 The author-only case you describe does exist in the same system, and it behaves differently: the object is not retrievable at all, and the outbox refuses a referenced `Create` for it. I think that case is a separate question from this FEP. An activity that changes an object's visibility is `Update` territory, and it would have to say what happens to an object no remote server has ever been told about.
 <!-- end of body -->
+
+## Body — PS (same topic, new reply)
+
+> 게시됨 2026-11-13 — post 12 (id 31664), 되읽기 일치 `d13954e5…`.
+> 여기서 약속한 Summary 문단은 `fep` 저장소 `f55b575`.
+
+PS, since this came out of your question: the next commit to the pull request puts it in the Summary rather than leaving it in a reply.
+
+> In this case the object already has an identifier and is publicly retrievable by `GET`. What the hosting server has not done is record or deliver a `Create` for it. A referenced `Create` records that publication and makes it eligible for delivery under the ordinary addressing rules; it does not make the object retrievable for the first time.
+
+Recording and delivering are kept apart there deliberately. An object may carry no addressing at all, and a server must then either refuse the submission or record the activity without inventing an audience, so "publish" cannot be read as shorthand for "deliver". It also leaves alone what another server may already have done with the object — fetched it, or even `Announce`d it — which is not something the hosting server is in a position to deny.
+<!-- end of PS body -->

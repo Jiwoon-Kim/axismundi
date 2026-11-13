@@ -134,6 +134,8 @@ Client-to-server interactions are described for objects that are born with their
 
 Where federation is added to a content store that already exists, the order is reversed, and that is the normal case for a content management system. The store assigns an identifier, an author and an audience when the content is written; a module or plugin adds federation later; and so an object can sit there for years before any actor decides to publish it. Publishing older content, publishing selectively, and publishing under one of several actors are then ordinary requests rather than edge cases. The same is true of any server that serves the same content both as a website and to the fediverse, since the website copy exists whether or not an activity was ever recorded for it.
 
+In this case the object already has an identifier and is publicly retrievable by `GET`. What the hosting server has not done is record or deliver a `Create` for it. A referenced `Create` records that publication and makes it eligible for delivery under the ordinary addressing rules; it does not make the object retrievable for the first time.
+
 For those servers the client has nothing new to submit. It wants to name an object the server already hosts and ask for it to be published:
 
 ```json

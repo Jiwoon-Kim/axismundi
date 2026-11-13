@@ -231,9 +231,30 @@ GET 을 돌려주는가.
 그러니 `following` 쪽이 빠른 것이 아니라 **네트워크 없이 답할 수 있는 유일한
 방향**이다. 성능 논거는 인덱스를 바꾸면 무너지지만 이 논거는 무너지지 않는다.
 
-**관계의 존재가 아니라 수락 상태를 요구한다.** `state` 컬럼이 있는 이유가 이것이다 —
-`manuallyApprovesFollowers` 아래에서는 pending Follow 가 행으로 존재한다. 존재만
-보면 승인 대기 중인 요청자에게 팔로워 전용 글이 보인다.
+**관계의 존재가 아니라 수락을 요구한다.** 팔로우가 성립했다는 권위는 `Accept`
+활동이다. 우리 `state` 컬럼은 그것을 기록한 **로컬 장부**이고, "pending" 은 AP 의
+상태가 아니다 — 스펙에는 `Accept`/`Reject` 만 있다. 그래서 판정은 행의 존재가 아니라
+수락 기록을 본다. 존재만 보면 아직 수락되지 않은 요청자에게 팔로워 전용 글이 보인다.
+
+`manuallyApprovesFollowers` 를 그 판정에 끌어들이면 안 된다. [apmisc] 는 이 속성을
+표시용 힌트로 규정한다 — *"conveys that for this actor, follow requests are not
+usually automatically approved"*, *"typically used to affect display of accounts,
+such as showing an account as private or locked"* — 그리고 **`Accept` 에 대해 아무 말도
+하지 않으며, 부재 시 기본값도 정하지 않는다.** *"Processors MAY ignore a value of
+false"* 이므로 `false` 조차 의무를 만들지 않는다.
+
+따라서 **원격 액터에 이 속성이 없다는 이유로 우리 발신 Follow 를 완료 처리할 수
+없다.** 그렇게 하면 원격이 수락한 적 없는 관계를 근거로, 그 액터의 팔로워 전용 캐시
+객체를 우리 로컬 독자에게 열어 준다 — 없는 관계로 남의 콘텐츠를 여는 것이다.
+현재 코드는 이 선을 지킨다: `axismundi_act_local_follow_requires_approval()`
+([local-social.php:29](../includes/local-social.php)) 은 **우리 로컬 액터**의 승인
+요구만 판정하고 OP 필터로 광고하며, 원격 속성으로 발신 Follow 를 완료시키는 경로는
+없다.
+
+남는 일은 표시 쪽이다. 원격 액터가 `Update` 로 이 속성을 바꾸면 캐시가 따라가야
+하는데, **표시만 바뀌고 관계 상태는 바뀌지 않는다** — 켜도 기존 팔로워가 취소되지
+않고, 꺼도 대기 중 요청이 자동 수락되지 않는다. 수락이 오지 않는 Follow 를 영원히
+"요청 중" 으로 두는 것은 진단 거리이지 자동 완료의 근거가 아니다.
 
 **미결로 둔다** — `audience: Group` 의 멤버십이 열람을 허용하는가. Group URI 는
 보존하되, 그것을 보자마자 ACL 로 해석하지 않는다. 그 결정에는 그룹 멤버십의 소유와
@@ -318,6 +339,8 @@ read the absence of addressing as either a grant or a restriction"* 라고 적�
 2026-11-11  resolve_audience 는 단어 넷 + 멘션, 역함수가 수신측 판정을 쥠 —
             audience.php:63, :146
 2026-11-11  Forum 이 Group 주소를 따로 만듦 — distribution.php:46
+2026-11-14  manuallyApprovesFollowers 는 표시용 힌트. Accept 를 언급하지 않고
+            부재 시 기본값도 없음. false 는 무시 가능 — apmisc 4.1 Notes
 2026-11-14  PeerTube Video 가 to/cc/audience/attributedTo 를 전부 실음.
             audience 와 to 에 같은 채널 Group. Accept: application/activity+json
             으로 skeptikon.fr 의 공개 영상 하나
@@ -326,4 +349,5 @@ read the absence of addressing as either a grant or a restriction"* 라고 적�
 [AP §5.6]: https://www.w3.org/TR/activitypub/#public-addressing
 [AP §3.1]: https://www.w3.org/TR/activitypub/#obj-id
 [AP §7.1]: https://www.w3.org/TR/activitypub/#delivery
+[apmisc]: https://www.w3.org/community/reports/socialcg/CG-FINAL-apmisc-20260828/#manuallyApprovesFollowers
 [AP §6]: https://www.w3.org/TR/activitypub/#delivery

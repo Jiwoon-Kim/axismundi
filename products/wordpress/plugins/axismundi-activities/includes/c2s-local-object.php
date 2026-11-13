@@ -27,12 +27,39 @@ function axismundi_act_submit_local_object( int $user, Axismundi_Actor $actor, a
 	} elseif ( 'Update' === $type ) {
 		$note = $input['object'] ?? null;
 		$editable = array( 'content', 'contentMap', 'name', 'nameMap', 'summary', 'summaryMap', 'sensitive' );
-		if ( ! is_array( $note ) || ! is_string( $note['id'] ?? null ) || '' === $note['id']
-			|| ( array_key_exists( 'type', $note ) && 'Note' !== $note['type'] )
-			|| array_diff( array_keys( $note ), array_merge( array( 'id', 'type' ), $editable ) )
-			|| ! array_intersect( array_keys( $note ), $editable )
-			|| array_intersect( array_keys( $input ), array( 'to', 'cc', 'bto', 'bcc', 'audience' ) ) ) {
-			return new WP_Error( 'ax_c2s_update_patch', 'Update requires a Note ID and editable fields only.', array( 'status' => 422 ) );
+		// Same policy as before; the refusal now names what it refused. A composer cannot place a
+		// blanket error on an input, and cannot tell a property the server owns from one the author
+		// misspelled. Nothing here widens what is accepted.
+		//
+		// Keys are qualified because an Update carries two documents: `to` on the Object and `to`
+		// on the Activity are different inputs. Unqualified, a composer cannot tell which field to
+		// mark, and when both are present one refusal silently overwrites the other.
+		$properties = array();
+		$reasons = array();
+		$owned = function_exists( 'axismundi_op_local_note_server_set' ) ? axismundi_op_local_note_server_set() : array();
+		$known = function_exists( 'axismundi_op_local_note_known_properties' ) ? axismundi_op_local_note_known_properties() : array();
+		if ( ! is_array( $note ) ) {
+			$reasons[] = 'object_required';
+		} else {
+			if ( ! is_string( $note['id'] ?? null ) || '' === $note['id'] ) { $properties['object.id'] = 'required'; }
+			if ( array_key_exists( 'type', $note ) && 'Note' !== $note['type'] ) { $properties['object.type'] = 'unsupported'; }
+			foreach ( array_diff( array_keys( $note ), array_merge( array( 'id', 'type' ), $editable ) ) as $field ) {
+				if ( in_array( $field, $owned, true ) ) {
+					$class = 'server_set';
+				} elseif ( in_array( $field, $known, true ) ) {
+					$class = 'not_updatable';
+				} else {
+					$class = 'unsupported_property';
+				}
+				$properties[ 'object.' . $field ] = $class;
+			}
+			if ( ! array_intersect( array_keys( $note ), $editable ) ) { $reasons[] = 'no_editable_properties'; }
+		}
+		foreach ( array_intersect( array_keys( $input ), array( 'to', 'cc', 'bto', 'bcc', 'audience' ) ) as $field ) {
+			$properties[ 'activity.' . $field ] = 'not_updatable';
+		}
+		if ( $properties || $reasons ) {
+			return new WP_Error( 'ax_c2s_update_patch', 'Update requires a Note ID and editable fields only.', array( 'status' => 422, 'properties' => $properties, 'reasons' => $reasons ) );
 		}
 	} else {
 		if ( ! is_string( $input['object'] ?? null ) ) { return new WP_Error( 'ax_c2s_delete_object', 'Delete requires a local Object URI.', array( 'status' => 400 ) ); }

@@ -76,12 +76,45 @@ axismundi_op_register_normative_requirement( 'local-note-attribution', array(
 	),
 ) );
 
+/**
+ * Properties of a local Note the server owns.
+ *
+ * A client never authors these; the store assigns them. They are stripped from a Create and
+ * named back from a rejected Update, so a composer can tell a server-owned property from one
+ * it merely misspelled. The list belongs to this projection, not to the vocabulary: another
+ * transformer derives different properties from its own source.
+ *
+ * @return string[]
+ */
+function axismundi_op_local_note_server_set() : array {
+	return array( 'id', 'url', 'published', 'updated', 'deleted', 'formerType', '@context' );
+}
+
+/**
+ * Properties this authoring slice recognises on a local Note.
+ *
+ * Recognised is not writable. `attributedTo` has its own attribution policy and the
+ * addressing properties ride on the Object at creation, so a caller that sends either is
+ * naming something real that this operation does not accept -- which is a different
+ * message from a property nobody has heard of. Writability per operation belongs to the
+ * caller; this says only what the vocabulary of the slice is.
+ *
+ * @return string[]
+ */
+function axismundi_op_local_note_known_properties() : array {
+	return array_merge(
+		axismundi_op_local_note_server_set(),
+		array( 'type', 'attributedTo', 'content', 'contentMap', 'name', 'nameMap', 'summary', 'summaryMap', 'sensitive' ),
+		array( 'to', 'cc', 'bto', 'bcc', 'audience', 'inReplyTo', 'context', 'tag', 'attachment' )
+	);
+}
+
 /** Validate before allocation; preserve structured values instead of selecting their first member. */
 function axismundi_op_prepare_local_note( array $input, Axismundi_Actor $actor, int $user_id = 0 ) {
 	if ( 'Note' !== ( $input['type'] ?? '' ) ) { return new WP_Error( 'ax_op_local_type', 'This authoring slice accepts Note only.', array( 'status' => 422 ) ); }
 	// This C2S Note slice stays single-Actor; WP post/attachment joint attribution is a separate source contract.
 	if ( isset( $input['attributedTo'] ) && $input['attributedTo'] !== $actor->get_uri() ) { return new WP_Error( 'ax_op_local_author', 'Object attribution conflicts with the outbox Actor.', array( 'status' => 403 ) ); }
-	unset( $input['id'], $input['url'], $input['published'], $input['updated'], $input['deleted'], $input['formerType'], $input['@context'] );
+	foreach ( axismundi_op_local_note_server_set() as $owned ) { unset( $input[ $owned ] ); }
 	$input['attributedTo'] = $actor->get_uri();
 	if ( isset( $input['sensitive'] ) && ! is_bool( $input['sensitive'] ) ) { return new WP_Error( 'ax_op_local_sensitive', 'Sensitive must be a boolean.', array( 'status' => 400 ) ); }
 	foreach ( array( 'content', 'summary', 'name' ) as $field ) {

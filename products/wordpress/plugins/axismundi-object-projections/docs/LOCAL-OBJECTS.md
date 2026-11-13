@@ -385,6 +385,32 @@ It is written here because it is the same question this section answers for loca
 because a design that says "the ledger does not keep bodies" should not be read as describing what
 the code does today.
 
+## 6. The projection owns the list of properties the server sets
+
+A client never authors `id`, `url`, `published`, `updated`, `deleted`, `formerType`
+or `@context` on a local Note: the store assigns them. That list is declared once, by
+`axismundi_op_local_note_server_set()`, and both write paths read it — a `Create`
+strips those properties, and a refused `Update` names them back so a composer can tell
+a property the server owns from one the author misspelled. Before this they were two
+literals, here and in Activities, that did not know about each other.
+
+The list belongs to the projection, not to the vocabulary. A transformer knows what it
+derives from its own source; AS2 does not. Another transformer therefore declares its
+own: an `Image` derives its rendition URLs from the original file, so those are
+server-set for that type while saying nothing about a `Note`.
+
+Three outcomes are needed rather than two, and only the first two exist today:
+
+```txt
+writable             content, name, summary, sensitive
+server-set           assigned by the store; a client that sends them is refused
+writable elsewhere   rendition URLs, alt text -- not "cannot be changed" but
+                     "not changed through this path"
+```
+
+The reasoning, the Create/Update asymmetry and what has to be measured before any of
+this is advertised are in `axismundi-activities/docs/DESIGN-C2S-COMPOSER.md`, section 7.
+
 ## Order of work
 
 1. ~~C2S vertical slice~~ — the command service exists and the editors submit into it; the

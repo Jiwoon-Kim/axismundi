@@ -505,13 +505,27 @@ PeerTube Video           audience: 채널 Group (to 에도 같은 값)
 지나가는 멘션은 `cc` 와 `tag` 에 들어가지 **`audience` 에는 들어가지 않는다.** 그러니
 `Note` 를 루트로 받되 `remote_root_addresses_group()` 의 느슨한 판정(`context`·
 `audience`·`to`·`cc` 아무 데나) 대신 **`audience` 또는 `context` 가 Group 을 지목할
-것**을 요구하면 주석이 걱정한 모호성이 닫힌다. `inReplyTo` 부재는 이미 검사한다
-([inbound-topics.php:112](../../axismundi-forum/includes/inbound-topics.php)).
+것**을 요구하면 주석이 걱정한 모호성이 닫힌다.
+
+**거부되는 것은 루트일 때의 `Note` 뿐이다.** 답글 경로는 이미 `Note` 를 받는다 —
+`'Note' === object_type` 이고 `in_reply_to_uri` 가 차 있으면 `entry_type: 'reply'` 로
+`pending` 입회한다([inbound-topics.php:192](../../axismundi-forum/includes/inbound-topics.php)).
+토픽의 댓글은 그 경로로 들어오고 Group 이 `Announce` 한다. 루트는 `in_reply_to_uri` 가
+비어 있을 것을 요구하므로([:112](../../axismundi-forum/includes/inbound-topics.php))
+둘은 겹치지 않는다.
 
 **그리고 지금은 우리끼리 연합이 되지 않는다.** 우리 컴포저는 `audience: Group` 인
-`Note` 를 보낼 수 있는데(C2S 저작은 Note 로 제한돼 있다) 우리 수신 게이트가 `Note` 를
-거부한다. Forum 토픽은 `Article` 로 나가므로 그 경로는 멀쩡하지만, 컴포저로 Group 에
-올린 글은 상대가 우리 코드를 돌려도 토픽이 되지 않는다.
+`Note` 를 보낼 수 있는데(C2S 저작은 Note 로 제한돼 있다) 루트 게이트가 `Note` 를
+거부한다. Forum 토픽은 `Article` 로 나가므로 그 경로는 멀쩡하고, 컴포저로 Group 에
+올린 **새 글**만 상대가 우리 코드를 돌려도 토픽이 되지 않는다. 답글은 된다.
+
+##### 답글의 부모는 검증되지 않는다
+
+`in_reply_to_uri` 는 **존재 여부로만** 쓰인다. 그 부모가 이 커뮤니티의 글인지는 확인하지
+않으므로, 아무 객체에 단 답글이라도 Group 을 `cc` 하기만 하면 댓글 항목으로 들어온다.
+경계는 둘뿐이다 — `admission_state: 'pending'` 과 `remote_actor_can_submit_comment()`.
+발행되지는 않지만 **큐에는 쌓인다.** 루트 쪽을 `audience` 로 좁힐 때 답글 쪽도 같이 볼
+자리다.
 
 **남는 것은 Announce 가 아니라 표면의 질문이다.** 행위하는 Group 은 팔로워로서 받은
 것을 inbox 에 쌓는다. "이 Group 이 받은 것" 을 보여 주는 화면이 생기면 거기에 커뮤니티

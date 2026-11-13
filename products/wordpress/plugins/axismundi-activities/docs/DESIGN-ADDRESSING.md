@@ -424,12 +424,38 @@ UI 도 **전송 재시도**와 **요청 취소 후 다시 보내기**를 구분�
 펼칠 수 없다 — 펼칠 수 없으면 그 멤버에게 배달할 방법이 없다는 것을 **실패로
 인정해야 하고**, 대신 컬렉션 소유자에게 보내는 것으로 바꿔치기하지 않는다.
 
-구현 메모: 배달 큐는 이미 inbox 단위로 유니크하다
-(`UNIQUE KEY recipient (delivery_id, inbox_hash)`,
-[delivery.php:77](../../axismundi-activitypub-bridge/includes/delivery.php)). 같은
-sharedInbox 로 해소되면 중복이 자동으로 접히므로, **압축은 큐 변경이 아니라 inbox
-해소 단계의 변경이다.** 현재 발신 경로는 sharedInbox 를 쓰지 않는다 — 브릿지는 수신과
-광고만 구현했다.
+### 현재 구현 (실측 2026-11-14)
+
+압축은 **이미 일어난다.** 수신자마다
+`endpoints['shared_inbox'] ?? endpoints['inbox']` 로 해소하고
+([transport.php:280](../../axismundi-activitypub-bridge/includes/transport.php))
+`array_values( array_unique( $inboxes ) )` 로 접는다([:294](../../axismundi-activitypub-bridge/includes/transport.php)).
+배달 큐도 inbox 단위로 유니크하다(`UNIQUE KEY recipient (delivery_id, inbox_hash)`,
+[delivery.php:77](../../axismundi-activitypub-bridge/includes/delivery.php)). 팔로워
+펼치기도 있고([:244](../../axismundi-activitypub-bridge/includes/transport.php)),
+원격 컬렉션을 펼칠 수 없을 때는 조용히 버리지 않고
+`axismundi_activitypub_bridge_unresolved_delivery_candidate` 로 드러낸다 — 위에서
+"실패로 인정해야 한다" 고 적은 것이 이미 그렇게 돼 있다.
+
+#### 결함 — bcc 수신자가 sharedInbox 로 접힌다
+
+```txt
+repository.php:453   저장 audience 는 to·cc·bto·bcc·audience 다섯을 한 목록으로 정규화
+repository.php:590   payload 에서는 bto·bcc 를 제거 — §6 대로 맞다
+transport.php:280    수신자마다 shared_inbox 우선 — bcc 에서 온 수신자도 같이
+```
+
+그래서 bcc 수신자의 배달이 **그 액터를 지목하지 않는 객체**를 들고 호스트 공유
+엔드포인트에 도착한다. 수신 서버는 라우팅할 근거가 없다. `prepare_local_note` 가
+`bcc` 를 받으므로 도달 가능한 경로다.
+
+원인은 정책이 아니라 **출처 상실**이다. 다섯 필드를 한 후보 목록으로 평탄화하면 어떤
+수신자가 `bcc` 에서만 왔는지 알 수 없다. 고치려면 해소 단계까지 출처를 들고 가서,
+`bto`/`bcc` 에서만 유도된 수신자는 개인 inbox 로 보내야 한다.
+
+**이 절은 제가 한 번 틀렸던 자리다.** `head -8` 로 잘린 grep 결과에서 "발신 경로는
+sharedInbox 를 쓰지 않는다" 고 결론했었다. 잘린 출력에서 부재를 읽은 것이다 —
+[[validate-measurement-tooling]] 의 사례가 하나 늘었다.
 
 **미결로 둔다** — 가시성을 좁히는 `Update` 를 직전 수신자에게 보낼 것인가.
 무효화 통지와 새 표현을 받을 권한은 다르다. 주소 이력을 저장해도 **GET 으로 가져간

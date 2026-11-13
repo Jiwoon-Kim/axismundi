@@ -376,6 +376,37 @@ UI 도 **전송 재시도**와 **요청 취소 후 다시 보내기**를 구분�
 
 열람 판정과 다른 축이다. `Public` 이 목적지가 아니라는 것(§1)이 그 증거다.
 
+### 어디로 보내는가 — 주소의 종류가 엔드포인트를 정한다
+
+```txt
+to 에 팔로워 컬렉션      sharedInbox 압축 가능. [AP §7.1.3] 이 바로 그 경우를 서술한다
+to 에 Public             알려진 모든 sharedInbox 로도 가능 (같은 절)
+to·cc 에 개별 액터       그 액터의 inbox. 압축해도 줄일 fan-out 이 없고, 수신자에게
+                         우리가 §4 에서 거부하는 모호성을 떠안긴다
+bto·bcc 의 액터          그 액터의 inbox — **필연이다.** 아래 참조
+```
+
+압축의 근거는 §7.1.3 이다 — *"a server MAY reduce the number of receiving actors"*,
+같은 `sharedInbox` 를 공유하는 팔로워를 묶어서. 그리고 수신 서버가
+*"participates in determining targeting and performing delivery to specific inboxes"*
+이므로, **수신자는 객체의 주소를 보고 라우팅한다.**
+
+거기서 `bto`/`bcc` 의 필연이 나온다. [AP §6] 은 배달 **전에** 객체에서 그 속성을
+제거하라고 한다. 그러면 sharedInbox 수신자가 라우팅할 근거가 사라지므로, bcc 된 액터가
+수신자인지 알 방법이 없다 — **sharedInbox 로 보내면 영영 도달하지 않는다.** 선호가
+아니라 두 조문의 곱이다.
+
+그리고 대칭 논거가 하나 더 있다. §4 에서 우리는 "sharedInbox 도착은 특정 로컬 액터에
+대해 추론 불가" 라고 정했다. 개별 지목 객체를 남의 sharedInbox 로 보내면 **우리가
+풀기를 거부한 모호성을 상대에게 떠넘기는 것**이다. 받고 싶은 방식으로 보낸다.
+
+구현 메모: 배달 큐는 이미 inbox 단위로 유니크하다
+(`UNIQUE KEY recipient (delivery_id, inbox_hash)`,
+[delivery.php:77](../../axismundi-activitypub-bridge/includes/delivery.php)). 같은
+sharedInbox 로 해소되면 중복이 자동으로 접히므로, **압축은 큐 변경이 아니라 inbox
+해소 단계의 변경이다.** 현재 발신 경로는 sharedInbox 를 쓰지 않는다 — 브릿지는 수신과
+광고만 구현했다.
+
 **미결로 둔다** — 가시성을 좁히는 `Update` 를 직전 수신자에게 보낼 것인가.
 무효화 통지와 새 표현을 받을 권한은 다르다. 주소 이력을 저장해도 **GET 으로 가져간
 서버를 모두 알 수 없고**, 원격 복사본의 회수를 보장할 수도 없다. 그러니 "이전
@@ -457,6 +488,8 @@ read the absence of addressing as either a grant or a restriction"* 라고 적�
             sharedInbox 는 Public 전용 수신 엔드포인트가 아니다
 2026-11-14  수신 Accept/Reject 는 이미 Follow 활동 URI 해시로 짝지어진다 —
             relations.php:265, :295, :329
+2026-11-14  배달 큐는 inbox 단위 유니크. 발신 경로에 sharedInbox 압축 없음 —
+            bridge delivery.php:77, actor-inbox.php 는 수신만
 2026-11-14  manuallyApprovesFollowers 는 Miscellaneous Terms 의 어휘 항목.
             용도 서술이지 프로토콜 규정이 아니다 — apmisc 4.1 Notes
 2026-11-14  PeerTube Video 가 to/cc/audience/attributedTo 를 전부 실음.

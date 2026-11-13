@@ -49,7 +49,7 @@ MAY 라서 클라이언트는 **저장됐는지 발행됐는지** 구별할 수 
 | **65ca** Common Client Configuration | 업로드 한계 탐색. `media` 객체가 이미 있다. 우리가 한계 탐색을 새로 정의하지 않는다 |
 | **c180** Problem Details for ActivityPub | 에러 모델. applicability 에 "media upload" 가 **명시**돼 있다 |
 | **ae97** Client-side activity signing | gateway endpoints 목록에 `uploadMedia` 가 들어 있다 — 존재를 전제한다 |
-| **fe34** Origin-based security model | 제약. §8 을 보라 |
+| **fe34** Origin-based security model | 제약. §9 을 보라 |
 
 따라서 CG 초안의 결함 다섯 중 **둘(한계·에러)은 우리가 풀 문제가 아니다.** 남은 셋 —
 완료 신호, 객체당 다중 파일, 재참조 — 이 설계의 몫이고 FEP 후보다.
@@ -163,7 +163,7 @@ URL 이니 매핑 단계가 사라진다. 그런데 네 가지가 걸린다.
                      URL 이 아예 없다(루트의 deny 가 트리 전체에 상속된다).
                      id 가 URL 이면 비공개 blob 은 id 를 가질 수 없다
 호스트가 바뀔 수 있다 저장 목적지를 안 옮긴다는 약속은 **경로**에 대한 약속이고
-                     호스트에 대한 약속이 아니다. §8 의 origin 분리를 나중에 택하면
+                     호스트에 대한 약속이 아니다. §9 의 origin 분리를 나중에 택하면
                      URL 은 바뀌고, id 가 URL 이면 발급된 모든 id 가 바뀐다
 가시성을 식별자에 박는다 URL 은 "이 주소에서 받을 수 있다" 는 주장이다. 비공개 초안
                      업로드를 지원할 수 없는 식별자가 된다
@@ -239,7 +239,7 @@ attachment' but 'must not bypass WordPress's upload validation', so `wp_handle_u
 mandatory and `move_uploaded_file()` is not an option — while the registry row, not an
 attachment post, remains the record."*
 
-그래서 §9 의 금지(⑧)와 충돌하지 않는다. 둘은 다른 층이다.
+그래서 §10 의 금지(⑧)와 충돌하지 않는다. 둘은 다른 층이다.
 
 ```txt
 해야 할 것    wp_handle_upload() 로 받는다. 코어 검증을 통과한다
@@ -275,7 +275,7 @@ Emoji 는 코어 검증 **위에** 자체 allowlist 를 얹는다. 근거가 적
 그 사이트가 결정한 적 없는 SVG 가 조용히 유효한 입력이 된다. 바이트를 직접 sniff 해서
 자체 목록과 대조한다.
 
-§8 의 보안 불변식이 이것을 요구한다. **코어의 허용 목록을 우리 allowlist 로 쓰면 안 된다** —
+§9 의 보안 불변식이 이것을 요구한다. **코어의 허용 목록을 우리 allowlist 로 쓰면 안 된다** —
 다른 플러그인이 넓힐 수 있는 목록이기 때문이다.
 
 ### 다른 점 하나 — URL 안정성
@@ -286,7 +286,61 @@ Emoji 의 저장 레이아웃은 `blobs/`(인스턴스별 디렉터리가 아니
 그러므로 코어가 쓴 자리가 최종 자리가 아니다 — `incoming` 에서 받고 해시를 확정한 뒤
 최종 경로로 옮긴다. Emoji 가 이미 같은 두 단계를 쓴다.
 
-## 8. FEP-fe34 와 확장자 allowlist 의 격상
+## 8. 저장과 삭제 계약
+
+가져오는 것은 Emoji 의 코드가 아니라 **객체와 바이트의 수명이 다르다**는 원칙이다. 세
+저장소가 같은 대수를 쓴다 — 내용 주소 지정, 확장자는 MIME 에서 유도, 실제 경로를 기록하고
+재계산하지 않는다.
+
+### 중복 제거
+
+```txt
+같은 바이트 · 다른 제목     Video 객체 URI 는 둘, 파일 URL 은 하나
+같은 업로드의 재시도         Idempotency-Key 로 판단한다. 해시로 판단하지 않는다
+```
+
+해시는 바이트를 공유하는 근거이고 제출을 식별하는 근거가 아니다(§3).
+
+### 파일 공개
+
+검증과 해시 계산이 끝난 파일만 최종 경로에 **원자적으로** 공개한다 — staging 에 쓰고
+`rename` 한다. 독자가 부분 파일을 보면 그것이 캐시되고, 내용 주소 지정 경로에서는 고칠
+방법이 없다.
+
+**계약은 "한 번 공개한 파일 URL 에 다른 바이트를 덮어쓰지 않는다" 다.** 저장소마다 다른
+규칙이 아니다 — 외부에 노출되는 URL 이면 어디서나 같다(JMAP 쪽도 같은 문장을 적고 있다:
+"바이트를 변경하거나 같은 경로를 덮어쓰는 API 는 없다").
+
+`rename` 과 DB 기록은 한 트랜잭션이 아니다. 그러므로 **파일은 공개됐는데 객체 기록이
+실패한 상태**가 생긴다. 내용 주소 지정이므로 이것은 오류 상태가 아니다 — 같은 바이트를
+다시 올리면 해시가 같아 그 파일을 재사용한다. 보상 삭제를 하지 않는다.
+
+### 삭제
+
+```txt
+Video 하나 삭제        공유 바이트를 지우지 않는다. 다른 객체가 그 해시를 주장한다
+마지막 참조 소멸        첫 버전에서는 즉시 삭제하지 않는다
+미발행 Video            파일을 참조하는 정상 객체다. 참조 계산에 포함된다
+```
+
+GC 는 업로드와 별개 작업이다. 참조 확인과 **동시 업로드 경합**을 검증한 뒤에 붙인다 —
+마지막 참조를 지우는 순간 같은 해시가 새로 올라오는 경합이 이 설계의 실제 위험이고, 그것을
+검증하지 않은 GC 는 발행된 URL 을 깨뜨린다.
+
+Emoji 의 선례는 "아무도 그 해시를 주장하지 않을 때만 거둔다" 이고, 주석이 그것을
+"reference-counted GC is scope-blind for exactly this case" 라고 적는다. 같은 규칙을 쓰되
+구현 시점을 분리한다.
+
+### 첫 감사
+
+```txt
+같은 파일로 Video 둘 생성   객체 URI 는 다르고 파일 URL 은 같다
+하나를 삭제                 다른 객체의 파일이 여전히 조회된다
+```
+
+마지막 참조 회수는 GC 를 구현할 때 별도 감사로 둔다.
+
+## 9. FEP-fe34 와 확장자 allowlist 의 격상
 
 fe34 는 이렇게 말한다 — *"If the server allows clients to upload arbitrary files, it MUST
 serve media from a different origin (e.g. from a different subdomain)."* 이유는 명시돼 있다.
@@ -309,7 +363,7 @@ serve media from a different origin (e.g. from a different subdomain)."* 이유�
 
 origin 분리는 열어 둔다 — 열어 두는 방법이 §4 의 "id 에서 url 을 유도한다" 다.
 
-## 9. 지금 당장 할 것
+## 10. 지금 당장 할 것
 
 ```txt
 ① 라우트       POST axismundi/activitypub/actors/{uuid}/uploadMedia
@@ -320,8 +374,9 @@ origin 분리는 열어 둔다 — 열어 두는 방법이 §4 의 "id 에서 ur
                upload_dir 필터는 호출 직전에 걸고 finally 에서 뗀다. 필터 안에서 경로
                헬퍼를 부르지 않는다 — §7 의 두 함정
 ④ 저장         uploads/axismundi-object-projections/blobs/{shard}/{hash}.{ext}
-               incoming 에서 받고 해시 확정 후 최종 경로로 옮긴다.
-               실제 상대 경로를 기록한다. 읽기·삭제는 기록된 경로만 쓴다(JMAP 선례)
+               incoming 에서 받고 해시 확정 후 staging → rename 으로 공개한다.
+               같은 해시가 이미 있으면 쓰지 않는다. 실제 상대 경로를 기록하고
+               읽기·삭제는 기록된 경로만 쓴다(JMAP 선례). 계약은 §8
 ⑤ 객체         로컬 객체 저장소에 기록. id·url 은 서버가 채운다. Create 는 만들지 않는다
 ⑥ 재시도 키    Actor + 주체에 묶인 업로드 키. 같은 키·같은 입력이면 기존 Location,
                다른 입력이면 409. 해시만으로 기존 객체를 돌려주지 않는다
@@ -332,7 +387,9 @@ origin 분리는 열어 둔다 — 열어 두는 방법이 §4 의 "id 에서 ur
                재생성 · 서브사이즈 메타데이터가 그 행에 달려 온다. (경로가 강제되는 것은
                아니다. 저장 위치를 정하는 것은 `wp_handle_upload()` · `wp_upload_bits()`
                쪽이고 attachment 행 생성과는 별개다)
-⑨ 감사         함수 호출이 아니라 **결과**를 본다 —
+⑨ 삭제         Video 삭제가 공유 바이트를 지우지 않는다. 마지막 참조가 사라져도
+               첫 버전은 파일을 남긴다 — GC 는 별개 작업이다(§8)
+⑩ 감사         함수 호출이 아니라 **결과**를 본다 —
                업로드 후 WP attachment 행이 생기지 않는다 ·
                바이트가 OP 경로에 있다 ·
                `Location` 이 Video 객체 URI 다 ·
@@ -340,14 +397,15 @@ origin 분리는 열어 둔다 — 열어 두는 방법이 §4 의 "id 에서 ur
                allowlist 가 activity+json 으로 매핑되지 않는다 ·
                같은 바이트를 다른 제목으로 올리면 **객체가 둘**이고 바이트만 공유한다 ·
                같은 키 · 다른 입력이 409 다 ·
+               같은 파일로 만든 Video 둘 중 하나를 지워도 다른 쪽 파일이 조회된다 ·
                Create 없이도 바이트는 공개다(이것이 정상 상태라는 것을 고정한다)
 ```
 
-멀티파트 N 파일 변형은 ①~⑨ 다음이다. 컴포저는 WP 의 DataViews 업로드 예제에서 파일 선택·
+멀티파트 N 파일 변형은 ①~⑩ 다음이다. 컴포저는 WP 의 DataViews 업로드 예제에서 파일 선택·
 진행·오류 UI 만 재사용하고, 전송은 이 계약으로 쓴다 — `wp.mediaUtils` 는 `/wp/v2/media` +
 `sideload` 에 결합돼 있어 이 경로에 쓰지 않는다.
 
-## 10. FEP 후보 경계
+## 11. FEP 후보 경계
 
 제안할 것은 **새 멀티파트 포맷이 아니라 의미의 예측 가능성**이다. CG 초안은 요청 형식을
 정의하고 그 요청이 무엇을 확정하는지를 정의하지 않았다.

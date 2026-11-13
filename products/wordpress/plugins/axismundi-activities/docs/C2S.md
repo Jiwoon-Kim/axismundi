@@ -744,3 +744,116 @@ protocol-relative    //.../1da5bd...jpg           → 0
 성능 후속: 메타데이터의 `LIKE '%"파일명"%'` 조회는 파일명 값에 대한 인덱스 검색이 아니다.
 meta_key 조건으로 후보가 좁혀질 수는 있지만 실행 계획/비용은 이번에 측정하지 않았다.
 피커·업로드의 ID 기반 참조 계약을 정할 때 함께 검토하며, 이번에 새 역방향 색인을 만들지 않는다.
+
+## 14. 같은 Create, 다른 진입 경로 — 제출 계층은 이미 있다 (2026-11-13)
+
+바깥에서 보면 하나의 `Create`다. 안에서는 **객체가 이 트랜잭션에서 태어났는지**가 다르다.
+
+```txt
+C2S outbox POST      "이것을 만들어라"   객체 생성이 이 제출의 부작용이다
+CMS publish          "이것을 만들었다"   객체는 이미 있고, 그 사실을 원장에 올린다
+```
+
+§2 의 "세 어댑터, 하나의 의미 계층" 이 이 구조를 이미 말하고 있고, §2 의 표는 C2S 와 S2S
+를 가른다. 여기서 더 갈라야 하는 것은 **로컬 제출 두 경로**다.
+
+| | C2S outbox POST | 로컬 소스 발행 |
+|---|---|---|
+| Object URI | 이 트랜잭션에서 발급 | 이미 존재한다 (`axismundi_op_post_object_uri()`) |
+| 객체 저장 | 원장 트랜잭션의 participant | 없다. 저장은 이미 끝났다 |
+| 원장에 제출하는 `object` | 임베드 (Group audience 면 스냅샷) | URI 문자열 |
+| 실패 의미 | 객체도 안 남는다 | 객체는 남고 발행만 안 된다 |
+
+`c2s-local-object.php:123` 의 `$participant` 가 첫 열이고, `post-lifecycle.php:72` 가
+`'object' => $object_uri` 로 두 번째 열이다. **표의 마지막 행은 원장 입력이고 최종 HTTP
+본문이 아니다** — 직렬화 결과까지 문자열인지는 이번에 재지 않았다. **두 번째 열의 와이어 형태가 FEP-c3ab 가
+다루는 바로 그 형태다** — 참조형 `Create`. 그래서 이 분해는 c3ab 와 같은 주장을 공유한다.
+
+### 제출 계층을 새로 만들지 말 것
+
+`wp_ax_activity_submission` 이 이미 있다 (`scheduled-publication.php:5`). 파일 머리말이
+스스로 "source-neutral identity; this slice supplies only the WordPress Post Create
+adapter/clock" 이라고 적고 있고, 실제로 소스 중립이다 — v12 의 `post_id` 를 버리고
+`(source_owner, source_kind, source_ref)` 로 이미 마이그레이션했다.
+
+```txt
+intent_uuid        PK. 제출 식별자 — Activity id 와 분리되어 있다
+source 삼중        UNIQUE. 소스당 살아 있는 의도는 하나
+activity_type      칼럼은 있다. 쓰이는 값은 'Create' 하나뿐
+object_uri         참조형 제출의 대상
+audience_json      동결된 수신 의도
+expected_version   + source_hash. 준비 이후 원본이 바뀌면 거부
+state              pending → completed · cancelled · failed
+```
+
+식별자도 넷 다 이미 있다. **새 ID 를 발명할 필요가 없다.**
+
+```txt
+Object URI      무엇에 관한 사건인가        OP 소유
+Activity id     어떤 사건이 일어났는가      원장
+intent_uuid     그 등록을 요청한 작업       ax_activity_submission
+delivery_id     어느 수신처로 보내는 작업   bridge delivery + recipients
+```
+
+재시도가 새 Activity 를 만들지 않는다는 요구도 이미 구조에 있다 — `source_event_key` 가
+원장에서 `FOR UPDATE` 로 잠기고, 같은 키에 다른 입력이면 `ax_c2s_retry_conflict` 다.
+
+### 그래서 남은 것은 셋뿐이다
+
+```txt
+① intent 행이 시계에만 달려 있다   post_status='future' 일 때만 생긴다. 즉시 발행은
+                                   $intent = null 로 통과한다 (c2s.php:169)
+② activity_type 이 Create 하나     Update·Delete·Announce 는 intent 행이 없다.
+                                   마이그레이션도 'Create' 를 하드코딩한다
+③ 세 번째 소스가 없다              wp_posts 도 아니고 이 제출이 만든 것도 아닌 객체 —
+                                   업로드된 미디어, 나중에 JMAP 발 객체
+```
+
+3단계는 이미 따로 돌릴 수 있다 — `enqueue_delivery()`, `find_delivery($activity_uri)`,
+`retry_failed_delivery()`, `cancel_delivery()`, `delivery_report()`. **수동으로 실행할 수
+없는 것은 2단계**이고, 그 이유는 설계가 아니라 배선이다.
+
+**독립 호출은 임의 순서가 아니다.** 객체가 준비되기 전에 `Create` 를 기록하지 않고, 기록
+전에 배달하지 않는다. 배달이 실패하면 **같은 Activity id 로 배달만** 다시 돌린다. 단계를
+분해하는 목적은 순서를 뒤집는 것이 아니라 **멈출 수 있게** 하는 것이다.
+
+그래서 ①도 "즉시 발행에도 intent 행을 만들라"가 아니다. 기록과 배달 사이에서 멈추거나
+재개하거나 제출 상태를 조회할 요구가 실제로 생길 때 만든다. 지금 즉시 발행에 intent 행이
+없는 것은 결함이 아니라 미사용이다.
+
+### 미디어 업로드에는 스펙이 없다
+
+AP §6.12 Uploading Media 는 **non-normative** 이고, "the precise mechanism is out of scope
+for this version of ActivityPub" 라고만 말한다. 규범은 "servers MAY support uploading
+document types to be referenced in activities" 한 문장이다. (§6.11 은 Delivery 다.)
+
+그래서 업로드 엔드포인트는 스펙이 강요한 결합을 푸는 작업이 아니라, 결합할 스펙이 없는
+자리에 우리 계약을 쓰는 작업이다. 바이트는 JMAP blob 로 가고(`axismundi-jmap-blob-store`),
+파일 URL 과 Video object URI 를 묶은 다음, 그 **기존** 객체를 참조해 ③의 소스로 2단계에
+들어간다. 트랜스코딩이 안 끝났으면 1단계에서 멈추고 Activity 를 만들지 않는다 — 이것이
+단계 분리가 사는 자리다.
+
+### 가시성과의 접점은 한 문장이다
+
+객체의 조회 정책, 활동의 주소 지정, 실제 inbox 배달은 **각 단계에서 따로** 결정된다.
+영상이 이미 익명으로 조회 가능해도 아직 `Create` 를 기록하지 않았을 수 있고, 그 `Create` 를
+팔로워에게만 보내도 영상의 조회 정책은 바뀌지 않는다. 같은 판정을
+`architecture/activitystreams-open-items.md` 가 이미 적고 있다 — "Create 전에도 파일 자체는
+공개다. 객체가 초안이라는 사실도, 해시 파일명도 접근 제어가 아니다."
+
+### 바꾸지 말 것
+
+- **outbox `POST` 이 공개 쓰기 표면이다.** AP §6 가 outbox 제출을 요구한다. 제출 API 는
+  내부 진입점 하나가 더 생기는 것이고, outbox 를 읽기 모델로 격하시키는 교체가 아니다.
+  CQRS 로 읽는 것은 우리 내부 설명으로는 맞지만 프로토콜 주장으로 쓰면 C2S 클라이언트를
+  깬다.
+- **C2S 경로의 participant 융합은 의도다.** 저장 실패한 객체에 Create 를 기록하지 않으려면
+  한 트랜잭션이어야 한다. 분해 대상은 1-2단계의 *배선*이지 이 원자성이 아니다.
+- **`post_author` 는 여전히 `attributedTo` 가 아니다.** §8 "Objects that predate the
+  ledger" 가 그대로 적용된다. 참조형 제출은 귀속을 주장으로만 받는다.
+
+### 한 가지 측정되지 않은 것
+
+두 경로가 외부에 **완전히** 같은 사건으로 보이는지는 와이어에서 재지 않았다. 임베드와
+URI 참조는 수신 구현에 다르게 보일 수 있고(Mastodon 의 `object` 문자열 처리), 그것이
+c3ab 가 묻고 있는 질문이다. "외부에서 같다" 는 우리 의도이며, 측정된 사실로 적지 않는다.

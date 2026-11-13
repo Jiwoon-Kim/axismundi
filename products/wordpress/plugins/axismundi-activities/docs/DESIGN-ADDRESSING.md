@@ -469,6 +469,29 @@ transport.php:280    수신자마다 shared_inbox 우선 — bcc 에서 온 수�
 그것과 별개로 출처가 필요하다(같은 호스트에 `to` 수신자와 `bcc` 수신자가 함께 있을 수
 있다).
 
+#### 행위하는 Group 이 받은 것을 아무거나 Announce 하지는 않는다 (실측 2026-11-14)
+
+우리 Group 액터는 행위할 수 있으므로 Person 이나 다른 Group 을 팔로우할 수 있고,
+그러면 팔로워 주소 지정된 글의 **수신자로 잡힌다.** 그것이 커뮤니티에 올라가지 않는지
+확인했다. 세 겹으로 막혀 있다.
+
+```txt
+① 명시 지목 요구   Group URI 가 객체의 context·audience·to·cc 또는 액티비티의 다섯
+                   필드에 나와야 한다 — remote_root_addresses_group()
+② 타입 제한        기본 Article·Page — is_root_object_type(), 필터로 확장 가능
+③ pending 입회     수신 제출은 admission_state='pending' 으로 들어가고 Announce 는
+                   별도 발행 단계에서만 난다 — publish_validated_pending_entry()
+```
+
+팔로워로서 받은 글은 `to: [<상대>/followers]` 라 Group URI 가 어디에도 없으므로 ①에서
+끝난다. 반대로 상대가 우리 Group 을 `cc` 하면 통과하는데, 그것은 Lemmy 식 제출 관행이라
+의도된 동작이다 — 그리고 ③ 이 있으므로 입회가 곧 발행은 아니다.
+
+**남는 것은 Announce 가 아니라 표면의 질문이다.** 행위하는 Group 은 팔로워로서 받은
+것을 inbox 에 쌓는다. "이 Group 이 받은 것" 을 보여 주는 화면이 생기면 거기에 커뮤니티
+제출과 팔로우 타임라인이 섞인다. 둘은 다른 것이므로 섞어 보여 줄지, 나눌지는 그 화면을
+만들 때 정한다.
+
 #### 수신 쪽은 이미 된다
 
 `audience` 에 우리 Group 이 있으면 **sharedInbox 로 받은 액티비티도** 타깃이 된다 —

@@ -49,6 +49,63 @@ special collection"* 이라고 한다. 그러니 `Public` 은 **열람 축의 �
 액터를 `cc: Public` 과 동일하게 보라는 규정이 없다 — 합성하면 우리 해석이 스펙인
 것처럼 보인다.
 
+## 1.5 주소가 없을 때 — 해석과 저작은 다른 규칙이다
+
+주소의 **부재**에도 상태가 셋이다. 첫째는 주소 질문이 성립하지 않는 경우다.
+
+```txt
+id 없음                      독립 fetch 불가 · Like · Reply 불가. 주소 질문이 없다
+id 있음 + to/cc 없음          공개로 해석한다
+id 있음 + to/cc 에 Public 없음  비공개로 해석한다
+```
+
+`id` 가 경계인 근거는 스펙에 있다. [AP §3.1] 은 배포되는 객체에 전역 식별자를
+요구하고, §6.2.1 은 *"For non-transient objects, the server MUST attach an id"* 라고
+한다 — **id 없음은 transient** 라는 뜻이다. Pre-FEP 의 Session 객체에서 `id` 를 뺀
+것이 같은 논리이고, 그래서 그 선택과 이 규칙이 한 모델 위에 있다. 관측과도 맞는다:
+액터 문서와 `followers`·`likes`·`shares` 컬렉션은 모두 `to`/`cc` 가 없고 공개다.
+
+### 해석 ≠ 저작
+
+**"to/cc 없으면 공개" 는 fail-open 이다.** 가시성은 우리가 다른 데서 전부
+fail-closed 로 잡은 속성인데(`sensitive` 는 object ∨ attachment, 키 없는 액터는
+fail-closed) 하필 가장 비싼 속성에서 방향이 뒤집힌다.
+
+실패 양상이 구체적이다. 투영 층이 버그로 `to` 를 떨어뜨리면 그 객체는 **에러가
+아니라 공개가 된다.** 누락과 "공개로 의도함" 이 문서상 구별되지 않으므로 아무도
+잡지 못한다. OP 는 `to` 를 매번 계산하므로(`default_public_audience`) 계산이 빈
+배열을 내는 경로가 생기면 그 자체가 공개 선언이다.
+
+```txt
+해석 (수신)   id 있고 to/cc 없으면 공개로 취급한다. 그러지 않으면 액터와 컬렉션을
+              전부 비공개로 읽어야 한다
+저작 (발신)   누락에 의존하지 않는다. 공개면 to 에 Public 을 명시한다.
+              우리가 내보내는 객체의 to 가 비어 있으면 그것은 버그다
+```
+
+해석 규칙은 받아들이고 **우리 쪽에서 그 규칙에 기대지 않는다.** 그러면 누락이 다시
+감지 가능한 이상이 된다.
+
+### Activity 쪽은 한 축이 더 있다
+
+활동에 `to`/`cc` 가 없으면 **공개로 읽히되 배달 대상이 없다.** 그래도 로컬
+팔로워에게는 닿는다 — 로컬 독자는 피드와 outbox 를 읽으므로 배달을 거치지 않고
+읽기 판정만 통과하면 된다. 즉 **배달은 원격에 대한 전파 수단**이고 로컬 도달은 순수
+읽기 판정이다.
+
+배달 결과가 같은 두 경우가 읽기 권위는 다르다. 이 구분을 적어 두지 않으면 "둘이
+같은 것 아니냐" 로 돌아온다.
+
+```txt
+to/cc 없음        읽기  우리 정책상 공개. 스펙이 강제하지는 않는다
+                  배달  대상 없음
+to: [Public] 만    읽기  [AP §5.6] 이 익명 접근을 MUST 로 강제한다
+                  배달  대상 없음 — Public 컬렉션으로는 배달 금지
+```
+
+[AP §7.1] 노트가 후자를 명시한다 — *"not delivered to any actors but is publicly
+viewable in the actor's outbox."*
+
 ## 2. 소스별 공개 정책
 
 표현력이 소스마다 다르다. **없는 표현력을 저장 구조가 있는 척하면 안 된다.**
@@ -81,6 +138,31 @@ special collection"* 이라고 한다. 그러니 `Public` 은 **열람 축의 �
 
 열람 판정은 로컬과 같은 질문이다. 다만 주소는 원본 서버가 정한 것이고 우리는 받은
 대로 보존한다. 우리가 정하는 것은 **우리 표면에서 그것을 어떻게 다룰지**뿐이다.
+
+### 독립 미디어는 자기 주소를 저작한다
+
+`Image`·`Video`·`Audio` 를 "딸린 서술자" 로 분류하면 안 된다. WordPress 의
+`inherit` 는 **저장 산출물이지 모델이 아니다.** 미디어 라이브러리는 공유 자산이고,
+액터가 명시적으로 가시성을 설정하는 방향이다.
+
+실물 선례가 있다. PeerTube 의 `Video` 를 AS2 로 받아 보면(2026-11-14 실측) 주소를
+전부 싣는다.
+
+```txt
+to            [ …activitystreams#Public, <채널 Group> ]
+cc            [ <계정>/followers ]
+audience      <채널 Group>
+attributedTo  [ Person, Group ]
+sensitive     false
+```
+
+`audience` 에 소유 채널 Group 이 들어가고 **`to` 에도 같은 값이 들어간다.** Forum 이
+프리셋 밖에서 따로 만들던 Lemmy 모양과 같은 계열이므로, 저층이 표현해야 할 것이
+분명해진다(§6). 복수 귀속이 실전에 있다는 것도 같이 확인된다.
+
+대조가 선명하다. Mastodon·Misskey 는 첨부를 **AS2 객체로 내놓지 않는다** — 주소가
+없는 것이 아니라 정체성이 없다. 그래서 종속 첨부의 질문은 "주소가 무엇인가" 가
+아니라 **"객체로 내놓을 것인가"** 이고, 내놓는 결정 자체가 가시성 결정이다.
 
 ### 예외 — Actor 와 Collection
 
@@ -158,7 +240,27 @@ audience: Group 의 멤버십이 열람을 허용하는가
 가시성을 좁히는 Update 의 배달 대상
 Group Announce 의 배달 정책이 일반 컴포저와 같은가
 wp_posts 를 더 좁히는 경로 (프런트엔드 게이트가 선행)
+Tombstone 의 가시성 — id 가 있고 to/cc 가 없으니 §1.5 규칙으로는 공개인데,
+  팔로워 전용 글의 Tombstone 이 공개면 그런 글이 존재했고 삭제됐다는 사실이
+  누설된다. 내용은 없어도 존재는 누설이다. 410 정책이 이미 이 근처를 지났다
 ```
+
+### FEP 후보 — 주소를 가질 수 없는 객체의 가시성
+
+§1.5 의 규칙을 일반화하면 FEP 한 편이 된다. 범위는 미디어가 빠지면서 좁아졌다 —
+독립 미디어는 자기 주소를 저작하므로(§2) 남는 것은 **다른 것을 대체하거나 서술하는
+객체**다: `Tombstone`(대체한 것), `Profile`(`describes`), `Relationship`(`subject`).
+
+**FEP-c3ab 와의 경계를 반드시 명시해야 한다.** c3ab 규칙 4 는 *"a server MUST NOT
+read the absence of addressing as either a grant or a restriction"* 라고 적었고, 이
+규칙은 부재에 뜻을 부여한다. 층이 다르다 — c3ab 는 참조형 `Create` 를 처리하는
+**서버의 판단**을, 이쪽은 객체를 받은 **수신자의 해석 기본값**을 말한다. 그 선을 안
+그으면 리뷰어가 두 FEP 가 반대로 말한다고 읽는다.
+
+그리고 Q5 와 같은 교훈이 걸린다 — 구현과 측정이 먼저다. 특히 종속 첨부에 대한 우리
+답이 둘이다: 첨부 페이지는 부모의 비공개를 **상속하지 않고**(의도적, 근거가 주석에
+있음), `sensitive` 는 **상속한다**(fail-closed). 같은 컨테이너·같은 첨부인데 한
+속성은 상속하고 한 속성은 안 한다. **왜 다른지를 일반화할 수 있을 때** 쓸 수 있다.
 
 **근거 없이 미결을 결정으로 바꾸지 않는다.** 보존된 주소는 어느 쪽으로 정하든
 충분하도록 두는 것이 이 문서의 목적이다.
@@ -185,7 +287,12 @@ wp_posts 를 더 좁히는 경로 (프런트엔드 게이트가 선행)
 2026-11-11  resolve_audience 는 단어 넷 + 멘션, 역함수가 수신측 판정을 쥠 —
             audience.php:63, :146
 2026-11-11  Forum 이 Group 주소를 따로 만듦 — distribution.php:46
+2026-11-14  PeerTube Video 가 to/cc/audience/attributedTo 를 전부 실음.
+            audience 와 to 에 같은 채널 Group. Accept: application/activity+json
+            으로 skeptikon.fr 의 공개 영상 하나
 ```
 
 [AP §5.6]: https://www.w3.org/TR/activitypub/#public-addressing
+[AP §3.1]: https://www.w3.org/TR/activitypub/#obj-id
+[AP §7.1]: https://www.w3.org/TR/activitypub/#delivery
 [AP §6]: https://www.w3.org/TR/activitypub/#delivery

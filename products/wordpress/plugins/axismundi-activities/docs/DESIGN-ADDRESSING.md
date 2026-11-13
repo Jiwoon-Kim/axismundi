@@ -453,6 +453,30 @@ transport.php:280    수신자마다 shared_inbox 우선 — bcc 에서 온 수�
 수신자가 `bcc` 에서만 왔는지 알 수 없다. 고치려면 해소 단계까지 출처를 들고 가서,
 `bto`/`bcc` 에서만 유도된 수신자는 개인 inbox 로 보내야 한다.
 
+#### 수신자가 하나면 공유 엔드포인트를 쓰지 않는다
+
+`is_direct_group_submission` 은 후보를 Group URI 하나로 줄이는데, 그 뒤 일반 해소가
+`shared_inbox ?? inbox` 를 적용하므로 **원격 호스트의 공유 엔드포인트로 간다.**
+수신자가 하나인데 압축한 것이다.
+
+§7.1.3 의 목적은 fan-out 축소이고, 수신자가 그 호스트에 하나뿐이면 줄일 것이 없다.
+그러니 **공유 엔드포인트는 둘 이상이 그리로 모일 때만 쓴다.** 그러면 Group 제출이
+자연히 Group 자신의 inbox 로 가고, Group 을 위한 특례를 만들 필요가 없다. Group 은
+받아서 `Announce` 하는 **행위자**이므로 우리 배달이 그 처리에 의존한다 — 라우팅 홉을
+하나 줄이는 편이 맞다.
+
+이 규칙은 이미 만들어진 목록에서 계산되므로 출처를 들고 다닐 필요가 없다. bcc 결함은
+그것과 별개로 출처가 필요하다(같은 호스트에 `to` 수신자와 `bcc` 수신자가 함께 있을 수
+있다).
+
+#### 수신 쪽은 이미 된다
+
+`audience` 에 우리 Group 이 있으면 **sharedInbox 로 받은 액티비티도** 타깃이 된다 —
+`receipt_targets()` 가 다섯 필드를 액티비티와 그 객체 양쪽에서 모아 로컬 액터로
+해소한다([actor-inbox.php:80](../../axismundi-activitypub-bridge/includes/actor-inbox.php)).
+그 제출에 대한 Group `Announce` 도 기록된다
+([distribution.php:215](../../axismundi-forum/includes/distribution.php)).
+
 **이 절은 제가 한 번 틀렸던 자리다.** `head -8` 로 잘린 grep 결과에서 "발신 경로는
 sharedInbox 를 쓰지 않는다" 고 결론했었다. 잘린 출력에서 부재를 읽은 것이다 —
 [[validate-measurement-tooling]] 의 사례가 하나 늘었다.

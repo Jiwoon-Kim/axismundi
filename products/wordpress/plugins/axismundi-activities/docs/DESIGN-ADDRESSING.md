@@ -236,25 +236,48 @@ GET 을 돌려주는가.
 상태가 아니다 — 스펙에는 `Accept`/`Reject` 만 있다. 그래서 판정은 행의 존재가 아니라
 수락 기록을 본다. 존재만 보면 아직 수락되지 않은 요청자에게 팔로워 전용 글이 보인다.
 
-`manuallyApprovesFollowers` 를 그 판정에 끌어들이면 안 된다. [apmisc] 는 이 속성을
-표시용 힌트로 규정한다 — *"conveys that for this actor, follow requests are not
-usually automatically approved"*, *"typically used to affect display of accounts,
-such as showing an account as private or locked"* — 그리고 **`Accept` 에 대해 아무 말도
-하지 않으며, 부재 시 기본값도 정하지 않는다.** *"Processors MAY ignore a value of
-false"* 이므로 `false` 조차 의무를 만들지 않는다.
+**`manuallyApprovesFollowers` 는 이 판정의 근거가 아니다.** 근거는 침묵이
+중의적이라는 것이다. [AP §7.5] 는 `Accept`/`Reject` 를 SHOULD 로 두고
+*"MAY choose to not explicitly send a `Reject`"* 를 허용한다 — 그래서 응답 없음은
+조용한 거절일 수도, 보내지 않는 구현일 수도 있다. 침묵을 수락으로 읽으면 **조용히
+거절된 것이 "팔로우 중" 이 된다.** 그것이 발신 Follow 를 자동 완료하지 않는 이유이고,
+어휘 보고서의 문구가 이유는 아니다 — [apmisc] 는 Miscellaneous Terms 이고, 속성의
+용도를 서술할 뿐 프로토콜 동작을 규정하지 않는다.
 
-따라서 **원격 액터에 이 속성이 없다는 이유로 우리 발신 Follow 를 완료 처리할 수
-없다.** 그렇게 하면 원격이 수락한 적 없는 관계를 근거로, 그 액터의 팔로워 전용 캐시
-객체를 우리 로컬 독자에게 열어 준다 — 없는 관계로 남의 콘텐츠를 여는 것이다.
 현재 코드는 이 선을 지킨다: `axismundi_act_local_follow_requires_approval()`
 ([local-social.php:29](../includes/local-social.php)) 은 **우리 로컬 액터**의 승인
 요구만 판정하고 OP 필터로 광고하며, 원격 속성으로 발신 Follow 를 완료시키는 경로는
-없다.
+없다. 원격이 `Update` 로 이 속성을 바꾸면 캐시가 따라가야 하지만 **표시만 바뀌고
+관계 상태는 바뀌지 않는다** — 켜도 기존 팔로워가 끊기지 않고, 꺼도 대기 중 요청이
+자동 수락되지 않는다.
 
-남는 일은 표시 쪽이다. 원격 액터가 `Update` 로 이 속성을 바꾸면 캐시가 따라가야
-하는데, **표시만 바뀌고 관계 상태는 바뀌지 않는다** — 켜도 기존 팔로워가 취소되지
-않고, 꺼도 대기 중 요청이 자동 수락되지 않는다. 수락이 오지 않는 Follow 를 영원히
-"요청 중" 으로 두는 것은 진단 거리이지 자동 완료의 근거가 아니다.
+### 배달 자체가 증거다 — 수신자는 발신자의 판정을 다시 하지 않는다
+
+수락이 오지 않는 Follow 에는 실제 위험이 하나 따라온다. 원격이 내부적으로는 우리를
+팔로워로 여기면서 `Accept` 를 보내지 않으면, 우리는 그 액터의 팔로워 전용 객체를
+**inbox 로 받으면서도** 우리 읽기 판정이 수락 기록을 요구하는 탓에 **스스로 숨긴다.**
+받은 것을 우리가 가리는 것이고, 이것은 자동 완료로 풀 문제가 아니다.
+
+풀이는 권위를 나누는 것이다.
+
+```txt
+우리가 권위일 때   우리 팔로워 전용 객체에 원격이 GET — 우리 수락 기록을 요구한다
+수신자일 때        로컬 액터 A 에게 배달된 것은 A 에게 보인다. 발신자가 이미 판정했으므로
+                   우리가 다시 판정하지 않는다. 강제할 것은 범위뿐 — A 에게만,
+                   공개로는 아니다
+```
+
+그래서 §2.3 의 "판정은 같다" 에 단서가 붙는다 — **질문은 같고 권위가 다르다.** 원격
+객체는 세 경우로 갈린다.
+
+```txt
+배달받음              주소지정된 로컬 액터에게 보인다
+가져왔고 Public       누구에게나 보인다
+가져왔고 비공개       애초에 가질 이유가 없다. 있다면 보이지 않는다
+```
+
+이렇게 하면 없는 관계를 만들지 않으면서(발신 Follow 는 수락 전까지 "요청 중") 배달받은
+콘텐츠가 보인다. §1 의 두 축을 캐시에 적용한 것이다.
 
 **미결로 둔다** — `audience: Group` 의 멤버십이 열람을 허용하는가. Group URI 는
 보존하되, 그것을 보자마자 ACL 로 해석하지 않는다. 그 결정에는 그룹 멤버십의 소유와
@@ -339,8 +362,10 @@ read the absence of addressing as either a grant or a restriction"* 라고 적�
 2026-11-11  resolve_audience 는 단어 넷 + 멘션, 역함수가 수신측 판정을 쥠 —
             audience.php:63, :146
 2026-11-11  Forum 이 Group 주소를 따로 만듦 — distribution.php:46
-2026-11-14  manuallyApprovesFollowers 는 표시용 힌트. Accept 를 언급하지 않고
-            부재 시 기본값도 없음. false 는 무시 가능 — apmisc 4.1 Notes
+2026-11-14  AP §7.5 는 Accept/Reject 를 SHOULD 로 두고 Reject 미발송을 허용 —
+            침묵이 중의적이라 수락으로 읽을 수 없다
+2026-11-14  manuallyApprovesFollowers 는 Miscellaneous Terms 의 어휘 항목.
+            용도 서술이지 프로토콜 규정이 아니다 — apmisc 4.1 Notes
 2026-11-14  PeerTube Video 가 to/cc/audience/attributedTo 를 전부 실음.
             audience 와 to 에 같은 채널 Group. Accept: application/activity+json
             으로 skeptikon.fr 의 공개 영상 하나
@@ -350,4 +375,5 @@ read the absence of addressing as either a grant or a restriction"* 라고 적�
 [AP §3.1]: https://www.w3.org/TR/activitypub/#obj-id
 [AP §7.1]: https://www.w3.org/TR/activitypub/#delivery
 [apmisc]: https://www.w3.org/community/reports/socialcg/CG-FINAL-apmisc-20260828/#manuallyApprovesFollowers
+[AP §7.5]: https://www.w3.org/TR/activitypub/#follow-activity-inbox
 [AP §6]: https://www.w3.org/TR/activitypub/#delivery

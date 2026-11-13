@@ -880,6 +880,31 @@ retrieval only"** 다. 바로 뒤에 못박아야 한다 — 실제로 그 필�
 공개 Actor 문서가 이미 주소 없이 공개인 객체다. (이전 판에서 "측정한 콘텐츠 객체가
 주소를 싣더라" 를 반대 근거로 썼는데, 그것은 **관례의 증거일 뿐 요구사항이 아니다.**)
 
+#### 우리 객체가 이미 그 사례다 (실측 2026-11-14)
+
+스테이징의 공개 미디어를 **익명으로** AS2 조회한 결과다.
+
+```txt
+GET https://designbusan.ai.kr/media/image/10003/   Accept: application/activity+json
+HTTP 200
+type           Image
+id             https://designbusan.ai.kr/?attachment_id=10003
+addressing     다섯 필드 **하나도 없음**
+attributedTo   키 자체가 없음 (정책대로 생략)
+usedIn·likes·shares   인라인이 아니라 컬렉션 URI
+```
+
+공개 미디어가 **주소 없이 익명 조회된다.** 제안한 규칙에서는 공개로 읽히고,
+Mastodon 수신 기본값(신호 없으면 `direct`)을 적용하는 피어는 **비공개로 오분류한다.**
+상호운용 위험이 추상이 아니라 우리 객체에서 바로 발생한다.
+
+`Create(Person)` 이 C2S 에서 바로 같은 질문을 낳는다 — 액터도 주소를 싣지 않으므로,
+c3ab 가 미결로 남긴 "참조형 `Create` 가 액터를 지목하면" 에 답하려면 이 규칙이 먼저
+있어야 한다. 그래서 일반화가 필요하다.
+
+(`used-in` 과 `likes` 는 둘 다 `totalItems: 0` 이라 **걸러서 0 인지 원래 0 인지 구별되지
+않는다.** 작업 순서의 E 는 여전히 미측정이다.)
+
 #### 두 표면이 갈린다
 
 ```txt

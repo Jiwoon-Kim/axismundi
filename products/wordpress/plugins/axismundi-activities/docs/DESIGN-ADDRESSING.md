@@ -862,7 +862,59 @@ ACL 이다" 를 선언하는 것이 아니라 **주소를 열람 근거로 언�
 금지             캐시된 문서의 주소에서 역산하기 — `bto: Public` 때문에 불가능하다
 ```
 
-세 군데를 명시해야 한다.
+#### 제안의 정확한 문장
+
+주장은 "주소가 없으면 공개" 가 **아니다.** 숨은 `bto`/`bcc` 가 실제로 있었다는 추론도
+아니다. **주소를 생략하고도 공개일 수 있고, 원본의 익명 GET 성공이 그 근거다** 이다.
+
+> If the origin serves an object's ActivityStreams representation in response to an
+> unauthenticated GET, the receiving server may treat that representation as publicly
+> retrievable even when it carries no addressing fields. This does not imply that the
+> delivering activity is public or that the object was addressed to `Public`.
+
+비유를 살리면 **"as if addressed to `Public` in an omitted blind-addressing field, for
+retrieval only"** 다. 바로 뒤에 못박아야 한다 — 실제로 그 필드가 있었다는 주장도
+아니고, 그 필드를 **합성하라**거나 **배달에 쓰라**는 지시도 아니다.
+
+**동기는 중복 제거다.** 공개성을 표현하려고 모든 객체에 주소를 다시 싣는 것은 낭비이고,
+공개 Actor 문서가 이미 주소 없이 공개인 객체다. (이전 판에서 "측정한 콘텐츠 객체가
+주소를 싣더라" 를 반대 근거로 썼는데, 그것은 **관례의 증거일 뿐 요구사항이 아니다.**)
+
+#### 두 표면이 갈린다
+
+```txt
+활동 안의 인라인 객체    그 활동을 읽을 수 있는 범위에서 보인다.
+                         독립 객체가 공개인지는 **아직 모른다**
+객체 URI 의 독립 조회    원본이 인증 없는 GET 에 AS2 표현을 돌려주면,
+                         주소 필드가 없어도 그 표현은 공개 조회 가능으로 해석한다
+```
+
+둘은 모순되지 않는다. 팔로워 전용 `Create` 가 URI 만 실어 왔고 그 URI 를 익명으로
+가져올 수 있다면, **객체는 공개이되 그 `Create` 는 여전히 팔로워 전용**이다. 반대로
+공개 `Update` 에 객체가 인라인됐다고 원본의 객체 GET 까지 공개인 것은 아니다. 서명이나
+자격 증명을 붙인 GET 만 성공했다면 공개의 근거가 아니다.
+
+#### `Update` 로 받은 무주소 객체
+
+[AP §7.3] 은 S2S `Update` 를 **부분 수정이 아니라 완전 교체**로 규정한다. 새 표현에
+주소 필드가 빠졌을 때 이전 주소를 그대로 남기는 것은 그것을 부분 패치처럼 다루는
+일이다. 그렇다고 **빠졌다는 사실이 비공개→공개 전환의 신호도 아니다.** 이전 주소를
+보존하는 것과, 따로 확인된 열람 근거를 관리하는 것은 다른 일이다(§5).
+
+그래서 위 두 표면이 그대로 적용된다 — `Update` 만 받았으면 그 활동의 열람 문맥에서
+보이고, 독립 공개 여부는 원본의 응답으로 판단한다.
+
+#### S2S 에 전체 표현을 실어야 한다는 일반 규정은 없다
+
+활동마다 `object` 를 인라인하라는 규정은 없고, `object: "<URI>"` 는 유효한 AS2 다
+(Minimal Activity). 다만 **수신 서버가 그 URI 를 GET 해야 한다는 규정도 없다.**
+§7.3 과 §6.3.1 은 S2S `Update` 가 적용 후의 전체 표현을 담아야 한다고 설명한다.
+
+c3ab 에 이 구분이 유용하다 — **C2S 는 URI 로 기존 객체를 선택하게 하고, S2S 는 같은
+객체 id 를 유지한 채 전체 표현을 인라인한다.** 두 구간의 표현을 같게 만들 필요가 없고,
+참조형 C2S `Create` 를 제안한다고 해서 **원격에 새 fetch 의무를 지우지 않는다.**
+
+#### 그래도 명시해야 할 세 가지
 
 **`id` 가 없는 것은 비공개가 아니라 범위 밖이다.** 공개 부모 표현 안의 인라인 객체는
 `id` 없이도 보인다. 답해야 할 독립 GET 이 없을 뿐이다(§3).

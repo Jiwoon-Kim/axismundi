@@ -63,6 +63,21 @@ additionally be addressed to…"* 로 **collection·object·activity 를 함께*
 지정의 대상은 액터만이 아니라 **코어 타입 전반**이다. 그리고 주소 지정(§6.1)과
 배달(§7.1)은 서로 다른 절이다 — 같은 필드를 읽지만 같은 질문이 아니다.
 
+배달 쪽은 범위가 훨씬 좁다. [AP §7.1] 은 *"An activity is delivered to its targets
+(which are actors)"* 라고 한다 — **대상은 액터이고, 배달되는 것은 활동이다.** 그래서
+주소 지정 가능한 것과 배달 가능한 것이 다르다.
+
+```txt
+주소 지정 가능   Activity · Object · Collection 의 모든 서브타입, Public 포함
+배달 가능        inbox 를 가진 액터. 보통 Person·Group·Organization·Service·Application
+                 [AP §4] 는 `Profile` 같은 다른 타입도 액터로 쓰일 수 있다고 한다 —
+                 기준은 타입이 아니라 inbox 다
+```
+
+여기서 따라오는 결론 하나: **객체를 그냥 inbox 로 POST 할 수 없다.** S2S 로 Article 을
+보내려면 활동으로 감싸야 한다. `bto`·`bcc` 는 숨긴 주소일 뿐 배달 자체는 정상 동작한다 —
+§7.1 이 수신자 결정 필드로 `to`·`bto`·`cc`·`bcc`·`audience` 를 함께 든다.
+
 **먼저 스펙이 실제로 말하는 것부터.** "Activity 주소 = 전달, Object 주소 = 가시성"
 이라고 단정하면 틀린다. ActivityPub 에는 객체 주소를 독립 GET 의 ACL 로 바꾸는 공통
 규칙이 **없다.**
@@ -176,11 +191,27 @@ bcc   private secondary audience   밝히지 않은 2차 청중
 셋째가 이 문서가 다루는 공백이고, 둘째와 다르다. `bto` 는 청중이 **있되 숨긴** 것이지
 없는 것이 아니다.
 
-이 구분이 두 가지 유혹을 막는다. 공개 Actor 문서를 `bto: Public` 으로 모델링하는 것은
-"숨긴 청중이 전원" 이라 자체 모순이고, 수신자는 `bto` 를 볼 수조차 없다([AP §6] 이 배달
-전에 제거한다). 익명 GET 이 성공한다는 이유로 `bto: Public` 을 **추론해 적는 것**도
-안 된다 — 없던 청중을 진술하고, 숨겼다고 거짓을 보태고, 보존된 기록에 추론을
-섞는다(§5).
+#### `bto: Public` — 모순이 아니라 이 공백의 증명이다
+
+`bto` 에 `Public` 을 넣는 것은 어색해 보이지만 **스펙이 금지하지 않고**, 그 귀결이
+정확히 이 문서가 다루는 공백이다.
+
+```txt
+[AP §5.6]   Public 으로 주소 지정된 활동은 인증 없이 접근 가능해야 한다.
+            **어느 필드인지 한정하지 않는다**
+[AP §6]     bto·bcc 는 배달 전에 객체에서 제거한다
+[AP B.11]   표시에서도 생략해야 한다 — **SHOULD 이지 MUST 가 아니다**.
+            저장 방식은 구현 자유
+```
+
+그러므로 `bto: Public` 인 객체는 **내준 표현에 `Public` 이 어디에도 없으면서 §5.6 이
+익명 접근을 요구하는** 상태가 된다. 가져온 문서의 주소는 **설계상 전체 주소가 아니다.**
+그러니 거기서 열람 규칙을 유도할 수 없다 — 앞에서 bcc 수신자 사례로 말한 것을 스펙이
+직접 증명하는 셈이고, 이것이 FEP 후보의 가장 선명한 동기다.
+
+막아야 할 것은 그 구성이 아니라 **추론을 기록으로 바꾸는 일**이다. 익명 GET 이
+성공한다는 이유로 `bto: Public` 을 **적어 넣으면** 없던 청중을 진술하고, 숨겼다고 거짓을
+보태고, 보존된 기록에 추론을 섞는다(§5). 관측은 관측으로 적는다.
 
 **관측은 주소가 아니라 관측으로 적는다.** 익명 GET 이 실제로 성공했다는 것은 공백을
 메우는 좋은 근거이지만, 그것은 **날짜 붙은 사실**이다 — 인가는 나중에 바뀌고, 어떤
@@ -757,7 +788,13 @@ Tombstone 의 가시성 — id 가 있고 to/cc 가 없으니 §3 규칙으로�
 ```
 
 둘을 구분하되 **그 사실만으로 허용도 금지도 하지 않고**, 무엇을 근거로 판단할지를
-제안한다. [AP §5.6] 의 `Public` 활동 규칙은 그대로 두고, §3.2 가 서버 정책에 맡긴 조회
+제안한다.
+
+**가장 선명한 동기는 스펙 안에 있다.** `bto: Public` 은 허용되고, §6 이 배달 전에 그
+필드를 제거하며, B.11 은 표시에서도 생략하라고 한다(SHOULD). 그래서 **내준 표현에
+`Public` 이 없는데 §5.6 이 익명 접근을 요구하는** 객체가 가능하다. 가져온 문서의 주소가
+설계상 전체 주소가 아니라는 뜻이고, 그러면 **그 문서만 보고 열람 규칙을 유도하는 모든
+방식이 근거를 잃는다**(§3). 관례가 바로 그것을 하고 있다. [AP §5.6] 의 `Public` 활동 규칙은 그대로 두고, §3.2 가 서버 정책에 맡긴 조회
 인가 중 **익명 접근만** 좁혀 다룬다. 배달 대상 선정과 인증된 팔로워의 접근까지 한꺼번에
 표준화할 필요가 없다.
 
@@ -865,6 +902,8 @@ E 는 규칙만 있고 구현을 보지 않았으므로 측정이 선행한다.
 [AP §3.1]: https://www.w3.org/TR/activitypub/#obj-id
 [AS2 어휘]: https://www.w3.org/TR/activitystreams-vocabulary/#dfn-bto
 [AP §7.1]: https://www.w3.org/TR/activitypub/#delivery
+[AP B.11]: https://www.w3.org/TR/activitypub/#security-not-displaying-bto-bcc
+[AP §4]: https://www.w3.org/TR/activitypub/#actors
 [apmisc]: https://www.w3.org/community/reports/socialcg/CG-FINAL-apmisc-20260828/#manuallyApprovesFollowers
 [AP §7.5]: https://www.w3.org/TR/activitypub/#follow-activity-inbox
 [AP §7.1.3]: https://www.w3.org/TR/activitypub/#shared-inbox-delivery

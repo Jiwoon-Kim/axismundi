@@ -30,8 +30,8 @@ $absent = axismundi_op_local_object_uri( wp_generate_uuid4() );
 $assert( function_exists( 'axismundi_op_local_note_server_set' ), 'The projection declares its server-set properties' );
 $owned = axismundi_op_local_note_server_set();
 $assert( in_array( 'published', $owned, true ) && in_array( 'id', $owned, true ), 'Declared list covers the store-assigned properties' );
-$assert( function_exists( 'axismundi_op_local_note_known_properties' ), 'The projection declares its vocabulary' );
-$assert( ! array_diff( $owned, axismundi_op_local_note_known_properties() ), 'Server-set properties are part of the vocabulary' );
+$assert( function_exists( 'axismundi_op_local_property_known' ), 'The projection uses the vocabulary registry' );
+$assert( axismundi_op_local_property_known( 'duration' ) && ! axismundi_op_local_property_known( 'nonsenseField' ), 'Vocabulary is not limited to Note fields' );
 
 // A property the author simply got wrong is not a property the server owns.
 $error = $submit( array( 'id' => $absent, 'content' => '<p>x</p>', 'nonsenseField' => 1 ) );

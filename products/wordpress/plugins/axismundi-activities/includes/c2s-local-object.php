@@ -10,7 +10,10 @@ function axismundi_act_submit_local_object( int $user, Axismundi_Actor $actor, a
 	if ( ! in_array( $type, array( 'Create', 'Update', 'Delete' ), true ) ) { return new WP_Error( 'ax_c2s_object_type', 'Unsupported Object command.', array( 'status' => 422 ) ); }
 	if ( ! $bare && ( $input['actor'] ?? '' ) !== $actor->get_uri() ) { return new WP_Error( 'ax_c2s_actor_mismatch', 'Actor must match the outbox.', array( 'status' => 403 ) ); }
 	if ( '' !== $key && ! preg_match( '/^[\x21-\x7e]{1,128}$/D', $key ) ) { return new WP_Error( 'ax_c2s_retry_key', 'Invalid Idempotency-Key.', array( 'status' => 400 ) ); }
-	if ( '1' !== get_option( 'ax_op_local_objects_schema', '' ) ) { return new WP_Error( 'ax_c2s_store_unavailable', 'Local storage is unavailable.', array( 'status' => 503 ) ); }
+	// The option survives deactivating Object Projections, so it does not say the store's
+	// functions are loaded. Measured 2026-11-14: option '1', every axismundi_op_local_*
+	// undefined. Everything below calls them, so both conditions are one unavailability.
+	if ( '1' !== get_option( 'ax_op_local_objects_schema', '' ) || ! function_exists( 'axismundi_op_local_update_types' ) ) { return new WP_Error( 'ax_c2s_store_unavailable', 'Local storage is unavailable.', array( 'status' => 503 ) ); }
 	$note = null;
 	$delete_row = null;
 	if ( 'Create' === $type ) {
@@ -37,16 +40,15 @@ function axismundi_act_submit_local_object( int $user, Axismundi_Actor $actor, a
 		$properties = array();
 		$reasons = array();
 		$owned = function_exists( 'axismundi_op_local_note_server_set' ) ? axismundi_op_local_note_server_set() : array();
-		$known = function_exists( 'axismundi_op_local_note_known_properties' ) ? axismundi_op_local_note_known_properties() : array();
 		if ( ! is_array( $note ) ) {
 			$reasons[] = 'object_required';
 		} else {
 			if ( ! is_string( $note['id'] ?? null ) || '' === $note['id'] ) { $properties['object.id'] = 'required'; }
-			if ( array_key_exists( 'type', $note ) && 'Note' !== $note['type'] ) { $properties['object.type'] = 'unsupported'; }
+			if ( array_key_exists( 'type', $note ) && ! in_array( $note['type'], axismundi_op_local_update_types(), true ) ) { $properties['object.type'] = 'unsupported'; }
 			foreach ( array_diff( array_keys( $note ), array_merge( array( 'id', 'type' ), $editable ) ) as $field ) {
 				if ( in_array( $field, $owned, true ) ) {
 					$class = 'server_set';
-				} elseif ( in_array( $field, $known, true ) ) {
+				} elseif ( function_exists( 'axismundi_op_local_property_known' ) && axismundi_op_local_property_known( (string) $field ) ) {
 					$class = 'not_updatable';
 				} else {
 					$class = 'unsupported_property';
@@ -59,7 +61,7 @@ function axismundi_act_submit_local_object( int $user, Axismundi_Actor $actor, a
 			$properties[ 'activity.' . $field ] = 'not_updatable';
 		}
 		if ( $properties || $reasons ) {
-			return new WP_Error( 'ax_c2s_update_patch', 'Update requires a Note ID and editable fields only.', array( 'status' => 422, 'properties' => $properties, 'reasons' => $reasons ) );
+			return new WP_Error( 'ax_c2s_update_patch', 'Update requires a local Object ID and editable fields only.', array( 'status' => 422, 'properties' => $properties, 'reasons' => $reasons ) );
 		}
 	} else {
 		if ( ! is_string( $input['object'] ?? null ) ) { return new WP_Error( 'ax_c2s_delete_object', 'Delete requires a local Object URI.', array( 'status' => 400 ) ); }
@@ -93,12 +95,13 @@ function axismundi_act_submit_local_object( int $user, Axismundi_Actor $actor, a
 			if ( ! $update_row || $update_row['attributed_to_uri'] !== $actor->get_uri() ) {
 				return new WP_Error( 'ax_c2s_update_actor', 'Only the recorded author may update this Object.', array( 'status' => 403 ) );
 			}
-			if ( 'active' !== $update_row['object_status'] || 'Note' !== $update_row['object_type'] ) {
-				return new WP_Error( 'ax_c2s_update_state', 'Only active Notes may be updated.', array( 'status' => 409 ) );
+			if ( 'active' !== $update_row['object_status'] || ! in_array( $update_row['object_type'], axismundi_op_local_update_types(), true )
+				|| ( isset( $note['type'] ) && $note['type'] !== $update_row['object_type'] ) ) {
+				return new WP_Error( 'ax_c2s_update_state', 'Update requires an active Object of the same type.', array( 'status' => 409 ) );
 			}
 			$document = $update_row['document'];
 			$patch = array_diff_key( $note, array( 'id' => true, 'type' => true ) );
-			$clean = axismundi_op_prepare_local_note( array( 'type' => 'Note' ) + $patch, $actor, $user );
+			$clean = axismundi_op_prepare_local_document( array( 'type' => $update_row['object_type'] ) + $patch, $actor, array( $update_row['object_type'] ) );
 			if ( is_wp_error( $clean ) ) { return $clean; }
 			foreach ( $patch as $field => $value ) {
 				if ( null === $value ) { unset( $document[ $field ] ); }

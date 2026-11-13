@@ -8,6 +8,7 @@
 |---|---|---|
 | AP 컬렉션 GET/HEAD | axismundi/activitypub | OP |
 | C2S outbox POST | axismundi/activitypub | Activities |
+| C2S uploadMedia POST | axismundi/activitypub | Object Projections (not advertised) |
 | inbox/sharedInbox POST | axismundi/activitypub | Bridge |
 | NodeInfo 2.1 | axismundi/nodeinfo | Actors |
 | 앱 객체 조회와 운영 동작 | axismundi/v1 | 기존 소유자 유지 |
@@ -16,6 +17,7 @@ AP 경로는 /inbox, /actors/{uuid}/inbox, /outbox, /followers, /following,
 /liked, /featured, /sent, /moderators와 /objects/replies, /likes,
 /shares, /emoji-reactions, /media/{id}/used-in이다. 액터별 접미사는
 /actors/{uuid} 아래에 있다. 각 GET은 Activities/Actors 등의 도메인 조회를 사용한다.
+Actor uploadMedia POST는 /actors/{uuid}/uploadMedia이며 Actor 문서에는 아직 광고하지 않는다.
 
 해시태그 /hashtags/{id}/members는 이름과 달리 AS2 Collection이 아니라
 앱 조회 결과를 반환한다. 따라서 /objects/{숫자 id}, /objects/read,

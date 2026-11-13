@@ -81,6 +81,7 @@ require_once __DIR__ . '/includes/router.php';
 require_once __DIR__ . '/includes/activity-read-route.php';
 require_once __DIR__ . '/includes/local-media.php';
 require_once __DIR__ . '/includes/local-objects.php';
+require_once __DIR__ . '/includes/media-upload.php';
 require_once __DIR__ . '/includes/local-object-route.php';
 if ( is_admin() ) {
 	require_once __DIR__ . '/includes/admin.php';

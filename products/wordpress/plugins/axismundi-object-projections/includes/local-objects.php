@@ -90,28 +90,28 @@ function axismundi_op_local_note_server_set() : array {
 	return array( 'id', 'url', 'published', 'updated', 'deleted', 'formerType', '@context' );
 }
 
-/**
- * Properties this authoring slice recognises on a local Note.
- *
- * Recognised is not writable. `attributedTo` has its own attribution policy and the
- * addressing properties ride on the Object at creation, so a caller that sends either is
- * naming something real that this operation does not accept -- which is a different
- * message from a property nobody has heard of. Writability per operation belongs to the
- * caller; this says only what the vocabulary of the slice is.
- *
- * @return string[]
- */
-function axismundi_op_local_note_known_properties() : array {
-	return array_merge(
-		axismundi_op_local_note_server_set(),
-		array( 'type', 'attributedTo', 'content', 'contentMap', 'name', 'nameMap', 'summary', 'summaryMap', 'sensitive' ),
-		array( 'to', 'cc', 'bto', 'bcc', 'audience', 'inReplyTo', 'context', 'tag', 'attachment' )
-	);
+/** Recognising a property does not grant permission to write it. */
+function axismundi_op_local_property_known( string $field ) : bool {
+	if ( in_array( $field, array( 'id', 'type', '@context', 'sensitive' ), true ) ) { return true; }
+	$term = preg_replace( '/^(content|name|summary)Map$/D', '$1', $field );
+	return null !== axismundi_op_vocabulary_property( $term );
 }
 
 /** Validate before allocation; preserve structured values instead of selecting their first member. */
 function axismundi_op_prepare_local_note( array $input, Axismundi_Actor $actor, int $user_id = 0 ) {
-	if ( 'Note' !== ( $input['type'] ?? '' ) ) { return new WP_Error( 'ax_op_local_type', 'This authoring slice accepts Note only.', array( 'status' => 422 ) ); }
+	return axismundi_op_prepare_local_document( $input, $actor, array( 'Note' ) );
+}
+
+/** Implemented storage types, independent of which properties the vocabulary recognises. */
+function axismundi_op_local_update_types() : array {
+	return array( 'Note', 'Video' );
+}
+
+function axismundi_op_prepare_local_document( array $input, Axismundi_Actor $actor, array $types ) {
+	$type = $input['type'] ?? null;
+	if ( ! is_string( $type ) || ! in_array( $type, $types, true ) || 'object' !== ( axismundi_op_vocabulary_type( $type )['category'] ?? null ) ) {
+		return new WP_Error( 'ax_op_local_type', 'This authoring operation does not support that Object type.', array( 'status' => 422 ) );
+	}
 	// This C2S Note slice stays single-Actor; WP post/attachment joint attribution is a separate source contract.
 	if ( isset( $input['attributedTo'] ) && $input['attributedTo'] !== $actor->get_uri() ) { return new WP_Error( 'ax_op_local_author', 'Object attribution conflicts with the outbox Actor.', array( 'status' => 403 ) ); }
 	foreach ( axismundi_op_local_note_server_set() as $owned ) { unset( $input[ $owned ] ); }
@@ -158,7 +158,7 @@ function axismundi_op_write_local_object( array $document, string $uuid ) {
 	$ok = $wpdb->insert( axismundi_op_local_objects_table(), array(
 		'local_uuid' => $uuid, 'object_uri' => $uri, 'object_uri_hash' => hash( 'sha256', $uri ), 'object_type' => $document['type'],
 		'attributed_to_uri' => $document['attributedTo'], 'attributed_to_uri_hash' => hash( 'sha256', $document['attributedTo'] ),
-		'document_json' => $json, 'document_hash' => hash( 'sha256', $json ), 'publicly_readable' => (int) axismundi_act_audience_is_public( axismundi_act_audience( $document ) ),
+		'document_json' => $json, 'document_hash' => hash( 'sha256', $json ), 'publicly_readable' => (int) axismundi_op_local_document_public( $document ),
 		'published_at' => $now, 'created_at' => $now, 'updated_at' => $now,
 	) );
 	if ( false === $ok ) { return new WP_Error( 'ax_op_local_write', 'Local Object insert failed.' ); }
@@ -173,7 +173,7 @@ function axismundi_op_update_local_object( array $row, array $document ) {
 	global $wpdb;
 	$json = wp_json_encode( $document, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
 	if ( ! is_string( $json ) || strlen( $json ) > 900000 ) { return new WP_Error( 'ax_op_local_size', 'Object exceeds the local body limit.', array( 'status' => 413 ) ); }
-	$row['publicly_readable'] = (int) axismundi_act_audience_is_public( axismundi_act_audience( $document ) );
+	$row['publicly_readable'] = (int) axismundi_op_local_document_public( $document );
 	$updated = $wpdb->update( axismundi_op_local_objects_table(), array(
 		'document_json' => $json,
 		'document_hash' => hash( 'sha256', $json ),
@@ -185,6 +185,17 @@ function axismundi_op_update_local_object( array $row, array $document ) {
 	if ( 1 !== $updated ) { return new WP_Error( 'ax_op_local_version', 'Object version changed.', array( 'status' => 409 ) ); }
 	$row['document'] = $document;
 	return axismundi_op_project_local_object( $row ) ? true : new WP_Error( 'ax_op_local_projection', 'Local Object projection failed.', array( 'status' => 500 ) );
+}
+
+function axismundi_op_local_document_public( array $document ) : bool {
+	if ( function_exists( 'axismundi_act_audience' ) ) {
+		return axismundi_act_audience_is_public( axismundi_act_audience( $document ) );
+	}
+	foreach ( array( 'to', 'cc' ) as $field ) {
+		$uris = array_column( axismundi_as2_normalize_members( $document[ $field ] ?? null ), 'uri' );
+		if ( array_intersect( $uris, array( 'https://www.w3.org/ns/activitystreams#Public', 'as:Public' ) ) ) { return true; }
+	}
+	return false;
 }
 
 /** All mandatory projections participate in the caller's transaction. */

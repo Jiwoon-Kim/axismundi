@@ -811,11 +811,35 @@ Tombstone 의 가시성 — id 가 있고 to/cc 가 없으니 §3 규칙으로�
   누설된다. 내용은 없어도 존재는 누설이다. 410 정책이 이미 이 근처를 지났다
 ```
 
-### FEP 후보 — `Public` 으로 주소 지정되지 않은 객체의 익명 조회
+### FEP 후보 — 객체 가시성의 해석
 
-임시 제목: **Anonymous Retrieval of ActivityPub Objects Without Public Addressing**
+임시 제목: **Interpreting Object Visibility in ActivityPub**
 
-**질문 하나로 좁힌다.**
+> This proposal separates an activity's delivery audience, the visibility of a
+> representation in context, and access to an object at its own URI. It applies the same
+> distinctions to actors and other objects without requiring them to share a default
+> visibility policy.
+
+**비일관성이 어디 있는지 정확히 집는다.** 공개 Actor 나 미디어가 주소 없이 조회되는 것은
+그 자체로 비일관성이 **아니다.** 문제는 **같은 무주소 표현을 Actor 일 때는 조회 정책으로
+판단하고, 다른 객체일 때는 주소 부재만 보고 비공개로 분류하는 것**이다. 같은 입력에 다른
+질문을 던지는 셈이다.
+
+그래서 일반화는 **모든 객체에 같은 공개 기본값을 강제하는 것이 아니다.** Actor 를 포함한
+객체에 **같은 질문**을 던지되, 답은 각자의 정책에서 나오게 한다.
+
+세 사례가 그 한 논리를 시험한다.
+
+```txt
+무주소 공개 Actor              주소가 없는데 공개다 — 조회 정책이 답한다
+팔로워에게만 알린 공개 attachment  배달은 좁고 객체는 공개다 — 두 판단이 다르다
+bto 로만 배달된 제한 본문        수신본은 무주소와 같아 보인다 — 부재로 추론할 수 없다
+```
+
+세 번째가 첫 번째·두 번째를 "그럼 부재는 공개" 로 일반화하지 못하게 막는다. 안티패턴
+목록은 이 구분을 어겼을 때 **무엇이 깨지는지** 보여 주는 역할이다.
+
+**질문을 하나로 좁히면 이렇다.**
 
 > When may an ActivityPub object that is not explicitly addressed to `Public` be served
 > to an unauthenticated requester?

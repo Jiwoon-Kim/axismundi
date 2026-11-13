@@ -58,6 +58,11 @@ Tombstone, 아직 발행되지 않은 소스. 열람은 "볼 자격이 있나" �
 
 ## 2. 개념 — 같은 속성 이름이 두 질문에 쓰인다
 
+§5.6 이 *"In addition to ActivityStreams collections and objects, Activities may
+additionally be addressed to…"* 로 **collection·object·activity 를 함께** 들므로, 주소
+지정의 대상은 액터만이 아니라 **코어 타입 전반**이다. 그리고 주소 지정(§6.1)과
+배달(§7.1)은 서로 다른 절이다 — 같은 필드를 읽지만 같은 질문이 아니다.
+
 **먼저 스펙이 실제로 말하는 것부터.** "Activity 주소 = 전달, Object 주소 = 가시성"
 이라고 단정하면 틀린다. ActivityPub 에는 객체 주소를 독립 GET 의 ACL 로 바꾸는 공통
 규칙이 **없다.**
@@ -155,6 +160,32 @@ Mastodon 수신 코드의 기본값은 `direct` 다(§2).
 to/cc 가 없다              공개 여부 미확인. 그 자체로 허가도 금지도 아니다
 to/cc 는 있는데 Public 없다  마찬가지로 미확인. 명시적 비공개 선언이 아니다
 ```
+
+### 축은 접근이 아니라 "밝혔는가" 다
+
+[AS2 어휘]의 정의를 보면 `public`/`private` 가 접근이 아니라 **공개 진술 여부**다.
+
+```txt
+to    public primary audience      밝힌 1차 청중
+cc    public secondary audience    밝힌 2차 청중
+bto   private primary audience     밝히지 않은 1차 청중
+bcc   private secondary audience   밝히지 않은 2차 청중
+```
+
+그래서 상태가 셋이다 — **밝힌 청중 · 밝히지 않은 청중 · 청중 진술이 아예 없음.**
+셋째가 이 문서가 다루는 공백이고, 둘째와 다르다. `bto` 는 청중이 **있되 숨긴** 것이지
+없는 것이 아니다.
+
+이 구분이 두 가지 유혹을 막는다. 공개 Actor 문서를 `bto: Public` 으로 모델링하는 것은
+"숨긴 청중이 전원" 이라 자체 모순이고, 수신자는 `bto` 를 볼 수조차 없다([AP §6] 이 배달
+전에 제거한다). 익명 GET 이 성공한다는 이유로 `bto: Public` 을 **추론해 적는 것**도
+안 된다 — 없던 청중을 진술하고, 숨겼다고 거짓을 보태고, 보존된 기록에 추론을
+섞는다(§5).
+
+**관측은 주소가 아니라 관측으로 적는다.** 익명 GET 이 실제로 성공했다는 것은 공백을
+메우는 좋은 근거이지만, 그것은 **날짜 붙은 사실**이다 — 인가는 나중에 바뀌고, 어떤
+서버는 익명 요청에 **축약된 표현**을 내준다. 그러니 "그때 익명으로 받아졌다" 로 적지
+"공개로 주소 지정돼 있다" 로 적지 않는다.
 
 미확인을 해소하는 것은 **별도의 근거**다 — 익명 GET 으로 실제 조회되는가, 어떤 로컬
 액터에게 어떤 경로로 배달됐는가, 그 소스의 공개 정책이 무엇인가(§4). 액터 문서와
@@ -832,6 +863,7 @@ E 는 규칙만 있고 구현을 보지 않았으므로 측정이 선행한다.
 
 [AP §5.6]: https://www.w3.org/TR/activitypub/#public-addressing
 [AP §3.1]: https://www.w3.org/TR/activitypub/#obj-id
+[AS2 어휘]: https://www.w3.org/TR/activitystreams-vocabulary/#dfn-bto
 [AP §7.1]: https://www.w3.org/TR/activitypub/#delivery
 [apmisc]: https://www.w3.org/community/reports/socialcg/CG-FINAL-apmisc-20260828/#manuallyApprovesFollowers
 [AP §7.5]: https://www.w3.org/TR/activitypub/#follow-activity-inbox

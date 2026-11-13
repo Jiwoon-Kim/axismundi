@@ -487,6 +487,32 @@ transport.php:280    수신자마다 shared_inbox 우선 — bcc 에서 온 수�
 끝난다. 반대로 상대가 우리 Group 을 `cc` 하면 통과하는데, 그것은 Lemmy 식 제출 관행이라
 의도된 동작이다 — 그리고 ③ 이 있으므로 입회가 곧 발행은 아니다.
 
+##### 타입 제한은 풀어야 하고, 그 신호는 `audience` 다
+
+②의 `Note` 제외는 의도적이고 근거가 주석에 적혀 있다 — *"A `Note` with no `inReplyTo`
+addressed to a Group is ambiguous between a NodeBB topic and an ordinary microblog post
+that merely mentioned the Group"*, 그래서 *"needs a signal beyond the type, and that is
+its own piece of work."*
+
+**그 신호는 `audience` 다.** 실측 둘이 같은 모양이다.
+
+```txt
+SocialHub 의 토픽 루트    type: Note · name: 제목 · audience: 카테고리 액터
+(2026-11-14 실측)        to: [Public, 같은 액터] · context: 스레드 컬렉션 · inReplyTo 없음
+PeerTube Video           audience: 채널 Group (to 에도 같은 값)
+```
+
+지나가는 멘션은 `cc` 와 `tag` 에 들어가지 **`audience` 에는 들어가지 않는다.** 그러니
+`Note` 를 루트로 받되 `remote_root_addresses_group()` 의 느슨한 판정(`context`·
+`audience`·`to`·`cc` 아무 데나) 대신 **`audience` 또는 `context` 가 Group 을 지목할
+것**을 요구하면 주석이 걱정한 모호성이 닫힌다. `inReplyTo` 부재는 이미 검사한다
+([inbound-topics.php:112](../../axismundi-forum/includes/inbound-topics.php)).
+
+**그리고 지금은 우리끼리 연합이 되지 않는다.** 우리 컴포저는 `audience: Group` 인
+`Note` 를 보낼 수 있는데(C2S 저작은 Note 로 제한돼 있다) 우리 수신 게이트가 `Note` 를
+거부한다. Forum 토픽은 `Article` 로 나가므로 그 경로는 멀쩡하지만, 컴포저로 Group 에
+올린 글은 상대가 우리 코드를 돌려도 토픽이 되지 않는다.
+
 **남는 것은 Announce 가 아니라 표면의 질문이다.** 행위하는 Group 은 팔로워로서 받은
 것을 inbox 에 쌓는다. "이 Group 이 받은 것" 을 보여 주는 화면이 생기면 거기에 커뮤니티
 제출과 팔로우 타임라인이 섞인다. 둘은 다른 것이므로 섞어 보여 줄지, 나눌지는 그 화면을

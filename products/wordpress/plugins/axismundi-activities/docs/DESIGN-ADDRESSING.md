@@ -284,6 +284,31 @@ sharedInbox 도착                   §4.1 상 Public 전용. 그 외는 제시�
 `received_via='shared' AND has_public_audience=1` 로 걸고 hydration 에서
 `audience_is_public()` 을 다시 확인한다([inbox.php:62](../includes/inbox.php)).
 
+### Accept 부재는 정책이 아니라 고장이다 (실측 2026-11-14)
+
+§7.5 가 SHOULD 이므로 "Accept 를 보내지 않는 구현" 을 상정해야 하는지가 문제였다.
+주요 구현 다섯을 재 보면 **만장일치로 보낸다.**
+
+```txt
+Mastodon   AuthorizeFollowService → AcceptFollowSerializer → DeliveryWorker   로직 읽음
+Lemmy      AcceptFollow::send — Follow 수신 네 분기                            로직 읽음
+Misskey    ApRendererService.renderAccept, UserFollowingService 가 사용        심볼 확인
+Pixelfed   Verb/AcceptFollow 트랜스포머 + FollowAcceptPipeline                 심볼 확인
+PeerTube   send-accept.ts, process-follow.ts 가 사용                           심볼 확인
+```
+
+그러므로 Accept 부재는 **고장**이다. 거기서 처방이 나온다 — 수락을 꾸며내지 않고
+재시도하고, 고장을 고장으로 표시한다.
+
+유실 두 경우는 우리 쪽에서 **구별할 수 없다.** 우리 Follow 가 닿지 않았는지, 그쪽
+Accept 가 닿지 않았는지 알 방법이 없다. 다행히 **재시도가 둘 다 덮는다** — 상대는
+중복 Follow 를 다시 수락하거나 무시한다. 그래서 환원 불가능한 경우가 남지 않고,
+UI 는 "요청 중" 을 영원히 보여 주는 대신 재시도 후에 **응답 없음**을 말해야 한다.
+요청 중과 응답 없음은 사용자에게 다른 정보다.
+
+그리고 그 고장 상태에서도 §4 의 주소 기반 판정이 안전망으로 남는다 — 배달이 해소한
+주소로 보이는 것은 보인다.
+
 **이것을 "tentative accept" 로 해석하지 않는다.** 그러면 표준에 없는 관계 상태를 또
 하나 발명하는 것이고, `pending` 과 같은 함정이다. 관계는 수락 전까지 요청 중으로
 두고, 가시성 질문만 답한다.

@@ -267,24 +267,25 @@ GET 을 돌려주는가.
 ```
 
 **증거는 배달이 아니라 그 배달이 해소한 주소다.** 배달 자체를 증거로 삼으면 두 군데서
-깨진다 — 공개 글은 널리 배달되므로 관계를 말해 주지 않고, sharedInbox 도착은 전송
-계층에 액터별 주소가 없다([AP §7.1.3] 은 *"MAY deliver that object to all known
-sharedInbox endpoints"*). 둘 다 **질문이 생기지 않는 경우**이기도 하다. 공개면 이미
-보이고, sharedInbox 는 [AP §4.1] 이 *"MUST NOT present objects which are not addressed
-to the Public endpoint"* 로 Public 전용으로 묶는다.
+깨진다. 공개 글은 널리 배달되므로 관계를 말해 주지 않는다. 그리고 **sharedInbox 는
+Public 전용 수신 엔드포인트가 아니다** — [AP §7.1.3] 은 여러 팔로워에게 갈 배달을
+sharedInbox 로 합치는 것을 명시적으로 허용한다. 그러니 거기 도착했다는 사실만으로는
+**어느 로컬 액터에 대해서도** 수락이나 열람 권한을 추론할 수 없다.
 
 ```txt
 Public 을 지목                     누구에게나. 관계와 무관하다
 이 액터를 직접 지목                그 액터에게. 직접 주소지정이지 팔로우의 증거는 아니다
 발신자 followers 지목 + 개인 inbox  그 액터에게. 발신자가 자기 멤버십을 해소했다
-sharedInbox 도착                   §4.1 상 Public 전용. 그 외는 제시하지 않는다
+sharedInbox 도착                   추론 불가. 그 액터를 수신자로 확인할 근거가 따로 필요하다
 ```
 
-마지막 줄은 이미 구현돼 있다 — sharedInbox 컬렉션이
-`received_via='shared' AND has_public_audience=1` 로 걸고 hydration 에서
-`audience_is_public()` 을 다시 확인한다([inbox.php:62](../includes/inbox.php)).
+sharedInbox **컬렉션을 읽을 때** 비공개를 노출하지 않는 것은 별개의 규칙이고, 그쪽은
+이미 구현돼 있다 — `received_via='shared' AND has_public_audience=1` 로 걸고
+hydration 에서 `audience_is_public()` 을 다시 확인한다
+([inbox.php:62](../includes/inbox.php)). 두 규칙을 섞어 "sharedInbox 는 공개만
+받는다" 로 읽으면 안 된다.
 
-### Accept 부재는 정책이 아니라 고장이다 (실측 2026-11-14)
+### Accept 미수신은 수락 미확인이다 (실측 2026-11-14)
 
 §7.5 가 SHOULD 이므로 "Accept 를 보내지 않는 구현" 을 상정해야 하는지가 문제였다.
 주요 구현 다섯을 재 보면 **만장일치로 보낸다.**
@@ -297,17 +298,59 @@ Pixelfed   Verb/AcceptFollow 트랜스포머 + FollowAcceptPipeline             
 PeerTube   send-accept.ts, process-follow.ts 가 사용                           심볼 확인
 ```
 
-그러므로 Accept 부재는 **고장**이다. 거기서 처방이 나온다 — 수락을 꾸며내지 않고
-재시도하고, 고장을 고장으로 표시한다.
+**이것이 보여 주는 것은 Accept 가 널리 쓰인다는 사실이다.** 모든 경로에서 반드시
+전송한다는 증거도, 중복 `Follow` 에 `Accept` 를 **재전송한다**는 증거도 아니다. §7.5 는
+지연을 허용하고 명시적 `Reject` 생략도 허용한다. 그래서 Accept 미수신은 고장이 아니라
+**수락 미확인**이다.
 
-유실 두 경우는 우리 쪽에서 **구별할 수 없다.** 우리 Follow 가 닿지 않았는지, 그쪽
-Accept 가 닿지 않았는지 알 방법이 없다. 다행히 **재시도가 둘 다 덮는다** — 상대는
-중복 Follow 를 다시 수락하거나 무시한다. 그래서 환원 불가능한 경우가 남지 않고,
-UI 는 "요청 중" 을 영원히 보여 주는 대신 재시도 후에 **응답 없음**을 말해야 한다.
-요청 중과 응답 없음은 사용자에게 다른 정보다.
+유실 두 경우는 우리 쪽에서 **구별할 수 없다.** 우리 `Follow` 가 닿지 않았는지, 그쪽
+`Accept` 가 닿지 않았는지 알 방법이 없다. 재시도는 **복구 수단이지 복구 보장이
+아니다** — 첫 `Follow` 가 유실됐다면 도움이 되지만, `Accept` 만 유실되고 상대가 중복
+`Follow` 를 무시하면 재시도로도 풀리지 않는다.
+
+그러므로 UI 는 처음에 **요청 보냄**, 오래 지나면 **아직 수락 확인 안 됨**이다. 수락을
+꾸며내지도, 고장이라 단정하지도 않는다.
 
 그리고 그 고장 상태에서도 §4 의 주소 기반 판정이 안전망으로 남는다 — 배달이 해소한
 주소로 보이는 것은 보인다.
+
+### 짝짓기 키는 `Follow.id` 다
+
+`Follow` 에 대한 정상 응답은 `Accept(Follow)` 이고, `Accept.object` 가 원래 `Follow`
+활동을 가리킨다. 그래서 상태는 **`Follow.id` 별로** 처리한다.
+
+```txt
+Follow F1 → Accept A1(object: F1)
+Undo   U1(object: F1)   선택적으로 Undo U2(object: A1)
+Follow F2 → Accept A2(object: F2)
+```
+
+늦게 도착한 `A1` 은 F1 에만 영향을 주고 F2 의 상태를 바꾸지 않는다. 같은 `U1` 이
+재배달되면 이미 처리했으므로 아무것도 새로 만들지 않는다 — 그것이 멱등이다.
+
+**이미 그렇게 구현돼 있다.** 수신 `Accept`/`Reject` 를 `object_uri_hash` = 해당
+`Follow` 활동 URI 의 해시로 집고([relations.php:265](../includes/relations.php)),
+순서가 뒤바뀐 도착을 재조정하며([:295](../includes/relations.php)), `Undo(Accept)` 를
+증거로 다룬다([:329](../includes/relations.php)). `initiating_activity_uri` 와
+`termination_activity_uri` 가 그 짝이다.
+
+`Undo(Accept)` 를 **보내는** 것은 이전 수락의 효력이 끝났음을 알리는 확장으로 괜찮지만,
+두 번째 `Accept` 를 구별하거나 중복을 막는 데 **필요하지는 않다.** AP 의 `Undo` 규칙은
+`Undo(Follow)` 에 `Undo(Accept)` 로 응답하라고 정의하지 않는다. 상대 구현이 그 뜻을
+이해할 때만 더한다.
+
+### 재시도와 취소는 다른 전이다
+
+```txt
+같은 요청의 재시도   기존 Follow 의 id 를 유지해 다시 전달한다. 같은 요청을 한 번 더
+                     도달시키는 것이고, 새 관계를 만들지 않는다. 상대가 Accept 를 다시
+                     보낸다는 보장은 없다
+취소 후 재요청       Undo 가 기존 Follow 를 가리키고, 새 Follow 는 새 id 를 쓴다.
+                     늦게 도착한 옛 Accept 가 새 요청을 완료시키면 안 된다
+```
+
+UI 도 **전송 재시도**와 **요청 취소 후 다시 보내기**를 구분해야 한다. `Accept` 가 안
+왔다고 자동으로 `Undo` 하면, 상대는 이미 수락했는데 우리가 그 관계를 끊을 수 있다.
 
 **이것을 "tentative accept" 로 해석하지 않는다.** 그러면 표준에 없는 관계 상태를 또
 하나 발명하는 것이고, `pending` 과 같은 함정이다. 관계는 수락 전까지 요청 중으로
@@ -408,8 +451,12 @@ read the absence of addressing as either a grant or a restriction"* 라고 적�
 2026-11-11  resolve_audience 는 단어 넷 + 멘션, 역함수가 수신측 판정을 쥠 —
             audience.php:63, :146
 2026-11-11  Forum 이 Group 주소를 따로 만듦 — distribution.php:46
-2026-11-14  AP §7.5 는 Accept/Reject 를 SHOULD 로 두고 Reject 미발송을 허용 —
-            침묵이 중의적이라 수락으로 읽을 수 없다
+2026-11-14  AP §7.5 는 Accept/Reject 를 SHOULD 로 두고 지연과 Reject 미발송을 허용 —
+            침묵이 중의적이라 수락으로도 고장으로도 읽을 수 없다
+2026-11-14  §7.1.3 은 여러 팔로워 배달을 sharedInbox 로 합치는 것을 허용 —
+            sharedInbox 는 Public 전용 수신 엔드포인트가 아니다
+2026-11-14  수신 Accept/Reject 는 이미 Follow 활동 URI 해시로 짝지어진다 —
+            relations.php:265, :295, :329
 2026-11-14  manuallyApprovesFollowers 는 Miscellaneous Terms 의 어휘 항목.
             용도 서술이지 프로토콜 규정이 아니다 — apmisc 4.1 Notes
 2026-11-14  PeerTube Video 가 to/cc/audience/attributedTo 를 전부 실음.

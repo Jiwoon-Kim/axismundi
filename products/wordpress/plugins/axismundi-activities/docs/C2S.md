@@ -709,6 +709,13 @@ AS2 `attachment` 는 Object 도 Link 도 받으므로 PeerTube Video 를 그 `id
 `inReplyTo`. 미디어 자체를 쓰려면 그 객체의 `id` 가 아니라 `url`(실제 미디어 파일)을
 `attachment` 의 Link 로 넣는다.
 
+**이 네 근거는 리모트 발행물에 대한 것이다** (2026-11-14 범위 명시). 로컬 객체를
+`attachment` 멤버로 넣는 것은 합법이고, 살아남는 근거는 "대화" 하나뿐이다 — 삭제와 저작자는
+양쪽을 우리가 가지므로 성립하지 않고, 렌더링은 inline 으로 해결된다. 그래서 로컬에 대해서는
+금지가 아니라 **레인 분리**가 정책이다: 미디어 라이브러리 파일이 `attachment` 로 가고,
+`uploadMedia` 로 올린 1급 미디어 객체는 그 자체로 발행된다. 근거와 경계는
+`axismundi-object-projections/docs/DESIGN-MEDIA-UPLOAD.md` §3 에 있다.
+
 ### 측정된 공백 -- URL 해석이 렌디션을 놓친다
 
 2026-10-29 측정. `attachment_url_to_postid()` 는 전체 크기 원본만 해석한다.

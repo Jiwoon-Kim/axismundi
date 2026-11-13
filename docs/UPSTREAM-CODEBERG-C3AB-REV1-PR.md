@@ -1,8 +1,9 @@
 # Draft — Codeberg PR: FEP-c3ab revision 1
 
 > 상태: **게시됨** — https://codeberg.org/fediverse/fep/pulls/986 (2026-11-13, 소유자가 열었다).
-> 브랜치 `Jiwoon-Kim:fep-c3ab-rev1` = `e0edd5a`, upstream/main 위 커밋 5개. 본문은 커밋 3개
-> 시점으로 올라갔다가 교체했고, 되읽어 바이트 일치 확인(`fdf2e004…`).
+> 브랜치 `Jiwoon-Kim:fep-c3ab-rev1` = `f55b575`, upstream/main 위 커밋 6개. 본문은 커밋 3개
+> 시점으로 올라갔다가 교체했고, 되읽어 바이트 일치 확인. 커밋 6개 시점으로 다시 교체,
+> 되읽기 일치 `3b45ede8…`(2026-11-13).
 > 검증기는 Codeberg 를 모르므로 `--github` 대신 API 의 `body` 를 저장해 `--posted` 로 돌린다:
 > `curl -sS https://codeberg.org/api/v1/repos/fediverse/fep/issues/986` 의 `.body`.
 >
@@ -62,6 +63,7 @@ This revises FEP-c3ab from the [discussion topic](https://socialhub.activitypub.
 - The response question is no longer presented as specific to a referenced `Create`. Any outbox that recognises a retry and records nothing new faces it; `Follow`, `Like` and `Block` are the familiar cases. How to recognise a retry for those is left undefined.
 - A section says why `Create` rather than `Announce`, which the draft had simply not answered, and when `Announce` is the better fit.
 - FEP-aef6 is cited as adjacent work, after `@silverpill` pointed to it. Its `Notify` answers a `Request` so an object can be retrieved without an always-on HTTP server; the subject is retrieval rather than publication.
+- The Summary now says what state an unpublished object is in, which the thread showed was being guessed at: it has an identifier and is retrievable by `GET`, and what the hosting server has not done is record or deliver a `Create`. A referenced `Create` records that publication and makes it eligible for delivery; it does not make the object retrievable for the first time.
 
 **What is not in this revision.** The draft previously refused any request-side addressing. `@trwnh`'s framing — the activity's addressing as a subset of the object's — is better, but the comparison is not a subset of URI lists: an object addressed to `Public` and a request naming one actor is narrower in effect while sharing no addresses at all. I would rather leave that open than write a test I cannot defend, so the rule is unchanged here. The draft also still recommends `200 OK` with the existing activity's `Location` for a recognised retry; whether to replay the original `201 Created` response instead remains open.
 

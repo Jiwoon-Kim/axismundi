@@ -1,7 +1,12 @@
 # Draft — SocialHub reply (FEP-c3ab topic, post 10)
 
-> 상태: **게시됨** 2026-11-13 — post 11 (id 31663), 되읽기 일치 `5d86aa99…`.
-> Discourse 가 고쳐 쓴 흔적 없음. 대상: silverpill #10 —
+> 상태: **게시 후 편집** 2026-11-13 — post 11 (id 31663). 첫 게시본 `5d86aa99…` 일치 확인 후,
+> 아래 세 군데를 고쳐 다시 올렸다. 편집본(version 2) 되읽기 일치 `8b5d4f40…`.
+> ① 누가 투영·서빙하는지 명시 — 공식 ActivityPub 플러그인이 객체를 제공한다고 읽힐 수 있었다.
+> ② "unknown to the fediverse" 는 같은 글 1문단("다른 서버도 가져갈 수 있었다")과 모순 →
+>   "our server has still never recorded or delivered a `Create` for it" 로 좁혔다.
+> ③ `Update`/`Delete` 는 **객체 URI** 를 대상으로 한다 — Create 의 id 를 가리킨다고 읽히는
+>   문장을 또 썼다. 답글 #8 에서 이미 한 번 자기수정한 오류의 재발이다. 대상: silverpill #10 —
 > https://socialhub.activitypub.rocks/t/fep-c3ab-referencing-existing-objects-in-client-to-server-create/8983/10
 >
 > 질문: "never published" 가 id 가 없었다는 뜻인가, 아니면 id 는 있고 작성자만 봤다는
@@ -49,11 +54,13 @@ Neither. The WordPress post already had a stable ActivityStreams identifier, and
 
 The client names the existing object by URI. The server derives the activity's `actor` from the authorized outbox, resolves the `object` through its projection of the WordPress row, and records the `Create`. The request selects what to publish; it does not make the object public and does not redefine it.
 
+To be clear about which component does what, since this is a WordPress setup and there is an official ActivityPub plugin for WordPress: our own Object Projection plugin generates and serves the ActivityStreams representation directly from the WordPress row. Our bridge delegates outbound signing to the official plugin; that plugin does not generate the object representation described here.
+
 The visibility gate is the content store's, not the activity's. A published row projects as AS2 — a post as an `Article`, an attachment as a `Document` subtype — with `to: [Public]`, and is served to anyone who asks. A draft, private or password-protected row is refused and answered `404`, so no URI leaks content the author withheld; a referenced `Create` naming such a row is refused for the same reason. Being published in the store's terms is a precondition, not something the activity performs.
 
-So before anyone submits a `Create`, a years-old published post is identified, fetchable, and addressed to `Public` — and still unknown to the fediverse, because no activity was ever recorded or delivered and no inbox ever saw it. "Never published" means never distributed. Not unidentified, and not withheld.
+So before anyone submits a `Create`, a years-old published post is identified, fetchable, and addressed to `Public` — and our server has still never recorded or delivered a `Create` for it, so no inbox was ever told about it. "Never published" means never distributed by us. Not unidentified, and not withheld.
 
-That is why the `Create` does not establish attribution or addressing: both already exist, assigned by the store when the content was written, sometimes years earlier and sometimes by a different person than the one now publishing it. The activity adds the one thing the store never had — a record that this actor put this object on the network, with an identifier that later `Update` and `Delete` activities can refer back to.
+That is why the `Create` does not establish attribution or addressing: both already exist, assigned by the store when the content was written, sometimes years earlier and sometimes by a different person than the one now publishing it. The activity adds the one thing the store never had — a record that this actor put this object on the network. Later `Update` and `Delete` activities target the object's own URI, not that record.
 
 The author-only case you describe does exist in the same system, and it behaves differently: the object is not retrievable at all, and the outbox refuses a referenced `Create` for it. I think that case is a separate question from this FEP. An activity that changes an object's visibility is `Update` territory, and it would have to say what happens to an object no remote server has ever been told about.
 <!-- end of body -->

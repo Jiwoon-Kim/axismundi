@@ -872,31 +872,52 @@ ACL 이다" 를 선언하는 것이 아니라 **주소를 열람 근거로 언�
 > retrievable even when it carries no addressing fields. This does not imply that the
 > delivering activity is public or that the object was addressed to `Public`.
 
+한 문장으로 줄이면: **무주소 표현에 대한 익명 GET 성공은 그 표현의 공개 조회 가능성을
+보여 준다. 그 사실로 원본의 주소 지정이나 전달 활동의 공개 범위를 역산하지 않는다.**
+
 비유를 살리면 **"as if addressed to `Public` in an omitted blind-addressing field, for
 retrieval only"** 다. 바로 뒤에 못박아야 한다 — 실제로 그 필드가 있었다는 주장도
 아니고, 그 필드를 **합성하라**거나 **배달에 쓰라**는 지시도 아니다.
 
-**"as if" 가 정당한 이유는 둘이 관측상 구별되지 않기 때문이다.** 익명 GET 이 성공했다는
-사실과 원본이 `bto`/`bcc` 에 `Public` 을 두고 §6·B.11 에 따라 지운 것은, **수신자 쪽에서
-구별할 수 있는 차이가 없다.** 그러니 동등하게 취급하는 것은 허구를 지어내는 일이 아니라
-**구별 불가능한 둘을 구별하지 않는 일**이다. 제안이 "숨은 필드가 있었다" 를 주장하지
-않고도 성립하는 근거가 여기다.
+**"as if" 가 정당한 이유는 그 응답만으로는 원본 상태를 가릴 수 없기 때문이다.** 익명
+GET 성공은 **관측 결과**이고, 숨겨진 `bto`/`bcc: Public` 은 그 결과를 설명할 수 있는
+**원본 상태 중 하나**다. 주소 없는 같은 AS2 표현을 익명으로 받았다면, **그 응답만으로는
+숨겨진 주소가 있었는지 구별할 수 없다.** 그러니 그 표현의 **열람 판정에 한해서는**
+동등하게 다뤄도 된다 — 허구를 지어내는 것이 아니라, 구별할 수 없는 것을 구별하지 않는
+것이다.
 
-#### 액터가 주소를 싣지 않는 것은 관례가 아니라 구조다
+범위를 넘기지 말 것: §6 은 **배달 전** 제거를 요구하고 B.11 은 **표시에서** 생략을
+권고(SHOULD)한다. 둘을 합쳐 **"GET 응답에서도 반드시 제거된다"** 고 쓰면 안 된다 —
+그런 규정은 없다.
 
-액터에 주소를 실어 조회를 좁히는 것은 **구현 가능하다** — 예컨대 `to: following` 으로
-"내가 팔로우한 사람에게만 보이는 액터" 를 만들 수 있다. 그러나 그러면 **원격 인스턴스가
-그 액터를 발견할 방법이 사라진다.** 액티비티를 통해서만 관측되는 액터가 된다.
+**그리고 규칙은 단방향이다.** 성공은 그 표현이 공개 조회 가능함을 보이지만, **실패는
+비공개의 증거가 아니다.** Mastodon 의 `AUTHORIZED_FETCH` 가 그 반례다 — 공개로 분류된
+게시물과 프로필조차 AS2 익명 GET 이 막힌다. 그러니 401·403 에서 아무것도 추론하지
+않는다.
 
-[AP §4] 는 *"Once the actor's URI has been identified, it should be dereferenced"* 라고
-한다 — 액터 조회는 프로토콜의 전제에 가깝다. 서명 검증에 쓰는 키도 액터 문서에서
-가져오므로(AP 코어가 아니라 관례), 조회를 좁히면 **키·inbox 발견까지 같이 좁아진다.**
-실제 사례가 Mastodon 의 authorized fetch 이고, 그것이 상호운용에서 겪는 문제가 그 비용의
-증거다.
+#### 액터를 제한하면 비용이 어디에 붙나
 
-그래서 제안은 액터의 조회 가능성을 **주소로 설명하지 않는다.** 액터가 공개인 것은 주소가
-없어서가 아니라 조회가 프로토콜 전제이기 때문이고, 우리 쪽에서는 그것을 `actor_policy`
-라는 별도 출처로 기록한다(§4).
+액터의 조회를 좁히는 것은 **구현 가능하다.** `to: following` 같은 값은 그때 쓰는 **로컬
+정책의 입력**이지, 그 자체로 ACL 이 되는 것은 아니다(§3.2 가 인가를 서버에 맡긴다).
+
+비용을 정확히 적어야 한다. [AP §4] 는 *"Once the actor's URI has been identified, it
+should be dereferenced"* 라고 한다 — **URI 를 이미 식별한 뒤의 역참조**를 말하지 **익명
+역참조를 보장하지 않는다.** 제한된 액터라도 URI 는 활동에서 알 수 있고, **인가된
+요청자는 문서를 읽을 수 있다.**
+
+```txt
+실제 비용   인가되지 않은 요청자가 액터 표현을, 그리고 그 안의 inbox 와 키를
+            얻지 못할 수 있다
+아닌 것     "발견이 불가능해진다" · "액티비티로만 관측되는 존재가 된다"
+```
+
+Mastodon 의 [`AUTHORIZED_FETCH`] 는 **공개 게시물과 프로필의 AS2 표현에 인증을 요구하는
+정책**과 그 상호운용 비용을 보여 준다. `to: following` 으로 특정 액터를 제한한 실례는
+아니다 — 오히려 **공개로 분류된 리소스도 익명 AS2 GET 이 막힐 수 있다**는 반례다.
+
+그래서 제안은 액터의 조회 가능성을 **주소로 설명하지 않는다.** 공개 Actor 는 이 규칙이
+유용한 **사례**이지 모든 액터가 공개여야 한다는 근거가 아니고, 우리 쪽에서는 그것을
+`actor_policy` 라는 별도 출처로 기록한다(§4).
 
 **동기는 중복 제거다.** 공개성을 표현하려고 모든 객체에 주소를 다시 싣는 것은 낭비이고,
 공개 Actor 문서가 이미 주소 없이 공개인 객체다. (이전 판에서 "측정한 콘텐츠 객체가
@@ -1149,6 +1170,7 @@ E 는 규칙만 있고 구현을 보지 않았으므로 측정이 선행한다.
 [AP §7.1]: https://www.w3.org/TR/activitypub/#delivery
 [AP B.11]: https://www.w3.org/TR/activitypub/#security-not-displaying-bto-bcc
 [AP §4]: https://www.w3.org/TR/activitypub/#actors
+[`AUTHORIZED_FETCH`]: https://docs.joinmastodon.org/admin/config/#authorized_fetch
 [apmisc]: https://www.w3.org/community/reports/socialcg/CG-FINAL-apmisc-20260828/#manuallyApprovesFollowers
 [AP §7.5]: https://www.w3.org/TR/activitypub/#follow-activity-inbox
 [AP §7.1.3]: https://www.w3.org/TR/activitypub/#shared-inbox-delivery

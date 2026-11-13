@@ -49,7 +49,7 @@ MAY 라서 클라이언트는 **저장됐는지 발행됐는지** 구별할 수 
 | **65ca** Common Client Configuration | 업로드 한계 탐색. `media` 객체가 이미 있다. 우리가 한계 탐색을 새로 정의하지 않는다 |
 | **c180** Problem Details for ActivityPub | 에러 모델. applicability 에 "media upload" 가 **명시**돼 있다 |
 | **ae97** Client-side activity signing | gateway endpoints 목록에 `uploadMedia` 가 들어 있다 — 존재를 전제한다 |
-| **fe34** Origin-based security model | 제약. §7 을 보라 |
+| **fe34** Origin-based security model | 제약. §8 을 보라 |
 
 따라서 CG 초안의 결함 다섯 중 **둘(한계·에러)은 우리가 풀 문제가 아니다.** 남은 셋 —
 완료 신호, 객체당 다중 파일, 재참조 — 이 설계의 몫이고 FEP 후보다.
@@ -163,7 +163,7 @@ URL 이니 매핑 단계가 사라진다. 그런데 네 가지가 걸린다.
                      URL 이 아예 없다(루트의 deny 가 트리 전체에 상속된다).
                      id 가 URL 이면 비공개 blob 은 id 를 가질 수 없다
 호스트가 바뀔 수 있다 저장 목적지를 안 옮긴다는 약속은 **경로**에 대한 약속이고
-                     호스트에 대한 약속이 아니다. §7 의 origin 분리를 나중에 택하면
+                     호스트에 대한 약속이 아니다. §8 의 origin 분리를 나중에 택하면
                      URL 은 바뀌고, id 가 URL 이면 발급된 모든 id 가 바뀐다
 가시성을 식별자에 박는다 URL 은 "이 주소에서 받을 수 있다" 는 주장이다. 비공개 초안
                      업로드를 지원할 수 없는 식별자가 된다
@@ -226,7 +226,67 @@ Notifications  우리 Notifications 가 수신 Actor 단위로 이미 있다.
 `202` 는 비동기 처리를 실제로 구현할 때 완료 신호와 함께 들어온다. 쓰지 않는 상태 코드를
 먼저 광고하면 클라이언트가 정의되지 않은 경로를 짜게 된다.
 
-## 7. FEP-fe34 와 확장자 allowlist 의 격상
+## 7. 선례: Emoji 가 이미 같은 문제를 풀었다
+
+`axismundi-emoji` 에 **공개 바이트 저장소와 업로드 경로가 이미 있다**
+(`uploads/axismundi-emoji/blobs`). attachment 을 만들지 않으면서 코어 검증을 통과하는
+방법이 그 안에 있고, 이 설계는 그것을 다시 발명하지 않는다.
+
+### 규칙은 "attachment 을 만들라" 가 아니라 "코어 검증을 우회하지 말라" 다
+
+`local.php` 의 주석이 그대로 적고 있다 — *"The rule that matters is not 'must create an
+attachment' but 'must not bypass WordPress's upload validation', so `wp_handle_upload()` is
+mandatory and `move_uploaded_file()` is not an option — while the registry row, not an
+attachment post, remains the record."*
+
+그래서 §9 의 금지(⑧)와 충돌하지 않는다. 둘은 다른 층이다.
+
+```txt
+해야 할 것    wp_handle_upload() 로 받는다. 코어 검증을 통과한다
+하지 말 것    attachment 행을 만들지 않는다. 기록은 우리 저장소의 행이다
+수단          upload_dir 필터로 목적지를 돌린다
+```
+
+이것은 wp.org 심사 요구이기도 하다. `move_uploaded_file()` 로 직접 쓰는 업로드 경로는
+검증 우회로 읽힌다.
+
+### 두 진입점은 실재하는 구분이다
+
+`wp_handle_upload()` 는 `is_uploaded_file()` 을 요구하므로 **진짜 POST 에만** 쓸 수 있다.
+이미 디스크에 있는 파일 — 가져온 것, 가져다 넣은 것, CLI 가 건넨 것 — 은
+`wp_handle_sideload()` 로 들어간다. 검증은 같다. 영상 레인에도 둘 다 필요하다.
+
+### 두 함정이 주석에 남아 있다
+
+```txt
+필터 수명    업로드 호출 직전에 걸고 finally 에서 뗀다. 요청 끝까지 걸려 있으면
+             같은 요청의 다른 플러그인 업로드까지 우리 저장소로 끌어온다 —
+             두 플러그인이 한 요청에서 업로드할 때만 나타나는 버그다
+필터 재귀    필터 안에서 경로 헬퍼를 부르지 않는다. 그 헬퍼가 wp_upload_dir() 를
+             부르고, 그것이 이 필터를 다시 적용한다. 스택 오버플로가 PHP 를
+             그냥 죽이므로 **에러가 아무 데도 안 남는다.** 코어가 막 건넨
+             basedir · baseurl 로만 조립한다
+```
+
+### allowlist 는 코어에 더하는 것이지 대신하는 것이 아니다
+
+Emoji 는 코어 검증 **위에** 자체 allowlist 를 얹는다. 근거가 적혀 있다 —
+`get_allowed_mime_types()` 는 필터 가능하므로, SVG 를 켜는 플러그인(흔히 깔린다)이 깔리면
+그 사이트가 결정한 적 없는 SVG 가 조용히 유효한 입력이 된다. 바이트를 직접 sniff 해서
+자체 목록과 대조한다.
+
+§8 의 보안 불변식이 이것을 요구한다. **코어의 허용 목록을 우리 allowlist 로 쓰면 안 된다** —
+다른 플러그인이 넓힐 수 있는 목록이기 때문이다.
+
+### 다른 점 하나 — URL 안정성
+
+Emoji 의 저장 레이아웃은 `blobs/`(인스턴스별 디렉터리가 아니다)이고 업로드는
+`blobs/incoming` 으로 들어온다. 영상은 `Video.url` 로 나가 리모트·엣지에 캐시되고 URL
+불변이 요구사항이므로, **최종 경로가 내용 주소 지정이어야 한다**(`{shard}/{hash}.{ext}`).
+그러므로 코어가 쓴 자리가 최종 자리가 아니다 — `incoming` 에서 받고 해시를 확정한 뒤
+최종 경로로 옮긴다. Emoji 가 이미 같은 두 단계를 쓴다.
+
+## 8. FEP-fe34 와 확장자 allowlist 의 격상
 
 fe34 는 이렇게 말한다 — *"If the server allows clients to upload arbitrary files, it MUST
 serve media from a different origin (e.g. from a different subdomain)."* 이유는 명시돼 있다.
@@ -241,32 +301,38 @@ serve media from a different origin (e.g. from a different subdomain)."* 이유�
 불변식   정적 서버가 확장자로 Content-Type 을 고른다. 그러므로 allowlist 가
          activity+json · ld+json · json 으로 매핑되는 확장자를 절대 포함하지 않는다
 첫 슬라이스  허용은 영상 타입뿐이다. 좁은 allowlist 는 이 불변식과 같은 방향이다
+출처        코어의 허용 목록을 우리 allowlist 로 쓰지 않는다 — 다른 플러그인이
+            넓힐 수 있다(§7). 바이트를 sniff 해서 자체 목록과 대조한다
 의미     이 allowlist 는 편의가 아니다. 이것이 느슨해지면 fe34 의 조건절이 참이 되고
          우리는 미디어 서브도메인을 분리해야 한다
 ```
 
 origin 분리는 열어 둔다 — 열어 두는 방법이 §4 의 "id 에서 url 을 유도한다" 다.
 
-## 8. 지금 당장 할 것
+## 9. 지금 당장 할 것
 
 ```txt
 ① 라우트       POST axismundi/activitypub/actors/{uuid}/uploadMedia
                Actor 문서의 endpoints.uploadMedia 로 광고. 클라이언트는 조립하지 않는다
 ② 권한         UUID 를 권한 증명으로 쓰지 않는다. outbox 의 can_act_as() 를 재사용하고
                업로드 허용은 따로 검사한다(바이트 업로드는 발행이 아니다)
-③ 저장         uploads/axismundi-object-projections/blobs/{shard}/{hash}.{ext}
+③ 수신         wp_handle_upload() (POST) · wp_handle_sideload() (디스크 파일).
+               upload_dir 필터는 호출 직전에 걸고 finally 에서 뗀다. 필터 안에서 경로
+               헬퍼를 부르지 않는다 — §7 의 두 함정
+④ 저장         uploads/axismundi-object-projections/blobs/{shard}/{hash}.{ext}
+               incoming 에서 받고 해시 확정 후 최종 경로로 옮긴다.
                실제 상대 경로를 기록한다. 읽기·삭제는 기록된 경로만 쓴다(JMAP 선례)
-④ 객체         로컬 객체 저장소에 기록. id·url 은 서버가 채운다. Create 는 만들지 않는다
-⑤ 재시도 키    Actor + 주체에 묶인 업로드 키. 같은 키·같은 입력이면 기존 Location,
+⑤ 객체         로컬 객체 저장소에 기록. id·url 은 서버가 채운다. Create 는 만들지 않는다
+⑥ 재시도 키    Actor + 주체에 묶인 업로드 키. 같은 키·같은 입력이면 기존 Location,
                다른 입력이면 409. 해시만으로 기존 객체를 돌려주지 않는다
-⑥ 응답         201 + Location(객체 URI). 거부는 c180 problem details
-⑦ 금지         WP attachment 를 만들지 않는다. `wp_insert_attachment()` ·
+⑦ 응답         201 + Location(객체 URI). 거부는 c180 problem details
+⑧ 금지         WP attachment 를 만들지 않는다. `wp_insert_attachment()` ·
                `wp_generate_attachment_metadata()` 가 편해 보이지만, 이 레인의 미디어를
                **attachment 수명주기에 묶는다** — 미디어 라이브러리 목록 · 코어의 삭제와
                재생성 · 서브사이즈 메타데이터가 그 행에 달려 온다. (경로가 강제되는 것은
                아니다. 저장 위치를 정하는 것은 `wp_handle_upload()` · `wp_upload_bits()`
                쪽이고 attachment 행 생성과는 별개다)
-⑧ 감사         함수 호출이 아니라 **결과**를 본다 —
+⑨ 감사         함수 호출이 아니라 **결과**를 본다 —
                업로드 후 WP attachment 행이 생기지 않는다 ·
                바이트가 OP 경로에 있다 ·
                `Location` 이 Video 객체 URI 다 ·
@@ -277,11 +343,11 @@ origin 분리는 열어 둔다 — 열어 두는 방법이 §4 의 "id 에서 ur
                Create 없이도 바이트는 공개다(이것이 정상 상태라는 것을 고정한다)
 ```
 
-멀티파트 N 파일 변형은 ①~⑥ 다음이다. 컴포저는 WP 의 DataViews 업로드 예제에서 파일 선택·
+멀티파트 N 파일 변형은 ①~⑨ 다음이다. 컴포저는 WP 의 DataViews 업로드 예제에서 파일 선택·
 진행·오류 UI 만 재사용하고, 전송은 이 계약으로 쓴다 — `wp.mediaUtils` 는 `/wp/v2/media` +
 `sideload` 에 결합돼 있어 이 경로에 쓰지 않는다.
 
-## 9. FEP 후보 경계
+## 10. FEP 후보 경계
 
 제안할 것은 **새 멀티파트 포맷이 아니라 의미의 예측 가능성**이다. CG 초안은 요청 형식을
 정의하고 그 요청이 무엇을 확정하는지를 정의하지 않았다.

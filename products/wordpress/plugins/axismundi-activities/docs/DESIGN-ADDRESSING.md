@@ -262,10 +262,31 @@ GET 을 돌려주는가.
 
 ```txt
 우리가 권위일 때   우리 팔로워 전용 객체에 원격이 GET — 우리 수락 기록을 요구한다
-수신자일 때        로컬 액터 A 에게 배달된 것은 A 에게 보인다. 발신자가 이미 판정했으므로
-                   우리가 다시 판정하지 않는다. 강제할 것은 범위뿐 — A 에게만,
-                   공개로는 아니다
+수신자일 때        발신자가 이미 판정했으므로 우리가 다시 판정하지 않는다.
+                   읽는 것은 그 배달이 해소한 주소다
 ```
+
+**증거는 배달이 아니라 그 배달이 해소한 주소다.** 배달 자체를 증거로 삼으면 두 군데서
+깨진다 — 공개 글은 널리 배달되므로 관계를 말해 주지 않고, sharedInbox 도착은 전송
+계층에 액터별 주소가 없다([AP §7.1.3] 은 *"MAY deliver that object to all known
+sharedInbox endpoints"*). 둘 다 **질문이 생기지 않는 경우**이기도 하다. 공개면 이미
+보이고, sharedInbox 는 [AP §4.1] 이 *"MUST NOT present objects which are not addressed
+to the Public endpoint"* 로 Public 전용으로 묶는다.
+
+```txt
+Public 을 지목                     누구에게나. 관계와 무관하다
+이 액터를 직접 지목                그 액터에게. 직접 주소지정이지 팔로우의 증거는 아니다
+발신자 followers 지목 + 개인 inbox  그 액터에게. 발신자가 자기 멤버십을 해소했다
+sharedInbox 도착                   §4.1 상 Public 전용. 그 외는 제시하지 않는다
+```
+
+마지막 줄은 이미 구현돼 있다 — sharedInbox 컬렉션이
+`received_via='shared' AND has_public_audience=1` 로 걸고 hydration 에서
+`audience_is_public()` 을 다시 확인한다([inbox.php:62](../includes/inbox.php)).
+
+**이것을 "tentative accept" 로 해석하지 않는다.** 그러면 표준에 없는 관계 상태를 또
+하나 발명하는 것이고, `pending` 과 같은 함정이다. 관계는 수락 전까지 요청 중으로
+두고, 가시성 질문만 답한다.
 
 그래서 §2.3 의 "판정은 같다" 에 단서가 붙는다 — **질문은 같고 권위가 다르다.** 원격
 객체는 세 경우로 갈린다.
@@ -376,4 +397,6 @@ read the absence of addressing as either a grant or a restriction"* 라고 적�
 [AP §7.1]: https://www.w3.org/TR/activitypub/#delivery
 [apmisc]: https://www.w3.org/community/reports/socialcg/CG-FINAL-apmisc-20260828/#manuallyApprovesFollowers
 [AP §7.5]: https://www.w3.org/TR/activitypub/#follow-activity-inbox
+[AP §7.1.3]: https://www.w3.org/TR/activitypub/#shared-inbox-delivery
+[AP §4.1]: https://www.w3.org/TR/activitypub/#actor-objects
 [AP §6]: https://www.w3.org/TR/activitypub/#delivery

@@ -1,6 +1,7 @@
 # Draft — SocialHub reply (FEP-c3ab topic, post 10)
 
-> 상태: **미게시.** 대상: silverpill #10 —
+> 상태: **게시됨** 2026-11-13 — post 11 (id 31663), 되읽기 일치 `5d86aa99…`.
+> Discourse 가 고쳐 쓴 흔적 없음. 대상: silverpill #10 —
 > https://socialhub.activitypub.rocks/t/fep-c3ab-referencing-existing-objects-in-client-to-server-create/8983/10
 >
 > 질문: "never published" 가 id 가 없었다는 뜻인가, 아니면 id 는 있고 작성자만 봤다는

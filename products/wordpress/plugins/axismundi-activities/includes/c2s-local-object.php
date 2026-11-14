@@ -29,7 +29,8 @@ function axismundi_act_submit_local_object( int $user, Axismundi_Actor $actor, a
 		if ( is_wp_error( $note ) ) { return $note; }
 	} elseif ( 'Update' === $type ) {
 		$note = $input['object'] ?? null;
-		$editable = array( 'content', 'contentMap', 'name', 'nameMap', 'summary', 'summaryMap', 'sensitive' );
+		// Note and Video currently share the same Outbox Update policy.
+		$editable = axismundi_op_local_editable_properties( 'Note' );
 		// Same policy as before; the refusal now names what it refused. A composer cannot place a
 		// blanket error on an input, and cannot tell a property the server owns from one the author
 		// misspelled. Nothing here widens what is accepted.
@@ -39,21 +40,13 @@ function axismundi_act_submit_local_object( int $user, Axismundi_Actor $actor, a
 		// mark, and when both are present one refusal silently overwrites the other.
 		$properties = array();
 		$reasons = array();
-		$owned = function_exists( 'axismundi_op_local_note_server_set' ) ? axismundi_op_local_note_server_set() : array();
 		if ( ! is_array( $note ) ) {
 			$reasons[] = 'object_required';
 		} else {
 			if ( ! is_string( $note['id'] ?? null ) || '' === $note['id'] ) { $properties['object.id'] = 'required'; }
 			if ( array_key_exists( 'type', $note ) && ! in_array( $note['type'], axismundi_op_local_update_types(), true ) ) { $properties['object.type'] = 'unsupported'; }
 			foreach ( array_diff( array_keys( $note ), array_merge( array( 'id', 'type' ), $editable ) ) as $field ) {
-				if ( in_array( $field, $owned, true ) ) {
-					$class = 'server_set';
-				} elseif ( function_exists( 'axismundi_op_local_property_known' ) && axismundi_op_local_property_known( (string) $field ) ) {
-					$class = 'not_updatable';
-				} else {
-					$class = 'unsupported_property';
-				}
-				$properties[ 'object.' . $field ] = $class;
+				$properties[ 'object.' . $field ] = axismundi_op_local_property_class( 'Note', (string) $field );
 			}
 			if ( ! array_intersect( array_keys( $note ), $editable ) ) { $reasons[] = 'no_editable_properties'; }
 		}
@@ -149,7 +142,7 @@ function axismundi_act_submit_local_object( int $user, Axismundi_Actor $actor, a
 				return new WP_Error( 'ax_act_object_history', 'The Object publication history is unavailable.', array( 'status' => 503 ) );
 			}
 			if ( ! $published ) {
-				return new WP_Error( 'ax_c2s_update_unpublished', 'This Object has no Create, so there is no publication to update. Edit it without an Activity instead.', array( 'status' => 409 ) );
+				return new WP_Error( 'ax_c2s_update_unpublished', 'This Object has no Create. Edit it using the ActivityStreams local-object API instead.', array( 'status' => 409 ) );
 			}
 			$document = $update_row['document'];
 			$patch = array_diff_key( $note, array( 'id' => true, 'type' => true ) );

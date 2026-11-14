@@ -20,7 +20,7 @@ AP 경로는 /inbox, /actors/{uuid}/inbox, /outbox, /followers, /following,
 /actors/{uuid} 아래에 있다. 각 GET은 Activities/Actors 등의 도메인 조회를 사용한다.
 Actor uploadMedia POST는 /actors/{uuid}/uploadMedia이며 Actor 문서에는 아직 광고하지 않는다.
 
-axismundi/activitystreams는 2026-11-15 결정이며 아직 구현하지 않았다. 본문이 AS2라는 것과
+axismundi/activitystreams는 OP의 미발행 로컬 객체 GET/PATCH와 타입 발견을 제공한다. 본문이 AS2라는 것과
 요청이 ActivityPub이라는 것은 별개이므로 프로토콜 네임스페이스에 두지 않는다.
 **activitypub은 소셜 프로토콜 API이고 activitystreams는 CMS API다.** 범위는 OP가 소유한
 저장소이고, 봉투(발행 상태·수정 가능성·페이지)는 AS2가 아닌 우리 것이다.

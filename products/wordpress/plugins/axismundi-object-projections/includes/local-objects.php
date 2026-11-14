@@ -107,6 +107,22 @@ function axismundi_op_local_update_types() : array {
 	return array( 'Note', 'Video' );
 }
 
+function axismundi_op_local_addressing_properties() : array {
+	return array( 'to', 'cc', 'bto', 'bcc', 'audience' );
+}
+
+function axismundi_op_local_editable_properties( string $type, bool $draft = false ) : array {
+	if ( ! in_array( $type, axismundi_op_local_update_types(), true ) ) { return array(); }
+	$fields = array( 'content', 'contentMap', 'name', 'nameMap', 'summary', 'summaryMap', 'sensitive' );
+	return $draft ? array_merge( $fields, axismundi_op_local_addressing_properties() ) : $fields;
+}
+
+function axismundi_op_local_property_class( string $type, string $field, bool $draft = false ) : string {
+	if ( in_array( $field, axismundi_op_local_note_server_set(), true ) ) { return 'server_set'; }
+	if ( in_array( $field, axismundi_op_local_editable_properties( $type, $draft ), true ) ) { return 'editable'; }
+	return axismundi_op_local_property_known( $field ) ? 'not_updatable' : 'unsupported_property';
+}
+
 /**
  * Validate a document this slice authors.
  *
@@ -189,7 +205,7 @@ function axismundi_op_write_local_object( array $document, string $uuid ) {
 	return axismundi_op_project_local_object( $row ) ? $row : new WP_Error( 'ax_op_local_projection', 'Local Object projection failed.' );
 }
 
-/** Replace the current body inside the caller's ledger transaction. */
+/** Replace the current body inside the caller's transaction. */
 function axismundi_op_update_local_object( array $row, array $document ) {
 	global $wpdb;
 	$json = wp_json_encode( $document, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );

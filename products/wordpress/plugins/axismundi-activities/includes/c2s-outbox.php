@@ -41,14 +41,14 @@ function axismundi_act_outbox_same_intent( array $stored, array $submitted ) : b
 	return wp_json_encode( $canonical( $stored ) ) === wp_json_encode( $canonical( $submitted ) );
 }
 
-/** Submit to the limited C2S surface; referenced posts report replay separately. */
+/** Submit to the limited C2S surface; referenced Create reports replay separately. */
 function axismundi_act_submit_outbox( int $user_id, Axismundi_Actor $actor, array $payload, string $retry_key = '', bool &$replayed = false ) {
 	$replayed = false;
 	$allowed = axismundi_act_outbox_authorize( $user_id, $actor );
 	if ( is_wp_error( $allowed ) ) { return $allowed; }
 	$type = $payload['type'] ?? null;
 	if ( 'Create' === $type && is_string( $payload['object'] ?? null ) ) {
-		return axismundi_act_submit_referenced_post( $user_id, $actor, $payload, $replayed );
+		return axismundi_act_submit_referenced_create( $user_id, $actor, $payload, $replayed );
 	}
 	if ( 'Create' === $type && is_array( $payload['object'] ?? null ) && 'Question' === ( $payload['object']['type'] ?? null ) ) {
 		return axismundi_act_submit_question( $user_id, $actor, $payload, $retry_key );
@@ -102,20 +102,23 @@ function axismundi_act_submit_outbox( int $user_id, Axismundi_Actor $actor, arra
 	} );
 }
 
-/** Publish an existing core post without letting the request change its identity or audience. */
-function axismundi_act_submit_referenced_post( int $user_id, Axismundi_Actor $actor, array $payload, bool &$replayed ) {
+/** Publish an existing source without letting the request change its identity or audience. */
+function axismundi_act_submit_referenced_create( int $user_id, Axismundi_Actor $actor, array $payload, bool &$replayed ) {
 	if ( ! is_string( $payload['actor'] ?? null ) || ! hash_equals( $actor->get_uri(), $payload['actor'] ) ) {
 		return new WP_Error( 'ax_c2s_actor_mismatch', 'The submitted actor must match the outbox Actor.', array( 'status' => 403 ) );
 	}
 	foreach ( array( 'to', 'cc', 'bto', 'bcc', 'audience' ) as $field ) {
 		if ( array_key_exists( $field, $payload ) ) {
-			return new WP_Error( 'ax_c2s_reference_addressing', 'A referenced post uses its existing audience settings.', array( 'status' => 400 ) );
+			return new WP_Error( 'ax_c2s_reference_addressing', 'A referenced Object uses its existing audience settings.', array( 'status' => 400 ) );
 		}
 	}
 	$uri = $payload['object'];
+	if ( function_exists( 'axismundi_op_get_local_object' ) && axismundi_op_get_local_object( $uri ) ) {
+		return axismundi_act_submit_referenced_video( $user_id, $actor, $uri, $replayed );
+	}
 	$post = function_exists( 'axismundi_op_resolve_source_by_uri' ) ? axismundi_op_resolve_source_by_uri( $uri ) : null;
 	if ( ! $post instanceof WP_Post || 'post' !== $post->post_type || ! hash_equals( axismundi_op_post_object_uri( $post ), $uri ) ) {
-		return new WP_Error( 'ax_c2s_reference_source', 'The URI does not identify a supported local post.', array( 'status' => 404 ) );
+		return new WP_Error( 'ax_c2s_reference_source', 'The URI does not identify a supported local source.', array( 'status' => 404 ) );
 	}
 	if ( ! user_can( $user_id, 'edit_post', $post->ID ) ) {
 		return new WP_Error( 'ax_act_c2s_capability', 'This account may not act on that post.', array( 'status' => 403 ) );
@@ -175,6 +178,52 @@ function axismundi_act_submit_referenced_post( int $user_id, Axismundi_Actor $ac
 	} finally {
 		axismundi_op_attribution_lock( $post->ID, true );
 	}
+}
+
+/** Record publication without creating or updating the source Object. */
+function axismundi_act_submit_referenced_video( int $user_id, Axismundi_Actor $actor, string $uri, bool &$replayed ) {
+	// Serialize with Outbox Update/Delete as well as concurrent publication requests.
+	$result = axismundi_act_submission_lock( array( 'source_owner' => 'axismundi-activities', 'source_kind' => 'outbox', 'source_ref' => $actor->get_identity_id() ), static function () use ( $user_id, $actor, $uri, &$replayed ) {
+		$allowed = axismundi_act_outbox_authorize( $user_id, $actor );
+		if ( is_wp_error( $allowed ) ) { return $allowed; }
+		$row = axismundi_op_get_local_object( $uri );
+		if ( ! $row || $uri !== $row['object_uri'] ) {
+			return new WP_Error( 'ax_c2s_reference_source', 'The URI does not identify a supported local source.', array( 'status' => 404 ) );
+		}
+		if ( ! hash_equals( $row['attributed_to_uri'], $actor->get_uri() ) ) {
+			return new WP_Error( 'ax_act_c2s_attribution', 'This Object is attributed to another Actor.', array( 'status' => 403 ) );
+		}
+		$deleted = axismundi_act_has_outbound_delete( $uri );
+		$first = axismundi_act_first_outbound_create_row( $uri );
+		if ( null === $deleted || null === $first ) {
+			return new WP_Error( 'ax_act_object_history', 'The Object publication history is unavailable.', array( 'status' => 503 ) );
+		}
+		if ( $deleted || 'tombstone' === $row['object_status'] ) {
+			return new WP_Error( 'ax_act_object_deleted', 'A deleted Object URI cannot be created again.', array( 'status' => 409 ) );
+		}
+		$document = $row['document'];
+		if ( 'Video' !== $row['object_type'] || 'active' !== $row['object_status'] || $uri !== ( $document['id'] ?? null ) ) {
+			return new WP_Error( 'ax_c2s_reference_source', 'The URI does not identify a supported local Video.', array( 'status' => 404 ) );
+		}
+		if ( $first ) {
+			if ( ! hash_equals( $first['actor_uri'], $actor->get_uri() ) ) {
+				return new WP_Error( 'ax_act_c2s_attribution', 'This Object was created by another Actor.', array( 'status' => 403 ) );
+			}
+			$replayed = true;
+			return axismundi_act_hydrate( $first );
+		}
+		// Peers receive a URI, not a body. Do not announce a source they cannot retrieve.
+		if ( empty( $row['publicly_readable'] ) ) {
+			return new WP_Error( 'ax_c2s_reference_projection', 'This Video is not available for reference publication.', array( 'status' => 422 ) );
+		}
+		$activity = array( 'type' => 'Create', 'actor' => $actor->get_uri(), 'object' => $uri )
+			+ array_intersect_key( $document, array_flip( array( 'to', 'cc', 'bto', 'bcc', 'audience' ) ) );
+		return axismundi_act_record_source_activity( $activity, 'outbound', 'ap-c2s:video-create:' . hash( 'sha256', $uri ) );
+	} );
+	if ( is_wp_error( $result ) && 'ax_act_pending_lock' === $result->get_error_code() ) {
+		return new WP_Error( 'ax_c2s_reference_busy', 'Publication is in progress. Retry the request.', array( 'status' => 409 ) );
+	}
+	return $result;
 }
 
 /** HTTP adapter: permission uses URL parameters, never JSON-shadowed route parameters. */

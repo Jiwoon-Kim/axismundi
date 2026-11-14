@@ -839,13 +839,16 @@ delivery_id     어느 수신처로 보내는 작업   bridge delivery + recipie
                                    $intent = null 로 통과한다 (c2s.php:169)
 ② activity_type 이 Create 하나     Update·Delete·Announce 는 intent 행이 없다.
                                    마이그레이션도 'Create' 를 하드코딩한다
-③ 세 번째 소스가 없다              wp_posts 도 아니고 이 제출이 만든 것도 아닌 객체 —
-                                   업로드된 미디어, 나중에 JMAP 발 객체
+③ 별도 소스를 연결한다             업로드된 Video는 연결됨. JMAP 발 객체는 별도 슬라이스.
 ```
 
 3단계는 이미 따로 돌릴 수 있다 — `enqueue_delivery()`, `find_delivery($activity_uri)`,
-`retry_failed_delivery()`, `cancel_delivery()`, `delivery_report()`. **수동으로 실행할 수
-없는 것은 2단계**이고, 그 이유는 설계가 아니라 배선이다.
+`retry_failed_delivery()`, `cancel_delivery()`, `delivery_report()`.
+
+업로드한 공개 `Video`는 같은 Actor의 Outbox에 `Create`의 `object`로 URI만 제출해
+발행한다. 이 경로는 객체의 기존 주소를 사용하고 요청의 주소 덮어쓰기를 거부한다.
+객체나 바이트는 다시 저장하지 않는다. 첫 제출은 `201`, 반복 제출은 같은 Activity URI를
+`200`으로 반환하고 배달을 다시 예약하지 않는다. 비공개 Video의 참조형 발행은 지원하지 않는다.
 
 **독립 호출은 임의 순서가 아니다.** 객체가 준비되기 전에 `Create` 를 기록하지 않고, 기록
 전에 배달하지 않는다. 배달이 실패하면 **같은 Activity id 로 배달만** 다시 돌린다. 단계를

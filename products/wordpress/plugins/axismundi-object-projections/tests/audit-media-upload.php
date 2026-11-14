@@ -58,6 +58,7 @@ $assert( is_int( $user ), 'Fixture author is created' );
 $before = get_current_user_id();
 $cookies = $_COOKIE;
 $uris = array();
+$delivery_id = 0;
 try {
 	$actor = axismundi_actors_ensure_for_user( $user );
 	$assert( $actor instanceof Axismundi_Actor, 'Fixture Actor is created' );
@@ -71,14 +72,14 @@ try {
 	$_COOKIE[ LOGGED_IN_COOKIE ] = $cookie;
 	$auth = array( 'Cookie' => LOGGED_IN_COOKIE . '=' . $cookie, 'X-WP-Nonce' => wp_create_nonce( 'wp_rest' ) );
 	$endpoint = $origin . '/wp-json/axismundi/activitypub/actors/' . $actor->get_uuid() . '/uploadMedia';
-	$counts = static function () use ( $wpdb ) : array {
+	$counts = static function () use ( $wpdb, $actor ) : array {
 		return array( $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type='attachment'" ),
-			$wpdb->get_var( 'SELECT COUNT(*) FROM ' . axismundi_act_activities_table() ) );
+			$wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE actor_uri=%s', axismundi_act_activities_table(), $actor->get_uri() ) ) );
 	};
 	$initial_counts = $counts();
-	$submit = static function ( string $name, string $body_bytes, array $headers ) use ( $endpoint, $host ) : array {
+	$submit = static function ( string $name, string $body_bytes, array $headers, array $addressing = array( 'to' => array( 'https://www.w3.org/ns/activitystreams#Public' ) ) ) use ( $endpoint, $host ) : array {
 		$boundary = 'ax' . wp_generate_uuid4();
-		$document = wp_json_encode( array( 'type' => 'Video', 'name' => $name, 'to' => array( 'https://www.w3.org/ns/activitystreams#Public' ) ) );
+		$document = wp_json_encode( array( 'type' => 'Video', 'name' => $name ) + $addressing );
 		$body = "--{$boundary}\r\nContent-Disposition: form-data; name=\"object\"; filename=\"object.json\"\r\nContent-Type: application/ld+json\r\n\r\n{$document}\r\n"
 			. "--{$boundary}\r\nContent-Disposition: form-data; name=\"file\"; filename=\"clip.webm\"\r\nContent-Type: video/webm\r\n\r\n{$body_bytes}\r\n--{$boundary}--\r\n";
 		$response = wp_remote_post( $endpoint, array( 'timeout' => 60, 'redirection' => 0, 'body' => $body,
@@ -148,7 +149,7 @@ try {
 	$again = $submit( 'First', $bytes, $keyed );
 	$assert( 200 === $again[0] && $one[1] === $again[1], 'Retry returns the same Location' );
 	$assert( 409 === $submit( 'Different', $bytes, $keyed )[0], 'Same key with different intent conflicts' );
-	$two = $submit( 'Second', $bytes, $auth );
+	$two = $submit( 'Second', $bytes, $auth, array() );
 	$uris[] = $two[1];
 	$assert( 201 === $two[0] && $one[1] !== $two[1], 'Different intent creates a different Object' );
 	$assert( $counts() === $initial_counts, 'No attachment or Activity rows were created' );
@@ -170,7 +171,58 @@ try {
 	$assert( true === axismundi_op_tombstone_local_object( $first, $actor->get_uri() ), 'One Object is deleted without an Activity' );
 	$download = wp_remote_get( $origin . wp_parse_url( $url, PHP_URL_PATH ), array( 'headers' => array( 'Host' => $host ), 'timeout' => 30 ) );
 	$assert( 200 === wp_remote_retrieve_response_code( $download ) && $hash === hash( 'sha256', wp_remote_retrieve_body( $download ) ), 'The second Object still has anonymously retrievable bytes' );
+
+	$peer = 'https://example.com/users/' . wp_generate_uuid4();
+	$inbox = $peer . '/inbox';
+	$remote = axismundi_actors_upsert_remote( array( 'uri' => $peer, 'actor_type' => 'Person',
+		'preferred_username' => 'video_peer', 'display_name' => 'Video Peer', 'profile_url' => $peer,
+		'endpoints' => array( 'inbox' => $inbox, 'outbox' => $peer . '/outbox' ),
+		'payload' => array( 'id' => $peer, 'type' => 'Person', 'preferredUsername' => 'video_peer' ) ) );
+	$assert( $remote instanceof Axismundi_Actor, is_wp_error( $remote ) ? $remote->get_error_message() : 'A remote peer with a cached inbox is available' );
+	$addressing = array( 'to' => array( 'https://www.w3.org/ns/activitystreams#Public', $peer ) );
+	$three = $submit( 'For publication', $bytes, $auth, $addressing );
+	$uris[] = $three[1];
+	$assert( 201 === $three[0] && $counts() === $initial_counts, 'Uploading a deliverable Video still does not record an Activity' );
+	$stored = axismundi_op_get_local_object( $three[1] );
+	$publish = static function ( string $uri, array $extra = array() ) use ( $endpoint, $auth, $host, $actor ) : array {
+		$response = wp_remote_post( substr( $endpoint, 0, -strlen( 'uploadMedia' ) ) . 'outbox', array(
+			'headers' => $auth + array( 'Host' => $host, 'Content-Type' => 'application/activity+json' ),
+			'body' => wp_json_encode( array( 'type' => 'Create', 'actor' => $actor->get_uri(), 'object' => $uri ) + $extra ),
+			'timeout' => 30, 'redirection' => 0,
+		) );
+		if ( is_wp_error( $response ) ) { throw new RuntimeException( $response->get_error_message() ); }
+		return array( wp_remote_retrieve_response_code( $response ), (string) wp_remote_retrieve_header( $response, 'location' ),
+			json_decode( wp_remote_retrieve_body( $response ), true ) );
+	};
+	$assert( 409 === $publish( $one[1] )[0], 'A tombstone cannot earn a Create' );
+	$assert( 422 === $publish( $two[1] )[0], 'Public bytes do not make an unaddressed Video eligible for reference publication' );
+	$assert( 400 === $publish( $three[1], array( 'to' => array( $peer ) ) )[0] && $counts() === $initial_counts,
+		'An addressing override is rejected and refused submissions leave no Activity' );
+	$created = $publish( $three[1], array( 'id' => $peer . '/create' ) );
+	$assert( 201 === $created[0] && '' !== $created[1] && $peer . '/create' !== $created[1]
+		&& $three[1] === ( $created[2]['object'] ?? null ), 'Outbox records a server-identified Create for the existing Video URI' );
+	$activity = axismundi_act_get( $created[1] );
+	$assert( $activity instanceof Axismundi_Activity && $three[1] === $activity->get_payload()['object']
+		&& $stored === axismundi_op_get_local_object( $three[1] ), 'Publication records only the reference and leaves the source untouched' );
+	$delivery_id = axismundi_activitypub_bridge_find_delivery( $created[1] );
+	$job = axismundi_activitypub_bridge_get_delivery( $delivery_id );
+	$wire = $job ? json_decode( $job->payload_json, true ) : array();
+	$assert( $job && array( $inbox ) === json_decode( $job->inboxes_json, true )
+		&& $created[1] === ( $wire['id'] ?? null ) && $three[1] === ( $wire['object'] ?? null )
+		&& $addressing['to'] === ( $wire['to'] ?? null ), 'The queued S2S body preserves the same URI and stored addressing' );
+	$replay = $publish( $three[1] );
+	$assert( 200 === $replay[0] && $created[1] === $replay[1], 'Replay returns the original Activity Location with HTTP 200' );
+	$assert( (int) $initial_counts[1] + 1 === (int) $counts()[1], 'Replay leaves exactly one Activity for the fixture author' );
+	$assert( $delivery_id === axismundi_activitypub_bridge_find_delivery( $created[1] ), 'Replay does not replace the existing delivery job' );
 } finally {
+	if ( $delivery_id ) {
+		axismundi_activitypub_bridge_cancel_delivery( $delivery_id );
+		$wpdb->delete( axismundi_activitypub_bridge_delivery_recipients_table(), array( 'delivery_id' => $delivery_id ) );
+		$wpdb->delete( axismundi_activitypub_bridge_delivery_table(), array( 'id' => $delivery_id ) );
+	}
+	if ( ! empty( $created[1] ) ) {
+		$wpdb->delete( axismundi_act_activities_table(), array( 'activity_uri_hash' => hash( 'sha256', $created[1] ), 'actor_uri' => $actor->get_uri() ) );
+	}
 	foreach ( array_filter( $uris ) as $uri ) {
 		$row = axismundi_op_get_local_object( $uri );
 		if ( $row && 'active' === $row['object_status'] ) { axismundi_op_tombstone_local_object( $row, $row['attributed_to_uri'] ); }

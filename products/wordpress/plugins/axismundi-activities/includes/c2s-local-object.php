@@ -130,6 +130,27 @@ function axismundi_act_submit_local_object( int $user, Axismundi_Actor $actor, a
 				|| ( isset( $note['type'] ) && $note['type'] !== $update_row['object_type'] ) ) {
 				return new WP_Error( 'ax_c2s_update_state', 'Update requires an active Object of the same type.', array( 'status' => 409 ) );
 			}
+			/*
+			 * An Update presupposes a Create. Without one, peers have never seen this Object,
+			 * so there is nothing for them to update and an `Update` addressed from the Object
+			 * would be delivered about something they cannot resolve. C2S.md §8 already says
+			 * this for WordPress posts -- settling a representation "is not a publication and
+			 * it is not an `Update`" -- and this path did not apply it: measured 2026-11-14, an
+			 * uploaded Video with no activities accepted an Update and gained one.
+			 *
+			 * Editing an unpublished Object is a real need, and this surface cannot serve it:
+			 * the outbox is the protocol surface, and answering here with an activity nobody
+			 * can interpret would be the wrong half of that split. What the editing path should
+			 * be is a dedicated API, decided outside this file; this refusal only stops the
+			 * ledger from carrying the claim.
+			 */
+			$published = axismundi_act_first_outbound_create_row( $uri );
+			if ( null === $published ) {
+				return new WP_Error( 'ax_act_object_history', 'The Object publication history is unavailable.', array( 'status' => 503 ) );
+			}
+			if ( ! $published ) {
+				return new WP_Error( 'ax_c2s_update_unpublished', 'This Object has no Create, so there is no publication to update. Edit it without an Activity instead.', array( 'status' => 409 ) );
+			}
 			$document = $update_row['document'];
 			$patch = array_diff_key( $note, array( 'id' => true, 'type' => true ) );
 			$clean = axismundi_op_prepare_local_document( array( 'type' => $update_row['object_type'] ) + $patch, $actor, array( $update_row['object_type'] ) );

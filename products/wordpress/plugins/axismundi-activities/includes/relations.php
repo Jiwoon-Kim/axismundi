@@ -403,7 +403,26 @@ function axismundi_act_apply_relation_activity( array $normalized ) {
 			return new WP_Error( 'ax_act_follow_transition_actor', __( 'Only the followed Actor may Accept or Reject a Follow.', 'axismundi-activities' ) );
 		}
 	}
-	if ( is_array( $root ) && in_array( $root['activity_type'], array( 'Accept', 'Reject' ), true ) ) {
+	/*
+	 * Only an `Undo` reaches its root through a response: `axismundi_act_relation_root()`
+	 * unwraps `Undo` chains and stops at the `Accept` it names, so this hop is what gets
+	 * `Undo(Accept)` to the `Follow`.
+	 *
+	 * `Accept` and `Reject` answer a request, so naming another `Accept` or `Reject` is not a
+	 * transition we interpret. Rejecting a rejection has no defined meaning, and hopping it
+	 * would silently turn it into rejecting the request itself. The hop also bypassed the
+	 * actor guard above, which only fires when the named activity is the `Follow`. The state
+	 * is derived from evidence addressed to the Follow rather than from this activity, so
+	 * what the hop allowed was an undefined construct entering the state machine, not a
+	 * transition it could choose. Resolving nothing leaves such an activity recorded and
+	 * without effect, which is the right answer for an inbound one.
+	 *
+	 * Measured 2026-11-14: restricting this hop changes nothing observable -- same relation
+	 * state, same ten change hooks in `audit-relations` either way. So this is a convention
+	 * about which grammar the machine answers, not an enforced invariant; what the audit pins
+	 * is the outcome, that such an activity does not transition the relation.
+	 */
+	if ( 'Undo' === $type && is_array( $root ) && in_array( $root['activity_type'], array( 'Accept', 'Reject' ), true ) ) {
 		$root = axismundi_act_transaction_row( (string) $root['object_uri'] );
 	}
 	if ( ! is_array( $root ) || ! in_array( (string) $root['activity_type'], array( 'Follow', 'Block' ), true ) ) {

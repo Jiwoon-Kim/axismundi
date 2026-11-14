@@ -145,6 +145,23 @@ try {
 	$accepted_again = axismundi_act_get_relation( 'follow', $ax_rel_remote_uri, $site_actor->get_uri() );
 	ax_rel_assert( $ax_rel_results, '[project choice] re-follow Accept preserves the same relation identity', $reject_row['id'] === $accepted_again['id'] );
 	ax_rel_assert( $ax_rel_results, '[project choice] accepted re-follow appears in followers', in_array( $ax_rel_remote_uri, axismundi_act_get_followers( $site_actor->get_uri() ), true ) );
+	// Rejecting a rejection is not a grammar this state machine interprets. This pins the
+	// outcome, not the code path: measured 2026-11-14, restricting the Undo(Accept) hop or
+	// leaving it open produces the same relation state and the same ten change hooks, because
+	// reconciliation derives from evidence addressed to the Follow. So this check would catch a
+	// future change that made a Reject naming an Accept transition the relation.
+	$accepted_state = axismundi_act_get_relation( 'follow', $ax_rel_remote_uri, $site_actor->get_uri() );
+	$reject_response = ax_rel_record(
+		array( 'id' => 'https://example.com/activities/reject-reject-' . $ax_rel_suffix, 'type' => 'Reject', 'actor' => $ax_rel_remote_uri, 'object' => $refollow_accept->get_uri() ),
+		'inbound', $ax_rel_activity_uris
+	);
+	$after_reject_response = axismundi_act_get_relation( 'follow', $ax_rel_remote_uri, $site_actor->get_uri() );
+	ax_rel_assert( $ax_rel_results, 'Reject naming an Accept is recorded without transitioning the relation',
+		$reject_response instanceof Axismundi_Activity
+			&& ( $after_reject_response['state'] ?? '' ) === ( $accepted_state['state'] ?? '' )
+			&& ( $after_reject_response['state_activity_uri'] ?? '' ) === ( $accepted_state['state_activity_uri'] ?? '' )
+			&& in_array( $ax_rel_remote_uri, axismundi_act_get_followers( $site_actor->get_uri() ), true ) );
+
 	$read_rows = axismundi_act_get_relations_for_object( $site_actor->get_uri(), array( 'follow' ) );
 	$read_row = array_values( array_filter( $read_rows, static fn( array $row ) : bool => $row['subject_uri'] === $ax_rel_remote_uri ) )[0] ?? array();
 	ax_rel_assert( $ax_rel_results, '[project choice] relation readers expose neutral endpoint names', ( $read_row['object_uri'] ?? '' ) === $site_actor->get_uri() );

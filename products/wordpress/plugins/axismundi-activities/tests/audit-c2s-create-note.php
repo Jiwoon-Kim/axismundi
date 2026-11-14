@@ -128,11 +128,29 @@ try {
 	$repeat = axismundi_act_submit_outbox( $user, $actor, array( 'type' => 'Delete', 'actor' => $actor->get_uri(), 'object' => $uri ) );
 	$assert( $repeat instanceof Axismundi_Activity && $deleted->get_uri() === $repeat->get_uri() && $before_repeat === $deletes(),
 		'A repeat Delete returns the recorded Delete and records no second one' );
-	// An Activity URI is not a deletable Object, and saying so is not an authority answer.
+	/*
+	 * Each verb takes only what it can act on, and the refusal happens before the ledger: a
+	 * refused submission must leave no row behind. Not transitioning a relation and refusing a
+	 * submission are different guarantees, and this is the second one.
+	 */
+	$ledger = static function () use ( $wpdb ) : int {
+		return (int) $wpdb->get_var( 'SELECT COUNT(*) FROM ' . axismundi_act_activities_table() );
+	};
+	$before_refusals = $ledger();
 	$not_object = axismundi_act_submit_outbox( $user, $actor, array( 'type' => 'Delete', 'actor' => $actor->get_uri(), 'object' => $deleted->get_uri() ) );
 	$assert( is_wp_error( $not_object ) && 'ax_c2s_delete_target' === $not_object->get_error_code()
 		&& 422 === ( $not_object->get_error_data()['status'] ?? 0 ),
 		'Delete naming an Activity URI is refused as a target, not as authority' );
+	// Rejecting a rejection cannot even be submitted here: Accept and Reject are not part of
+	// this outbox, so the type allowlist answers before anything is recorded.
+	$rejected_reject = axismundi_act_submit_outbox( $user, $actor, array( 'type' => 'Reject', 'actor' => $actor->get_uri(), 'object' => $deleted->get_uri() ) );
+	$assert( is_wp_error( $rejected_reject ) && 'ax_c2s_not_implemented' === $rejected_reject->get_error_code(),
+		'Reject is not submittable to this outbox at all' );
+	// Undo already takes only what it can undo, and only the Actor's own.
+	$undo_wrong_type = axismundi_act_submit_outbox( $user, $actor, array( 'type' => 'Undo', 'actor' => $actor->get_uri(), 'object' => $deleted->get_uri() ) );
+	$assert( is_wp_error( $undo_wrong_type ) && 'ax_c2s_undo_target' === $undo_wrong_type->get_error_code(),
+		'Undo naming something other than a Like is refused' );
+	$assert( $before_refusals === $ledger(), 'No refused submission recorded a ledger row' );
 
 	$stale = axismundi_op_tombstone_local_object( $row, $actor->get_uri() );
 	$assert( is_wp_error( $stale ) && 'ax_op_local_version' === $stale->get_error_code(), 'Stale body version cannot overwrite current state' );

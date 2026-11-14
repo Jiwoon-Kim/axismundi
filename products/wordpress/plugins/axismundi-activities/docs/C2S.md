@@ -255,6 +255,33 @@ soft-delete(200 Tombstone + Delete 전파)를 WP 휴지통에 구현하는 것�
 검증 명령: `AX_C2S_HTTP_ORIGIN=http://wordpress wp eval-file wp-content/plugins/axismundi-activities/tests/audit-wp-post-deletion.php`
 (wp-env CLI 컨테이너 내부). 실제 WP 상태 변경과 AP/HTML 응답, 영구삭제 Delete, 원장/principal 보존을 검사한다.
 
+### 각 동사는 응답하거나 취소할 수 있는 대상만 받는다
+
+"활동을 대상으로 삼지 않는다" 는 규칙이 아니다 — `Accept(Follow)` · `Reject(Follow)` ·
+`Undo(Like)` 가 모두 활동을 대상으로 삼고 그것이 정상이다. 규칙은 **동사별로 받을 수 있는
+대상이 정해져 있다** 이고, 거부는 **원장에 기록하기 전에** 일어나야 한다.
+
+실측 2026-11-14, 이 outbox 가 실제로 하는 일:
+
+```txt
+Undo     대상이 이 Actor 가 쓴 Like 여야 한다 → 아니면 ax_c2s_undo_target 403
+         (c2s-outbox.php, record_source_activity 호출 전)
+Delete   대상이 로컬 Object 여야 한다 → 아니면 ax_c2s_delete_target 422
+Accept   받지 않는다 → ax_c2s_not_implemented 422
+Reject   받지 않는다 → ax_c2s_not_implemented 422
+```
+
+그래서 **`Reject(Reject)` 는 지금 제출 자체가 되지 않는다.** 타입 allowlist 가 먼저 답하기
+때문이고, 대상 타입 규칙 때문이 아니다. Accept·Reject 를 받게 되는 슬라이스가 그 규칙을
+함께 가져와야 한다 — 두 동사의 대상은 **응답을 기다리는 요청**(`Follow`, 그리고 쓰게 되면
+`Invite`·`Offer`·join·quote 요청)이고, 응답은 대상이 될 수 없다. 거절을 거절하는 것에는
+정의된 의미가 없다.
+
+**관계를 전이시키지 않는 것과 제출을 거부하는 것은 다른 보장이다.** 전자는 상태기계가
+어떤 증거를 세는지의 문제이고(`relations.php` 의 Undo 홉 한정), 후자는 원장에 행이 생기는지의
+문제다. 감사는 둘을 따로 확인한다 — 관계 상태 불변, 그리고 거부된 제출이 원장 행을 남기지
+않음.
+
 ### Addressing
 
 > The server MUST remove the `bto` and/or `bcc` properties, if they exist, from the

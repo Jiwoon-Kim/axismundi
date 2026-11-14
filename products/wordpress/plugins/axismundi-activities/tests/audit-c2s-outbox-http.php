@@ -8,11 +8,37 @@ $assert = static function ( bool $ok, string $label ) use ( &$checks ) : void {
 	++$checks;
 };
 $users = array();
+$fixture_actor_uris = array();
 $actors = array();
 $reference_post_id = 0;
 $reference_uri = '';
 $original_user = get_current_user_id();
 $cookies = $_COOKIE;
+/*
+ * Two different questions, and only one of them belongs to this audit.
+ *
+ * "Did this audit modify a row it did not create?" is the regression worth keeping, and it
+ * holds no matter who else is writing. "Did the ledger gain any row at all?" is not: anything
+ * writing to the ledger at the same time fails it, which is what a concurrent run of the media
+ * audit did on 2026-11-14 while the implementation under test was correct.
+ *
+ * So the pre-existing rows are compared exactly, by key, and the fixture rows this audit
+ * creates are checked for removal by name instead of by counting the table.
+ */
+$keyed = static function ( array $rows, array $keys ) : array {
+	$out = array();
+	foreach ( $rows as $row ) {
+		$id = '';
+		foreach ( $keys as $key ) { $id .= '|' . (string) ( $row[ $key ] ?? '' ); }
+		$out[ $id ] = $row;
+	}
+	return $out;
+};
+/** The same rows as before, by key, ignoring anything added since. */
+$surviving = static function ( array $before, array $after, array $keys ) use ( $keyed ) : array {
+	$after = $keyed( $after, $keys );
+	return array( $keyed( $before, $keys ), array_intersect_key( $after, $keyed( $before, $keys ) ) );
+};
 $ledger_before = $wpdb->get_results( 'SELECT * FROM ' . axismundi_act_activities_table() . ' ORDER BY id', ARRAY_A );
 $principals_before = $wpdb->get_results( 'SELECT * FROM ' . axismundi_actors_managers_table() . ' ORDER BY identity_id,principal_kind,principal_id', ARRAY_A );
 $meta_before = $wpdb->get_results( 'SELECT * FROM ' . axismundi_actors_meta_table() . ' ORDER BY actor_id,meta_key', ARRAY_A );
@@ -36,6 +62,7 @@ try {
 		$assert( is_int( $user ), 'Fixture User created' );
 		$users[] = $user;
 		$actor = axismundi_actors_ensure_for_user( $user );
+		if ( $actor instanceof Axismundi_Actor ) { $fixture_actor_uris[] = $actor->get_uri(); }
 		$assert( $actor instanceof Axismundi_Actor, 'Fixture Actor created' );
 		$actors[] = $actor;
 		axismundi_actors_register_handle( $actor->get_identity_id(), $login );
@@ -253,7 +280,17 @@ try {
 	$_COOKIE = $cookies;
 	foreach ( $users as $id ) { wp_delete_user( $id ); }
 }
-$assert( $ledger_before === $wpdb->get_results( 'SELECT * FROM ' . axismundi_act_activities_table() . ' ORDER BY id', ARRAY_A ), 'All pre-existing ledger rows remain byte-for-byte unchanged' );
-$assert( $principals_before === $wpdb->get_results( 'SELECT * FROM ' . axismundi_actors_managers_table() . ' ORDER BY identity_id,principal_kind,principal_id', ARRAY_A ), 'All pre-existing principal rows remain unchanged' );
-$assert( $meta_before === $wpdb->get_results( 'SELECT * FROM ' . axismundi_actors_meta_table() . ' ORDER BY actor_id,meta_key', ARRAY_A ), 'Actor metadata and disclosure settings leave no fixture rows' );
+[ $ledger_keyed, $ledger_now ] = $surviving( $ledger_before, $wpdb->get_results( 'SELECT * FROM ' . axismundi_act_activities_table() . ' ORDER BY id', ARRAY_A ), array( 'id' ) );
+$assert( $ledger_keyed === $ledger_now, 'Every pre-existing ledger row is unchanged and still present' );
+[ $principals_keyed, $principals_now ] = $surviving( $principals_before, $wpdb->get_results( 'SELECT * FROM ' . axismundi_actors_managers_table() . ' ORDER BY identity_id,principal_kind,principal_id', ARRAY_A ), array( 'identity_id', 'principal_kind', 'principal_id' ) );
+$assert( $principals_keyed === $principals_now, 'Every pre-existing principal row is unchanged and still present' );
+[ $meta_keyed, $meta_now ] = $surviving( $meta_before, $wpdb->get_results( 'SELECT * FROM ' . axismundi_actors_meta_table() . ' ORDER BY actor_id,meta_key', ARRAY_A ), array( 'actor_id', 'meta_key' ) );
+$assert( $meta_keyed === $meta_now, 'Every pre-existing Actor metadata row is unchanged and still present' );
+// The fixtures this audit created are gone, which is what the whole-table comparison used to
+// cover. Named rather than counted, so a concurrent writer cannot fail it.
+$fixture_actors = array_values( array_filter( array_map( static fn( string $uri ) : string => $uri, $fixture_actor_uris ) ) );
+$remaining = empty( $fixture_actors ) ? 0 : (int) $wpdb->get_var( 'SELECT COUNT(*) FROM ' . axismundi_act_activities_table()
+	. " WHERE actor_uri IN ('" . implode( "','", array_map( static fn( string $uri ) : string => esc_sql( $uri ), $fixture_actors ) ) . "')" );
+$assert( 0 === $remaining, 'No Activity recorded for a fixture Actor survives the run' );
+$assert( ! empty( $fixture_actors ), 'The fixture Actors were captured for that check' );
 printf( "PASS: %d C2S HTTP checks\n", $checks );

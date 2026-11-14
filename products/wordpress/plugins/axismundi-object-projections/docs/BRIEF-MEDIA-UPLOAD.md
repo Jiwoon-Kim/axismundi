@@ -101,10 +101,20 @@ tag · inReplyTo · quote   각자 이미 있는 의미 계약을 쓴다
 손으로 쓴 타입 목록이 아니라 `category: object` 하나다. 그것이 activity·actor·collection·
 link 네 범주를 한꺼번에 제외하고, FEP-c3ab 가 산문으로 적은 경계와 같다.
 
-**전역 규칙으로 일반화하면 틀린다.** 스냅샷 실측: `Undo` 는 `category: activity` 이고
-`Undo(Like)` 가 AP 가 Like 를 거두는 방법이다. `Accept`·`Reject`·Group 전달 `Announce` 도
-같은 모양이다. 그러므로 이 규칙은 **콘텐츠 명령**(로컬 객체의 Create·Update·Delete)에만
-적용된다.
+**전역 규칙으로 일반화하면 틀린다.** 활동의 대상이 활동인 것이 정당한 자리가 셋 있다.
+
+```txt
+Undo              Undo(Like)·Undo(Follow) — AP 가 활동을 거두는 방법
+Accept · Reject   object 가 Follow 활동이다.  **Person 도 보낸다 — Group 특례가 아니다.**
+                  실측: local-social.php:214 는 'object' => $follow->get_uri(),
+                  :263 은 'object' => $follow->get_payload()
+Announce          Group 전달 패턴에서 Create 를 감싼다.  이쪽이 Group 특례다 —
+                  Mastodon 의 boost 는 Announce(객체 URI) 이고 활동이 아니다
+```
+
+그러므로 이 규칙은 **콘텐츠 명령**(로컬 객체의 Create·Update·Delete)에만 적용된다. 스냅샷
+실측으로 `Undo`·`Accept`·`Reject`·`Announce` 는 모두 `category: activity` 이므로, 범주
+검사를 이 셋에 적용하면 정상 동작을 막는다.
 
 `Question` 은 예고된 예외다 — 스냅샷이 `category: activity`·부모 `IntransitiveActivity` 로
 기록하는데(AS2 가 거기 두었으므로) 우리는 그것을 콘텐츠로 작성한다. Question 을 작성하게

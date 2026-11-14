@@ -115,10 +115,12 @@ function axismundi_op_local_update_types() : array {
  * categories, which is the same boundary FEP-c3ab states in prose as "neither an actor type,
  * nor a `Collection` or `CollectionPage`, nor a `Link`".
  *
- * It generalises only to the content commands. Measured in the snapshot: `Undo` is
- * `category: activity`, and `Undo` naming a `Like` is how ActivityPub withdraws one, so
- * "an activity's object is never an activity subtype" is false as a global rule. `Accept`,
- * `Reject` and a Group's forwarding `Announce` are the same shape.
+ * It generalises only to the content commands. Three places legitimately take an activity as
+ * the object, so "an activity's object is never an activity subtype" is false as a global
+ * rule: `Undo`, which is how ActivityPub withdraws one; `Accept` and `Reject`, whose object is
+ * a `Follow` -- sent by a Person as much as by a Group, so not a Group special case; and a
+ * Group's forwarding `Announce`, which is the Group-specific one. All four are
+ * `category: activity` in the snapshot.
  *
  * `Question` is the known exception waiting to happen: the snapshot records it as
  * `category: activity` with `IntransitiveActivity` as its parent, because that is where AS2

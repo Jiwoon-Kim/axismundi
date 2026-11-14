@@ -51,18 +51,81 @@ function axismundi_op_media_upload_problem( WP_Error $error ) : WP_REST_Response
 	), $status, array( 'Content-Type' => 'application/problem+json', 'Cache-Control' => 'no-store' ) );
 }
 
+/**
+ * May this principal put a publicly served file on this site?
+ *
+ * WordPress's authority over its own uploads directory, and nothing about ActivityPub. The
+ * bytes land on an anonymous URL whether or not any Activity is ever recorded, so this is
+ * the condition that decides whether the principal may put them there at all.
+ */
+function axismundi_op_media_upload_may_store( int $user ) : bool {
+	return $user > 0 && user_can( $user, 'upload_files' );
+}
+
+/**
+ * May this principal author an Object attributed to this Actor?
+ *
+ * Actors owns this question, and `can_act_as()` is the whole of it. The axis that decides
+ * whether an upload needs an identity at all is not "does this publish" -- it does not --
+ * but "does this mint an Object whose `attributedTo` is an Actor". It does, so the JMAP blob
+ * store deliberately requires less for the same bytes: storing bytes for an account creates
+ * no attributed Object (`axismundi-jmap/docs/BLOB-STORE.md`).
+ *
+ * This deliberately does not re-test status or the handle lock. Measured 2026-11-14, every
+ * combination of the three stored statuses and both handle states:
+ *
+ *     public     locked=true   workspace=true   can_act_as=true
+ *     disabled   locked=true   workspace=false  can_act_as=false
+ *     tombstone  locked=true   workspace=false  can_act_as=false
+ *     public     locked=false  workspace=-      can_act_as=false
+ *
+ * So `'public' === get_status() && is_handle_locked()` -- the pair `axismundi_act_outbox_authorize()`
+ * calls an activated local Actor, and which appears in eleven places across Activities -- adds
+ * nothing here. Worse, requiring a *published profile* to author contradicts what Actors
+ * states about its own rule: "Being public is deliberately not required: whether a profile is
+ * published has no bearing on who authored something."
+ *
+ * The behaviour is pinned by the audit rather than by a second copy of the judgement, so that
+ * a future loosening in Actors fails a test here instead of passing silently.
+ */
+function axismundi_op_media_upload_may_author( Axismundi_Actor $actor, int $user ) : bool {
+	return $actor->is_local() && axismundi_actors_can_act_as( $actor, $user );
+}
+
+/**
+ * Authorize at the service boundary, independently of the REST layer.
+ *
+ * The REST permission callback has already run this; it runs again because a later caller
+ * of the service must not inherit authorization from whoever dispatched the request. The
+ * nonce is not re-checked, because it answers a question about the HTTP request rather than
+ * about the principal.
+ */
 function axismundi_op_media_upload_authorize( WP_REST_Request $request ) {
 	$user = get_current_user_id();
-	if ( ! $user ) { return axismundi_op_media_upload_error( 'ax_op_media_auth', 'Authentication is required.', 401 ); }
-	if ( ! rest_get_authenticated_app_password() && ! wp_verify_nonce( (string) $request->get_header( 'X-WP-Nonce' ), 'wp_rest' ) ) {
-		return axismundi_op_media_upload_error( 'ax_op_media_nonce', 'Cookie authentication requires a REST nonce.', 403 );
+	if ( $user <= 0 ) { return axismundi_op_media_upload_error( 'ax_op_media_auth', 'Authentication is required.', 401 ); }
+	$actor = axismundi_actors_get_by_uuid( (string) ( $request->get_url_params()['uuid'] ?? '' ) );
+	// Two questions, two answers, and each can refuse on its own: who may author as this
+	// identity, and what this principal may do with files on this site.
+	if ( ! $actor instanceof Axismundi_Actor || ! axismundi_op_media_upload_may_author( $actor, $user ) ) {
+		return axismundi_op_media_upload_error( 'ax_op_media_forbidden', 'The principal cannot author as this Actor.', 403 );
 	}
-	$actor = axismundi_actors_get_by_uuid( (string) $request->get_url_params()['uuid'] );
-	if ( ! $actor instanceof Axismundi_Actor || ! $actor->is_local() || 'public' !== $actor->get_status()
-		|| ! $actor->is_handle_locked() || ! axismundi_actors_can_act_as( $actor, $user ) || ! user_can( $user, 'upload_files' ) ) {
-		return axismundi_op_media_upload_error( 'ax_op_media_forbidden', 'The principal cannot upload for this Actor.', 403 );
+	if ( ! axismundi_op_media_upload_may_store( $user ) ) {
+		return axismundi_op_media_upload_error( 'ax_op_media_capability', 'The principal cannot upload files.', 403 );
 	}
 	return $actor;
+}
+
+/** Authorization for the route, so the refusal happens before the request body is handled. */
+function axismundi_op_media_upload_permission( WP_REST_Request $request ) {
+	if ( get_current_user_id() <= 0 ) {
+		return axismundi_op_media_upload_error( 'ax_op_media_auth', 'Authentication is required.', 401 );
+	}
+	if ( ! rest_get_authenticated_app_password()
+		&& ! wp_verify_nonce( sanitize_text_field( (string) $request->get_header( 'X-WP-Nonce' ) ), 'wp_rest' ) ) {
+		return axismundi_op_media_upload_error( 'ax_op_media_nonce', 'Cookie authentication requires a REST nonce.', 403 );
+	}
+	$authorized = axismundi_op_media_upload_authorize( $request );
+	return is_wp_error( $authorized ) ? $authorized : true;
 }
 
 function axismundi_op_media_upload_mimes() : array {
@@ -235,10 +298,47 @@ function axismundi_op_media_upload_rest( WP_REST_Request $request ) : WP_REST_Re
 	return is_wp_error( $result ) ? axismundi_op_media_upload_problem( $result ) : $result;
 }
 
+/**
+ * Whether this request was dispatched to this endpoint.
+ *
+ * Measured 2026-11-14: at `rest_post_dispatch` the request's route is the concrete path with
+ * the UUID substituted, not the pattern it was registered with, so this cannot be a string
+ * comparison against the registered route.
+ *
+ * The `i` is not cosmetic. Core dispatches with `preg_match( '@^' . $route . '$@i', ... )`
+ * (`class-wp-rest-server.php`), so `/uploadmedia` reaches this endpoint as well. Matching
+ * case-sensitively here would have left those refusals in WordPress's error shape while the
+ * canonical spelling got problem details.
+ */
+function axismundi_op_media_upload_is_route( WP_REST_Request $request ) : bool {
+	return 1 === preg_match( '#^/axismundi/activitypub/actors/[0-9a-f-]{36}/uploadMedia$#iD', (string) $request->get_route() );
+}
+
+/**
+ * One refusal shape for the whole endpoint.
+ *
+ * A permission callback cannot return a response, so WordPress renders its refusal in the
+ * REST error shape while everything the callback body refuses is FEP-c180 problem details.
+ * Rather than let the shape depend on which layer said no, convert that one case here.
+ */
+function axismundi_op_media_upload_dispatch( $response, $server, $request ) {
+	unset( $server );
+	// Core converts a WP_Error to a response before this filter, so a permission refusal
+	// arrives here as an error response rather than as the WP_Error the callback returned.
+	if ( ! axismundi_op_media_upload_is_route( $request ) || ! $response instanceof WP_REST_Response || ! $response->is_error() ) {
+		return $response;
+	}
+	$data = (array) $response->get_data();
+	$code = (string) ( $data['code'] ?? '' );
+	if ( ! str_starts_with( $code, 'ax_op_media_' ) ) { return $response; }
+	return axismundi_op_media_upload_problem( axismundi_op_media_upload_error( $code, (string) ( $data['message'] ?? '' ), (int) ( $data['data']['status'] ?? $response->get_status() ) ) );
+}
+add_filter( 'rest_post_dispatch', 'axismundi_op_media_upload_dispatch', 10, 3 );
+
 add_action( 'rest_api_init', static function () : void {
 	register_rest_route( 'axismundi/activitypub', '/actors/(?P<uuid>[0-9a-f-]{36})/uploadMedia', array(
 		'methods' => WP_REST_Server::CREATABLE,
-		'permission_callback' => '__return_true',
+		'permission_callback' => 'axismundi_op_media_upload_permission',
 		'callback' => 'axismundi_op_media_upload_rest',
 	) );
 } );

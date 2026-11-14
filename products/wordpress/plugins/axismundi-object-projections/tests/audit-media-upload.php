@@ -84,11 +84,63 @@ try {
 		$response = wp_remote_post( $endpoint, array( 'timeout' => 60, 'redirection' => 0, 'body' => $body,
 			'headers' => $headers + array( 'Host' => $host, 'Content-Type' => 'multipart/form-data; boundary=' . $boundary ) ) );
 		if ( is_wp_error( $response ) ) { throw new RuntimeException( $response->get_error_message() ); }
-		return array( wp_remote_retrieve_response_code( $response ), (string) wp_remote_retrieve_header( $response, 'location' ), (string) wp_remote_retrieve_header( $response, 'content-type' ) );
+		$decoded = json_decode( (string) wp_remote_retrieve_body( $response ), true );
+		return array( wp_remote_retrieve_response_code( $response ), (string) wp_remote_retrieve_header( $response, 'location' ),
+			(string) wp_remote_retrieve_header( $response, 'content-type' ), is_array( $decoded ) ? $decoded : array() );
 	};
-	$assert( 401 === $submit( 'Unauthorized', '', array() )[0], 'Anonymous uploads are denied' );
+	$anonymous = $submit( 'Unauthorized', '', array() );
+	$assert( 401 === $anonymous[0], 'Anonymous uploads are denied' );
+	// The permission callback refuses before the body is read, and still in one shape.
+	$assert( str_starts_with( $anonymous[2], 'application/problem+json' ) && 'ax_op_media_auth' === ( $anonymous[3]['code'] ?? '' ),
+		'A refusal from the permission callback is problem details too' );
+	// Core dispatches routes case-insensitively, so a non-canonical spelling reaches the same
+	// endpoint and must not get a different refusal shape.
+	$lowercased = wp_remote_post( str_replace( '/uploadMedia', '/uploadmedia', $endpoint ), array(
+		'timeout' => 30, 'redirection' => 0, 'headers' => array( 'Host' => $host ),
+	) );
+	$assert( 401 === wp_remote_retrieve_response_code( $lowercased )
+		&& str_starts_with( (string) wp_remote_retrieve_header( $lowercased, 'content-type' ), 'application/problem+json' ),
+		'A non-canonical route spelling keeps the refusal shape' );
 	$bad = $submit( 'Not video', '{"type":"Note"}', $auth );
 	$assert( 415 === $bad[0] && str_starts_with( $bad[2], 'application/problem+json' ), 'Disguised JSON is refused with problem details' );
+	// Putting a public file on this site and having an identity to author as are separate
+	// conditions, so each has to be able to fail alone. First: an Actor that is fine, held by
+	// a principal with no file capability.
+	$reader = wp_insert_user( array( 'user_login' => 'ax_reader_' . wp_generate_password( 10, false ), 'user_pass' => wp_generate_password(), 'role' => 'subscriber' ) );
+	$assert( is_int( $reader ) && ! user_can( $reader, 'upload_files' ), 'A principal without the file capability exists' );
+	try {
+		$reader_actor = axismundi_actors_ensure_for_user( $reader );
+		axismundi_actors_register_handle( $reader_actor->get_identity_id(), get_userdata( $reader )->user_login );
+		axismundi_actors_set_status( $reader_actor->get_identity_id(), 'public' );
+		$reader_actor = axismundi_actors_get_by_identity( $reader_actor->get_identity_id() );
+		$assert( axismundi_op_media_upload_may_author( $reader_actor, $reader ), 'That principal may author as its own Actor' );
+		$reader_expires = time() + 300;
+		$reader_token = WP_Session_Tokens::get_instance( $reader )->create( $reader_expires );
+		$reader_cookie = wp_generate_auth_cookie( $reader, $reader_expires, 'logged_in', $reader_token );
+		$_COOKIE[ LOGGED_IN_COOKIE ] = $reader_cookie;
+		wp_set_current_user( $reader );
+		$reader_auth = array( 'Cookie' => LOGGED_IN_COOKIE . '=' . $reader_cookie, 'X-WP-Nonce' => wp_create_nonce( 'wp_rest' ) );
+		$reader_endpoint = $origin . '/wp-json/axismundi/activitypub/actors/' . $reader_actor->get_uuid() . '/uploadMedia';
+		$denied = wp_remote_post( $reader_endpoint, array( 'timeout' => 30, 'redirection' => 0,
+			'headers' => $reader_auth + array( 'Host' => $host ) ) );
+		$denied_body = json_decode( (string) wp_remote_retrieve_body( $denied ), true );
+		$assert( 403 === wp_remote_retrieve_response_code( $denied ) && 'ax_op_media_capability' === ( $denied_body['code'] ?? '' ),
+			'An identity to author as does not grant the file capability' );
+	} finally {
+		wp_set_current_user( $user );
+		$_COOKIE[ LOGGED_IN_COOKIE ] = $cookie;
+		require_once ABSPATH . 'wp-admin/includes/user.php';
+		if ( is_int( $reader ) ) { wp_delete_user( $reader ); }
+	}
+	// And the reverse: the capability is held, the identity is withdrawn. This pins the
+	// behaviour rather than the layer -- authorization asks Actors one question, so if acting
+	// as a disabled Actor ever becomes allowed there, this fails here instead of passing.
+	$assert( axismundi_actors_set_status( $actor->get_identity_id(), 'disabled' ), 'The fixture Actor can be deactivated' );
+	$withdrawn = $submit( 'Deactivated', '', $auth );
+	$assert( axismundi_actors_set_status( $actor->get_identity_id(), 'public' ), 'The fixture Actor is reactivated' );
+	$assert( 403 === $withdrawn[0] && 'ax_op_media_forbidden' === ( $withdrawn[3]['code'] ?? '' ),
+		'The file capability does not stand in for an identity to author as' );
+
 	$keyed = $auth + array( 'Idempotency-Key' => 'fixture-upload' );
 	$one = $submit( 'First', $bytes, $keyed );
 	$uris[] = $one[1];

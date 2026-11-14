@@ -504,6 +504,95 @@ hydration 에서 `audience_is_public()` 을 다시 확인한다
 ([inbox.php:62](../includes/inbox.php)). 두 규칙을 섞어 "sharedInbox 는 공개만
 받는다" 로 읽으면 안 된다.
 
+### 비공개 액터, 그리고 인라인은 권위가 아니다 (2026-11-14)
+
+익명 GET 을 거부하는 액터는 가능하다. 우리 Pre-FEP 예시 ① 이 이미 그렇게 적는다 — 원본이
+액터 문서를 익명으로 내주면 공개 조회 가능하지만, **그것이 모든 액터 문서를 익명 열람으로
+요구하지는 않는다.**
+
+그럴 때 `Follow` 에 액터를 인라인으로 실으면 풀린다는 생각은 틀린다. FEP-fe34 가 이유를
+명시한다.
+
+```txt
+69행   "Fetching from an origin is the primary authentication method, and other
+       authentication methods described in this document depend on it."
+92행   키의 id 는 객체 id 와 같은 origin 이어야 한다 (MUST)
+98행   서명키의 owner 가 서명된 객체와 같은지 확인하고, **reciprocal claim** 으로
+       키 소유를 확인해야 한다 (MUST)
+184행  비공개 객체: 서버는 GET 에 **audience 에 속한 키로 만든 HTTP 서명**이
+       있는지 검증해야 한다 (MUST)
+```
+
+검증 대상 본문 안에 들어온 액터는 상호 주장이 아니다 — 주장과 주장되는 것이 같은 미검증
+본문에서 온다. 수신자는 키를 얻기 위해 어차피 액터를 fetch 하고, 막히는 단계가 바로 그
+fetch 다. 그러므로 **비공개 액터의 답은 익명 GET 이 아니라 서명된 GET** 이고(184행),
+인라인 사본은 표시용일 수 있어도 권위가 아니다.
+
+우리 코드가 이미 그렇게 동작한다 — `axismundi_act_member_uri()` 가 인라인 객체를
+`['id'] ?? ['href']` 로 줄인다(`repository.php:252`). 인라인 본문을 버리고 URI 를 남기는
+것은 결함이 아니다.
+
+#### 갈리는 축은 활동의 모양이 아니라 **키를 이미 가졌는지**다
+
+위를 "항상 fetch 해서 기록한다" 로 일반화하면 이미 동작하는 경로를 망친다. 실제 기준은
+다르다.
+
+```txt
+갱신(이미 아는 액터)   검증된 활동의 완전한 인라인 문서를 받아도 된다 — 서명이 그 본문을
+                      **이전에 fetch 해 둔 키**에 묶는다.  구현돼 있다:
+                      bridge 가 axismundi_actors_apply_remote_actor_update() 를 호출하고
+                      (axismundi-activitypub-bridge.php:305), Actors 는
+                      actor === object.id 일 때만 기존 **원격** Actor 를 갱신한다
+                      (remote-discovery.php:222). 부분 문서 거부, **새 정체성 생성 안 함**
+등록(모르는 액터)      키가 아직 없다. 그러므로 레코드는 **fetch 에서** 나와야 한다.
+                      활동 본문은 포인터일 뿐이다
+```
+
+2026-11-14 정정: 이 문서의 이전 판단과 그날의 대화에서 "Actor 의 검증된 Update 경로가
+없다" 고 적은 것은 **틀렸다.** 함수명이 `upsert_remote`·`Update(Person)` 가 아니라
+`apply_remote_actor_update` 였고, 검색어가 빗나간 것을 부재로 결론했다. 비어 있는 것은
+갱신이 아니라 **등록**이다.
+
+### 자기참조 Create 와 자기소개
+
+`Create { actor: X, object: "X" }` — 액터가 자기 생성을 참조형으로 알리는 형태. FEP-c3ab 는
+이것을 **금지하지 않는다.** 범위 문장이 `MAY` 이고 "A server MAY apply the same rules to
+other types; this proposal does not say what they should mean there" 라고 적는다. 금지가
+아니라 미정의이고, 그 이유도 적혀 있다 — 구현하고 측정하는 쪽을 택한다.
+
+성립하는 역할이 있다. **주소를 `Create` 에만 싣고 액터 문서는 자기 조회 정책을 그대로 두면,
+WebFinger 도 Follow 도 없이 다른 인스턴스에 자기소개가 된다.** WebFinger 는 사람이 입력한
+핸들을 URI 로 바꾸는 장치이므로, URI 를 직접 배달하면 해소할 것이 없다.
+
+```txt
+push   Create 가 "이 정체성이 존재하고 URI 는 이것이다" 를 지목된 inbox 로 배달한다
+pull   수신자가 서명 검증을 위해 그 URI 를 fetch 한다 — 이것이 실제 등록 행위다
+```
+
+Follow 가 필요 없는 이유도 같다. Follow 도 같은 검증 fetch 를 유발하는 배달이었고, 관계
+수립이 덧붙어 있었을 뿐이다.
+
+**주소지정과 배달을 혼동하지 말 것.** "생성 시점에 followers 가 비어 있으니 audience 가
+없다" 는 2026-11-14 에 한 번 틀린 판단이다. 비어 있는 것은 **배달 대상**이고 주소지정이
+아니다. `to: Public` 인 `Create(Person)` 은 완전히 주소지정된 활동이며, §7.1.3 은 공개
+객체를 알려진 sharedInbox 들로 보내는 것도 허용한다.
+
+측정 과제 둘.
+
+```txt
+① 수신 관례     이전 세션 측정: Mastodon 의 SUPPORTED_TYPES 는 Note·Question 이고
+                CONVERTED_TYPES 에도 Person 이 없다 → Create(Person) 은 드롭된다.
+                그런데 서명 검증 과정에서 계정은 알려질 수 있다.
+                **부수효과로 동작하는 메커니즘**이라면 제안 전에 그 사실을 먼저 적는다
+② 비요청 push    임의 inbox 로 보내면 수신자가 fetch 하게 되는 반사 증폭이다.
+                수신자가 무시·제한할 정당한 이유이므로 신뢰 가능한 전달로 전제하지 않는다
+```
+
+비는 자리는 실재한다 — 관계 행위 없이 정체성을 소개하는 표준 수단이 없다. `Follow` 는 관계를
+만들고 `Offer`·`Invite` 는 초대이며 WebFinger 는 핸들 해소, NodeInfo 는 인스턴스 메타다.
+비공개 액터에서는 발견이 push 로만 시작될 수 있으므로 더 분명해진다. 그래도 순서는 구현·측정
+이 먼저다.
+
 ## 7. 관계 — Follow 의 상태
 
 열람 판정이 "수락된 관계" 를 묻기 때문에 여기 둔다. 관계 자체는 주소 문제가 아니다.

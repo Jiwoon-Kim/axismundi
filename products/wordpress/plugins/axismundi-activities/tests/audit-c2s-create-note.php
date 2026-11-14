@@ -118,6 +118,22 @@ try {
 	if ( function_exists( 'axismundi_media_relations_table' ) ) {
 		$assert( 0 === (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE subject_uri=%s AND provider=%s', axismundi_media_relations_table(), $uri, 'ax-op-local' ) ), 'Tombstone removes media usage links without deleting shared files' );
 	}
+	// This ledger only grows, so a repeat Delete must return the recorded one rather than
+	// record a second event for an Object that is already a Tombstone (FEP-c3ab rule 7).
+	$deletes = static function () use ( $wpdb, $uri ) : int {
+		return (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE object_uri_hash=%s AND activity_type=%s AND direction=%s',
+			axismundi_act_activities_table(), hash( 'sha256', $uri ), 'Delete', 'outbound' ) );
+	};
+	$before_repeat = $deletes();
+	$repeat = axismundi_act_submit_outbox( $user, $actor, array( 'type' => 'Delete', 'actor' => $actor->get_uri(), 'object' => $uri ) );
+	$assert( $repeat instanceof Axismundi_Activity && $deleted->get_uri() === $repeat->get_uri() && $before_repeat === $deletes(),
+		'A repeat Delete returns the recorded Delete and records no second one' );
+	// An Activity URI is not a deletable Object, and saying so is not an authority answer.
+	$not_object = axismundi_act_submit_outbox( $user, $actor, array( 'type' => 'Delete', 'actor' => $actor->get_uri(), 'object' => $deleted->get_uri() ) );
+	$assert( is_wp_error( $not_object ) && 'ax_c2s_delete_target' === $not_object->get_error_code()
+		&& 422 === ( $not_object->get_error_data()['status'] ?? 0 ),
+		'Delete naming an Activity URI is refused as a target, not as authority' );
+
 	$stale = axismundi_op_tombstone_local_object( $row, $actor->get_uri() );
 	$assert( is_wp_error( $stale ) && 'ax_op_local_version' === $stale->get_error_code(), 'Stale body version cannot overwrite current state' );
 } finally {

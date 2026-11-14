@@ -52,6 +52,45 @@ Activity 문서 자체의 삭제와 행위 효과의 취소는 다르다. Undo �
 이 방향은 삭제된 Actor URI의 410 후속과 같은 조회 일관성 문제다. S10 Account
 선택·전환의 선결 조건이 아니며, 이번 슬라이스에서 구현하지 않는다.
 
+## 2.1 An Actor's deletion does not delete its Activities (2026-11-14)
+
+`actor` is a reference to who acted. It is not an ownership relation that binds an Activity's
+lifetime to the identity's. So the two URIs answer different questions:
+
+```txt
+Object URI     the target's current state.  It may come to serve a Tombstone
+Activity URI   an event that was recorded.  It keeps pointing at that event
+```
+
+A processed `Delete(Person)` may turn the Person's URI into a Tombstone while the `Delete`
+that announced it still resolves to a `Delete`. Redelivery reuses that same Activity URI, and
+reversing an effect is a separate `Undo` rather than an edit of the original.
+
+This is where having a ledger of our own pays off. **The Outbox is a surface for submitting and
+reading activities, not the store that issues Activity identifiers** — this ledger assigns
+them. So an Actor can stop serving an Outbox, and the self-referential `Delete` that recorded
+its own deletion does not disappear with it. Mastodon forms that activity's id as a fragment on
+the actor URI (`<actor-uri>#delete`); that is its id construction, and nothing requires ours to
+follow it.
+
+Three separations hold around this, and each has been stated too strongly here before:
+
+```txt
+불변성의 출처   "Activity 는 삭제도 타입 수정도 불가" 는 **이 원장의 정책**이고 AP 전체의
+               규칙이 아니다.  기록을 다른 타입으로 바꿔 쓰지 않는 것과, 열람 제한이나
+               보존 정책에 따라 더 이상 제공하지 않는 것은 별개다
+보관 ≠ 제공     원장에 남는 것과 외부에 계속 공개하는 것은 다른 결정이다
+id ≠ 재배달      id 가 남는다고 재배달이 가능한 것은 아니다.  이미 기록된 `Delete` 를
+               배달·재시도하려면 그동안 서명 수단이 유지돼야 하고, 그 수명은 Actor
+               생명주기 설계의 몫이다 — 삭제 결정과 키 폐기를 같은 순간으로 묶지 않는다
+```
+
+자기참조 `Delete` 를 C2S 로 받는 일(자기 계정 삭제)은 여기서 정하지 않는다. 권한이 비대칭이기
+때문이다 — **Actor 로 활동할 권한은 Actor 를 삭제할 권한이 아니다.** 공동 관리 `Group` 에서
+게시할 수 있는 관리자가 Group 자체를 지울 수 있다고 가정하면 안 되고, WP 계정 삭제나 특정
+사용자의 접근권 회수와도 다른 결정이다. URI 모양은 `actor === object` 로 대칭이지만 요구하는
+인가는 대칭이 아니다.
+
 ## 3. Hooks
 
 Recorded/transition hooks are post-commit facts. Consumers must be idempotent because a crash

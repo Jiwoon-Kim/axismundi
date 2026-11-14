@@ -66,7 +66,38 @@ function axismundi_act_submit_local_object( int $user, Axismundi_Actor $actor, a
 	} else {
 		if ( ! is_string( $input['object'] ?? null ) ) { return new WP_Error( 'ax_c2s_delete_object', 'Delete requires a local Object URI.', array( 'status' => 400 ) ); }
 		$delete_row = axismundi_op_get_local_object( $input['object'] );
-		if ( ! $delete_row || $delete_row['attributed_to_uri'] !== $actor->get_uri() ) { return new WP_Error( 'ax_c2s_delete_actor', 'The Actor cannot delete this Object.', array( 'status' => 403 ) ); }
+		/*
+		 * The target must be an Object. An Activity URI names a recorded event, and this
+		 * ledger only grows: a `Delete` naming a `Delete` could add an activity but never
+		 * remove one, and the recorded event would not become a `Tombstone` either. The verb
+		 * for withdrawing the effect of a recorded activity is `Undo`, which is itself
+		 * recorded. Saying so is a different refusal from saying the Actor lacks authority,
+		 * which is what this used to answer for any URI that was not a local Object.
+		 */
+		if ( ! $delete_row ) {
+			return new WP_Error( 'ax_c2s_delete_target', 'Delete requires a local Object URI; the effect of a recorded Activity is withdrawn with Undo.', array( 'status' => 422 ) );
+		}
+		if ( $delete_row['attributed_to_uri'] !== $actor->get_uri() ) {
+			return new WP_Error( 'ax_c2s_delete_actor', 'The Actor cannot delete this Object.', array( 'status' => 403 ) );
+		}
+		/*
+		 * Update already requires an active Object; Delete did not, so a second Delete
+		 * recorded a second activity for an Object that was already a Tombstone (measured
+		 * 2026-11-14). FEP-c3ab rule 7 is what this should do -- return the activity the
+		 * earlier submission recorded, "without recording or delivering another" -- and rule 7
+		 * also forbids answering one Actor's submission with another Actor's activity, so the
+		 * prior Delete is matched on its actor. A Tombstone with no Delete of its own is a
+		 * different state: the withdrawal happened outside this ledger, and recording one now
+		 * would announce a past event as a present one.
+		 */
+		if ( 'active' !== $delete_row['object_status'] ) {
+			$prior = axismundi_act_get_object_lifecycle( $delete_row['object_uri'] );
+			if ( $prior instanceof Axismundi_Activity && 'Delete' === $prior->get_type()
+				&& hash_equals( $prior->get_actor_uri(), $actor->get_uri() ) ) {
+				return $prior;
+			}
+			return new WP_Error( 'ax_c2s_delete_state', 'Only an active Object may be deleted.', array( 'status' => 409 ) );
+		}
 	}
 	// A normalized semantic command is retained only as a hash, not another body/history store.
 	$intent = array( 'type' => $type, 'actor' => $actor->get_uri(), 'object' => $note ?? $input['object'] );

@@ -107,6 +107,25 @@ function axismundi_op_local_update_types() : array {
 	return array( 'Note', 'Video' );
 }
 
+/**
+ * Validate a document this slice authors.
+ *
+ * The category test is the general rule, and the registry holds it as data rather than as a
+ * list here: `category: object` already excludes the activity, actor, collection and link
+ * categories, which is the same boundary FEP-c3ab states in prose as "neither an actor type,
+ * nor a `Collection` or `CollectionPage`, nor a `Link`".
+ *
+ * It generalises only to the content commands. Measured in the snapshot: `Undo` is
+ * `category: activity`, and `Undo` naming a `Like` is how ActivityPub withdraws one, so
+ * "an activity's object is never an activity subtype" is false as a global rule. `Accept`,
+ * `Reject` and a Group's forwarding `Announce` are the same shape.
+ *
+ * `Question` is the known exception waiting to happen: the snapshot records it as
+ * `category: activity` with `IntransitiveActivity` as its parent, because that is where AS2
+ * puts it, while we author it as content. When this slice authors Questions the rule becomes
+ * "category object, or an activity-category type this slice authors as content" -- an explicit
+ * exception list, not a loosened category test.
+ */
 function axismundi_op_prepare_local_document( array $input, Axismundi_Actor $actor, array $types ) {
 	$type = $input['type'] ?? null;
 	if ( ! is_string( $type ) || ! in_array( $type, $types, true ) || 'object' !== ( axismundi_op_vocabulary_type( $type )['category'] ?? null ) ) {

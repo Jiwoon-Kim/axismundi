@@ -96,6 +96,21 @@ tag · inReplyTo · quote   각자 이미 있는 의미 계약을 쓴다
 확인할 것    DB 스키마 변경이 필요 없다는 것.  object_type · document_json 으로 충분하다
 ```
 
+#### 타입 축의 일반 규칙은 레지스트리의 `category` 다
+
+손으로 쓴 타입 목록이 아니라 `category: object` 하나다. 그것이 activity·actor·collection·
+link 네 범주를 한꺼번에 제외하고, FEP-c3ab 가 산문으로 적은 경계와 같다.
+
+**전역 규칙으로 일반화하면 틀린다.** 스냅샷 실측: `Undo` 는 `category: activity` 이고
+`Undo(Like)` 가 AP 가 Like 를 거두는 방법이다. `Accept`·`Reject`·Group 전달 `Announce` 도
+같은 모양이다. 그러므로 이 규칙은 **콘텐츠 명령**(로컬 객체의 Create·Update·Delete)에만
+적용된다.
+
+`Question` 은 예고된 예외다 — 스냅샷이 `category: activity`·부모 `IntransitiveActivity` 로
+기록하는데(AS2 가 거기 두었으므로) 우리는 그것을 콘텐츠로 작성한다. Question 을 작성하게
+되면 규칙은 "category object, 또는 이 슬라이스가 콘텐츠로 작성하는 activity 범주 타입" 이
+된다 — **명시적 예외 목록**이고 category 검사를 느슨하게 푸는 것이 아니다.
+
 Update 도 타입으로 거부하지 않는다. **같은 분류표가 결정한다** — 어떤 속성이 수정 가능한지
 만 보고, 타입이 Video 라서 거부하는 경로를 만들지 않는다.
 

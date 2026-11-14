@@ -1,9 +1,12 @@
 # Draft — FEP-c3ab: Referencing Existing Objects in ActivityPub Client-to-Server Create
 
-> 상태: **머지됨, 개정 대기** (2026-11-13). `fediverse/fep` PR #984 머지, DRAFT 등록,
-> 트래킹 이슈 #985. 아래 본문은 **머지된 것보다 앞서 있다** — `Why Create and not Announce`
-> 절이 추가됐고 아직 PR 하지 않았다. 그래서 지금 검증기로 업스트림 파일과 대조하면
-> 불일치가 정상이다.
+> 상태: **1차 개정까지 머지됨** (2026-11-14). `fediverse/fep` PR #984 머지·DRAFT 등록,
+> 트래킹 이슈 #985, 1차 개정 PR #986 머지(upstream `6a9c19d`). 포크 브랜치
+> `fep-c3ab-rev1` 의 커밋은 upstream 과 델타가 없다.
+>
+> 아래 본문은 머지된 것보다 **한 절 앞서 있다** — `Introducing an existing actor
+> (non-normative)`. 비규범 예시이고 규범 요구사항은 건드리지 않았다. #986 이 이미 머지됐으므로
+> 이것은 **새 PR** 이다.
 >
 > **개정 대기 목록** (토론 8983 의 답을 보고 묶어서 PR 한 번에):
 >
@@ -236,6 +239,14 @@ The same actor may legitimately update the same object many times. Actor and obj
 How many `Create` activities one object may have, and who may publish them, are left to the implementation. A server may record exactly one and treat the actor of that activity as the object's publishing authority; a server may instead accept a `Create` from each of several actors and treat the object as jointly published. Both remain compatible with the requirements above, which concern a single submission in isolation.
 
 Deletion and restoration semantics beyond the replay rule, re-use of an identifier after deletion, and the relationship between a referenced `Create` and later `Update` activities are out of scope.
+
+## Introducing an existing actor (non-normative)
+
+An existing actor may be introduced to selected recipients using a referenced `Create` whose `actor` and `object` name the same actor URI. This announces an identity that already exists; it does not provision an account or establish a follow relationship. The introduction's recipients are addressed on the activity, independently of the actor document's retrieval policy.
+
+Mastodon already sends an `Update` containing the actor document when publishing a profile change, and a `Delete` naming the same actor URI in both `actor` and `object` when announcing an account deletion. Both are an actor acting on itself, but only the second is a URI reference. They are server-to-server precedents, not definitions of client-to-server actor management.
+
+Actor lifecycle is out of scope here — provisioning, profile editing, account deletion and key handling — and so is what a receiver does with such an activity. What this example describes is narrower: where a referenced `Create` can fit alongside the activities an actor already sends about itself. The addressing requirements above are written for content, and this example does not apply them to an actor.
 
 ## Implementation notes
 

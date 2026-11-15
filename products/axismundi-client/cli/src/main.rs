@@ -6,11 +6,10 @@
 
 use std::process::ExitCode;
 
-use axismundi_jmap_core::{Client, Credentials, Error, Session};
-use serde_json::{json, Value};
+use axismundi_jmap_core::{CORE_CAPABILITY as CORE, Client, Credentials, Error, Session};
+use serde_json::{Value, json};
 
 const TODO: &str = "urn:com.example:jmap:todo";
-const CORE: &str = "urn:ietf:params:jmap:core";
 
 struct Options {
     session_url: String,
@@ -26,6 +25,7 @@ fn usage() -> String {
         "",
         "usage:",
         "  axj session   --session-url URL [--user NAME] [--secret SECRET]",
+        "  axj echo      --session-url URL [--user NAME] [--secret SECRET]",
         "  axj todo      --session-url URL [--user NAME] [--secret SECRET] [--account ID]",
         "  axj changes   ... [--account ID] [--since STATE]",
         "",
@@ -45,7 +45,12 @@ fn options(args: &[String]) -> Result<Options, String> {
     let mut since = None;
     let mut rest = args.iter();
     while let Some(flag) = rest.next() {
-        let value = || rest.clone().next().cloned().ok_or(format!("{flag} needs a value"));
+        let value = || {
+            rest.clone()
+                .next()
+                .cloned()
+                .ok_or(format!("{flag} needs a value"))
+        };
         match flag.as_str() {
             "--session-url" => session_url = value()?,
             "--user" => user = value()?,
@@ -64,15 +69,33 @@ fn options(args: &[String]) -> Result<Options, String> {
     if user.is_empty() || secret.is_empty() {
         return Err("credentials are required (--user/--secret or AXJ_USER/AXJ_SECRET)".into());
     }
-    Ok(Options { session_url, user, secret, account, since })
+    Ok(Options {
+        session_url,
+        user,
+        secret,
+        account,
+        since,
+    })
 }
 
 fn describe(session: &Session) {
     println!("apiUrl        {}", session.api_url);
     println!("state         {}", session.state);
-    println!("capabilities  {}", session.capabilities.keys().cloned().collect::<Vec<_>>().join(", "));
+    println!(
+        "capabilities  {}",
+        session
+            .capabilities
+            .keys()
+            .cloned()
+            .collect::<Vec<_>>()
+            .join(", ")
+    );
     for (id, account) in &session.accounts {
-        let caps: Vec<&str> = account.account_capabilities.keys().map(String::as_str).collect();
+        let caps: Vec<&str> = account
+            .account_capabilities
+            .keys()
+            .map(String::as_str)
+            .collect();
         println!(
             "account {id}   name={:?} personal={} readOnly={} capabilities=[{}]",
             account.name,
@@ -157,10 +180,29 @@ fn run() -> Result<bool, String> {
     let argv: Vec<String> = std::env::args().skip(1).collect();
     let (command, rest) = argv.split_first().ok_or_else(usage)?;
     let options = options(rest)?;
-    let client = Client::new(Credentials { user: options.user, secret: options.secret });
+    let client = Client::new(Credentials {
+        user: options.user,
+        secret: options.secret,
+    });
     let session = client.session(&options.session_url).map_err(explain)?;
     describe(&session);
     if command == "session" {
+        return Ok(true);
+    }
+    if command == "echo" {
+        let nonce = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_err(|error| error.to_string())?
+            .as_nanos();
+        let call_id = format!("echo-{}-{nonce}", std::process::id());
+        client
+            .echo(
+                &session,
+                json!({"nested": ["\u{d55c}\u{ae00}", 42, null, {"ok": true}]}),
+                &call_id,
+            )
+            .map_err(explain)?;
+        println!("PASS Core/echo callId={call_id}: arguments match exactly");
         return Ok(true);
     }
     if command != "todo" && command != "changes" {
@@ -221,7 +263,9 @@ fn explain(error: Error) -> String {
     match &error {
         Error::Transport(_) => format!("{error}\n  the server was never reached"),
         Error::Problem { .. } => format!("{error}\n  the server answered with a JMAP problem"),
-        Error::Status { status: 401 | 403, .. } => {
+        Error::Status {
+            status: 401 | 403, ..
+        } => {
             format!("{error}\n  authentication was refused; check the user and the secret")
         }
         _ => error.to_string(),

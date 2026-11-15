@@ -11,7 +11,9 @@ use std::collections::BTreeMap;
 use std::fmt;
 
 use serde::Deserialize;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
+
+pub const CORE_CAPABILITY: &str = "urn:ietf:params:jmap:core";
 
 /// Username and secret for HTTP Basic. Never printed.
 pub struct Credentials {
@@ -111,7 +113,10 @@ impl Batch {
 
     /// Every method-level failure in the batch, which a successful status code hides.
     pub fn errors(&self) -> Vec<&Invocation> {
-        self.method_responses.iter().filter(|i| i.is_error()).collect()
+        self.method_responses
+            .iter()
+            .filter(|i| i.is_error())
+            .collect()
     }
 }
 
@@ -158,6 +163,19 @@ pub struct Client {
 }
 
 impl Client {
+    /// Verify a Core round trip without selecting an account.
+    pub fn echo(&self, session: &Session, arguments: Value, call_id: &str) -> Result<(), Error> {
+        if !session.capabilities.contains_key(CORE_CAPABILITY) {
+            return Err(Error::Shape("Session does not advertise JMAP Core".into()));
+        }
+        let batch = self.request(
+            session,
+            &[CORE_CAPABILITY],
+            vec![("Core/echo", arguments.clone(), call_id)],
+        )?;
+        verify_echo(&batch, &arguments, call_id)
+    }
+
     pub fn new(credentials: Credentials) -> Self {
         // Status codes carry meaning here: a 4xx may be a JMAP problem document that has
         // to be read, so the agent must not turn a status into an error and drop the body.
@@ -180,11 +198,14 @@ impl Client {
 
     /// Read the Session resource. This is the only URL the caller supplies.
     pub fn session(&self, session_url: &str) -> Result<Session, Error> {
-        let body = self.get(session_url)?;
-        serde_json::from_str(&body).map_err(|error| Error::Shape(format!("session: {error}")))
+        let (body, response_url) = self.get(session_url)?;
+        let mut session: Session = serde_json::from_str(&body)
+            .map_err(|error| Error::Shape(format!("session: {error}")))?;
+        session.api_url = resolve_api_url(&response_url, &session.api_url)?;
+        Ok(session)
     }
 
-    /// Send a method batch to the `apiUrl` the Session advertised, used verbatim.
+    /// Send a method batch to the `apiUrl` the Session advertised.
     pub fn request(
         &self,
         session: &Session,
@@ -226,7 +247,8 @@ impl Client {
         })
     }
 
-    fn get(&self, url: &str) -> Result<String, Error> {
+    fn get(&self, url: &str) -> Result<(String, String), Error> {
+        use ureq::ResponseExt as _;
         let response = self
             .agent
             .get(url)
@@ -234,7 +256,8 @@ impl Client {
             .header("Accept", "application/json")
             .call()
             .map_err(|error| Error::Transport(error.to_string()))?;
-        Self::read(response)
+        let response_url = response.get_uri().to_string();
+        Ok((Self::read(response)?, response_url))
     }
 
     fn post(&self, url: &str, payload: String) -> Result<String, Error> {
@@ -287,9 +310,87 @@ impl Client {
     }
 }
 
+fn resolve_api_url(session_url: &str, advertised: &str) -> Result<String, Error> {
+    if advertised.trim().is_empty() {
+        return Err(Error::Shape("Session apiUrl is empty".into()));
+    }
+    let base =
+        url::Url::parse(session_url).map_err(|e| Error::Shape(format!("Session URL: {e}")))?;
+    let api = base
+        .join(advertised)
+        .map_err(|e| Error::Shape(format!("Session apiUrl: {e}")))?;
+    if !matches!(api.scheme(), "https" | "http")
+        || !api.username().is_empty()
+        || api.password().is_some()
+    {
+        return Err(Error::Shape(
+            "Session apiUrl must be HTTP(S) without embedded credentials".into(),
+        ));
+    }
+    if base.scheme() == "https" && api.scheme() != "https" {
+        return Err(Error::Shape("Session apiUrl downgrades HTTPS".into()));
+    }
+    Ok(api.into())
+}
+
+fn verify_echo(batch: &Batch, expected: &Value, call_id: &str) -> Result<(), Error> {
+    match batch.method_responses.as_slice() {
+        [reply]
+            if reply.name == "Core/echo"
+                && reply.call_id == call_id
+                && &reply.arguments == expected =>
+        {
+            Ok(())
+        }
+        _ => Err(Error::Shape(
+            "Core/echo response did not match the method, call ID, and arguments sent".into(),
+        )),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn session_resolves_the_advertised_api_reference() {
+        let base = "http://127.0.0.1:18880/jmap/session";
+        assert_eq!(
+            resolve_api_url(base, "/jmap/").unwrap(),
+            "http://127.0.0.1:18880/jmap/"
+        );
+        assert_eq!(
+            resolve_api_url(base, "api").unwrap(),
+            "http://127.0.0.1:18880/jmap/api"
+        );
+        assert_eq!(
+            resolve_api_url(base, "https://example.test/elsewhere").unwrap(),
+            "https://example.test/elsewhere"
+        );
+        assert!(
+            resolve_api_url("https://example.test/session", "http://example.test/api").is_err()
+        );
+    }
+
+    #[test]
+    fn echo_requires_exactly_one_matching_invocation() {
+        let arguments = json!({"nested": ["\u{d55c}\u{ae00}", 42, null, {"ok": true}]});
+        let mut batch = Batch {
+            method_responses: vec![Invocation {
+                name: "Core/echo".into(),
+                arguments: arguments.clone(),
+                call_id: "probe".into(),
+            }],
+            session_state: None,
+        };
+        assert!(verify_echo(&batch, &arguments, "probe").is_ok());
+        assert!(verify_echo(&batch, &arguments, "wrong").is_err());
+        assert!(verify_echo(&batch, &json!({}), "probe").is_err());
+        batch.method_responses[0].name = "error".into();
+        assert!(verify_echo(&batch, &arguments, "probe").is_err());
+        batch.method_responses.clear();
+        assert!(verify_echo(&batch, &arguments, "probe").is_err());
+    }
 
     #[test]
     fn credentials_never_print_the_secret() {

@@ -16,13 +16,15 @@ exchange a second time behind a window. Nothing in `core` prints, and nothing in
 Every URL comes from the Session resource. The caller supplies a Session URL and
 credentials; `apiUrl`, the accounts and the capabilities are read from what the
 server advertises. The client appends no path, guesses no account identifier and
-presumes no capability. A client that builds `apiUrl` itself proves nothing,
+presumes no capability. An advertised relative `apiUrl` is resolved against
+the URL of the Session response. A client that guesses `apiUrl` itself proves nothing,
 because it would only ever work against the server it was written for.
 
 ## Running it
 
 ```bash
 axj session --session-url http://localhost:8884/wp-json/axismundi/jmap/session
+axj echo    --session-url http://localhost:8884/wp-json/axismundi/jmap/session
 axj todo    --session-url http://localhost:8884/wp-json/axismundi/jmap/session
 axj changes --session-url http://localhost:8884/wp-json/axismundi/jmap/session [--since STATE]
 ```
@@ -33,6 +35,10 @@ WordPress server these are a username and an Application Password, which is that
 server's authentication setting rather than an assumption of this client.
 
 ## What a run does and does not prove
+
+`axj echo` needs no account selection. It verifies exactly one response with
+the same method name, call ID, and JSON arguments. See the
+[Stalwart Core smoke test](docs/INTEROP-CORE-ECHO.md) for the measured result.
 
 ```txt
 localhost, staging     the deployment works.  Both are the same server implementation

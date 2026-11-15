@@ -259,6 +259,60 @@ JMAP        Account 선택 + Identity 선택 = 두 단계
 혼동하기 쉬운 곳을 적어 둔다 — **발신 Actor 가 하나라는 것은 귀속이 하나라는 뜻이 아니다.**
 권위는 `Create.actor` 이고 귀속 집합은 `attributedTo`(배열)다. 복수 귀속은 다른 축이다.
 
+## Principal 은 user·account·identity 중 어느 것도 아니다 — Account **위**다
+
+RFC 9670 §2 에서 확인한 것.
+
+```txt
+정의     "A Principal represents an individual, a group, a location (e.g., a room),
+         a resource (e.g., a projector), or another entity"
+역할     "Sharing in JMAP is generally configured by assigning rights to certain data
+         within an Account to **other Principals**"  → **공유의 대상**이다
+accounts "A map of Account id to Account object for each JMAP Account containing data
+         for this Principal"  → Principal 이 Account 들을 **거느린다**
+type     individual | group | resource | location | other
+기타     name, description, email, timeZone, capabilities
+```
+
+그래서 층은 넷이다.
+
+```txt
+user       인증된 당사자.  JMAP 에 타입이 없다.  한 user 가 여러 Principal 에 접근한다
+           §1.5.1 의 currentUserPrincipalId 가 user ↔ Principal 을 잇는다 — 둘은 같지 않다
+principal  **엔티티**.  사람·팀·회의실·프로젝터.  디렉터리 항목이자 공유 대상.  Account 를 거느린다
+account    한 종류의 데이터를 담는 컨테이너.  최대 한 Principal 이 소유한다 (§1.5.2)
+identity   **Mail 전용**.  Mail Account 안의 From 주소.  §2 에 등장하지 않는다
+```
+
+### 우리 쪽 대응 — Actor 가 둘을 겸한다
+
+```txt
+Principal  ↔ Actor (엔티티·디렉터리·공유 대상).  type 도 가깝다 —
+             individual↔Person, group↔Group.  AP 의 Organization·Service·Application 은
+             other 쪽이고, resource·location 에 해당하는 Actor 타입은 없다
+Identity   ↔ Actor (발신 주소).  앞 절 참조
+Account    ↔ 그 Actor 의 데이터 컨테이너 (API 층)
+```
+
+**AP 의 Actor 는 JMAP 이 Principal 과 Identity 로 쪼갠 것을 하나로 들고 있다.** 연합
+식별자와 inbox·outbox 를 같은 객체가 갖기 때문이다. 앞 절의 inbox 논증과 같은 뿌리다.
+
+### 지금 어긋나 있는 곳 (2026-11-16 측정)
+
+Todo PoC 의 Principal 은 **WP 사용자**다 — `principal_objects( int $user )`, `user_id` 로
+행을 잡고, `shareWith` 는 서버에 존재하는 WP 사용자 Principal ID 만 받는다.
+
+```txt
+PoC      Principal = WP user
+RFC 9670 Principal = 엔티티.  우리에게 그 엔티티는 **Actor** 다
+현재     PoC 범위에서는 문제가 아니다.  Todo 는 WP 사용자 사이의 공유만 다룬다
+언제 갈리나  공유 대상이 **원격 Actor** 이거나 **Group Actor** 가 되는 순간.
+         WP 사용자에는 그 둘에 해당하는 행이 없다
+```
+
+**지금 바꾸지 않는다.** 다만 Contacts·Calendar 공유를 세울 때 Principal 을 Actor 로 올리는
+것이 전제이고, 그때 PoC 의 디렉터리 정책을 그대로 승격하지 않는다는 것을 적어 둔다.
+
 ## 세 층의 등록 — 개념은 맞고, 우리 코드는 아직 둘을 뭉쳐 둔다
 
 ```txt

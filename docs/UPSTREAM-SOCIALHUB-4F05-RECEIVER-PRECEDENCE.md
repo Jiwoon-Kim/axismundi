@@ -27,12 +27,12 @@ The section says to handle the activity based on the received response code *or*
 
 A `410 Gone` whose body is a `Tombstone` matches the first and the third branch, with opposite outcomes, and I could not find a statement of which one wins.
 
-That combination is not an unusual input. It is the response ActivityPub §6.4 recommends: for a deleted object, "410 Gone" when a `Tombstone` is presented as the body, and 404 otherwise. So a server following the base specification produces exactly the response the table does not resolve.
+That combination is not an unusual input. It is the response ActivityPub §6.4 recommends: for a deleted object, "410 Gone" when a `Tombstone` is presented as the body, and 404 otherwise. So a server following the base specification produces exactly the response the receiver rules do not resolve.
 
-"Unexpected responses" does not settle this one. It answers what to follow when the activity and the refetch disagree, where the retrieved state supersedes the activity. Here a single refetch result matches two branches of the table, and both branches describe the same retrieved state.
+"Unexpected responses" does not settle this one. It answers what to follow when the activity and the refetch disagree, where the retrieved state supersedes the activity. Here a single refetch result matches two branches of the receiver rules, and both branches describe the same retrieved state.
 
 So: should the HTTP status be read first, making `410` + `Tombstone` a hard delete, with the body type consulted only on a 200-level response?
 
-I ask because the other reading is not safe in general. ActivityPub §6.2.1 requires a C2S server to accept any valid ActivityStreams object that is not a subtype of `Activity`, and `Tombstone` is one of those, so a client can author a `Tombstone` outright. We accept that and serve the result at its canonical URI with a 200, as an ordinary object that was never deleted. A `Tombstone` at a 200-level response therefore does not establish that anything was deleted, which is an argument for the status code carrying that fact rather than the type.
+As a related example, our C2S implementation accepts an authored `Tombstone` and serves it at its canonical URI with HTTP 200, even though the object was never deleted. I realise the Receivers section applies after receiving a `Delete`; this example is not a counterexample to that precondition. It illustrates why the body type and the HTTP status should be treated as separate inputs rather than interchangeable signals.
 
 <!-- end of body -->

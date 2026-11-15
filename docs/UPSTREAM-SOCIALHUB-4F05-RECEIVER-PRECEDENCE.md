@@ -33,6 +33,6 @@ That combination is not an unusual input. It is the response ActivityPub §6.4 r
 
 So: should the HTTP status be read first, making `410` + `Tombstone` a hard delete, with the body type consulted only on a 200-level response?
 
-As a related example, our C2S implementation accepts an authored `Tombstone` and serves it at its canonical URI with HTTP 200, even though the object was never deleted. I realise the Receivers section applies after receiving a `Delete`; this example is not a counterexample to that precondition. It illustrates why the body type and the HTTP status should be treated as separate inputs rather than interchangeable signals.
+As a related example, our C2S implementation accepts an authored `Tombstone` — **which §6.2.1 requires a C2S server to accept** — and serves it at its canonical URI with HTTP 200, even though the object was never deleted. I realise the Receivers section applies after receiving a `Delete`; this example is not a counterexample to that precondition. It illustrates why the body type and the HTTP status should be treated as separate inputs rather than interchangeable signals.
 
 <!-- end of body -->

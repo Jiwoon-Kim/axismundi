@@ -74,7 +74,7 @@ function axismundi_op_read_application_object( int $id ) {
 		return new WP_Error( 'ax_op_object_read_mismatch', 'The source contradicts its registered identity or type.', array( 'status' => 409 ) );
 	}
 	$document = axismundi_op_clean_object_read_value( $document );
-	return axismundi_op_finalize_object( $document, $uri, $local );
+	return axismundi_op_finalize_object( $document, $uri, $local, $local ? 'tombstone' === $row['object_status'] : null );
 }
 
 /** A separate application surface; the public AP and registry read routes stay unchanged. */
@@ -83,8 +83,18 @@ add_action( 'rest_api_init', static function () : void {
 		'methods' => WP_REST_Server::READABLE,
 		'permission_callback' => '__return_true',
 		'callback' => static function ( WP_REST_Request $request ) {
-			$result = axismundi_op_read_application_object( (int) $request['id'] );
-			$status = is_array( $result ) && 'Tombstone' === ( $result['type'] ?? '' ) ? 410 : 200;
+			$id = (int) $request['id'];
+			$result = axismundi_op_read_application_object( $id );
+			$status = 200;
+			if ( is_array( $result ) ) {
+				$object = axismundi_op_get_object_by_identity( $id );
+				if ( 'axismundi-object-projections' === ( $object['source_owner'] ?? null ) && 'local-object' === ( $object['source_kind'] ?? null ) ) {
+					$row = axismundi_op_get_local_object( $object['canonical_uri'] );
+					$status = 'tombstone' === ( $row['object_status'] ?? null ) ? 410 : 200;
+				} elseif ( 'Tombstone' === ( $result['type'] ?? '' ) ) {
+					$status = 410;
+				}
+			}
 			if ( is_wp_error( $result ) ) {
 				$status = (int) ( $result->get_error_data()['status'] ?? 500 );
 				$result = array( 'code' => $result->get_error_code(), 'message' => $result->get_error_message() );

@@ -1,5 +1,5 @@
 <?php
-/** Local Note atomicity and WordPress index admission. Dev-only. */
+/** Local Object atomicity. Set AX_C2S_HTTP_ORIGIN=http://wordpress for canonical HTTP checks in wp-env. */
 defined( 'ABSPATH' ) || exit( 1 );
 global $wpdb;
 $checks = 0;
@@ -113,7 +113,10 @@ try {
 	$assert( is_wp_error( axismundi_act_submit_outbox( $user, $actor, $patch ) ), 'Update rejects audience edits' );
 	$deleted = axismundi_act_submit_outbox( $user, $actor, array( 'type' => 'Delete', 'actor' => $actor->get_uri(), 'object' => $uri ) );
 	$tombstone = axismundi_op_get_local_object( $uri );
-	$assert( $deleted instanceof Axismundi_Activity && 'tombstone' === $tombstone['object_status'] && 4 === count( $tombstone['document'] ), 'Delete leaves only the minimal Tombstone body' );
+	$assert( $deleted instanceof Axismundi_Activity && 'tombstone' === $tombstone['object_status']
+		&& 'Note' === $tombstone['object_type'] && 'Note' === $tombstone['document']['formerType']
+		&& 6 === count( $tombstone['document'] ) && $row['document']['published'] === $tombstone['document']['published']
+		&& $tombstone['document']['deleted'] === $tombstone['document']['updated'], 'Delete preserves the authored type and leaves only the Tombstone metadata' );
 	$assert( ! str_contains( $tombstone['document_json'], 'Stored body' ) && ! str_contains( $tombstone['document_json'], 'attachment' ) && ! str_contains( $tombstone['document_json'], 'summary' ), 'Deleted body, attachments and CW are absent' );
 	if ( function_exists( 'axismundi_media_relations_table' ) ) {
 		$assert( 0 === (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE subject_uri=%s AND provider=%s', axismundi_media_relations_table(), $uri, 'ax-op-local' ) ), 'Tombstone removes media usage links without deleting shared files' );
@@ -154,6 +157,56 @@ try {
 
 	$stale = axismundi_op_tombstone_local_object( $row, $actor->get_uri() );
 	$assert( is_wp_error( $stale ) && 'ax_op_local_version' === $stale->get_error_code(), 'Stale body version cannot overwrite current state' );
+
+	$marker = array( 'type' => 'Tombstone', 'name' => 'Authored marker', 'to' => $note['to'], 'formerType' => 'Image', 'deleted' => '2020-01-01T00:00:00Z' );
+	foreach ( array( $marker, array( 'type' => 'Create', 'actor' => $actor->get_uri(), 'object' => $marker ) ) as $submission ) {
+		$create = axismundi_act_submit_outbox( $user, $actor, $submission );
+		if ( $create instanceof Axismundi_Activity ) { $uris[] = $create->get_object_uri(); }
+		$assert( $create instanceof Axismundi_Activity && 'Create' === $create->get_type(), 'Authored Tombstone records a Create' );
+		$marker_uri = $create->get_object_uri();
+		$body = axismundi_op_get_local_object( $marker_uri );
+		$assert( 'active' === $body['object_status'] && 'Tombstone' === $body['object_type']
+			&& ! array_intersect( array( 'formerType', 'deleted' ), array_keys( $body['document'] ) ), 'Authored Tombstone is active and cannot claim server deletion metadata' );
+		$index = axismundi_op_get_object_by_uri( $marker_uri );
+		$read = static fn() => rest_do_request( new WP_REST_Request( 'GET', '/axismundi/v1/objects/' . $index['id'] ) );
+		$canonical_read = static function ( array $row, int $status ) use ( $marker_uri, $assert ) {
+			$origin = getenv( 'AX_C2S_HTTP_ORIGIN' );
+			if ( ! $origin ) { return axismundi_op_transform_object( new Axismundi_OP_Local_Source( $row ) ); }
+			$host = wp_parse_url( $marker_uri, PHP_URL_HOST );
+			$port = wp_parse_url( $marker_uri, PHP_URL_PORT );
+			$response = wp_remote_get( rtrim( $origin, '/' ) . wp_parse_url( $marker_uri, PHP_URL_PATH ), array(
+				'timeout' => 30, 'redirection' => 0,
+				'headers' => array( 'Host' => $host . ( $port ? ':' . $port : '' ), 'Accept' => 'application/activity+json' ),
+			) );
+			$assert( $status === wp_remote_retrieve_response_code( $response ), 'Canonical AS2 GET follows local deletion state' );
+			return json_decode( wp_remote_retrieve_body( $response ), true );
+		};
+		$get = $read();
+		$assert( 200 === $get->get_status() && 'Tombstone' === $get->get_data()['type'], 'An active Tombstone representation is served with 200' );
+		$canonical = $canonical_read( $body, 200 );
+		foreach ( array( $get->get_data(), $canonical ) as $served ) {
+			$assert( is_array( $served ) && $marker['name'] === ( $served['name'] ?? null )
+				&& $actor->get_uri() === ( $served['attributedTo'] ?? null )
+				&& ! isset( $served['formerType'] ) && ! isset( $served['deleted'] ), 'Active Tombstone rendering preserves authorship without faking deletion' );
+		}
+		$delete_marker = axismundi_act_submit_outbox( $user, $actor, array( 'type' => 'Delete', 'actor' => $actor->get_uri(), 'object' => $marker_uri ) );
+		$get = $read();
+		$assert( $delete_marker instanceof Axismundi_Activity && 410 === $get->get_status()
+			&& 'Tombstone' === $get->get_data()['formerType'], 'The same URI and representation type become 410 only after deletion' );
+		$canonical = $canonical_read( axismundi_op_get_local_object( $marker_uri ), 410 );
+		foreach ( array( $get->get_data(), $canonical ) as $served ) {
+			$assert( is_array( $served ) && 7 === count( $served )
+				&& $body['document']['published'] === ( $served['published'] ?? null )
+				&& ! empty( $served['deleted'] ) && $served['deleted'] === ( $served['updated'] ?? null )
+				&& ! array_intersect( array( 'name', 'attributedTo', 'attachment', 'summary', 'content' ), array_keys( $served ) ),
+				'Deleted Tombstone rendering serves only system metadata, including timestamps' );
+		}
+		$edit = axismundi_act_submit_outbox( $user, $actor, array( 'type' => 'Update', 'actor' => $actor->get_uri(),
+			'object' => array( 'id' => $marker_uri, 'name' => 'Too late' ) ) );
+		$assert( is_wp_error( $edit ) && 'ax_c2s_update_state' === $edit->get_error_code(), 'Delete is terminal for Update' );
+		$recreate = axismundi_act_record_source_activity( array( 'type' => 'Create', 'actor' => $actor->get_uri(), 'object' => $marker_uri ), 'outbound', '' );
+		$assert( is_wp_error( $recreate ) && 'ax_act_object_deleted' === $recreate->get_error_code(), 'Delete is terminal for Create of the same URI' );
+	}
 } finally {
 	remove_action( 'axismundi_act_activity_recorded', $observe, 999 );
 	if ( $post_id ) { wp_delete_post( $post_id, true ); }
@@ -166,4 +219,9 @@ try {
 	}
 }
 $assert( $before === $wpdb->get_results( 'SELECT * FROM ' . axismundi_act_activities_table() . ' ORDER BY id', ARRAY_A ), 'Existing ledger rows preserved' );
+// A silent skip is the failure mode here: without the origin the canonical status-code
+// assertions never run, and the count alone reads as a clean pass.
+if ( ! getenv( 'AX_C2S_HTTP_ORIGIN' ) ) {
+	printf( "SKIPPED: canonical AS2 GET status codes. Set AX_C2S_HTTP_ORIGIN=http://wordpress\n" );
+}
 printf( "== %d checks, 0 failed ==\n", $checks );

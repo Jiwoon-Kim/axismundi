@@ -2,10 +2,16 @@
 /** Create(Note) and Delete(local Object), sharing the ledger transaction. */
 defined( 'ABSPATH' ) || exit;
 
+/** Bare document and embedded Create share the same authoring slice. */
+function axismundi_act_local_create_types() : array {
+	return array( 'Note', 'Tombstone' );
+}
+
 function axismundi_act_submit_local_object( int $user, Axismundi_Actor $actor, array $input, string $key = '' ) {
 	$permission = axismundi_act_outbox_authorize( $user, $actor );
 	if ( is_wp_error( $permission ) ) { return $permission; }
-	$bare = 'Note' === ( $input['type'] ?? '' );
+	$create_types = axismundi_act_local_create_types();
+	$bare = in_array( $input['type'] ?? '', $create_types, true );
 	$type = $bare ? 'Create' : ( $input['type'] ?? '' );
 	if ( ! in_array( $type, array( 'Create', 'Update', 'Delete' ), true ) ) { return new WP_Error( 'ax_c2s_object_type', 'Unsupported Object command.', array( 'status' => 422 ) ); }
 	if ( ! $bare && ( $input['actor'] ?? '' ) !== $actor->get_uri() ) { return new WP_Error( 'ax_c2s_actor_mismatch', 'Actor must match the outbox.', array( 'status' => 403 ) ); }
@@ -18,12 +24,12 @@ function axismundi_act_submit_local_object( int $user, Axismundi_Actor $actor, a
 	$delete_row = null;
 	if ( 'Create' === $type ) {
 		$note = $bare ? $input : ( $input['object'] ?? null );
-		if ( ! is_array( $note ) || array_is_list( $note ) ) { return new WP_Error( 'ax_c2s_embedded', 'Create requires an embedded Note.', array( 'status' => 400 ) ); }
+		if ( ! is_array( $note ) || array_is_list( $note ) ) { return new WP_Error( 'ax_c2s_embedded', 'Create requires an embedded Object.', array( 'status' => 400 ) ); }
 		foreach ( array( 'to', 'cc', 'bto', 'bcc', 'audience' ) as $field ) {
-			if ( ! $bare && isset( $input[ $field ], $note[ $field ] ) && $input[ $field ] !== $note[ $field ] ) { return new WP_Error( 'ax_c2s_audience_conflict', 'Create and Note addressing must agree.', array( 'status' => 400 ) ); }
+			if ( ! $bare && isset( $input[ $field ], $note[ $field ] ) && $input[ $field ] !== $note[ $field ] ) { return new WP_Error( 'ax_c2s_audience_conflict', 'Create and Object addressing must agree.', array( 'status' => 400 ) ); }
 			if ( isset( $input[ $field ] ) && ! isset( $note[ $field ] ) ) { $note[ $field ] = $input[ $field ]; }
 		}
-		$note = axismundi_op_prepare_local_note( $note, $actor, $user );
+		$note = axismundi_op_prepare_local_document( $note, $actor, $create_types );
 		if ( is_wp_error( $note ) ) { return $note; }
 		$note = axismundi_act_prepare_community_submission( $note, $actor, $user );
 		if ( is_wp_error( $note ) ) { return $note; }
@@ -119,6 +125,7 @@ function axismundi_act_submit_local_object( int $user, Axismundi_Actor $actor, a
 			if ( ! $update_row || $update_row['attributed_to_uri'] !== $actor->get_uri() ) {
 				return new WP_Error( 'ax_c2s_update_actor', 'Only the recorded author may update this Object.', array( 'status' => 403 ) );
 			}
+			// The URI keeps its authored type; deletion changes the served representation, not the type of the source.
 			if ( 'active' !== $update_row['object_status'] || ! in_array( $update_row['object_type'], axismundi_op_local_update_types(), true )
 				|| ( isset( $note['type'] ) && $note['type'] !== $update_row['object_type'] ) ) {
 				return new WP_Error( 'ax_c2s_update_state', 'Update requires an active Object of the same type.', array( 'status' => 409 ) );

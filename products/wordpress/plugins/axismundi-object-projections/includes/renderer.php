@@ -174,8 +174,9 @@ function axismundi_op_object_html_url( array $object ) : string {
  * @param string              $expected_id The transformer's declared object URI.
  * @return array<string,mixed>|WP_Error
  */
-function axismundi_op_finalize_object( array $object, string $expected_id, bool $local_source = false ) {
-	if ( 'Tombstone' === (string) ( $object['type'] ?? '' ) ) {
+function axismundi_op_finalize_object( array $object, string $expected_id, bool $local_source = false, ?bool $local_deleted = null ) {
+	// Without local lifecycle facts, retain the existing minimal Tombstone policy.
+	if ( false !== $local_deleted && 'Tombstone' === (string) ( $object['type'] ?? '' ) ) {
 		if ( empty( $object['id'] ) || (string) $object['id'] !== $expected_id ) {
 			return new WP_Error( 'ax_op_id_mismatch', __( 'A projected object id must equal its declared object URI.', 'axismundi-object-projections' ) );
 		}
@@ -183,7 +184,8 @@ function axismundi_op_finalize_object( array $object, string $expected_id, bool 
 			'id'   => (string) $object['id'],
 			'type' => 'Tombstone',
 		);
-		foreach ( array( 'formerType', 'deleted' ) as $member ) {
+		$members = true === $local_deleted ? array( 'formerType', 'published', 'updated', 'deleted' ) : array( 'formerType', 'deleted' );
+		foreach ( $members as $member ) {
 			if ( isset( $object[ $member ] ) && '' !== trim( (string) $object[ $member ] ) ) {
 				$tombstone[ $member ] = sanitize_text_field( (string) $object[ $member ] );
 			}
@@ -379,5 +381,6 @@ function axismundi_op_run_transformer( array $transformer, $source ) {
 	if ( ! is_array( $result ) ) {
 		return new WP_Error( 'ax_op_transform_result', __( 'A transformer must return an array or WP_Error.', 'axismundi-object-projections' ) );
 	}
-	return axismundi_op_finalize_object( $result, $expected_id, ! empty( $transformer['local'] ) );
+	$local_deleted = $source instanceof Axismundi_OP_Local_Source ? 'tombstone' === $source->row['object_status'] : null;
+	return axismundi_op_finalize_object( $result, $expected_id, ! empty( $transformer['local'] ), $local_deleted );
 }

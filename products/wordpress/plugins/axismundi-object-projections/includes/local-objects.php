@@ -104,7 +104,7 @@ function axismundi_op_prepare_local_note( array $input, Axismundi_Actor $actor, 
 
 /** Implemented storage types, independent of which properties the vocabulary recognises. */
 function axismundi_op_local_update_types() : array {
-	return array( 'Note', 'Video' );
+	return array( 'Note', 'Video', 'Tombstone' );
 }
 
 function axismundi_op_local_addressing_properties() : array {
@@ -276,8 +276,12 @@ function axismundi_op_tombstone_local_object( array $row, string $actor_uri ) {
 	if ( 'tombstone' === $row['object_status'] ) { return true; }
 	$now = current_time( 'mysql', true );
 	$document = array( 'id' => $row['object_uri'], 'type' => 'Tombstone', 'formerType' => $row['object_type'], 'deleted' => gmdate( 'c', strtotime( $now . ' UTC' ) ) );
+	$document['updated'] = $document['deleted'];
+	if ( is_string( $row['document']['published'] ?? null ) ) {
+		$document['published'] = $row['document']['published'];
+	}
 	$json = wp_json_encode( $document );
-	$done = $wpdb->update( axismundi_op_local_objects_table(), array( 'object_type' => 'Tombstone', 'object_status' => 'tombstone', 'document_json' => $json, 'document_hash' => hash( 'sha256', $json ), 'version' => (int) $row['version'] + 1, 'updated_at' => $now, 'deleted_at' => $now ), array( 'id' => $row['id'], 'version' => $row['version'], 'object_status' => 'active' ) );
+	$done = $wpdb->update( axismundi_op_local_objects_table(), array( 'object_status' => 'tombstone', 'document_json' => $json, 'document_hash' => hash( 'sha256', $json ), 'version' => (int) $row['version'] + 1, 'updated_at' => $now, 'deleted_at' => $now ), array( 'id' => $row['id'], 'version' => $row['version'], 'object_status' => 'active' ) );
 	if ( 1 !== $done ) { return new WP_Error( 'ax_op_local_version', 'Object version changed.', array( 'status' => 409 ) ); }
 	$updated = axismundi_op_get_local_object( $row['object_uri'] );
 	$index = axismundi_op_register_object( array( 'canonical_uri' => $row['object_uri'], 'origin' => 'local', 'source_owner' => 'axismundi-object-projections', 'source_kind' => 'local-object', 'source_ref' => (int) $row['id'], 'as2_type' => 'Tombstone', 'attributed_to_uri' => $row['attributed_to_uri'] ) );

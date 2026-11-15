@@ -114,15 +114,56 @@ location"*, *"Jane Doe" or "Room 4B"*.
 Stalwart 가 `urn:ietf:params:jmap:principals:availability` 를 광고하는 것도 같은 계보다
 (2026-11-15 실측) — availability 는 free/busy 다.
 
-### 우리 쪽 매핑
+### 같은 질문의 열거형이 **넷**이다 — 호환되지 않는다
 
 ```txt
-Person                  → individual
-Group                   → group
-Organization            → group 또는 other.  **정하고 적는다**
-Service · Application   → other
-resource · location     쓰지 않는다.  장소·설비를 Actor 로 모델링하지 않는 한
+                     individual  group  org    location  resource  device  application  catch-all
+iCal CUTYPE §3.2.3   INDIVIDUAL  GROUP  —      ROOM      RESOURCE  —       —            UNKNOWN
+JMAP Principal §2    individual  group  —      location  resource  —       —            other
+JSContact kind §2.1.4 individual group  org    location  —         device  application  **없음**
+AS2 Actor types      Person      Group  Organization  —   —       —       Service·Application  —
 ```
+
+**셋 이상이 합의하는 값은 `individual` 과 `group` 뿐이다.** 나머지는 전부 갈린다.
+
+```txt
+org          JSContact 와 AS2 에만 있다.  JMAP·CUTYPE 에는 없다 → 거기서 **손실된다**
+application  JSContact 와 AS2 에만 있다.  JMAP 에서는 other 로 간다
+resource     CUTYPE·JMAP 에만.  JSContact 의 device 가 가장 가깝다
+location     CUTYPE(ROOM)·JMAP·JSContact 에 있고 **AS2 Actor 타입에는 없다**
+             (AS2 Place 는 객체이지 actor 가 아니다)
+catch-all    CUTYPE UNKNOWN, JMAP other.  **JSContact 에는 없다**
+```
+
+#### JSContact 이 AS2 에 가장 가깝다 — 그래서 손실은 JMAP 쪽에서 난다
+
+```txt
+Person       → kind individual   → Principal individual
+Group        → kind group        → Principal group
+Organization → kind **org**      → Principal group 또는 other   ← **손실**
+Service      → kind application  → Principal other              ← **손실**
+Application  → kind application  → Principal other              ← **손실**
+```
+
+권고: Organization 은 Principal 쪽에서 **`group`** 으로 평탄화한다. `other` 는 분류 포기
+값이라 `Principal/query` 필터에서 쓸모가 없고, CUTYPE 의 GROUP 이 "a group of individuals"
+라 조직이 그 자리에 들어가는 것이 자연스럽다. **평탄화라는 사실을 같이 적는다** — 되돌릴 수
+없다.
+
+#### 측정된 함정 — `kind` 기본값이 `individual` 이다
+
+JSContact 에는 catch-all 이 없고 §2.1.4 의 기본값이 `individual` 이다. 우리 코드는 그 기본값을
+**실체화**한다.
+
+```txt
+cards.php:218-219   kind 가 없으면 'individual' 을 넣는다 (기본값과 일치 — 맞다)
+admin.php:451       새 Card 는 kind: 'individual' 로 시작한다
+Actor type → kind   **매핑이 저장소에 없다** (2026-11-16 grep)
+```
+
+그래서 Actor 에서 Card 를 만드는 경로가 생기면 **Group·Organization·Service 가 전부
+"한 사람" 으로 기록된다.** 조용히 틀리고, 나중에 고치려면 어느 행이 진짜 개인인지 알 수 없다.
+**Actor 에서 Card 를 만들기 전에 매핑을 먼저 쓴다.**
 
 새 의미를 발명하지 말 것. 이 필드는 "사람인가 방인가" 를 묻는 자리이고 우리 Actor 타입에서
 유도된다.

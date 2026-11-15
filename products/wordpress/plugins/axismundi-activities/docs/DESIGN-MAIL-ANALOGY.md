@@ -88,12 +88,14 @@ Thread             → 서버가 정한다.  §3 이 "same Thread is **not manda
 뒤 바뀌지 않는다 — 우리 "Activity 는 불변" 정책, 그리고 "principal 과 acting Actor 를 둘 다
 명시하고 추론하지 않는다" 와 같은 모양이다.
 
-### Mailbox — 대응이 **있다**
+### Mailbox — 타입은 없고, 개념 대응은 있다
+
+**AS2/AP 에 `Mailbox` 타입은 없다.** 아래는 관념적 대응이고 타입 선언이 아니다.
 
 ```txt
-JMAP Mailbox         ↔ Collection 의 서브타입.  AP 에서는 OrderedCollection
+JMAP Mailbox         ↔ 역할이 붙은 Collection.  AP 에서는 OrderedCollection
 Mailbox.role         ↔ **Actor 의 어느 속성이 그 컬렉션을 가리키는가** — inbox, outbox,
-                       followers, following, liked, shares
+                       followers, following, liked, shares.  필드가 아니라 **위치**다
 Mailbox 멤버십        ↔ 컬렉션의 items.  저장돼 있다
 담는 것              JMAP Mailbox 는 Email(객체)을 담고 EmailSubmission 은 담지 않는다.
                      AP 의 inbox/outbox 는 **Activity**(제출)를 담는다
@@ -103,7 +105,10 @@ totalEmails          ↔ Collection 의 totalItems
 ```
 
 그러니까 AP 의 "메일박스" 에 들어 있는 것은 객체가 아니라 제출이다. 그 차이는 남지만,
-**컨테이너 자체는 대응이 있다.**
+**컨테이너라는 개념 자체는 대응이 있다.**
+
+병기를 제안하는 것은 별개의 선택지다 — FEP 로 `["OrderedCollection", "Mailbox"]` 같은
+공동 타입 선언을 제안할 수 있다. **지금 없는 것이고, 제안이다.** 있는 것처럼 적지 말 것.
 
 이것이 우리가 이미 내린 결정과 맞는다 — 공유폴더는 Group 이 아니라
 `OrderedCollection attributedTo Group` 이다. 폴더가 컬렉션이라는 그 결정이 여기서
@@ -124,16 +129,27 @@ unread           JMAP 의 unreadEmails.  AP 에 없고 우리 Notifications 가 
 **이 네 가지가 질문이고, "Mailbox 가 없다" 는 질문이 아니었다.** 특히 `role` 이 위치인지
 필드인지가 실제 설계 분기다 — 위치면 컬렉션의 역할을 옮길 수 없고, 필드면 옮길 수 있다.
 
-#### 기록: 이름으로 부재를 판정한 오류
+#### 기록: 타입의 부재에서 기능의 부재를 끌어낸 오류
 
-초안은 "AP 에는 Mailbox 에 대응하는 타입이 없다" 고 적었다. **`Mailbox` 라는 이름이 없는
-것을 타입이 없는 것으로 읽었다.** AP 는 그 역할을 **위치로** 표현하므로 이름 기반 탐색에
-걸리지 않는다. 같은 주에 같은 종류의 오류를 세 번 했다 — `TodoList/changes` 를
-`$type . '/changes'` 로 조립해 등록하는데 리터럴 grep 으로 "없다" 고 한 것, Session 발견이
-이미 구현됐는데 낡은 문서를 믿은 것, 그리고 이것이다.
+초안의 "`Mailbox` 타입이 없다" 는 **맞았다.** 틀린 것은 거기서 끌어낸 결론이다 —
+*"없는 것은 멤버십이 저장되고 변경 가능한 질의 가능 컨테이너다."* role 컬렉션이 바로 그
+컨테이너이고, items 는 저장돼 있다. **타입 이름이 없다는 사실로 기능이 없다고 적었다.**
 
-판정 규칙: **개념의 부재를 주장하기 전에, 그 개념이 다른 이름이나 다른 위치(속성 이름,
-조립된 식별자, 상위 타입)로 존재할 수 있는 경로를 먼저 확인한다.**
+그 전 교정에서는 반대로 넘어가 "Mailbox 는 Collection 의 서브타입" 이라고 적었다. 그것도
+사실이 아니다 — 대응은 **관념적**이고, 타입 병기는 아직 **제안**일 뿐이다.
+
+판정 규칙 둘:
+
+```txt
+① 타입·이름의 부재 ≠ 기능의 부재.  개념이 다른 이름, 조립된 식별자, 상위 타입, 또는
+   **위치**(어느 속성이 가리키는가)로 존재할 수 있는 경로를 먼저 확인한다
+② 교정할 때 반대편으로 넘어가지 않는다.  "없다" 를 고칠 때 "있다" 로 적지 말고,
+   **무엇이 어떤 형태로 있는지**를 적는다
+```
+
+같은 주에 ①을 세 번 어겼다 — `TodoList/changes` 가 `$type . '/changes'` 로 조립 등록되는데
+리터럴 grep 으로 "없다" 고 한 것, 공개 Session 이 이미 구현됐는데 낡은 문서를 믿은 것,
+그리고 이것이다.
 
 ## 이미 설계한 것의 JMAP 이름 둘
 

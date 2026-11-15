@@ -10,7 +10,7 @@ $assert = static function ( bool $ok, string $label ) use ( &$checks ) : void {
 $initial_user = get_current_user_id();
 $registration = $GLOBALS['wp_filter']['axismundi_jmap_register'] ?? null;
 remove_all_actions( 'axismundi_jmap_register' );
-$dispatch = static function ( string $body, ?string $nonce, string $route = '/axismundi-jmap/v1/api' ) {
+$dispatch = static function ( string $body, ?string $nonce, string $route = '/axismundi/jmap' ) {
 	$request = new WP_REST_Request( 'POST', $route );
 	$request->set_header( 'Content-Type', 'application/json' );
 	if ( null !== $nonce ) { $request->set_header( 'X-WP-Nonce', $nonce ); }
@@ -27,7 +27,11 @@ try {
 	$nonce = wp_create_nonce( 'wp_rest' );
 	$assert( null === \Axismundi\Jmap\runtime_registry()->method( 'Todo/get' ), 'Fresh generic registry excludes Todo' );
 	$body = $wire( array( array( 'Core/echo', (object) array( 'hello' => 'world' ), 'e' ) ) );
-	foreach ( array( '/axismundi-jmap/v1/api', '/axismundi-jmap/v1/todo' ) as $route ) {
+		// The retired alias paths must stop accepting the batch, not merely stop being advertised.
+	foreach ( array( '/axismundi/jmap/api', '/axismundi-jmap/v1/api', '/axismundi-jmap/v1/todo' ) as $gone ) {
+		$assert( 404 === $dispatch( $body, $nonce, $gone )->get_status(), 'Retired API path no longer dispatches: ' . $gone );
+	}
+	foreach ( array( '/axismundi/jmap', '/axismundi/jmap/todo' ) as $route ) {
 		$response = $dispatch( $body, $nonce, $route );
 		$data = $response->get_data();
 		$assert( 200 === $response->get_status() && 'world' === $data->methodResponses[0][1]->hello, 'Core/echo dispatch: ' . $route );

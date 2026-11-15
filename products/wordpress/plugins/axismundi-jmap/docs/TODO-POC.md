@@ -31,7 +31,7 @@ Principal 디렉터리 준비, 해당 Account의 Todo·Principal 정책 할당�
 UI 저장은 PHP 저장 함수 직접 호출이 아니라 nonce 인증 REST 요청의 JMAP 봉투다.
 인증 없는 호출·다른 세션 nonce는 거부하고, 응답은 캐시하지 않는다.
 
-공용 API는 `POST /wp-json/axismundi-jmap/v1/api`이며 WordPress 통합 계층이 소유한다.
+공용 API는 `POST /wp-json/axismundi/jmap`이며 WordPress 통합 계층이 소유한다.
 Todo 외 capability도 같은 registry·engine을 사용한다. 기존 `/todo` POST는 호환 alias로
 공용 dispatcher에 위임한다. `/todo/context`·`/todo/enable`은 Todo 관리자 기능이다.
 공개 Session 은 이후 슬라이스에서 들어왔다 (`docs/HTTP-SESSION.md`). `GET
@@ -198,8 +198,8 @@ Contacts(RFC 9610)는 Todo 가 궤도에 오른 뒤에 착수한다. 그 판단 
 ### 되는 것
 
 ```txt
-전송        /axismundi-jmap/v1/api      공용 JMAP 엔드포인트 (Todo 밖에서도 쓴다)
-            /axismundi-jmap/v1/todo     PoC 관리자 화면 전용 프록시
+전송        /axismundi/jmap             공용 JMAP 엔드포인트 (Todo 밖에서도 쓴다)
+            /axismundi/jmap/todo        PoC 관리자 화면 전용 프록시
             클라이언트가 using + methodCalls 봉투를 실제로 보낸다
 
 메서드      TodoList/get · set · changes

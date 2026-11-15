@@ -40,7 +40,7 @@ function fixture(...args) {
         console.log('Todo created');
         const calls = [];
         const collect = request => {
-            if (!request.url().endsWith('/axismundi-jmap/v1/api') || request.method() !== 'POST') return;
+            if (!request.url().endsWith('/axismundi/jmap') || request.method() !== 'POST') return;
             calls.push(...request.postDataJSON().methodCalls.map(row => ({method: row[0], args: row[1]})));
         };
         page.on('request', collect);
@@ -69,12 +69,12 @@ function fixture(...args) {
                 await route.fulfill({status: 503, contentType: 'application/json', body: JSON.stringify({message: 'Simulated save failure'})});
             } else await route.continue();
         };
-        await page.route('**/axismundi-jmap/v1/api', rejectSave);
+        await page.route('**/axismundi/jmap', rejectSave);
         await page.getByLabel('Todo title', {exact: true}).fill('Draft survives failed save');
         await page.getByRole('button', {name: 'Save', exact: true}).click();
         await page.waitForFunction(() => document.getElementById('todo-status').textContent === 'Simulated save failure', null, {timeout: 30000});
         if (await page.getByLabel('Todo title', {exact: true}).inputValue() !== 'Draft survives failed save') throw new Error('Failed save discarded its draft');
-        await page.unroute('**/axismundi-jmap/v1/api', rejectSave);
+        await page.unroute('**/axismundi/jmap', rejectSave);
         await page.getByLabel('Todo title', {exact: true}).fill('Exercise JMAP');
         await page.getByRole('button', {name: 'Load directory', exact: true}).click();
         const recipient = page.locator('.todo-share li').filter({hasText: data.users[1].login});
@@ -101,7 +101,7 @@ function fixture(...args) {
         await b.screenshot({path: mobileImage, fullPage: true});
         const overflow = await b.evaluate(() => document.documentElement.scrollWidth > innerWidth);
         if (overflow) throw new Error('Mobile horizontal overflow');
-        const forbidden = await b.request.post(origin + '/wp-json/axismundi-jmap/v1/api', {headers: {'X-WP-Nonce': 'invalid'}, data: {using: ['urn:ietf:params:jmap:core'], methodCalls: [['Core/echo', {}, 'x']]}});
+        const forbidden = await b.request.post(origin + '/wp-json/axismundi/jmap', {headers: {'X-WP-Nonce': 'invalid'}, data: {using: ['urn:ietf:params:jmap:core'], methodCalls: [['Core/echo', {}, 'x']]}});
         if (forbidden.status() !== 403) throw new Error('Invalid REST nonce accepted');
         await page.getByRole('button', {name: 'Refresh', exact: true}).click();
         await page.waitForFunction(() => [...document.querySelectorAll('button')].some(button => button.textContent === 'Refresh' && !button.disabled), null, {timeout: 30000});
@@ -110,7 +110,7 @@ function fixture(...args) {
         await page.waitForFunction(() => document.getElementById('todo-status').textContent === 'Saved.', null, {timeout: 30000});
         const incoming = [];
         const collectIncoming = request => {
-            if (request.url().endsWith('/axismundi-jmap/v1/api') && request.method() === 'POST') incoming.push(...request.postDataJSON().methodCalls.map(row => ({method: row[0], args: row[1]})));
+            if (request.url().endsWith('/axismundi/jmap') && request.method() === 'POST') incoming.push(...request.postDataJSON().methodCalls.map(row => ({method: row[0], args: row[1]})));
         };
         b.on('request', collectIncoming);
         let failContext = true;
@@ -118,13 +118,13 @@ function fixture(...args) {
             if (failContext) { failContext = false; await route.fulfill({status: 503, contentType: 'application/json', body: JSON.stringify({message: 'Simulated context failure'})}); }
             else await route.continue();
         };
-        await b.route('**/axismundi-jmap/v1/todo/context', rejectContextOnce);
+        await b.route('**/axismundi/jmap/todo/context', rejectContextOnce);
         await b.getByRole('button', {name: 'Refresh', exact: true}).click();
         await b.waitForFunction(() => document.getElementById('todo-status').textContent === 'Simulated context failure', null, {timeout: 30000});
         if (await b.getByLabel('Todo title', {exact: true}).inputValue() === 'Updated through JMAP') throw new Error('Failed refresh partially applied its view');
         await b.getByRole('button', {name: 'Refresh', exact: true}).click();
         await b.waitForFunction(() => document.querySelector('input[aria-label="Todo title"]')?.value === 'Updated through JMAP', null, {timeout: 30000});
-        await b.unroute('**/axismundi-jmap/v1/todo/context', rejectContextOnce);
+        await b.unroute('**/axismundi/jmap/todo/context', rejectContextOnce);
         if (!incoming.some(call => call.method === 'Todo/changes') || !incoming.some(call => call.method === 'Todo/get' && Array.isArray(call.args.ids) && call.args.ids.length === 1) || incoming.some(call => call.method.endsWith('/get') && call.args.ids === null)) throw new Error('Remote update did not use ID-scoped delta fetch: ' + JSON.stringify(incoming));
         b.off('request', collectIncoming);
         await page.getByRole('button', {name: 'Load directory', exact: true}).click();

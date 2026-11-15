@@ -31,7 +31,7 @@ function dispatch( \WP_REST_Request $request ) {
 function session_transport() : \stdClass {
 	$base = rest_url( 'axismundi/jmap/' );
 	return (object) array(
-		'apiUrl' => $base . 'api',
+		'apiUrl' => untrailingslashit( $base ),
 		'uploadUrl' => $base . 'upload/{accountId}',
 		'downloadUrl' => $base . 'download/{accountId}/{blobId}/{name}?type={type}',
 		'eventSourceUrl' => $base . 'eventsource?types={types}&closeafter={closeafter}&ping={ping}',
@@ -53,7 +53,7 @@ function unavailable() : \WP_REST_Response {
 // WordPress validates JSON parameters before the route callback can reject the envelope.
 add_filter( 'rest_pre_dispatch', function ( $result, $server, $request ) {
 	if ( null !== $result || 'POST' !== $request->get_method()
-		|| ! in_array( $request->get_route(), array( '/axismundi/jmap/api', '/axismundi/jmap/todo', '/axismundi-jmap/v1/api', '/axismundi-jmap/v1/todo' ), true ) ) {
+		|| ! in_array( $request->get_route(), array( '/axismundi/jmap', '/axismundi/jmap/todo' ), true ) ) {
 		return $result;
 	}
 	try { json_decode( $request->get_body(), false, 512, JSON_THROW_ON_ERROR ); }
@@ -67,7 +67,7 @@ add_filter( 'rest_pre_dispatch', function ( $result, $server, $request ) {
 }, 10, 3 );
 
 add_filter( 'rest_post_dispatch', function ( $response, $server, $request ) {
-	if ( preg_match( '#^/(?:axismundi/jmap|axismundi-jmap/v1)(?:/|$)#', $request->get_route() ) ) {
+	if ( preg_match( '#^/axismundi/jmap(?:/|$)#', $request->get_route() ) ) {
 		$response = rest_ensure_response( $response );
 		$response->header( 'Cache-Control', 'private, no-store' );
 		$response->header( 'Vary', 'Authorization, Cookie' );
@@ -76,12 +76,23 @@ add_filter( 'rest_post_dispatch', function ( $response, $server, $request ) {
 }, 10, 3 );
 
 add_action( 'rest_api_init', function () {
-	foreach ( array( 'axismundi/jmap', 'axismundi-jmap/v1' ) as $namespace ) {
-		// POST compatibility aliases execute in place, never redirect authenticated requests.
-		register_rest_route( $namespace, '/api', array( 'methods' => 'POST', 'permission_callback' => __NAMESPACE__ . '\\permission', 'callback' => __NAMESPACE__ . '\\dispatch' ) );
-	}
 	register_rest_route( 'axismundi/jmap', '/session', array( 'methods' => 'GET', 'permission_callback' => __NAMESPACE__ . '\\permission', 'callback' => __NAMESPACE__ . '\\session' ) );
 	register_rest_route( 'axismundi/jmap', '/eventsource', array( 'methods' => 'GET', 'permission_callback' => __NAMESPACE__ . '\\permission', 'callback' => __NAMESPACE__ . '\\unavailable' ) );
+	/*
+	 * The method batch is the namespace path itself, because JMAP advertises a single apiUrl.
+	 * register_rest_route() cannot express that: it builds the full route as
+	 * '/' . $namespace . '/' . trim( $route, '/' ), so an empty route still yields a trailing
+	 * slash and POST would land on /axismundi/jmap/ instead. Registering on the server merges our
+	 * POST handler onto the same route key core uses for its GET namespace index, so discovery
+	 * keeps working on the same path. Measured, not assumed: see audit-http-transport.
+	 */
+	rest_get_server()->register_route( 'axismundi/jmap', '/axismundi/jmap', array(
+		array(
+			'methods' => 'POST',
+			'permission_callback' => __NAMESPACE__ . '\\permission',
+			'callback' => __NAMESPACE__ . '\\dispatch',
+		),
+	) );
 } );
 
 /** Exact discovery-path interception works without a rewrite flush or protocol URL relocation. */

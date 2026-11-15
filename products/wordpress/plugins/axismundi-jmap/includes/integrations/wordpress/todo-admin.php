@@ -14,7 +14,7 @@ function server_failure( \Throwable $error ) : \WP_Error {
 
 // Cover successful responses and permission/error responses on all Todo routes.
 add_filter( 'rest_post_dispatch', function ( $response, $server, $request ) {
-	if ( preg_match( '#^/(?:axismundi/jmap|axismundi-jmap/v1)/todo(?:/|$)#', $request->get_route() ) ) {
+	if ( preg_match( '#^/axismundi/jmap/todo(?:/|$)#', $request->get_route() ) ) {
 		$response = rest_ensure_response( $response );
 		$response->header( 'Cache-Control', 'private, no-store' );
 	}
@@ -22,7 +22,7 @@ add_filter( 'rest_post_dispatch', function ( $response, $server, $request ) {
 }, 10, 3 );
 
 add_action( 'rest_api_init', function () {
-	foreach ( array( 'axismundi/jmap', 'axismundi-jmap/v1' ) as $namespace ) {
+	$namespace = 'axismundi/jmap';
 	register_rest_route( $namespace, '/todo/context', array(
 		'methods' => 'GET', 'permission_callback' => __NAMESPACE__ . '\\permission',
 		'callback' => function () {
@@ -54,7 +54,6 @@ add_action( 'rest_api_init', function () {
 			} catch ( \Throwable $error ) { return server_failure( $error ); }
 		},
 	) );
-	}
 } );
 
 add_action( 'admin_menu', function () {
@@ -68,6 +67,6 @@ add_action( 'admin_menu', function () {
 		wp_enqueue_style( 'ax-jmap-todo', $url . 'todo.css', array(), filemtime( $root . '/assets/todo.css' ) );
 		wp_enqueue_script( 'ax-jmap-todo-sync', $url . 'todo-sync.js', array(), filemtime( $root . '/assets/todo-sync.js' ), true );
 		wp_enqueue_script( 'ax-jmap-todo', $url . 'todo.js', array( 'ax-jmap-todo-sync' ), filemtime( $root . '/assets/todo.js' ), true );
-		wp_add_inline_script( 'ax-jmap-todo', 'window.axTodoConfig=' . wp_json_encode( array( 'url' => rest_url( 'axismundi/jmap/api' ), 'contextUrl' => rest_url( 'axismundi/jmap/todo' ), 'nonce' => wp_create_nonce( 'wp_rest' ), 'canEnable' => current_user_can( 'manage_options' ) ) ) . ';', 'before' );
+		wp_add_inline_script( 'ax-jmap-todo', 'window.axTodoConfig=' . wp_json_encode( array( 'url' => untrailingslashit( rest_url( 'axismundi/jmap' ) ), 'contextUrl' => rest_url( 'axismundi/jmap/todo' ), 'nonce' => wp_create_nonce( 'wp_rest' ), 'canEnable' => current_user_can( 'manage_options' ) ) ) . ';', 'before' );
 	} );
 } );

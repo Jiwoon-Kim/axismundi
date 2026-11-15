@@ -44,10 +44,17 @@ try {
 	$assert( 200 === $session[0] && isset( $session[1]['capabilities']['urn:ietf:params:jmap:core'], $session[1]['accounts'], $session[1]['state'] ), 'Authenticated browser gets a complete Session' );
 	$assert( isset( $session[1]['accounts']['a' . $actor->get_identity_id()] ), 'Session contains the accessible Actor Account' );
 	foreach ( array( 'apiUrl', 'downloadUrl', 'uploadUrl', 'eventSourceUrl' ) as $field ) {
-		$assert( isset( $session[1][$field] ) && str_contains( $session[1][$field], '/axismundi/jmap/' ), 'Canonical Session URL: ' . $field );
+		$url = (string) ( $session[1][ $field ] ?? '' );
+		// apiUrl is the namespace path itself, so requiring a trailing slash there would pass only
+		// while it was wrong, and a substring test would also accept the retired /api suffix.
+		$ok = 'apiUrl' === $field ? str_ends_with( $url, '/axismundi/jmap' ) : str_contains( $url, '/axismundi/jmap/' );
+		$assert( '' !== $url && $ok, 'Canonical Session URL: ' . $field );
 	}
 	$body = wp_json_encode( array( 'using' => array( 'urn:ietf:params:jmap:core' ), 'methodCalls' => array( array( 'Core/echo', (object) array( 'hello' => 'world' ), 'e' ) ) ) );
-	foreach ( array( $base . '/api', '/wp-json/axismundi-jmap/v1/api', '/wp-json/axismundi-jmap/v1/todo', $base . '/todo' ) as $path ) {
+	foreach ( array( '/wp-json/axismundi/jmap/api', '/wp-json/axismundi-jmap/v1/api', '/wp-json/axismundi-jmap/v1/todo' ) as $gone ) {
+		$assert( 404 === $request( 'POST', $gone, $auth, $body )[0], 'Retired API path is gone over real HTTP: ' . $gone );
+	}
+	foreach ( array( $base, $base . '/todo' ) as $path ) {
 		$r = $request( 'POST', $path, $auth, $body );
 		$assert( 200 === $r[0] && 'world' === ( $r[1]['methodResponses'][0][1]['hello'] ?? null ) && empty( $r[2]['location'] ), 'API executes without redirect: ' . $path );
 		$assert( $r[1]['sessionState'] === $session[1]['state'], 'API sessionState agrees with Session GET' );
@@ -61,7 +68,7 @@ try {
 	$assert( is_array( $app ), 'Temporary Application Password created' );
 	$basic = array( 'Authorization' => 'Basic ' . base64_encode( get_userdata( $user )->user_login . ':' . $app[0] ) );
 	$assert( 200 === $request( 'GET', $base . '/session', $basic )[0], 'Real Application Password reads Session without nonce' );
-	$assert( 200 === $request( 'POST', $base . '/api', $basic, $body )[0], 'Real Application Password invokes API without nonce' );
+	$assert( 200 === $request( 'POST', $base, $basic, $body )[0], 'Real Application Password invokes API without nonce' );
 	WP_Application_Passwords::delete_application_password( $user, $app[1]['uuid'] );
 	$assert( in_array( $request( 'GET', $base . '/session', $basic )[0], array( 401, 403 ), true ), 'Revoked Application Password is denied' );
 	echo "PASS $checks real HTTP Session checks\n";

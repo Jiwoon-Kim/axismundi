@@ -8,9 +8,8 @@ POST는 405이고 본문·자격증명을 다른 경로로 재전송하도록 �
 | 경로 | 메서드 | 동작 |
 | --- | --- | --- |
 | /wp-json/axismundi/jmap/session | GET | 인증된 현재 User의 Session |
-| /wp-json/axismundi/jmap/api | POST | 단일 JMAP 메서드 배치 |
+| /wp-json/axismundi/jmap | POST | 단일 JMAP 메서드 배치.  GET 은 코어 네임스페이스 인덱스 |
 | /wp-json/axismundi/jmap/todo* | 기존 메서드 | 기존 개발 UI 어댑터 |
-| /wp-json/axismundi-jmap/v1/api 및 todo* | 기존 메서드 | 리다이렉트 없는 호환 alias |
 
 브라우저는 WP 쿠키 + 정화한 X-WP-Nonce를 사용한다.
 일반 다운로드 링크는 Core 표준 `_wpnonce` 쿼리도 검증한다. 쿼리 nonce만으로

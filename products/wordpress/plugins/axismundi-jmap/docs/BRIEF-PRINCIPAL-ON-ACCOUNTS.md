@@ -54,11 +54,41 @@ account 키 세계에서 Principal 이 없다.
 **답은 스펙에 있다.** §1.5.1 의 `currentUserPrincipalId` 는 타입이 **`Id|null`** 이다.
 
 ```txt
-규칙   요청자가 그 Account 의 Actor 로 행위할 수 있으면 currentUserPrincipalId = 그 Principal.
-      아니면 **null**.  적합하다
+규칙   그 Account 의 Principal 디렉터리에서 **요청 사용자에 대응하는** Principal 의 id.
+      없으면 **null**
+아니다  그 Account 를 **소유한** Principal 이 아니다 — 그건 principals:owner 가 답한다
 의미   Actor 가 없는 사람은 공유 대상이 아니다.  정체성이 없으면 공유할 자리가 없다
 금지   그 사람을 위해 Actor 를 자동 생성하는 것.  정체성 발급은 Actors 의 결정이고
       공유 기능이 끌어낼 일이 아니다
+```
+
+**두 질문을 섞지 말 것 — 권한 결과가 다르다.**
+
+```txt
+누가 요청했나        currentUserPrincipalId
+누구를 대신해 행위하나  Actors 의 account principal.  다른 개념이다 (§이름 충돌)
+```
+
+§2.3 이 그 id 를 **쓰기 핸들**로 쓴다 — *"a server SHOULD allow an update to the `name`,
+`description`, and `timeZone` properties of the Principal with **the same id as the
+`currentUserPrincipalId`** ... This allows the user to update their own details."*
+
+그래서 Alice 가 Group 을 운영한다는 이유로 Group 의 Principal 을 거기 넣으면, Alice 가
+**자기 정보를 고치는 경로로 Group 의 이름을 고치게 된다.** 명명 차이가 아니라 권한 상승이다.
+
+#### 미결 — 개인 Actor 가 여럿이면 어느 것인가
+
+§1.5.1 은 단수로 말한다("the Principal ... that corresponds to the user"). 지금은 문제가
+되지 않는다 — 실측상 개인 Account 가 자기 디렉터리이고(`accountIdForPrincipal: a199`),
+Group Account 들은 `principals` capability 자체가 없다. 그러나 코드에 이미
+`directory_account()` 가 있어 **공유 디렉터리 하나로 가는 경로가 열려 있다.** 그때 개인
+Actor 가 둘 이상인 사용자의 답을 정해야 한다.
+
+```txt
+선택지   ① 요청의 acting Actor 를 따른다 — 그런데 Session 은 acting 맥락이 없다
+        ② 지정된 primary 개인 Actor 하나
+        ③ 모호하면 null
+정하기 전  구현하지 않는다.  틀린 답을 내보내면 §2.3 의 쓰기 핸들이 틀린 곳을 가리킨다
 ```
 
 ### 같이 고친다 — `currentUserPrincipalId` 가 **아예 없다**
@@ -151,6 +181,9 @@ Actor 가 없는 사용자의 공유는 버려진다.
 필수   principals 의 accountCapabilities 값에 currentUserPrincipalId 가 **존재한다**.
       지금은 키 자체가 없어서 이 단정을 쓸 수 없다
 필수   Actor 없는 사용자의 currentUserPrincipalId 가 **null** 이다 (부재가 아니라 null)
+필수   **Group 운영자라도 Group 의 소유 Principal 이 자신의 Principal 이 되지 않는다.**
+      Group Account 에서 currentUserPrincipalId 가 principals:owner 의 principalId 와
+      같으면 실패다 — §2.3 의 쓰기 핸들이 틀린 곳을 가리킨다는 뜻이다
 변이   배제 절을 지우면 감사가 **실패해야 한다**.  지금은 실패하지 않는다 —
       그것이 이 작업의 출발점이었다
 ```

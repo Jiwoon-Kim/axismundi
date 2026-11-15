@@ -219,6 +219,29 @@ unread           JMAP 의 unreadEmails.  AP 에 없고 우리 Notifications 가 
 
 ## Identity — 우리에게는 선택 단계가 없다
 
+이것은 우리 선호가 아니라 **inbox 가 어디 붙어 있느냐가 강제하는 결과**다.
+
+```txt
+JMAP   role 은 Mailbox 의 속성이고 §2 가 못박는다 — "a Mailbox MUST only have a single role,
+       and there MUST NOT be two Mailboxes in the same account with the same role"
+       → **inbox 는 Account 당 하나**
+       그런데 Identity 는 한 Account 안에 여럿 둘 수 있다  → **N 발신 : 1 수신**
+AP     §4.1 — "Actor objects MUST have ... inbox ... outbox"
+       → **inbox 는 Actor 마다 있다**
+```
+
+그래서 한 Account 에 Actor 가 여럿이면 inbox 도 여럿이 되고, "Account 당 inbox 하나" 가
+깨진다. **Actor 하나 = Account 하나가 강제되고, Identity 를 따로 고를 자리가 없다.**
+
+메일에서 N:1 이 성립하는 이유도 같은 자리에서 나온다 — `Identity` 는 **From 주소**일 뿐
+자기 수신 종점이 없다. AP Actor 는 수신 종점을 직접 들고 있으므로 "주소" 일 수 없고,
+Account 에 상당한다. 그래서 대응이 `Identity → Actor 의 하위 필드` 가 아니라
+**`Identity → Actor 객체 자체`** 다.
+
+`sharedInbox` 가 반례처럼 보이지만 아니다 — 여러 Actor 가 배달 종점을 공유하는 **전달
+최적화**(§7.1.3)이고, 수신자는 여전히 해당 Actor 들에게 분배해야 한다. 정체성을 합치지
+않는다.
+
 JMAP Mail 은 한 Account 안에 **여러 `Identity`** 를 둘 수 있다(보낼 수 있는 여러 주소).
 우리 Actor 기반 Account 는 **이미 Actor 하나를 가리킨다.**
 

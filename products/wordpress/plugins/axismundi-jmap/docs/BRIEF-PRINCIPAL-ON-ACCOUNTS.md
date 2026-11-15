@@ -73,14 +73,33 @@ account 키 세계에서 Principal 이 없다.
 `description`, and `timeZone` properties of the Principal with **the same id as the
 `currentUserPrincipalId`** ... This allows the user to update their own details."*
 
-그래서 Alice 가 Group 을 운영한다는 이유로 Group 의 Principal 을 거기 넣으면, Alice 가
-**자기 정보를 고치는 경로로 Group 의 이름을 고치게 된다.** 명명 차이가 아니라 권한 상승이다.
+그래서 Alice 가 어떤 Account 를 운영한다는 이유로 그 Account 의 소유 Principal 을 거기
+넣으면, Alice 가 **자기 정보를 고치는 경로로 남의 디렉터리 레코드를 고치게 된다.**
+
+#### 층을 섞지 말 것 — 편집 대상이 둘이고 시스템이 다르다
+
+```txt
+AS2 Actor 객체    정체성 문서다.  type: Person|Group|... 이 여기 있다.
+                 편집은 **ActivityPub 쪽** 일이고, 그 Actor 를 대신해 행위할 수 있는
+                 주체(Actors 의 account principal)가 권한을 갖는다
+JMAP Principal   디렉터리 레코드다.  §2.3 이 name·description·timeZone 을 열어 준다.
+                 type: individual|group|resource|location|other 는 **Principal 의 속성**이다
+Account          **type 이 없다.**  name·isPersonal·isReadOnly·accountCapabilities 뿐이다
+                 (RFC 8620 §1.6.2, 그리고 우리 Session 실측).  "Group Account" 라는 것은 없다
+```
+
+그러니 §2.3 의 위험은 "Group 이 개명된다" 가 아니다 — 그건 AP 쪽 필드이고 다른 경로다.
+위험은 **JMAP 디렉터리 레코드를 자기 것인 양 고치는 것**이다.
+
+**다만 경로가 생길 수 있다.** `Principal.name` 을 Actor 의 표시 이름에서 **투영**하면,
+§2.3 의 자기 편집이 뒷문으로 정체성 편집이 된다. 투영할지 말지는 이 브리프의 결정이 아니고,
+**투영한다면 §2.3 쓰기를 막아야 한다**는 것만 적어 둔다.
 
 #### 미결 — 개인 Actor 가 여럿이면 어느 것인가
 
 §1.5.1 은 단수로 말한다("the Principal ... that corresponds to the user"). 지금은 문제가
 되지 않는다 — 실측상 개인 Account 가 자기 디렉터리이고(`accountIdForPrincipal: a199`),
-Group Account 들은 `principals` capability 자체가 없다. 그러나 코드에 이미
+비개인 Account 들은 `principals` capability 자체가 없다. 그러나 코드에 이미
 `directory_account()` 가 있어 **공유 디렉터리 하나로 가는 경로가 열려 있다.** 그때 개인
 Actor 가 둘 이상인 사용자의 답을 정해야 한다.
 
@@ -181,9 +200,10 @@ Actor 가 없는 사용자의 공유는 버려진다.
 필수   principals 의 accountCapabilities 값에 currentUserPrincipalId 가 **존재한다**.
       지금은 키 자체가 없어서 이 단정을 쓸 수 없다
 필수   Actor 없는 사용자의 currentUserPrincipalId 가 **null** 이다 (부재가 아니라 null)
-필수   **Group 운영자라도 Group 의 소유 Principal 이 자신의 Principal 이 되지 않는다.**
-      Group Account 에서 currentUserPrincipalId 가 principals:owner 의 principalId 와
-      같으면 실패다 — §2.3 의 쓰기 핸들이 틀린 곳을 가리킨다는 뜻이다
+필수   **운영할 수 있다는 것이 자신의 Principal 을 만들지 않는다.**
+      요청자가 대신 행위할 수 있는 비개인 Account 에서
+      currentUserPrincipalId 가 principals:owner 의 principalId 와 같으면 실패다 —
+      §2.3 의 쓰기 핸들이 남의 레코드를 가리킨다는 뜻이다
 변이   배제 절을 지우면 감사가 **실패해야 한다**.  지금은 실패하지 않는다 —
       그것이 이 작업의 출발점이었다
 ```

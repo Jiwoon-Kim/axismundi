@@ -311,7 +311,7 @@ function axismundi_op_actor_outbox_transform( Axismundi_OP_Actor_Outbox $source 
 				continue;
 			}
 			$row = axismundi_op_get_local_object( $uri );
-			if ( $row && 'tombstone' === $row['object_status'] ) {
+			if ( $row && axismundi_op_local_object_is_deleted( $row ) ) {
 				$activity['object'] = ! empty( $row['publicly_readable'] ) ? $row['document'] : $uri;
 			} elseif ( ! $row || 'Update' === $activity['type'] || ( empty( $row['publicly_readable'] ) && ! $source->owner_view ) ) {
 				$activity['object'] = $uri;
@@ -570,7 +570,7 @@ function axismundi_op_get_actor_sent( WP_REST_Request $request ) {
 				continue;
 			}
 			$row = axismundi_op_get_local_object( $uri );
-			if ( $row && ( 'tombstone' === $row['object_status'] || ( ! $owner && empty( $row['publicly_readable'] ) ) ) ) {
+			if ( $row && ( axismundi_op_local_object_is_deleted( $row ) || ( ! $owner && empty( $row['publicly_readable'] ) ) ) ) {
 				continue;
 			}
 			$source = $row ? null : axismundi_op_resolve_source_by_uri( $uri );

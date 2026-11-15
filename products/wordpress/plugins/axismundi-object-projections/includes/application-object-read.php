@@ -44,7 +44,7 @@ function axismundi_op_read_application_object( int $id ) {
 		$row = axismundi_op_get_local_object( $uri );
 		if ( ! $row || (int) $row['id'] !== (int) $object['source_ref'] ) { return $public; }
 		$document = $row['document'];
-		$public_tombstone = 'tombstone' === $row['object_status'] && ! empty( $row['publicly_readable'] );
+		$public_tombstone = axismundi_op_local_object_is_deleted( $row ) && ! empty( $row['publicly_readable'] );
 	} elseif ( 'remote' === $object['origin'] && 'axismundi-object-projections' === $object['source_owner'] && 'remote-object-cache' === $object['source_kind'] ) {
 		$source = axismundi_op_load_registered_remote_source( $object, $object );
 		if ( ! $source ) { return $public; }
@@ -65,7 +65,7 @@ function axismundi_op_read_application_object( int $id ) {
 		if ( ! axismundi_op_application_actor_can_read( $document, (string) ( $row['attributed_to_uri'] ?? '' ), $selection['actor'] ) ) { return $public; }
 	}
 	if ( $local ) {
-		if ( ! in_array( $row['object_status'], array( 'active', 'tombstone' ), true ) ) { return $public; }
+		if ( 'active' !== $row['object_status'] && ! axismundi_op_local_object_is_deleted( $row ) ) { return $public; }
 		$document = axismundi_op_transform_local_body( new Axismundi_OP_Local_Source( $row ) );
 	} else {
 		$document = axismundi_op_read_remote_jsonld_source( $source, $object, $object )['document'];
@@ -74,7 +74,7 @@ function axismundi_op_read_application_object( int $id ) {
 		return new WP_Error( 'ax_op_object_read_mismatch', 'The source contradicts its registered identity or type.', array( 'status' => 409 ) );
 	}
 	$document = axismundi_op_clean_object_read_value( $document );
-	return axismundi_op_finalize_object( $document, $uri, $local, $local ? 'tombstone' === $row['object_status'] : null );
+	return axismundi_op_finalize_object( $document, $uri, $local, $local ? axismundi_op_local_object_is_deleted( $row ) : null );
 }
 
 /** A separate application surface; the public AP and registry read routes stay unchanged. */
@@ -90,7 +90,7 @@ add_action( 'rest_api_init', static function () : void {
 				$object = axismundi_op_get_object_by_identity( $id );
 				if ( 'axismundi-object-projections' === ( $object['source_owner'] ?? null ) && 'local-object' === ( $object['source_kind'] ?? null ) ) {
 					$row = axismundi_op_get_local_object( $object['canonical_uri'] );
-					$status = 'tombstone' === ( $row['object_status'] ?? null ) ? 410 : 200;
+					$status = ( $row && axismundi_op_local_object_is_deleted( $row ) ) ? 410 : 200;
 				} elseif ( 'Tombstone' === ( $result['type'] ?? '' ) ) {
 					$status = 410;
 				}

@@ -198,7 +198,7 @@ function axismundi_act_submit_referenced_video( int $user_id, Axismundi_Actor $a
 		if ( null === $deleted || null === $first ) {
 			return new WP_Error( 'ax_act_object_history', 'The Object publication history is unavailable.', array( 'status' => 503 ) );
 		}
-		if ( $deleted || 'tombstone' === $row['object_status'] ) {
+		if ( $deleted || axismundi_op_local_object_is_deleted( $row ) ) {
 			return new WP_Error( 'ax_act_object_deleted', 'A deleted Object URI cannot be created again.', array( 'status' => 409 ) );
 		}
 		$document = $row['document'];

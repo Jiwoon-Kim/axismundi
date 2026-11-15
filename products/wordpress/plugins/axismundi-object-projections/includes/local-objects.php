@@ -48,6 +48,11 @@ add_action( 'plugins_loaded', static function () : void {
 	if ( '1' !== get_option( 'ax_op_local_objects_schema', '' ) ) { axismundi_op_install_local_objects(); }
 } );
 
+/** Whether a row from the local Object store has been deleted. */
+function axismundi_op_local_object_is_deleted( array $row ) : bool {
+	return 'tombstone' === ( $row['object_status'] ?? null );
+}
+
 function axismundi_op_local_object_uri( string $uuid ) : string {
 	return home_url( '/objects/' . strtolower( $uuid ) );
 }
@@ -273,7 +278,7 @@ function axismundi_op_project_local_object( array $row ) : bool {
 function axismundi_op_tombstone_local_object( array $row, string $actor_uri ) {
 	global $wpdb;
 	if ( ! hash_equals( $row['attributed_to_uri'], $actor_uri ) ) { return new WP_Error( 'ax_op_local_delete_actor', 'Only the recorded author may delete this Object.', array( 'status' => 403 ) ); }
-	if ( 'tombstone' === $row['object_status'] ) { return true; }
+	if ( axismundi_op_local_object_is_deleted( $row ) ) { return true; }
 	$now = current_time( 'mysql', true );
 	$document = array( 'id' => $row['object_uri'], 'type' => 'Tombstone', 'formerType' => $row['object_type'], 'deleted' => gmdate( 'c', strtotime( $now . ' UTC' ) ) );
 	$document['updated'] = $document['deleted'];

@@ -89,7 +89,7 @@ function axismundi_actors_write_featured( Axismundi_Actor $actor, string $uri, b
 	foreach ( $existing_rows as $row ) {
 		$local = axismundi_op_get_local_object( $row['object_uri'] );
 		$registered = axismundi_op_get_object_by_uri( $row['object_uri'] );
-		if ( 'tombstone' === ( $local['object_status'] ?? '' ) || 'tombstone' === ( $registered['status'] ?? '' ) ) {
+		if ( ( $local && axismundi_op_local_object_is_deleted( $local ) ) || 'tombstone' === ( $registered['status'] ?? '' ) ) {
 			if ( false === $wpdb->delete( $table, array( 'actor_id' => $id, 'object_uri' => $row['object_uri'] ) ) ) { return new WP_Error( 'ax_featured_write', 'Deleted membership cleanup failed.' ); }
 		}
 	}

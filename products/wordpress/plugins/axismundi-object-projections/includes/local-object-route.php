@@ -11,7 +11,7 @@ function axismundi_op_local_object_route() : void {
 	$uuid = substr( $path, strlen( $base ) );
 	$row = preg_match( '/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/D', $uuid ) ? axismundi_op_get_local_object( axismundi_op_local_object_uri( $uuid ) ) : null;
 	$visible = is_array( $row ) && ! empty( $row['publicly_readable'] );
-	$status = ! $visible ? 404 : ( 'tombstone' === $row['object_status'] ? 410 : 200 );
+	$status = ! $visible ? 404 : ( axismundi_op_local_object_is_deleted( $row ) ? 410 : 200 );
 	status_header( $status );
 	nocache_headers();
 	header( 'Vary: Accept', false );

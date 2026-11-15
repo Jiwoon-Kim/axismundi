@@ -381,6 +381,6 @@ function axismundi_op_run_transformer( array $transformer, $source ) {
 	if ( ! is_array( $result ) ) {
 		return new WP_Error( 'ax_op_transform_result', __( 'A transformer must return an array or WP_Error.', 'axismundi-object-projections' ) );
 	}
-	$local_deleted = $source instanceof Axismundi_OP_Local_Source ? 'tombstone' === $source->row['object_status'] : null;
+	$local_deleted = $source instanceof Axismundi_OP_Local_Source ? axismundi_op_local_object_is_deleted( $source->row ) : null;
 	return axismundi_op_finalize_object( $result, $expected_id, ! empty( $transformer['local'] ), $local_deleted );
 }

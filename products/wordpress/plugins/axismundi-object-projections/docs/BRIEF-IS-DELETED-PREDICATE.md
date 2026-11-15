@@ -87,18 +87,21 @@ ax_object_index   객체 축.  10컬럼, 페이로드 없음, 재생성 가능  
                 op/hashtags.php 300, op/thread-edges.php 350 509,
                 op/remote-objects.php 전부, op/mentions.php 131,
                 op/inbox-observations.php 58, op/tag-references.php 238 240
-미확인          activities/admin-workflows.php 179, activities/community-replies.php 99,
-                activities/community-posts.php 84 ($local 분기), activities/like-block.php 19,
-                actors/featured.php 92 187 189, op/object-read-api.php 150
+추가 확인: 로컬  activities/admin-workflows.php 179, activities/community-replies.php 99,
+                activities/community-posts.php 84 ($local 분기), actors/featured.php 92 ($local)
+추가 확인: 원격  activities/like-block.php 19, actors/featured.php 187 189 ($cached),
+                op/object-read-api.php 150 (Axismundi_Op_Remote_Source)
 ```
 
-**미확인 줄은 추측하지 말고 행의 출처 함수를 따라가 판정하고, 판정 결과를 이 표에 적는다.**
-`like-block.php:19` 은 변수명이 `$remote` 라 원격으로 보이지만 확인은 필요하다.
+로컬 행은 `axismundi_op_get_local_object()`에서, 원격 행은
+`axismundi_op_get_remote_object()` 또는 이를 감싼 원격 소스에서 온다.
+명시적인 활성 요구, SQL 조건 및 표시값은 그대로 둔다.
 
 ### ③ 감사 — 소스 스캔이고, 그 스캔을 먼저 깨 본다
 
-통과만으로는 **누락을 못 잡는다.** 단정은 "로컬 행을 읽는 파일에서 `'tombstone'` 과
-`'active'` 리터럴 비교가 술어 밖에 남아 있지 않다" 다. 구현 파일 목록은 ②의 로컬 목록이다.
+통과만으로는 **누락을 못 잡는다.** `audit-local-object-is-deleted.php`는 확인한 로컬 소비
+파일에서 `object_status`와 `'tombstone'`을 함께 쓰는 직접 판정을 찾는다.
+술어 본체, SQL 갱신과 확인된 원격 캐시 분기는 제외한다.
 
 ```txt
 필수   known-positive 로 먼저 깨 본다 — 교체한 자리 하나를 리터럴 비교로 되돌리고

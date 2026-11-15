@@ -297,21 +297,36 @@ Account    ↔ 그 Actor 의 데이터 컨테이너 (API 층)
 **AP 의 Actor 는 JMAP 이 Principal 과 Identity 로 쪼갠 것을 하나로 들고 있다.** 연합
 식별자와 inbox·outbox 를 같은 객체가 갖기 때문이다. 앞 절의 inbox 논증과 같은 뿌리다.
 
-### 지금 어긋나 있는 곳 (2026-11-16 측정)
+### 소유는 JMAP 플러그인에 있다 — Principal 은 `accountId` 기반으로 둔다
 
-Todo PoC 의 Principal 은 **WP 사용자**다 — `principal_objects( int $user )`, `user_id` 로
-행을 잡고, `shareWith` 는 서버에 존재하는 WP 사용자 Principal ID 만 받는다.
+기록된 경계 그대로다 — *"Actors 는 Account 아이덴티티·개인 귀속·기존 운영 관계를 제공한다.
+JMAP 은 별도 opaque Principal ID, WP 사용자/Account 연결, … 자원별 공유를 소유한다."*
+**Principal 을 Actors 플러그인으로 올리지 않는다.**
+
+필요한 것은 그보다 작다. Account 는 이미 `'a' . $identity_id` 이고
+`axismundi_actors_workspace_options()` 에서 나온다 — **모든 Account 가 이미 Actor 하나**다.
+그러니 Principal 을 `accountId` 로 키 잡으면 **엔티티 대응이 공짜로 따라온다.**
 
 ```txt
-PoC      Principal = WP user
-RFC 9670 Principal = 엔티티.  우리에게 그 엔티티는 **Actor** 다
-현재     PoC 범위에서는 문제가 아니다.  Todo 는 WP 사용자 사이의 공유만 다룬다
-언제 갈리나  공유 대상이 **원격 Actor** 이거나 **Group Actor** 가 되는 순간.
-         WP 사용자에는 그 둘에 해당하는 행이 없다
+지금      principal_objects( int $user ) — WP user_id 로 행을 잡는다
+가야 할 곳  accountId 기반.  Account 가 이미 Actor 이므로 Principal = 그 Account 의 엔티티
+결과      Group·Organization Actor 도 자동으로 포함된다 — 이미 Account 를 갖는다
+          (2026-11-15 실측: isPersonal=false 인 Account 셋)
+소유      JMAP 플러그인.  Actors 는 Account 아이덴티티만 제공한다
 ```
 
-**지금 바꾸지 않는다.** 다만 Contacts·Calendar 공유를 세울 때 Principal 을 Actor 로 올리는
-것이 전제이고, 그때 PoC 의 디렉터리 정책을 그대로 승격하지 않는다는 것을 적어 둔다.
+#### 앞서 "어긋남" 이라 적은 것의 정정
+
+원격 Actor 와 공유할 수 없는 것은 **결함이 아니라 범위선**이다.
+
+```txt
+원격 Actor   우리 서버에 Account 가 없다 → JMAP Principal 도 없다.  그게 맞다
+JMAP 공유     로컬이다.  accountId 가 있는 엔티티 사이의 ACL
+연합 참여     AP 활동이 한다.  초대·RSVP 는 Calendar 가 활동으로 처리한다
+```
+
+둘을 섞으면 JMAP ACL 이 연합 권한을 주는 것처럼 보인다. 그 분리는 이미 기록돼 있다 —
+수락은 목록 추가이지 권한 부여가 아니고, Federation 은 공식 ActivityPub 에 위임한다.
 
 ## 세 층의 등록 — 개념은 맞고, 우리 코드는 아직 둘을 뭉쳐 둔다
 

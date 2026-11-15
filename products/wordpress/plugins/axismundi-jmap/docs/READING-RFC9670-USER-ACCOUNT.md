@@ -88,9 +88,13 @@ directory service or other user management system."*
 "디렉터리 서비스에서 직접 매핑될 것" 이라고 예상한다는 점은 적어 둔다 — 우리 디렉터리는
 Actors 다.
 
-## `Principal.type` 은 iCalendar 의 CUTYPE 이다
+## `Principal.type` — CUTYPE 이 **유사한 선례**다 (파생은 아니다)
 
-일반 공유 스펙에 있기엔 이상한 열거형인데, 출처가 있다.
+일반 공유 스펙에 있기엔 이상한 열거형인데, 모양을 설명해 주는 선례가 있다.
+
+**과장하지 말 것.** RFC 9670 본문에 `5545`·iCalendar·CalDAV·CUTYPE 참조가 **0건**이다
+(2026-11-16 전수 grep). 값이 대응한다는 사실만으로 파생을 단정할 수 없다. 아래는
+**값 대응과 예시의 성격**이고, 그것이 설명하는 것은 "왜 이런 모양인가" 까지다.
 
 ```txt
 RFC 5545 §3.2.3 CUTYPE   INDIVIDUAL / GROUP / RESOURCE / ROOM     / UNKNOWN
@@ -135,20 +139,35 @@ location     CUTYPE(ROOM)·JMAP·JSContact 에 있고 **AS2 Actor 타입에는 �
 catch-all    CUTYPE UNKNOWN, JMAP other.  **JSContact 에는 없다**
 ```
 
-#### JSContact 이 AS2 에 가장 가깝다 — 그래서 손실은 JMAP 쪽에서 난다
+#### 이 표는 **참고 자료**다 — 하나를 다른 쪽의 원본으로 삼지 않는다
+
+세 필드는 서로 다른 질문에 답한다. 값이 겹친다고 같은 것이 아니다.
 
 ```txt
-Person       → kind individual   → Principal individual
-Group        → kind group        → Principal group
-Organization → kind **org**      → Principal group 또는 other   ← **손실**
-Service      → kind application  → Principal other              ← **손실**
-Application  → kind application  → Principal other              ← **손실**
+AS2 type             **Actor 문서**의 타입
+JSContact kind       그 **연락처가 나타내는 대상**의 분류
+JMAP Principal.type  **JMAP 디렉터리**의 분류 (query 필터용)
+Account              이 분류를 **넣지 않는다**.  type 이 없다
 ```
 
-권고: Organization 은 Principal 쪽에서 **`group`** 으로 평탄화한다. `other` 는 분류 포기
-값이라 `Principal/query` 필터에서 쓸모가 없고, CUTYPE 의 GROUP 이 "a group of individuals"
-라 조직이 그 자리에 들어가는 것이 자연스럽다. **평탄화라는 사실을 같이 적는다** — 되돌릴 수
-없다.
+**권한을 타입에서 유도하지 않는다.** Principal 이 `group` 이라는 이유로 무엇을 허용하거나
+금지하지 않는다. 권한은 `shareWith` 와 `myRights` 가 답한다.
+
+#### 두 매핑은 성격이 다르다 — 섞어 적지 말 것
+
+```txt
+Organization → kind "org"            **표현 매핑**.  JSContact 이 조직을 조직으로 적는다.
+                                     형식이 그 값을 들고 있으므로 선택의 여지가 적다
+Organization → Principal "group"     **제품 정책**.  JMAP 공유 디렉터리에서 조직을 group 으로
+                                     검색되게 할 것인가.  RFC 가 정해 주지 않는다
+```
+
+정책 쪽 권고는 `group` 이다 — `other` 는 분류 포기라 `Principal/query` 필터에서 쓸모가 없다.
+**다만 채택하면 그 값으로 원래 Actor 타입을 역산하지 않는다.** `group` 인 Principal 이
+Group Actor 인지 Organization Actor 인지는 그 필드로 알 수 없고, 알아야 하면 Actor 를 본다.
+
+같은 방향으로 `Service`·`Application` 은 JSContact 에서 `application` 이고 Principal 에서는
+`other` 다. 역산 금지가 여기에도 걸린다.
 
 #### 측정된 함정 — `kind` 기본값이 `individual` 이다
 
@@ -163,7 +182,8 @@ Actor type → kind   **매핑이 저장소에 없다** (2026-11-16 grep)
 
 그래서 Actor 에서 Card 를 만드는 경로가 생기면 **Group·Organization·Service 가 전부
 "한 사람" 으로 기록된다.** 조용히 틀리고, 나중에 고치려면 어느 행이 진짜 개인인지 알 수 없다.
-**Actor 에서 Card 를 만들기 전에 매핑을 먼저 쓴다.**
+**Actor 에서 Card 를 만들기 전에 매핑을 먼저 쓴다.** 그 매핑은 **변환 경계**에서 정하고,
+Principal 의 Account 기반 키 전환과 **분리한다** — 둘은 서로 의지하지 않는다.
 
 새 의미를 발명하지 말 것. 이 필드는 "사람인가 방인가" 를 묻는 자리이고 우리 Actor 타입에서
 유도된다.

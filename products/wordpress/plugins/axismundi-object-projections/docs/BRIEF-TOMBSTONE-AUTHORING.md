@@ -6,7 +6,7 @@ that isn't a subtype of Activity."* `Tombstone` 은 Object 이므로 그 MUST �
 ## 세 가지가 서로 다른 것을 말한다
 
 ```txt
-object_type     **저작된 타입**.  Create 에서 정해지고 바뀌지 않는다
+object_type     **저작된 타입**.  처음 저장될 때 정해지고 바뀌지 않는다
 document        지금 내주는 표현.  삭제되면 Tombstone 본문이 된다
 object_status   이 URI 가 실제로 삭제됐는가
 ```
@@ -181,6 +181,30 @@ server_set    저자가 formerType · deleted 를 실어도 저장되지 않는�
 처리하는지 재기 전에는 조일 근거가 없고, 재서 아무 일도 없으면 조일 것도 없다. 이 슬라이스는
 그 측정을 가능하게 만드는 것까지다.
 
-4f05 에 대한 별도 지적은 이 슬라이스와 무관하게 남아 있다 — 수신 절의 `MUST` fetch 가 그
-문서 자신의 캐시 전제와 어긋나고, `Update(Tombstone)` 기각 사유가 한 줄이다. 우리가 수신
-Delete 를 구현하지 않았으므로 **"대안을 구현해 봤다" 고는 말할 수 없다.**
+### §6.4 는 Tombstone 에 410 을 강제하지 않는다
+
+문장의 조건절이 **삭제된 객체**에 걸려 있다 — *"If the deleted object is requested … 410 …
+if a Tombstone object is presented as the response body, otherwise … 404."*
+
+```txt
+삭제됨 + Tombstone 본문     410 (SHOULD)
+삭제됨 + 본문 없음           404
+삭제 아님 + Tombstone 본문   §6.4 가 말하지 않는다 → 200 이 위반이 아니다
+```
+
+그래서 저작된 Tombstone 을 200 으로 내는 것은 편의가 아니라 **문장이 닿지 않는 자리**다.
+
+### 4f05 에 대한 지적 셋 (이 슬라이스와 무관하게 남는다)
+
+```txt
+① 수신 절의 MUST fetch 가 그 문서 자신의 캐시 전제(line 23)와 어긋난다
+② Update(Tombstone) 기각 사유가 한 줄이고, Update 와 Delete 는 "객체가 아직 있는가" 에서
+   갈리므로 "같은 효과" 가 아니다
+③ **soft delete 의 200-level 이 AP §6.4 의 SHOULD 와 정면으로 반대다.**
+   같은 조건(삭제됨 + Tombstone 본문)에 base spec 은 410 을, 4f05(line 33)는 200 을 권하고,
+   4f05 는 그 충돌을 언급하지 않는다
+```
+
+③이 가장 객관적이다 — 추론이 아니라 두 문서의 같은 조건에 대한 상반된 SHOULD 다.
+
+우리가 수신 Delete 를 구현하지 않았으므로 **"대안을 구현해 봤다" 고는 말할 수 없다.**

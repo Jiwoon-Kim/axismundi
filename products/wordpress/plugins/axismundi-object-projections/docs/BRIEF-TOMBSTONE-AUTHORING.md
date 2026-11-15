@@ -200,37 +200,73 @@ if a Tombstone object is presented as the response body, otherwise … 404."*
 ① 수신 절의 MUST fetch 가 그 문서 자신의 캐시 전제(line 23)와 어긋난다
 ② Update(Tombstone) 기각 사유가 한 줄이고, Update 와 Delete 는 "객체가 아직 있는가" 에서
    갈리므로 "같은 효과" 가 아니다
-③ **4f05 가 soft delete 에 배정한 쌍이 이미 다른 용도로 차 있다.**
-   아래가 전문이다
+③ **`410 + Tombstone` 이 수신 규칙 두 개에 동시에 들어간다.** 아래가 전문이다
 ```
 
-### ③ — 저작물과 시스템 표현이 같은 타입을 쓴다
+### ③ — 수신 절의 두 축이 엇갈려 있다
+
+4f05 Receivers 는 *"based on the received response code **or** object `type`"* 로 분기한다.
+상태코드와 타입을 섞어 쓰면서 둘이 분할한다고 가정하는데, 분할하지 않는다.
 
 ```txt
-Create(Tombstone)        저작물.  저자가 쓴 것이고 저자의 것이다
-is_deleted 의 Tombstone  시스템 표현.  시스템이 정한 것만 내준다
+### Tombstone          → SHOULD be soft deleted
+### Not a Tombstone    → update local representation
+### HTTP 404 or 410    → SHOULD be hard deleted
 ```
 
-둘은 같은 `type` 을 쓰고, **가르는 것은 상태 코드**다.
+```txt
+410 + Tombstone 본문    "Tombstone" 행      → soft delete
+                       "404 or 410" 행     → hard delete
+                       **두 행에 동시에 맞고 결과가 반대다.  우선순위 규정이 없다**
+```
+
+그리고 그 조합이 바로 **AP §6.4 가 권고하는 삭제 응답**이다. 적합하게 구현한 서버가 내는
+응답에서 4f05 가 갈리지 못한다.
+
+**`Unexpected responses` 는 이 모호성을 풀지 않는다.** 그 절(과 그것을 낳은 댓글 #6·#8)이
+답하는 것은 *활동과 재조회 결과가 다르면 무엇을 따르는가* — "the retrieved state supercedes
+the activity" — 이고, 이 질문은 *한 재조회 결과가 두 분기에 동시에 맞으면 무엇을 따르는가*
+다. 이 구분을 먼저 쓰지 않으면 그 절을 가리키는 한 줄로 닫힌다.
+
+#### 저작 사례는 보조 근거다
+
+`Create(Tombstone)` 실측은 **두 신호를 왜 갈라야 하는지** 보여주는 예로만 쓴다.
 
 ```txt
 §6.2.1   Activity 가 아닌 유효한 AS2 객체를 **MUST accept**.  Tombstone 이 포함된다
          → 저작된 Tombstone 은 우리가 고른 것이 아니라 스펙이 강제한 경우다
 저작물    조회가 허용되면 200.  §6.4 의 조건절은 삭제된 객체에만 걸리므로 위반이 아니다
-§6.4     삭제 표현은 Tombstone 본문일 때 410 — **410 이 시스템 표현의 신호다**
-4f05     soft delete 에 200 + Tombstone 을 배정한다.
-         적합한 서버가 저작물에 대해 **이미 내고 있는 바로 그 쌍**이다
+결론      **`200 + Tombstone` 만으로는 삭제를 증명하지 못한다**
 ```
 
-그러므로 "soft deletion 을 200 + Tombstone 으로 표현한다" 는 비어 있는 자리를 쓰는 것이 아니다.
+실측: 저작 Tombstone 이 canonical 에서 `HTTP 200 { @context, id, type }` 로 나온다
+(2026-11-15). "누가 그러겠나" 에 돌아가는 구현으로 답할 수 있다.
 
-**과장하지 말 것.** `deleted` 는 AS2 에서 optional 이므로, soft 삭제자가 항상 싣는다면 그 유무로
-갈리기는 한다. 정확한 주장은 "구별 불가능" 이 아니라 **"4f05 가 구별할 속성을 지정하지
-않는다"** 다. 그렇게 쓰지 않으면 그 한 줄로 반박당한다.
+#### 주장하지 말 것
 
-이것이 ①②보다 센 이유는 기전이 있기 때문이다 — 두 문서의 SHOULD 가 다르다는 대조를 넘어,
-**그 쌍이 왜 이미 차 있는지**를 §6.2.1 에서 끌어낸다. 그리고 우리는 그것을 구현했으므로
-"누가 그러겠나" 에 **돌아가는 구현**으로 답할 수 있다 — 저작 Tombstone 이 canonical 에서
-`HTTP 200 { @context, id, type }` 로 나오는 것을 실측했다(2026-11-15).
+```txt
+"4f05 표에 저작 Tombstone 칸이 없다 ⇒ 결함"
+    표는 Delete 를 받은 뒤 도는 것이므로 거기에 일반 저작 사례가 없는 것은 결함이 아니다
+"구별 불가능"
+    deleted 는 AS2 에서 optional 이지만, soft 삭제자가 항상 싣는다면 유무로 갈리기는 한다
+```
+
+#### 25개 댓글에서 이미 다룬 것 — 중복해서 올리지 말 것
+
+```txt
+#14 #15 #17  강제 fetch 의 thundering herd, 음성 캐시 비용, xsd:dateTime 분해능
+#16 #19      임베드하면 MUST 가 안 걸린다 / MUST→SHOULD 완화 의향
+             (본문 49행은 **아직 MUST 다** — 개정되지 않았다, 2026-11-15 확인)
+#3 #4        "임베드된 Tombstone 이면 soft" 판별자 제안 → 반려.
+             판별자 질문은 역사가 있다.  단 **본문 축에서만** 다뤄졌고 상태코드 축은 비어 있다
+#6 #8        활동 ↔ 재조회 결과 불일치 → Unexpected responses 절이 여기서 나왔다
+#18 (trwnh)  Delete/Undo(Delete) ∥ Update(type=Tombstone) 두 모델, Tombstone 도 Object 라
+             content·attributedTo 를 가질 수 있다.  **가장 가까운 선행**
+             다만 #18 의 Tombstone 은 여전히 **삭제된** 것이다.  삭제되지 않은 Tombstone 은
+             어느 댓글에도 없다 — 거기가 §6.2.1 이 들어오는 자리다
+```
+
+덧붙일 것: 4f05 는 `Update(Tombstone)` 을 "superfluous" 한 줄로 기각하는데, 그것이
+**#18 이 제안한 모델**이다.
 
 우리가 수신 Delete 를 구현하지 않았으므로 **"대안을 구현해 봤다" 고는 말할 수 없다.**

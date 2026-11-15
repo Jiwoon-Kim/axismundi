@@ -88,6 +88,45 @@ directory service or other user management system."*
 "디렉터리 서비스에서 직접 매핑될 것" 이라고 예상한다는 점은 적어 둔다 — 우리 디렉터리는
 Actors 다.
 
+## `Principal.type` 은 iCalendar 의 CUTYPE 이다
+
+일반 공유 스펙에 있기엔 이상한 열거형인데, 출처가 있다.
+
+```txt
+RFC 5545 §3.2.3 CUTYPE   INDIVIDUAL / GROUP / RESOURCE / ROOM     / UNKNOWN
+RFC 9670 §2  type        individual / group / resource / location / other
+```
+
+다섯 값이 1:1 이고 `ROOM → location`, `UNKNOWN → other` 로 소문자화했다. **Principal 은
+일정 디렉터리 항목을 공유 대상으로 일반화한 것**이고, 그래서 같은 객체에 일정용 필드가
+셋 있다 — `type`, `timeZone`, `email`(addr-spec).
+
+본문의 예시도 전부 그쪽이다: *"a room or projector"*, *"a calendar representing a
+location"*, *"Jane Doe" or "Room 4B"*.
+
+```txt
+기계적 용도   §2.4.1 의 Principal/query 필터.  "The type must be exactly as given to match"
+            → "회의실만 보여줘" 가 이 필드의 일이다
+그 밖        9670 은 클라이언트가 type 으로 무엇을 하라고 정하지 않는다
+주의         §6 이 편집 가능·위조 가능 필드로 name 과 함께 type 을 든다
+```
+
+Stalwart 가 `urn:ietf:params:jmap:principals:availability` 를 광고하는 것도 같은 계보다
+(2026-11-15 실측) — availability 는 free/busy 다.
+
+### 우리 쪽 매핑
+
+```txt
+Person                  → individual
+Group                   → group
+Organization            → group 또는 other.  **정하고 적는다**
+Service · Application   → other
+resource · location     쓰지 않는다.  장소·설비를 Actor 로 모델링하지 않는 한
+```
+
+새 의미를 발명하지 말 것. 이 필드는 "사람인가 방인가" 를 묻는 자리이고 우리 Actor 타입에서
+유도된다.
+
 ## 부수 확인
 
 ```txt

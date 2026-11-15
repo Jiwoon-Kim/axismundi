@@ -88,105 +88,71 @@ directory service or other user management system."*
 "디렉터리 서비스에서 직접 매핑될 것" 이라고 예상한다는 점은 적어 둔다 — 우리 디렉터리는
 Actors 다.
 
-## `Principal.type` — CUTYPE 이 **유사한 선례**다 (파생은 아니다)
+## `Principal.type` — 채워야 하는 분류 칸 하나
 
-일반 공유 스펙에 있기엔 이상한 열거형인데, 모양을 설명해 주는 선례가 있다.
+§2 가 다섯 값 중 하나를 **MUST** 로 요구한다: `individual` · `group` · `resource` ·
+`location` · `other`. 기계적 용도는 하나다 — §2.4.1 의 `Principal/query` 필터,
+*"The type must be exactly as given to match"*. **"회의실만 보여줘"** 가 이 필드의 일이다.
+그 밖에 클라이언트가 무엇을 하라는 규정은 없고, §6 은 `name` 과 함께 편집·위조 가능 필드로
+꼽는다.
 
-**과장하지 말 것.** RFC 9670 본문에 `5545`·iCalendar·CalDAV·CUTYPE 참조가 **0건**이다
-(2026-11-16 전수 grep). 값이 대응한다는 사실만으로 파생을 단정할 수 없다. 아래는
-**값 대응과 예시의 성격**이고, 그것이 설명하는 것은 "왜 이런 모양인가" 까지다.
+모양이 일정 쪽인 것은 선례가 있어 보인다 — iCal CUTYPE(§3.2.3)이 값 다섯 개를 거의 같이
+들고 있고, 9670 의 예시도 *"a room or projector"*, *"Room 4B"* 다. 다만 RFC 9670 본문에
+`5545`·iCalendar·CalDAV·CUTYPE 참조가 **0건**이므로(2026-11-16 전수 grep) 파생이라고
+단정하지 않는다. **설명이 되는 선례까지**다.
 
-```txt
-RFC 5545 §3.2.3 CUTYPE   INDIVIDUAL / GROUP / RESOURCE / ROOM     / UNKNOWN
-RFC 9670 §2  type        individual / group / resource / location / other
-```
-
-다섯 값이 1:1 이고 `ROOM → location`, `UNKNOWN → other` 로 소문자화했다. **Principal 은
-일정 디렉터리 항목을 공유 대상으로 일반화한 것**이고, 그래서 같은 객체에 일정용 필드가
-셋 있다 — `type`, `timeZone`, `email`(addr-spec).
-
-본문의 예시도 전부 그쪽이다: *"a room or projector"*, *"a calendar representing a
-location"*, *"Jane Doe" or "Room 4B"*.
+## 비슷한 어휘를 쓰는 분류가 셋 있다 — **같은 필드가 아니다**
 
 ```txt
-기계적 용도   §2.4.1 의 Principal/query 필터.  "The type must be exactly as given to match"
-            → "회의실만 보여줘" 가 이 필드의 일이다
-그 밖        9670 은 클라이언트가 type 으로 무엇을 하라고 정하지 않는다
-주의         §6 이 편집 가능·위조 가능 필드로 name 과 함께 type 을 든다
+AS2 Actor type        Actor **문서**의 타입.  Person · Group · Organization · Service · Application
+JSContact kind §2.1.4 그 **연락처가 나타내는 대상**.  individual · group · org · location ·
+                      device · application.  catch-all 이 없고 기본값이 individual 이다
+JMAP Principal.type   **JMAP 디렉터리**의 분류.  위 다섯 값.  query 필터용이다
+Account               분류가 **없다**.  name · isPersonal · isReadOnly · accountCapabilities
 ```
 
-Stalwart 가 `urn:ietf:params:jmap:principals:availability` 를 광고하는 것도 같은 계보다
-(2026-11-15 실측) — availability 는 free/busy 다.
-
-### 같은 질문의 열거형이 **넷**이다 — 호환되지 않는다
+어휘가 겹치지만 **서로를 대체할 수 있는 연산이 없다.** 한쪽 값을 다른 쪽의 근거로 쓰지
+않는다. 그래서 이 문서는 **매핑표를 두지 않는다** — 값을 나란히 늘어놓으면 변환이 있는 것처럼
+읽히고, 없는 "손실" 이 보이기 시작한다.
 
 ```txt
-                     individual  group  org    location  resource  device  application  catch-all
-iCal CUTYPE §3.2.3   INDIVIDUAL  GROUP  —      ROOM      RESOURCE  —       —            UNKNOWN
-JMAP Principal §2    individual  group  —      location  resource  —       —            other
-JSContact kind §2.1.4 individual group  org    location  —         device  application  **없음**
-AS2 Actor types      Person      Group  Organization  —   —       —       Service·Application  —
+쓰지 말 것   "Actor type → kind → Principal.type" 같은 파생 연쇄.  그런 경로는 없다
+             한쪽 값에서 다른 쪽을 **역산**하는 것.  group 인 Principal 이 Group 인지
+             Organization 인지는 그 필드로 알 수 없다.  알아야 하면 Actor 를 본다
+             **권한을 타입에서 유도하는 것.**  group 이라서 무엇을 허용하지 않는다 —
+             권한은 shareWith 와 myRights 가 답한다
+쓸 수 있는 것  나중에 동기화하거나 새 레코드를 만들 때의 **참조값**.  편의이고 규칙이 아니다
 ```
 
-**셋 이상이 합의하는 값은 `individual` 과 `group` 뿐이다.** 나머지는 전부 갈린다.
+### 값을 적어야 하는 자리는 그 자리에서 정한다
+
+각 필드는 **자기 목적에 맞는 값**을 갖는다. 다른 필드를 보고 결정하지 않는다.
 
 ```txt
-org          JSContact 와 AS2 에만 있다.  JMAP·CUTYPE 에는 없다 → 거기서 **손실된다**
-application  JSContact 와 AS2 에만 있다.  JMAP 에서는 other 로 간다
-resource     CUTYPE·JMAP 에만.  JSContact 의 device 가 가장 가깝다
-location     CUTYPE(ROOM)·JMAP·JSContact 에 있고 **AS2 Actor 타입에는 없다**
-             (AS2 Place 는 객체이지 actor 가 아니다)
-catch-all    CUTYPE UNKNOWN, JMAP other.  **JSContact 에는 없다**
+Principal.type   "이 디렉터리 항목이 필터에서 어떻게 잡혀야 하나"
+JSContact kind   "이 Card 가 무엇을 나타내나"
+AS2 type         Actor 문서가 선언하는 것.  이미 정해져 있다
 ```
 
-#### 이 표는 **참고 자료**다 — 하나를 다른 쪽의 원본으로 삼지 않는다
+조직을 디렉터리에서 `group` 으로 잡히게 할지 `other` 로 둘지는 **제품 정책**이고 RFC 가
+정해 주지 않는다. 정하면 그 이유를 적되, 그것을 Actor 타입의 번역이라고 부르지 않는다.
 
-세 필드는 서로 다른 질문에 답한다. 값이 겹친다고 같은 것이 아니다.
+### 코드에 실제로 걸리는 것 하나 — `kind` 기본값
 
-```txt
-AS2 type             **Actor 문서**의 타입
-JSContact kind       그 **연락처가 나타내는 대상**의 분류
-JMAP Principal.type  **JMAP 디렉터리**의 분류 (query 필터용)
-Account              이 분류를 **넣지 않는다**.  type 이 없다
-```
-
-**권한을 타입에서 유도하지 않는다.** Principal 이 `group` 이라는 이유로 무엇을 허용하거나
-금지하지 않는다. 권한은 `shareWith` 와 `myRights` 가 답한다.
-
-#### 두 매핑은 성격이 다르다 — 섞어 적지 말 것
-
-```txt
-Organization → kind "org"            **표현 매핑**.  JSContact 이 조직을 조직으로 적는다.
-                                     형식이 그 값을 들고 있으므로 선택의 여지가 적다
-Organization → Principal "group"     **제품 정책**.  JMAP 공유 디렉터리에서 조직을 group 으로
-                                     검색되게 할 것인가.  RFC 가 정해 주지 않는다
-```
-
-정책 쪽 권고는 `group` 이다 — `other` 는 분류 포기라 `Principal/query` 필터에서 쓸모가 없다.
-**다만 채택하면 그 값으로 원래 Actor 타입을 역산하지 않는다.** `group` 인 Principal 이
-Group Actor 인지 Organization Actor 인지는 그 필드로 알 수 없고, 알아야 하면 Actor 를 본다.
-
-같은 방향으로 `Service`·`Application` 은 JSContact 에서 `application` 이고 Principal 에서는
-`other` 다. 역산 금지가 여기에도 걸린다.
-
-#### 측정된 함정 — `kind` 기본값이 `individual` 이다
-
-JSContact 에는 catch-all 이 없고 §2.1.4 의 기본값이 `individual` 이다. 우리 코드는 그 기본값을
-**실체화**한다.
+위의 어떤 것과도 무관하게, 이것만은 지금 위험하다. JSContact §2.1.4 는 catch-all 이 없고
+기본값이 `individual` 이다.
 
 ```txt
 cards.php:218-219   kind 가 없으면 'individual' 을 넣는다 (기본값과 일치 — 맞다)
 admin.php:451       새 Card 는 kind: 'individual' 로 시작한다
-Actor type → kind   **매핑이 저장소에 없다** (2026-11-16 grep)
 ```
 
-그래서 Actor 에서 Card 를 만드는 경로가 생기면 **Group·Organization·Service 가 전부
-"한 사람" 으로 기록된다.** 조용히 틀리고, 나중에 고치려면 어느 행이 진짜 개인인지 알 수 없다.
-**Actor 에서 Card 를 만들기 전에 매핑을 먼저 쓴다.** 그 매핑은 **변환 경계**에서 정하고,
-Principal 의 Account 기반 키 전환과 **분리한다** — 둘은 서로 의지하지 않는다.
+그래서 **Actor 에서 Card 를 만드는 경로가 생기면 `kind` 를 반드시 명시해야 한다.** 빠뜨리면
+Group·Organization·Service 가 전부 "한 사람" 으로 기록되고, 조용히 틀리고, 나중에는 어느
+행이 진짜 개인인지 구별할 수 없다.
 
-새 의미를 발명하지 말 것. 이 필드는 "사람인가 방인가" 를 묻는 자리이고 우리 Actor 타입에서
-유도된다.
+이 규칙은 **그 변환 경계 하나에만** 걸린다. Principal 의 Account 기반 키 전환과 분리하고,
+위의 분류 논의와도 분리한다 — 세 가지가 서로 기다릴 이유가 없다.
 
 ## 부수 확인
 

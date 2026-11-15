@@ -6,19 +6,44 @@ Tombstone 슬라이스가 닫히면서 `object_status` 를 읽는 자리가 늘�
 
 ## 먼저 측정한 것 — 술어는 전역이 아니다
 
-`object_status` 는 한 컬럼이 아니라 **네 테이블의 컬럼**이고 소유자가 다르다.
+`object_status` 는 한 컬럼이 아니라 **네 테이블의 컬럼**이고 소유자가 다르며, 그중 하나는 사영이다.
 
 ```txt
-ax_notes                      varchar(16)  axismundi-note 소유.  envelope 생명주기
-ax_op_local_objects           varchar(12)  OP 소유.  이 슬라이스의 대상
-ax_op_remote_objects          varchar(12)  OP 소유.  수신 관찰 결과
-ax_op_object_listing(사영)     varchar(12)  OP 소유.  목록 질의용 복제
+ax_op_local_objects   varchar(12)  OP 소유.  **이 슬라이스의 대상**
+ax_remote_objects     varchar(12)  OP 소유.  수신 관찰 결과
+ax_object_index       varchar(12)  OP 소유.  조인용 사영 — 아래
+ax_notes              varchar(16)  axismundi-note.  **컷오프 대상이라 손대지 않는다**
 ```
 
 로컬의 `tombstone` 은 **우리가 기록한 Delete** 이고, 원격의 `tombstone` 은 **상대가 그렇다고
 알려준 것**이다. 같은 문자열이지만 권위가 다르다. 술어 하나로 네 곳을 쓸면 그 구분이 사라진다.
 
 **이 슬라이스는 `ax_op_local_objects` 만 손댄다.** 나머지 셋은 그대로 둔다.
+
+### `ax_object_index` 는 원장의 중복이 아니다 — 측정함
+
+권위는 `ax_activities` 다. 사영은 **원장이 혼자 못 하는 조인의 반대쪽**이다.
+
+```txt
+ax_activities     활동 축.  "어떤 활동이 있었나"              ← 권위
+ax_object_index   객체 축.  10컬럼, 페이로드 없음, 재생성 가능  ← 조인 대상
+```
+
+피드 질의(`activities/repository.php:1084`)가 한 SQL 안에서 객체 쪽 사실을 WHERE 에 쓴다 —
+`publicly_listable` · `attributed_to_uri_hash` · `has_group_context` · `is_reply`. 그 사실은
+**로컬 테이블과 원격 테이블 둘로 나뉘어** 있어서, 원장 행을 "둘 중 어느 쪽인지 모르는 테이블"
+에 인덱스 타고 조인할 수 없다. URI 해시로 묶은 조인 대상이 그래서 필요하고, `source` 가 어느
+저장소에서 왔는지를 적는다.
+
+원장에 컬럼을 붙이면 안 되는 이유도 같은 자리에서 나온다 — 객체 하나에 활동이 여럿이다
+(Create + Announce N개). 비정규화하면 활동마다 복제되고 객체 가시성이 바뀔 때 전부 낡는다.
+
+권위 관계는 코드에 이미 적혀 있다 (`admin-publishing-filters.php:293`):
+
+> A missing or zero projection is not proof of non-publication. Check the ledger by URI.
+
+**사영의 `object_status` 는 건드리지 않는다.** 사영 행은 원본에서 파생되므로, 술어는 원본을
+읽는 자리에만 들어간다.
 
 ## 이름
 

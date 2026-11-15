@@ -17,10 +17,9 @@ RFC 9670 §4.1 Example    TodoList 공유 예제 — TodoListRights, 세 공통 
 
 ```txt
 §5.7 이 호출하는 것   Todo/set  Todo/query  Todo/queryChanges  Todo/get  Todo/copy  Todo/changes
-우리가 가진 것        Todo/get  Todo/set  Todo/changes  TodoList/get  TodoList/set
+우리가 가진 것        Todo/get  Todo/set  Todo/changes  TodoList/get  TodoList/set  TodoList/changes
                      Principal/get  Principal/changes  Core/echo
 없는 것              **Todo/query  Todo/queryChanges  Todo/copy**
-                     TodoList/changes
                      Principal/set  Principal/query  Principal/queryChanges
                      ShareNotification/*  (그리고 §4.1 의 Principal capability)
 ```
@@ -102,10 +101,18 @@ A 가 끝났을 때 적을 문장은 "queryChanges 가 적합하게 거부한다
 
 ### ③ `TodoList/changes`
 
-`TodoList/get` 과 `set` 만 있어 동기화가 반쪽이다. 목록 이름 변경·공유 변경·구독 변경이
-클라이언트에 전달될 경로가 없다. ①②보다 작고 독립적이다.
+`TodoList/changes`는 이미 Todo와 같은 등록 루프 및 변경 원장을 사용한다.
+이름 변경은 `updated`로 전달한다. 공유 또는 구독 변경으로 ACL epoch가 달라지면
+기존 state로 안전한 델타를 계산할 수 없으므로 `cannotCalculateChanges`를 반환한다.
+마지막 목록의 읽기 권한이 회수되면 `accountNotFound`를 반환한다.
+통합 감사는 이름 변경의 정확한 ID, 구독 해제, 일부 공유 회수 이후 다시 조회한
+목록, 전체 접근 회수를 각각 확인한다. 공유 회수에 대해 `destroyed`를 추측하지 않는다.
 
 ### ④ `Todo/copy` (§5.4) — 두 RFC 가 만나는 자리
+
+구현: Account를 건너 복사할 때 목적지 `todoListId`를 명시한다. 복사는 양쪽의 state와 권한을
+확인한 뒤 커밋하고, 원본 삭제를 요청했으면 같은 call ID의 별도 `Todo/set`을 다음
+명시적 메서드보다 먼저 실행한다. 삭제가 거부돼도 복사본은 남는다.
 
 `/copy` 는 **Account 를 건넌다**. 인자가 `fromAccountId`, `ifFromInState`, `create`,
 `onSuccessDestroyOriginal` 이다.

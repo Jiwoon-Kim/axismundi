@@ -313,6 +313,74 @@ function save_object( string $account, string $type, ?string $id, \stdClass $val
 	return $create ? (object) array( 'id' => $id ) : new \stdClass();
 }
 
+function authorize_copy_source( string $account, Context $context ) : void {
+	try {
+		$context->authorize( $account, CAPABILITY, false );
+	} catch ( MethodError $error ) {
+		$type = $error->arguments()->type;
+		throw new MethodError( match ( $type ) {
+			'accountNotFound' => 'fromAccountNotFound',
+			'accountNotSupportedByMethod' => 'fromAccountNotSupportedByMethod',
+			default => $type,
+		} );
+	}
+}
+
+function todo_copy( \stdClass $args, Context $context ) : \stdClass {
+	$from = $args->fromAccountId ?? null;
+	$to = $args->accountId;
+	$destroy = property_exists( $args, 'onSuccessDestroyOriginal' ) ? $args->onSuccessDestroyOriginal : false;
+	if ( ! valid_id( $from ) || ! is_bool( $destroy ) ) { throw new MethodError( 'invalidArguments' ); }
+	foreach ( array( 'ifFromInState', 'ifInState', 'destroyFromIfInState' ) as $field ) {
+		if ( isset( $args->{$field} ) && ! is_string( $args->{$field} ) ) { throw new MethodError( 'invalidArguments' ); }
+	}
+	authorize_copy_source( $from, $context );
+	$created = new \stdClass();
+	$failed = new \stdClass();
+	$originals = array();
+	begin( $to, $from );
+	try {
+		authorize_copy_source( $from, $context );
+		$context->authorize( $to, CAPABILITY, true );
+		if ( ( isset( $args->ifFromInState ) && $args->ifFromInState !== state( $from, 'Todo', $context->user_id ) )
+			|| ( isset( $args->ifInState ) && $args->ifInState !== state( $to, 'Todo', $context->user_id ) ) ) {
+			throw new MethodError( 'stateMismatch' );
+		}
+		$visible = array_column( visible_objects( $from, 'Todo', $context->user_id ), null, 'id' );
+		foreach ( $args->create as $key => $input ) {
+			$key = (string) $key;
+			db_execute( 'SAVEPOINT todo_copy_item' );
+			try {
+				if ( ! valid_id( $key ) || ! $input instanceof \stdClass || ! is_string( $input->id ?? null ) ) {
+					throw new MethodError( 'invalidProperties' );
+				}
+				$id = $context->resolve_id( $input->id );
+				if ( null === $id || ! isset( $visible[ $id ] ) ) { throw new MethodError( 'notFound' ); }
+				$values = get_object_vars( $input );
+				unset( $values['id'] );
+				$source = get_object_vars( $visible[ $id ] );
+				unset( $source['id'] );
+				// Omitted properties inherit from the source, but its list is not a destination.
+				if ( $from !== $to ) { unset( $source['todoListId'] ); }
+				$created->{$key} = save_object( $to, 'Todo', null, (object) ( $values + $source ), $context );
+				$originals[ $id ] = $id;
+			} catch ( MethodError $error ) {
+				db_execute( 'ROLLBACK TO SAVEPOINT todo_copy_item' );
+				$failed->{$key} = $error->arguments();
+			}
+		}
+		commit();
+	} catch ( \Throwable $error ) { rollback(); throw $error; }
+	foreach ( $created as $key => $object ) { $context->record_created_id( (string) $key, $object->id ); }
+	if ( $destroy && $originals ) {
+		$context->schedule_copy_destroy( 'Todo', (object) array( 'accountId' => $from,
+			'ifInState' => $args->destroyFromIfInState ?? null, 'destroy' => array_values( $originals ) ) );
+	}
+	if ( $originals ) { notify_commit( $to, $context->user_id ); }
+	return (object) array( 'fromAccountId' => $from, 'accountId' => $to,
+		'created' => get_object_vars( $created ) ? $created : null, 'notCreated' => get_object_vars( $failed ) ? $failed : null );
+}
+
 function destroy_object( string $account, string $type, string $id, int $user ) : void {
 	global $wpdb;
 	if ( 'TodoList' === $type ) {
@@ -371,9 +439,13 @@ function set_objects( \stdClass $args, Context $context, string $type ) : \stdCl
 		commit();
 	} catch ( \Throwable $error ) { rollback(); throw $error; }
 	foreach ( $created as $creation => $id ) { $context->record_created_id( $creation, $id ); }
+	notify_commit( $account, $context->user_id );
+	return $result;
+}
+
+function notify_commit( string $account, int $user ) : void {
 	// Optional transports consume committed state; no Notifications/PWA dependency.
 	try {
-		do_action( 'axismundi_jmap_todo_poc_committed', $account, (object) array( 'TodoList' => state( $account, 'TodoList', $context->user_id ), 'Todo' => state( $account, 'Todo', $context->user_id ) ), $context->user_id );
+		do_action( 'axismundi_jmap_todo_poc_committed', $account, (object) array( 'TodoList' => state( $account, 'TodoList', $user ), 'Todo' => state( $account, 'Todo', $user ) ), $user );
 	} catch ( \Throwable $observer_error ) { error_log( 'JMAP Todo observer failed: ' . get_class( $observer_error ) ); }
-	return $result;
 }

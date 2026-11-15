@@ -143,6 +143,7 @@ function register( Registry $registry ) : void {
 		$registry->register_method( $type . '/changes', CAPABILITY, static fn( $a, $c ) => read_method( $a, $c, $type, true ), true );
 	}
 	$registry->register_method( 'Todo/query', CAPABILITY, __NAMESPACE__ . '\\todo_query', true );
+	$registry->register_method( 'Todo/copy', CAPABILITY, __NAMESPACE__ . '\\todo_copy', true, true );
 	$registry->register_type( 'Principal', PRINCIPALS, 'https://jmap.io/spec/rfc9670/#section-2' );
 	$registry->register_method( 'Principal/get', PRINCIPALS, __NAMESPACE__ . '\\principal_get', true );
 	$registry->register_method( 'Principal/changes', PRINCIPALS, static function ( $a, $c ) {

@@ -9,6 +9,18 @@ final class Context {
 
 	private \stdClass $created_ids;
 	private ?\Closure $account_resolver;
+	private ?array $followup = null;
+
+	/** A committed copy can request one ordinary Set call under the same call ID. */
+	public function schedule_copy_destroy( string $type, \stdClass $arguments ) : void {
+		$this->followup = array( $type . '/set', $arguments );
+	}
+
+	public function take_followup() : ?array {
+		$call = $this->followup;
+		$this->followup = null;
+		return $call;
+	}
 
 	public function __construct( public readonly int $user_id, \stdClass $created_ids, ?callable $account_resolver ) {
 		$this->created_ids = clone $created_ids;

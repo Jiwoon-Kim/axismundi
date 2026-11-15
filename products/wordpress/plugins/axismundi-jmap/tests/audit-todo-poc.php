@@ -140,6 +140,22 @@ try {
 	$session = server()->accounts();
 	$assert( property_exists( $subscription->updated, $list ) && isset( $session->accounts->{$aa}, $session->accounts->{$ab} ) && $session->accounts->{$aa}->isReadOnly, 'Subscription exposes A alongside own B Account' );
 	$assert( ! axismundi_actors_account_role( $actors[0], $b ), 'Resource sharing adds no Actors manager grant' );
+	$list_state = $call( 'TodoList/get', array( 'accountId' => $aa ) )->state;
+	wp_set_current_user( $a );
+	$rename_list = $call( 'TodoList/set', array( 'accountId' => $aa, 'update' => (object) array( $list => (object) array( 'name' => 'Renamed shared list' ) ) ) );
+	$assert( property_exists( $rename_list->updated, $list ), 'Owner renamed the shared list' );
+	wp_set_current_user( $b );
+	$list_delta = $call( 'TodoList/changes', array( 'accountId' => $aa, 'sinceState' => $list_state ) );
+	$assert( $list_state === $list_delta->oldState && $list_delta->newState !== $list_state
+		&& array( $list ) === $list_delta->updated && array() === $list_delta->created && array() === $list_delta->destroyed
+		&& false === $list_delta->hasMoreChanges, 'Shared TodoList rename is exactly one update' );
+	$wp_list = $call( 'TodoList/get', array( 'accountId' => $aa ) );
+	$assert( $wp_list->state === $list_delta->newState && 'Renamed shared list' === $wp_list->list[0]->name, 'TodoList delta and refetched snapshot agree' );
+	$unsubscribed = $call( 'TodoList/set', array( 'accountId' => $aa, 'update' => (object) array( $list => (object) array( 'isSubscribed' => false ) ) ) );
+	$assert( property_exists( $unsubscribed->updated, $list ) && ! isset( server()->accounts()->accounts->{$aa} ), 'Unsubscribing removes the last subscription from Session discovery' );
+	$assert( 'cannotCalculateChanges' === ( $call( 'TodoList/changes', array( 'accountId' => $aa, 'sinceState' => $wp_list->state ) )->type ?? null ),
+		'An unsubscribed reader with explicit access must refetch rather than reuse its old list state' );
+	$call( 'TodoList/set', array( 'accountId' => $aa, 'update' => (object) array( $list => (object) array( 'isSubscribed' => true ) ) ) );
 	// Operating grades must not manufacture ownership of private resources.
 	foreach ( array( 'manager', 'editor' ) as $grade ) {
 		$assert( true === axismundi_actors_set_principal_role( $actors[0], 'wp_user', $c, $grade ), 'Fixture operating grade assigned' );
@@ -181,6 +197,48 @@ try {
 	$call( 'Todo/set', array( 'accountId' => $aa, 'update' => (object) array( $hidden => (object) array( 'title' => 'Private edit' ) ) ) );
 	wp_set_current_user( $b );
 	$assert( $shared_query->queryState === $call( 'Todo/query', $query )->queryState, 'Private writes do not change a reader query state' );
+	$destination = $call( 'TodoList/set', array( 'accountId' => $ab, 'create' => (object) array( 'copyList' => (object) array( 'name' => 'Copy destination' ) ) ) )->created->copyList->id;
+	$source_state = $call( 'Todo/get', array( 'accountId' => $aa ) )->state;
+	$destination_state = $call( 'Todo/get', array( 'accountId' => $ab ) )->state;
+	$copy_args = array( 'fromAccountId' => $aa, 'accountId' => $ab, 'ifFromInState' => $source_state, 'ifInState' => $destination_state,
+		'create' => (object) array( 'copied' => (object) array( 'id' => $todo, 'todoListId' => $destination, 'title' => 'Copied Todo' ),
+			'hidden' => (object) array( 'id' => $hidden, 'todoListId' => $destination ) ), 'onSuccessDestroyOriginal' => true );
+	foreach ( array( 'ifFromInState', 'ifInState' ) as $guard ) {
+		$assert( 'stateMismatch' === $call( 'Todo/copy', array( $guard => 'stale' ) + $copy_args )->type, 'Copy aborts on a stale ' . $guard );
+	}
+	$assert( $destination_state === $call( 'Todo/get', array( 'accountId' => $ab ) )->state, 'State mismatch leaves destination untouched' );
+	$copied = $batch( array(
+		array( 'Todo/copy', (object) $copy_args, 'copy' ),
+		array( 'Todo/get', (object) array( 'accountId' => $ab ), 'after' ),
+	) )->methodResponses;
+	$copy_id = $copied[0][1]->created->copied->id ?? '';
+	$assert( array( 'Todo/copy', 'Todo/set', 'Todo/get' ) === array_column( $copied, 0 )
+		&& 'copy' === $copied[1][2], 'Implicit destroy follows the copy and precedes the next call under the same call ID' );
+	$assert( '' !== $copy_id && $copy_id !== $todo && 'notFound' === ( $copied[0][1]->notCreated->hidden->type ?? null ),
+		'Copy creates a fresh ID and does not disclose a private source' );
+	$assert( 'forbidden' === ( $copied[1][1]->notDestroyed->{$todo}->type ?? null )
+		&& $todo === $call( 'Todo/get', array( 'accountId' => $aa, 'ids' => array( $todo ) ) )->list[0]->id,
+		'Read-only source survives implicit destroy while its copy remains committed' );
+	$copy_doc = $copied[2][1]->list[0];
+	$assert( $copy_id === $copy_doc->id && $destination === $copy_doc->todoListId && 'Copied Todo' === $copy_doc->title
+		&& true === $copy_doc->keywords->{'audit-query'}, 'Destination document applies overrides and inherits omitted fields' );
+	$read_only_destination = $call( 'Todo/copy', array( 'fromAccountId' => $ab, 'accountId' => $aa,
+		'create' => (object) array( 'refused' => (object) array( 'id' => $copy_id, 'todoListId' => $list ) ),
+	) );
+	$assert( 'accountReadOnly' === ( $read_only_destination->type ?? null ), 'Copy cannot write into a read-only destination account' );
+	$stale_destroy = $batch( array( array( 'Todo/copy', (object) array( 'fromAccountId' => $ab, 'accountId' => $ab,
+		'create' => (object) array( 'staleDestroy' => (object) array( 'id' => $copy_id ) ),
+		'onSuccessDestroyOriginal' => true, 'destroyFromIfInState' => 'stale',
+	), 'stale' ) ) )->methodResponses;
+	$assert( isset( $stale_destroy[0][1]->created->staleDestroy->id ) && 'error' === $stale_destroy[1][0]
+		&& 'stateMismatch' === $stale_destroy[1][1]->type
+		&& $copy_id === $call( 'Todo/get', array( 'accountId' => $ab, 'ids' => array( $copy_id ) ) )->list[0]->id,
+		'Stale destroy state preserves the source and does not roll back the copy' );
+	$move_copy = $batch( array( array( 'Todo/copy', (object) array( 'fromAccountId' => $ab, 'accountId' => $ab,
+		'create' => (object) array( 'move' => (object) array( 'id' => $copy_id ) ), 'onSuccessDestroyOriginal' => true,
+	), 'move' ) ) )->methodResponses;
+	$assert( isset( $move_copy[0][1]->created->move->id ) && array( $copy_id ) === ( $move_copy[1][1]->destroyed ?? null ),
+		'An authorized implicit destroy removes only the successfully copied source' );
 	wp_set_current_user( $a );
 	$move = $call( 'Todo/set', array( 'accountId' => $aa, 'update' => (object) array( $todo => (object) array( 'todoListId' => $private_id ) ) ) );
 	$assert( property_exists( $move->updated, $todo ), 'A moves shared Todo into private L2' );
@@ -209,9 +267,24 @@ try {
 	$assert( ! isset( $after_delete->shareWith->{$pc} ) && isset( $after_delete->shareWith->{$pb} ), 'Deleted C share removed while B share survives' );
 	$renamed = $call( 'TodoList/set', array( 'accountId' => $aa, 'update' => (object) array( $list => (object) array( 'name' => 'Renamed after deletion' ) ) ) );
 	$assert( property_exists( $renamed->updated, $list ), 'Unrelated rename remains valid after shared user deletion' );
+	$second_share = (object) array( $pb => (object) array( 'mayRead' => true, 'mayWrite' => false, 'mayAdmin' => false ) );
+	$second = $call( 'TodoList/set', array( 'accountId' => $aa, 'update' => (object) array( $private_id => (object) array( 'shareWith' => $second_share ) ) ) );
+	$assert( property_exists( $second->updated, $private_id ), 'Second list keeps the account accessible after partial revocation' );
+	wp_set_current_user( $b );
+	$before_revoke = $call( 'TodoList/get', array( 'accountId' => $aa ) )->state;
+	wp_set_current_user( $a );
 	$call( 'TodoList/set', array( 'accountId' => $aa, 'update' => (object) array( $list => (object) array( 'shareWith' => null ) ) ) );
 	wp_set_current_user( $b );
+	$assert( 'cannotCalculateChanges' === ( $call( 'TodoList/changes', array( 'accountId' => $aa, 'sinceState' => $before_revoke ) )->type ?? null ),
+		'Partial share revocation invalidates the old list state instead of guessing destroyed IDs' );
+	$remaining = $call( 'TodoList/get', array( 'accountId' => $aa ) );
+	$assert( array( $private_id ) === array_column( $remaining->list, 'id' ), 'Refetch drops the revoked list and keeps the still-readable list' );
+	wp_set_current_user( $a );
+	$call( 'TodoList/set', array( 'accountId' => $aa, 'update' => (object) array( $private_id => (object) array( 'shareWith' => null ) ) ) );
+	wp_set_current_user( $b );
 	$assert( ! isset( server()->accounts()->accounts->{$aa} ) && 'accountNotFound' === ( $call( 'Todo/get', array( 'accountId' => $aa ) )->type ?? null ), 'Revocation denies A immediately in the same process and session' );
+	$assert( 'accountNotFound' === ( $call( 'TodoList/changes', array( 'accountId' => $aa, 'sinceState' => $remaining->state ) )->type ?? null ),
+		'Revoking the final readable list denies changes without leaking any IDs' );
 	$assert( isset( $call( 'Todo/get', array( 'accountId' => $ab ) )->list ), 'Own B Account remains usable after A revocation' );
 	$own = $call( 'TodoList/set', array( 'accountId' => $ab, 'create' => (object) array( 'own' => (object) array( 'name' => 'B own list' ) ) ) );
 	$assert( isset( $own->created->own->id ), 'B can still write its separate own Account' );

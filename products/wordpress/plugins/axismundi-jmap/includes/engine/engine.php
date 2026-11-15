@@ -30,7 +30,9 @@ final class Engine {
 		$this->validate( $request );
 		$context = new Context( $user_id, $request->createdIds ?? new \stdClass(), $account_resolver );
 		$responses = array();
-		foreach ( $request->methodCalls as [ $name, $arguments, $call_id ] ) {
+		$calls = $request->methodCalls;
+		for ( $index = 0; $index < count( $calls ); ++$index ) {
+			[ $name, $arguments, $call_id ] = $calls[ $index ];
 			try {
 				$arguments = $this->resolve_arguments( $arguments, $responses );
 				$method = $this->registry->method( $name );
@@ -46,6 +48,10 @@ final class Engine {
 					$count = count( get_object_vars( $arguments->create ?? new \stdClass() ) ) + count( get_object_vars( $arguments->update ?? new \stdClass() ) ) + ( is_array( $arguments->destroy ?? null ) ? count( $arguments->destroy ) : 0 );
 					if ( $count > $this->max_set ) { throw new MethodError( 'requestTooLarge' ); }
 				}
+				if ( str_ends_with( $name, '/copy' ) ) {
+					if ( ! ( $arguments->create ?? null ) instanceof \stdClass ) { throw new MethodError( 'invalidArguments' ); }
+					if ( count( get_object_vars( $arguments->create ) ) > $this->max_set ) { throw new MethodError( 'requestTooLarge' ); }
+				}
 				$account = $method['account_bound']
 					? $context->authorize( $arguments->accountId ?? null, $method['capability'], $method['writes'] ) : null;
 				$result = ( $method['handler'] )( $arguments, $context, $account );
@@ -53,6 +59,10 @@ final class Engine {
 					throw new \LogicException( 'Method handlers must return an arguments object.' );
 				}
 				$responses[] = array( $name, copy_json( $result ), $call_id );
+				$followup = $context->take_followup();
+				if ( null !== $followup && str_ends_with( $name, '/copy' ) && substr( $name, 0, -5 ) . '/set' === $followup[0] ) {
+					array_splice( $calls, $index + 1, 0, array( array( ...$followup, $call_id ) ) );
+				}
 			} catch ( MethodError $error ) {
 				$responses[] = array( 'error', $error->arguments(), $call_id );
 			} catch ( \Throwable $error ) {
@@ -60,6 +70,7 @@ final class Engine {
 				error_log( 'JMAP method failed: ' . get_class( $error ) );
 				$responses[] = array( 'error', (object) array( 'type' => 'serverFail' ), $call_id );
 			}
+			$context->take_followup();
 		}
 		$response = (object) array( 'methodResponses' => $responses, 'sessionState' => $session_state );
 		if ( property_exists( $request, 'createdIds' ) ) {

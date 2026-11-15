@@ -188,17 +188,22 @@ function visible_lists( string $account, int $user ) : array {
 }
 
 /** No implicit provisioning. Caller must commit()/rollback(); nested transactions are unsupported. */
-function begin( string $account ) : void {
+function begin( string $account, string ...$other_accounts ) : void {
 	global $wpdb;
+	$accounts = array_unique( array( $account, ...$other_accounts ) );
+	// Opposite-direction copies must acquire both account locks in the same order.
+	sort( $accounts, SORT_STRING );
 	db_execute( 'START TRANSACTION' );
 	try {
-		// Serialize capability-policy revocation with data access without reading Actors storage.
-		$policy_lock = $wpdb->get_var( $wpdb->prepare( 'SELECT actor_id FROM %i WHERE actor_id=%d FOR UPDATE', \Axismundi\Jmap\accounts_table(), (int) substr( $account, 1 ) ) );
-		check_db();
-		if ( null === $policy_lock ) { throw new \RuntimeException( 'JMAP Account is unavailable.' ); }
-		$row = $wpdb->get_row( $wpdb->prepare( 'SELECT revision,acl_revision FROM %i WHERE account_id=%s FOR UPDATE', table( 'accounts' ), $account ), ARRAY_A );
-		check_db();
-		if ( ! $row ) { throw new \RuntimeException( 'Todo Account has not been enabled.' ); }
+		foreach ( $accounts as $account ) {
+			// Serialize capability-policy revocation with data access without reading Actors storage.
+			$policy_lock = $wpdb->get_var( $wpdb->prepare( 'SELECT actor_id FROM %i WHERE actor_id=%d FOR UPDATE', \Axismundi\Jmap\accounts_table(), (int) substr( $account, 1 ) ) );
+			check_db();
+			if ( null === $policy_lock ) { throw new \RuntimeException( 'JMAP Account is unavailable.' ); }
+			$row = $wpdb->get_row( $wpdb->prepare( 'SELECT revision,acl_revision FROM %i WHERE account_id=%s FOR UPDATE', table( 'accounts' ), $account ), ARRAY_A );
+			check_db();
+			if ( ! $row ) { throw new \RuntimeException( 'Todo Account has not been enabled.' ); }
+		}
 	} catch ( \Throwable $error ) {
 		rollback();
 		throw $error;

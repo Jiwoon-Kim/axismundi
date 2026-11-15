@@ -92,6 +92,86 @@ function read_method( \stdClass $args, Context $context, string $type, bool $del
 	} catch ( \Throwable $error ) { rollback(); throw $error; }
 }
 
+/** Compile and validate the entire filter even if the visible result is empty. */
+function todo_query_filter( mixed $filter, int $depth = 0 ) : \Closure {
+	if ( null === $filter && 0 === $depth ) { return static fn() => true; }
+	if ( ! $filter instanceof \stdClass || $depth > 16 ) { throw new MethodError( 'invalidArguments' ); }
+	if ( property_exists( $filter, 'operator' ) || property_exists( $filter, 'conditions' ) ) {
+		$operator = $filter->operator ?? null;
+		if ( ! in_array( $operator, array( 'AND', 'OR', 'NOT' ), true )
+			|| ! is_array( $filter->conditions ?? null ) || ! array_is_list( $filter->conditions )
+			|| ! $filter->conditions || array_diff( array_keys( get_object_vars( $filter ) ), array( 'operator', 'conditions' ) ) ) {
+			throw new MethodError( 'invalidArguments' );
+		}
+		$conditions = array_map( static fn( $item ) => todo_query_filter( $item, $depth + 1 ), $filter->conditions );
+		return static function ( \stdClass $todo ) use ( $conditions, $operator ): bool {
+			foreach ( $conditions as $condition ) {
+				$matches = $condition( $todo );
+				if ( 'AND' === $operator && ! $matches ) { return false; }
+				if ( 'OR' !== $operator && 'AND' !== $operator && $matches ) { return false; }
+				if ( 'OR' === $operator && $matches ) { return true; }
+			}
+			return 'OR' !== $operator;
+		};
+	}
+	if ( array_diff( array_keys( get_object_vars( $filter ) ), array( 'hasKeyword' ) ) ) {
+		throw new MethodError( 'unsupportedFilter' );
+	}
+	if ( ! property_exists( $filter, 'hasKeyword' ) ) { return static fn() => true; }
+	if ( ! is_string( $filter->hasKeyword ) ) { throw new MethodError( 'invalidArguments' ); }
+	return static fn( \stdClass $todo ): bool => true === ( $todo->keywords->{$filter->hasKeyword} ?? false );
+}
+
+function todo_query( \stdClass $args, Context $context ) : \stdClass {
+	$account = $args->accountId;
+	$match = todo_query_filter( $args->filter ?? null );
+	$sort = $args->sort ?? array();
+	$position = property_exists( $args, 'position' ) ? $args->position : 0;
+	$offset = property_exists( $args, 'anchorOffset' ) ? $args->anchorOffset : 0;
+	$anchor = $args->anchor ?? null;
+	$limit = $args->limit ?? null;
+	$total_requested = property_exists( $args, 'calculateTotal' ) ? $args->calculateTotal : false;
+	if ( ! is_array( $sort ) || ! array_is_list( $sort ) || ! is_int( $position ) || ! is_int( $offset )
+		|| ( null !== $anchor && ! valid_id( $anchor ) ) || ( null !== $limit && ( ! is_int( $limit ) || $limit < 0 ) )
+		|| ! is_bool( $total_requested ) ) { throw new MethodError( 'invalidArguments' ); }
+	foreach ( $sort as $comparator ) {
+		if ( ! $comparator instanceof \stdClass || ! is_string( $comparator->property ?? null )
+			|| ( property_exists( $comparator, 'isAscending' ) && ! is_bool( $comparator->isAscending ) )
+			|| ( isset( $comparator->collation ) && ! is_string( $comparator->collation ) ) ) {
+			throw new MethodError( 'invalidArguments' );
+		}
+		if ( 'title' !== $comparator->property || isset( $comparator->collation ) ) { throw new MethodError( 'unsupportedSort' ); }
+	}
+	begin( $account );
+	try {
+		\Axismundi\Jmap\server()->authorize( $account, CAPABILITY );
+		$objects = array_filter( visible_objects( $account, 'Todo', $context->user_id ), $match );
+		usort( $objects, static function ( \stdClass $a, \stdClass $b ) use ( $sort ): int {
+			foreach ( $sort as $comparator ) {
+				$order = strcmp( $a->title, $b->title );
+				if ( 0 !== $order ) { return ( $comparator->isAscending ?? true ) ? $order : -$order; }
+			}
+			return strcmp( $a->id, $b->id );
+		} );
+		$ids = array_column( $objects, 'id' );
+		$total = count( $ids );
+		if ( null !== $anchor ) {
+			$index = array_search( $anchor, $ids, true );
+			if ( false === $index ) { throw new MethodError( 'anchorNotFound' ); }
+			$position = max( 0, min( PHP_INT_MAX - $index, $offset ) + $index );
+		} elseif ( $position < 0 ) {
+			$position = max( 0, $total + $position );
+		}
+		// Only the ordered, visible results affect this token, not private rows or the requested page.
+		$token = hash_hmac( 'sha256', wp_json_encode( array( $account, $context->user_id, $ids ) ), wp_salt( 'auth' ) );
+		$result = (object) array( 'accountId' => $account, 'queryState' => $token, 'canCalculateChanges' => false,
+			'position' => $position, 'ids' => array_slice( $ids, $position, $limit ) );
+		if ( $total_requested ) { $result->total = $total; }
+		commit();
+		return $result;
+	} catch ( \Throwable $error ) { rollback(); throw $error; }
+}
+
 /** Return only complete change sets; clients can refetch when ACLs changed. */
 function changes( \stdClass $args, Context $context, string $type ) : \stdClass {
 	global $wpdb;

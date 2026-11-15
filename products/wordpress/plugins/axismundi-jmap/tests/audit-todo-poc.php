@@ -156,6 +156,32 @@ try {
 	$private = $call( 'TodoList/set', array( 'accountId' => $aa, 'create' => (object) array( 'private' => (object) array( 'name' => 'Private L2' ) ) ) );
 	$private_id = $private->created->private->id ?? '';
 	$assert( '' !== $private_id, 'Private destination created' );
+	$keyword = (object) array( 'audit-query' => true );
+	$call( 'Todo/set', array( 'accountId' => $aa, 'update' => (object) array( $todo => (object) array( 'keywords' => $keyword ) ) ) );
+	$hidden = $call( 'Todo/set', array( 'accountId' => $aa, 'create' => (object) array( 'hidden' => (object) array(
+		'todoListId' => $private_id, 'title' => 'Zulu private', 'keywords' => $keyword,
+	) ) ) )->created->hidden->id ?? '';
+	$query = array( 'accountId' => $aa, 'filter' => (object) array( 'operator' => 'OR', 'conditions' => array(
+		(object) array( 'hasKeyword' => 'not-present' ), (object) array( 'hasKeyword' => 'audit-query' ),
+	) ), 'sort' => array( (object) array( 'property' => 'title', 'isAscending' => false ) ), 'calculateTotal' => true );
+	$owned_query = $call( 'Todo/query', $query );
+	$assert( '' !== $hidden && array( $hidden, $todo ) === $owned_query->ids && 2 === $owned_query->total, 'Owner sees both keyword matches in descending title order' );
+	wp_set_current_user( $b );
+	$shared_query = $call( 'Todo/query', $query );
+	$assert( in_array( $todo, $shared_query->ids, true ), 'Shared query includes the matching readable Todo' );
+	$assert( ! in_array( $hidden, $shared_query->ids, true ), 'Shared query excludes the matching private Todo ID' );
+	$assert( 1 === $shared_query->total && false === $shared_query->canCalculateChanges, 'Shared total excludes the private match and does not promise deltas' );
+	$page = $call( 'Todo/query', array( 'calculateTotal' => false, 'position' => -1, 'limit' => 0 ) + $query );
+	$assert( array() === $page->ids && 0 === $page->position && ! property_exists( $page, 'total' )
+		&& $page->queryState === $shared_query->queryState, 'Zero limit omits IDs and total without changing the query state' );
+	$assert( 'anchorNotFound' === $call( 'Todo/query', array( 'anchor' => $hidden ) + $query )->type, 'Private IDs cannot be used as anchors' );
+	$assert( 'unsupportedFilter' === $call( 'Todo/query', array( 'filter' => (object) array( 'unknown' => true ) ) + $query )->type, 'Unsupported conditions are not silently ignored' );
+	$assert( 'unsupportedSort' === $call( 'Todo/query', array( 'sort' => array( (object) array( 'property' => 'keywords' ) ) ) + $query )->type, 'Unsupported comparators are rejected' );
+	wp_set_current_user( $a );
+	$call( 'Todo/set', array( 'accountId' => $aa, 'update' => (object) array( $hidden => (object) array( 'title' => 'Private edit' ) ) ) );
+	wp_set_current_user( $b );
+	$assert( $shared_query->queryState === $call( 'Todo/query', $query )->queryState, 'Private writes do not change a reader query state' );
+	wp_set_current_user( $a );
 	$move = $call( 'Todo/set', array( 'accountId' => $aa, 'update' => (object) array( $todo => (object) array( 'todoListId' => $private_id ) ) ) );
 	$assert( property_exists( $move->updated, $todo ), 'A moves shared Todo into private L2' );
 	wp_set_current_user( $b );

@@ -61,6 +61,42 @@ account 키 세계에서 Principal 이 없다.
       공유 기능이 끌어낼 일이 아니다
 ```
 
+### 같이 고친다 — `currentUserPrincipalId` 가 **아예 없다**
+
+Session 은 Account 를 나열하고 Principal 을 나열하지 않는다. 다리는 `accountCapabilities`
+안에 둘이다.
+
+```txt
+principals         이 Account 가 Principal 객체를 담는다 +
+                   §1.5.1 "an object that **MUST contain** ... currentUserPrincipalId"
+principals:owner   이 Account 를 소유한 Principal(principalId)과 그것을 가져올
+                   Account(accountIdForPrincipal)
+```
+
+실측(2026-11-16, Application Password 로 받은 Session 원문):
+
+```txt
+principals:owner  {"accountIdForPrincipal":"a199","principalId":"P99136e91-..."}   정확하다
+principals        **{}**                                                           MUST 위반
+저장소 전체        currentUserPrincipalId grep **0건** — 어디서도 내보내지 않는다
+결과              클라이언트가 우리 Session 에서 **자기 Principal 을 알 수 없다**
+```
+
+세션 수준 `capabilities` 의 값이 빈 객체인 것은 §1.5.1 이 그렇게 정한 것이라 맞다. **Account
+수준만 내용이 있어야 한다.** 고칠 자리는 `principals` account-capability **provider** 다 —
+`modules/rfc8620/session.php:101` 이 provider 의 `properties` 를 그대로 싣는다.
+
+**이 작업과 분리하지 않는다.** 그 필드의 *값*이 바로 여기서 바뀌는 것이기 때문이다.
+
+```txt
+지금 고치면   값이 "그 사용자의 user Principal" 이 된다 → 걷어낼 때 또 바꾼다.  마이그레이션 두 번
+같이 하면     값이 처음부터 "요청자가 행위할 수 있으면 그 Account 의 Actor Principal,
+             아니면 null" 이다
+```
+
+곁들여 적어 둔다: `primaryAccounts` 가 `{}` 다. 구조상 합법이지만 클라이언트가 principals
+Account 를 찾으려면 전부 훑어야 한다. Stalwart 는 채운다. **이번 범위는 아니다.**
+
 ## 작업
 
 ### ① 생성 경로를 하나로
@@ -112,7 +148,9 @@ Actor 가 없는 사용자의 공유는 버려진다.
       넣으면 거부된다.  지금은 이 단정을 쓸 수 없다 — 그 id 가 받아들여지지도 않는다
 필수   **Group Actor 와 공유된다.**  isPersonal=false 인 Account 의 Principal 이 유효한
       공유 대상이다.  지금은 불가능하다
-필수   Actor 없는 사용자의 currentUserPrincipalId 가 **null** 이다
+필수   principals 의 accountCapabilities 값에 currentUserPrincipalId 가 **존재한다**.
+      지금은 키 자체가 없어서 이 단정을 쓸 수 없다
+필수   Actor 없는 사용자의 currentUserPrincipalId 가 **null** 이다 (부재가 아니라 null)
 변이   배제 절을 지우면 감사가 **실패해야 한다**.  지금은 실패하지 않는다 —
       그것이 이 작업의 출발점이었다
 ```

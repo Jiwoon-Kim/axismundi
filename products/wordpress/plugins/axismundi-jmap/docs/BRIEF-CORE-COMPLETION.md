@@ -32,6 +32,11 @@ RFC 9670 §4.1 Example    TodoList 공유 예제 — TodoListRights, 세 공통 
 
 ### ① `Todo/query` (§5.5)
 
+첫 슬라이스는 `hasKeyword` 및 `AND`·`OR`·`NOT` 필터, 제목 정렬(동률은 ID 순),
+position·anchor·limit·calculateTotal을 지원한다. ID와 total은 `Todo/get`과 같은 열람
+조건 적용 후 계산한다. queryState는 페이지에 독립적이며 정렬된 가시 ID만 반영한다.
+`canCalculateChanges`는 false이고 `Todo/queryChanges`는 이 슬라이스에 포함하지 않는다.
+
 표준 메서드 중 **우리가 한 번도 만들지 않은 모양**이다. `/get` 은 id 를 받고 `/query` 는
 filter·sort·position·limit 를 받아 **id 목록과 queryState** 를 돌려준다.
 
@@ -77,10 +82,15 @@ tooManyChanges          maxChanges 초과.  added/removed 각 항목이 한 변�
 **완료 기준을 둘로 나눈다.** 하나로 묶으면 거부 경로가 녹색인 것을 동기화가 된다고 읽는다.
 
 ```txt
-완료 A — 거부 경로        queryChanges 가 등록돼 있고, 계산할 수 없는 queryState 에
-                        cannotCalculateChanges 를 돌려준다.  tooManyChanges 도 maxChanges
-                        초과에서 돌아온다.  미등록(unknownMethod)과 거부는 **다르다** —
-                        전자는 공백이고 후자는 계약이다.  이것만으로 끝낼 수 있다
+완료 A — 호출하지 말라고 말한다   둘 중 하나로 만족한다.
+                        (a) `Todo/query` 응답이 `canCalculateChanges: false` 를 광고한다.
+                            §5.5 가 그 필드를 바로 이 용도로 정의하므로 **적합한 클라이언트는
+                            애초에 호출하지 않는다** — 스펙 자신의 기전이라 더 깔끔하다
+                        (b) queryChanges 를 등록하고 cannotCalculateChanges 로 거부한다.
+                            tooManyChanges 도 maxChanges 초과에서 돌아온다
+                        (a) 를 택하면 unknownMethod 상황이 생기지 않는다.  그래도
+                        미등록과 거부는 **다른 사실**이므로 어느 쪽을 택했는지 적는다.
+                        **(a) 로 완료됨 (2026-11-15)**
 완료 B — 실제 델타        계산할 수 있는 조건을 **먼저 문서에 적고**, 그 조건에서만 계산한다.
                         added/removed 가 정확한 것을 단정한다.  **별건이고, A 없이는 못 한다**
 금지                     계산할 수 없는 델타를 추측해서 내보내는 것.

@@ -88,23 +88,52 @@ Thread             → 서버가 정한다.  §3 이 "same Thread is **not manda
 뒤 바뀌지 않는다 — 우리 "Activity 는 불변" 정책, 그리고 "principal 과 acting Actor 를 둘 다
 명시하고 추론하지 않는다" 와 같은 모양이다.
 
-### 어긋나는 곳 하나 — Mailbox
+### Mailbox — 대응이 **있다**
 
 ```txt
-JMAP    Mailbox 가 **Email**(객체)을 담는다.  EmailSubmission 은 Mailbox 에 들어가지 않는다
-AP      inbox/outbox 는 **Activity** 의 컬렉션이다
+JMAP Mailbox         ↔ Collection 의 서브타입.  AP 에서는 OrderedCollection
+Mailbox.role         ↔ **Actor 의 어느 속성이 그 컬렉션을 가리키는가** — inbox, outbox,
+                       followers, following, liked, shares
+Mailbox 멤버십        ↔ 컬렉션의 items.  저장돼 있다
+담는 것              JMAP Mailbox 는 Email(객체)을 담고 EmailSubmission 은 담지 않는다.
+                     AP 의 inbox/outbox 는 **Activity**(제출)를 담는다
+파일링 동사           AP §6.6 Add, §6.7 Remove.  target 이 컬렉션이다 —
+                     "이것을 그 컨테이너에 넣어라" 가 이미 동사로 있다
+totalEmails          ↔ Collection 의 totalItems
 ```
 
-그러니까 AP 의 "메일박스" 에 들어 있는 것은 객체가 아니라 **제출**이다. 그리고 그 결과로
-**AP 에는 Mailbox 에 대응하는 타입이 없다.**
+그러니까 AP 의 "메일박스" 에 들어 있는 것은 객체가 아니라 제출이다. 그 차이는 남지만,
+**컨테이너 자체는 대응이 있다.**
 
-없는 것이 폴더가 아니라는 점이 중요하다. 없는 것은 **멤버십이 저장되고 변경 가능한 질의
-가능 컨테이너**다. JMAP Mailbox 의 `role`(inbox/drafts/sent/trash)은 저장된 가변 상태인데,
-우리 읽기 표면은 그 사실을 매번 **유도**한다. 우리가 Notifications 와 Object read surfaces
-에서 반복해 다시 끌어내던 질문이 이 공백이다.
+이것이 우리가 이미 내린 결정과 맞는다 — 공유폴더는 Group 이 아니라
+`OrderedCollection attributedTo Group` 이다. 폴더가 컬렉션이라는 그 결정이 여기서
+메일 쪽 이름과 만난다.
 
-지금 결정하지 않는다. 다만 **"폴더가 필요하다" 가 아니라 "저장된 멤버십이 필요하다"** 로
-질문을 고쳐 둔다.
+#### 그래서 실제로 없는 것은 더 좁다
+
+```txt
+settable role    AP 의 role 은 **위치**다 — 어느 속성이 가리키는지.  바꿀 수 있는 필드가 아니다.
+                 JMAP 은 role 을 Mailbox 의 속성으로 들고 있어서 옮길 수 있다
+사용자 생성 컨테이너  JMAP Mailbox 는 name 과 parentId 를 갖는다 → 사용자가 "Projects/2026" 을
+                 만든다.  AP 의 역할 컬렉션은 프로토콜이 정한 것이고, 임의로 이름 붙인
+                 중첩 컨테이너를 정의하는 표준 패턴은 없다 (동사는 Add/Remove 로 있다)
+컨테이너별 권리     myRights · isSubscribed.  AP core 에 없다.  RFC 9670 영역이다
+unread           JMAP 의 unreadEmails.  AP 에 없고 우리 Notifications 가 그 자리다
+```
+
+**이 네 가지가 질문이고, "Mailbox 가 없다" 는 질문이 아니었다.** 특히 `role` 이 위치인지
+필드인지가 실제 설계 분기다 — 위치면 컬렉션의 역할을 옮길 수 없고, 필드면 옮길 수 있다.
+
+#### 기록: 이름으로 부재를 판정한 오류
+
+초안은 "AP 에는 Mailbox 에 대응하는 타입이 없다" 고 적었다. **`Mailbox` 라는 이름이 없는
+것을 타입이 없는 것으로 읽었다.** AP 는 그 역할을 **위치로** 표현하므로 이름 기반 탐색에
+걸리지 않는다. 같은 주에 같은 종류의 오류를 세 번 했다 — `TodoList/changes` 를
+`$type . '/changes'` 로 조립해 등록하는데 리터럴 grep 으로 "없다" 고 한 것, Session 발견이
+이미 구현됐는데 낡은 문서를 믿은 것, 그리고 이것이다.
+
+판정 규칙: **개념의 부재를 주장하기 전에, 그 개념이 다른 이름이나 다른 위치(속성 이름,
+조립된 식별자, 상위 타입)로 존재할 수 있는 경로를 먼저 확인한다.**
 
 ## 이미 설계한 것의 JMAP 이름 둘
 
@@ -123,7 +152,7 @@ Email/parse    블롭을 메시지로 해석해 보여주되 **기록하지 않�
 
 ```txt
 Mail 자체              구현하지 않는다
-Mailbox as folder      제품 요구가 생기기 전까지.  위의 질문만 바꿔 둔다
+사용자 생성 컨테이너    제품 요구가 생기기 전까지.  컨테이너 자체는 이미 있고, 네 질문으로 남긴다
 Vacation Response      AP 유사물은 Follow 자동 Accept 정책이지만 지금 범위 밖
 Search Snippets        파생되고 독립 주소가 없는 결과.  목록 사영 질문과 닿지만 별건
 HTML Email Display     표현 문제이고 우리 renderer 경계와 다르다

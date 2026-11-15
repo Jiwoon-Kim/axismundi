@@ -36,6 +36,10 @@ if ( ! $row || empty( $row['user_id'] ) || ! get_userdata( (int) $row['user_id']
 
 ## 목표
 
+> **범위**: Account 기반 Principal · 공유 권한 · `currentUserPrincipalId` 의 의미 바로잡기.
+> **Actor 타입 매핑은 필요 없다** — 이 작업에 변환 기능이 없기 때문이다.
+> 분류표나 `kind` 매핑을 선행 조건으로 두지 않는다.
+
 ```txt
 하나의 공간   Principal 은 accountId 로만 키 잡는다 (actor_id).
              principal_for_account() 가 유일한 생성 경로가 된다

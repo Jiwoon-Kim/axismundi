@@ -1,5 +1,9 @@
 # Brief — `Todo/set`: 쓰기와 **항목 수준** 오류
 
+> 공유 쪽은 같이 가야 한다 — [BRIEF-TODO-SET-SHARING.md](BRIEF-TODO-SET-SHARING.md).
+> `isSubscribed`·`myRights`·`shareWith` 는 Todo 가 발명한 것이 아니라
+> **RFC 9670 §4 가 MUST 로 요구하는** 세 속성이다.
+
 이 조각의 목적은 Todo 가 아니다. **`/set` 의 모양**을 코어에 넣는 것이다. Stalwart 는 Todo 를
 구현하지 않으므로 이 슬라이스는 상호운용 증거가 되지 않는다. 그런데도 Contacts 보다 먼저
 하는 이유는 하나다 — **capability 는 옮겨가지 않지만 `/set` 의 모양은 그대로 옮겨간다.**

@@ -307,13 +307,43 @@ JMAP 은 별도 opaque Principal ID, WP 사용자/Account 연결, … 자원별 
 `axismundi_actors_workspace_options()` 에서 나온다 — **모든 Account 가 이미 Actor 하나**다.
 그러니 Principal 을 `accountId` 로 키 잡으면 **엔티티 대응이 공짜로 따라온다.**
 
+#### 측정: 이미 그렇게 돼 있다 (2026-11-16)
+
 ```txt
-지금      principal_objects( int $user ) — WP user_id 로 행을 잡는다
-가야 할 곳  accountId 기반.  Account 가 이미 Actor 이므로 Principal = 그 Account 의 엔티티
-결과      Group·Organization Actor 도 자동으로 포함된다 — 이미 Account 를 갖는다
-          (2026-11-15 실측: isPersonal=false 인 Account 셋)
-소유      JMAP 플러그인.  Actors 는 Account 아이덴티티만 제공한다
+Principal id   'P' . wp_generate_uuid4() — **JMAP 이 발급하는 자체 opaque UUID**.
+               기록된 경계의 "별도 opaque Principal ID" 그대로다
+principals     (id, user_id UNIQUE, actor_id UNIQUE).  **두 매퍼가 이미 있다** —
+               principal_for_user( int ) ∥ principal_for_account( string )
+               주석: "The two identity domains intentionally allocate different Principal rows"
+actor_id       Actors 의 identity_id 를 가리키는 **연결 컬럼**.  user_id 가 WP 를 가리키는 것과
+               같은 역할이다.  소유권 누수가 아니라 링크다
+소유           principals 테이블을 건드리는 것은 axismundi-jmap 뿐이다
 ```
+
+소유자 축은 **이미 actor 키**다 — `principal_for_account()` 가 §1.5.2 의 `principalId` 를
+낸다. 그러니 "갈아엎는다" 가 아니다.
+
+```txt
+남은 질문   **공유 후보 디렉터리**를 사용자로 둘 것인가 Actor 로 둘 것인가.
+           지금은 methods.php:262 의 shareWith 검증이 user 키 Principal 만 받는다
+권고        actor 기반 하나로.  소유자 축이 이미 actor 키라 "소유자는 shareWith 에 없다"
+           검사가 같은 공간에서 돌고, Actor 셋을 가진 사람과는 그중 하나로 공유하는 것이
+           AP 의미와 맞는다.  둘 다 두면 shareWith 한 맵에 정체성 체계 둘이 섞여 이중 부여가 된다
+크기        호출부 3곳 + 감사.  스키마 변경 없음
+시점        지금이 아니라 **다음 공유 표면 전**.  Todo 공유는 로컬 사용자 간이라 현재 동작이 맞다
+```
+
+#### 이름 충돌 — `principal` 이 두 개념이다
+
+```txt
+axismundi-actors   axismundi_actors_account_principals(), principal_kind,
+                   principal_can_manage() → **이 Actor 를 대신해 행위할 수 있는 주체**
+axismundi-jmap     RFC 9670 Principal → **공유 대상 엔티티**
+```
+
+"누가 이 Actor 로 행위할 수 있나" 와 "누구와 공유할 수 있나" 는 다른 질문이다. 같은 단어라
+다음에 "principal 은 이미 있으니 재사용하자" 가 나온다. **재사용하지 않는다** — 둘을 잇는
+자리가 생기면 그때 변환을 명시한다.
 
 #### 앞서 "어긋남" 이라 적은 것의 정정
 

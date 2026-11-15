@@ -19,7 +19,11 @@ object_status   이 URI 가 실제로 삭제됐는가
 `axismundi_op_tombstone_local_object()` 가 **원장을 조회하지 않고** 상태를 바꾸고, 편집과
 투영이 그 상태를 쓴다. 감사에도 활동 없이 삭제되는 경우가 있다. 독립 권위다.
 
-### 타입은 Create 에서 고정된다
+### 타입은 **객체가 처음 저장될 때** 고정된다
+
+`Create` 시점이 아니다. 업로드한 `Video` 는 참조형 `Create` 전에 이미 URI 와 타입을 갖고,
+발행은 그 타입을 다시 정하지 않는다. 두 시점이 같아지는 것은 outbox 가 객체 생성까지 맡는
+경우뿐이다(`C2S.md` §14 의 두 진입 경로).
 
 Outbox `Update` 가 타입 변경을 이미 막는다. 그 금지는 유지하고, **이유를 적어 둔다** —
 열면 `Article → Image → Note → Question` 같은 변형이 가능해진다. 수신자는 `id` 로 캐시하므로,
@@ -73,8 +77,18 @@ Tombstone 이 들어오면 거짓이 된다 — 생성 즉시 410 으로 나간�
 않는다** — 내주는 문서의 `formerType` 은 그대로 있으므로 표현은 바뀌지 않고, 바뀌는 것은
 컬럼의 정보량뿐이다. 그 사실을 적어 둔다.
 
-같이 보는 것: `axismundi_op_register_object( … 'as2_type' => 'Tombstone' … )` 도 같은 줄에서
-덮는다. 레지스트리의 `as2_type` 이 저작 타입인지 현재 표현인지 **먼저 정하고** 맞춘다.
+레지스트리의 `as2_type` 은 **덮는 것이 맞다** (실측 2026-11-15). 소비처가 답을 정해 준다 —
+`application-object-read.php:73` 이 내주는 문서의 `type` 과 `as2_type` 이 다르면
+`ax_op_object_read_mismatch` 409 로 거부하고, 인덱스 이름도 `type_observed (as2_type,
+as2_type_observed_at)` 다. 즉 **현재 표현**을 가리킨다.
+
+```txt
+local_objects.object_type   저작된 타입.  고정
+registry.as2_type           현재 표현의 타입.  삭제하면 Tombstone
+```
+
+그래서 삭제는 `as2_type` 만 덮고 `object_type` 은 그대로 둔다. 둘을 같이 바꾸거나 같이
+놔두면 한쪽이 틀린다.
 
 ### ④ 삭제 본문에 시각을 남긴다
 

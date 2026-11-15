@@ -34,9 +34,11 @@ UI 저장은 PHP 저장 함수 직접 호출이 아니라 nonce 인증 REST 요�
 공용 API는 `POST /wp-json/axismundi-jmap/v1/api`이며 WordPress 통합 계층이 소유한다.
 Todo 외 capability도 같은 registry·engine을 사용한다. 기존 `/todo` POST는 호환 alias로
 공용 dispatcher에 위임한다. `/todo/context`·`/todo/enable`은 Todo 관리자 기능이다.
-전체 Session은 아직 in-process 조립기뿐이다. 그 조립기에 테스트 호출자가 넣는
-URL 템플릿과 실제 공개 광고를 혼동하지 않는다. 공개 Session·blob·SSE 주소는
-이 API가 광고하지 않는다.
+공개 Session 은 이후 슬라이스에서 들어왔다 (`docs/HTTP-SESSION.md`). `GET
+/wp-json/axismundi/jmap/session` 이 `apiUrl`·`uploadUrl`·`downloadUrl` 을 광고하고,
+`eventSourceUrl` 은 광고하되 501 problem+json 을 돌려준다 — 구현하지 않은 것을 없는 척하지
+않고, 동작하지 않는다고 명시한다. **이 문서가 "Session 은 in-process 조립기뿐" 이라고 하던
+것은 낡은 기록이었다** (2026-11-15 실측·정정).
 
 인증된 디렉터리는 활성화 시 준비한 사이트 사용자 이름과 opaque ID를 공유 후보로
 제공한다. 다른 사용자의 이메일은 노출하지 않는다. 이는 시스템 Account의
@@ -90,9 +92,23 @@ context 요청이 실패한 경우에도 미적용 데이터를 pending으로 �
 커밋된 저장을 실패로 바꾸지 않는다. 전달된 state는 **호출자 기준**이므로 선택적
 전송기는 반드시 수신자별 현재 권리와 state를 다시 계산해야 한다.
 
-PushSubscription·SSE·공개 Session discovery·blob 전송은 이 슬라이스에 없다.
-동작하지 않는 Session URL을 만들어 광고하지 않는다. Notifications/PWA를
-비활성화해도 Todo 메서드와 `/changes`는 동작한다.
+PushSubscription·SSE·blob 전송은 이 슬라이스에 없다. 동작하지 않는 Session URL을 만들어
+광고하지 않는다. Notifications/PWA를 비활성화해도 Todo 메서드와 `/changes`는 동작한다.
+
+공개 Session discovery 는 더 이상 빠진 항목이 아니다. 그리고 **외부 비브라우저
+클라이언트가 지금 붙는다** — `permission()` 이 `rest_get_authenticated_app_password()` 를
+받으므로 WordPress Application Password + HTTP Basic 으로 nonce 없이 인증된다.
+`tests/audit-session-http.php` 가 일회용 Application Password 를 만들어 실제 HTTP 로
+그 경로를 재고 정리한다. 측정(2026-11-15):
+
+```txt
+PASS  Real Application Password invokes API without nonce
+PASS  Revoked Application Password is denied
+PASS  35 real HTTP Session checks        AX_JMAP_HTTP_ORIGIN=http://wordpress 필요
+```
+
+`AX_JMAP_HTTP_ORIGIN` 없이 wp-env 안에서 돌리면 `home_url()` 의 `localhost:8884` 로 나가
+cURL 7 로 죽는다. 제품 실패가 아니다.
 
 기존 PWA sender의 payload는 Notifications의 delivery/category 전용이며 worker는
 사용자 알림을 표시한다. 이를 JMAP StateChange에 그대로 쓰지 않는다. 후속 푸시

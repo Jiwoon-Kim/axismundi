@@ -24,6 +24,7 @@ because it would only ever work against the server it was written for.
 ```bash
 axj session --session-url http://localhost:8884/wp-json/axismundi/jmap/session
 axj todo    --session-url http://localhost:8884/wp-json/axismundi/jmap/session
+axj changes --session-url http://localhost:8884/wp-json/axismundi/jmap/session [--since STATE]
 ```
 
 Credentials come from `AXJ_USER` and `AXJ_SECRET` so the secret stays out of the

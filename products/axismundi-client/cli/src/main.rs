@@ -17,6 +17,7 @@ struct Options {
     user: String,
     secret: String,
     account: Option<String>,
+    since: Option<String>,
 }
 
 fn usage() -> String {
@@ -26,6 +27,7 @@ fn usage() -> String {
         "usage:",
         "  axj session   --session-url URL [--user NAME] [--secret SECRET]",
         "  axj todo      --session-url URL [--user NAME] [--secret SECRET] [--account ID]",
+        "  axj changes   ... [--account ID] [--since STATE]",
         "",
         "Credentials may come from AXJ_USER and AXJ_SECRET instead of the flags, which",
         "keeps the secret out of the shell history and the process list.",
@@ -40,6 +42,7 @@ fn options(args: &[String]) -> Result<Options, String> {
     let mut user = std::env::var("AXJ_USER").unwrap_or_default();
     let mut secret = std::env::var("AXJ_SECRET").unwrap_or_default();
     let mut account = None;
+    let mut since = None;
     let mut rest = args.iter();
     while let Some(flag) = rest.next() {
         let value = || rest.clone().next().cloned().ok_or(format!("{flag} needs a value"));
@@ -48,6 +51,7 @@ fn options(args: &[String]) -> Result<Options, String> {
             "--user" => user = value()?,
             "--secret" => secret = value()?,
             "--account" => account = Some(value()?),
+            "--since" => since = Some(value()?),
             other => return Err(format!("unknown argument: {other}")),
         }
         if flag.starts_with("--") {
@@ -60,7 +64,7 @@ fn options(args: &[String]) -> Result<Options, String> {
     if user.is_empty() || secret.is_empty() {
         return Err("credentials are required (--user/--secret or AXJ_USER/AXJ_SECRET)".into());
     }
-    Ok(Options { session_url, user, secret, account })
+    Ok(Options { session_url, user, secret, account, since })
 }
 
 fn describe(session: &Session) {
@@ -132,7 +136,12 @@ fn report(batch: &axismundi_jmap_core::Batch) -> bool {
             "{}  callId={}  state={}  list={}",
             invocation.name,
             invocation.call_id,
-            invocation.arguments.get("state").and_then(Value::as_str).unwrap_or("(none)"),
+            invocation
+                .arguments
+                .get("state")
+                .or_else(|| invocation.arguments.get("newState"))
+                .and_then(Value::as_str)
+                .unwrap_or("(none)"),
             ids
         );
         if let Some(rows) = invocation.arguments.get("list").and_then(Value::as_array) {
@@ -154,7 +163,7 @@ fn run() -> Result<bool, String> {
     if command == "session" {
         return Ok(true);
     }
-    if command != "todo" {
+    if command != "todo" && command != "changes" {
         return Err(usage());
     }
     let account = choose(&session, TODO, options.account.as_deref())?;
@@ -169,7 +178,42 @@ fn run() -> Result<bool, String> {
             ],
         )
         .map_err(explain)?;
-    Ok(report(&batch))
+    let healthy = report(&batch);
+    if command == "todo" {
+        return Ok(healthy);
+    }
+    // A sync asks what changed since a state the client already holds. Taking that state
+    // from the Get above keeps the client from inventing one, and an unchanged store is
+    // expected to answer with no ids rather than with an error.
+    let since = match options.since {
+        Some(state) => state,
+        None => batch
+            .first_named("Todo/get")
+            .and_then(|i| i.arguments.get("state"))
+            .and_then(Value::as_str)
+            .ok_or("Todo/get returned no state to sync from")?
+            .to_string(),
+    };
+    println!("sinceState    {since}");
+    let changes = client
+        .request(
+            &session,
+            &[CORE, TODO],
+            vec![(
+                "Todo/changes",
+                json!({ "accountId": account, "sinceState": since }),
+                "c",
+            )],
+        )
+        .map_err(explain)?;
+    // cannotCalculateChanges is a legitimate answer, not a transport failure: the server
+    // is telling the client to refetch the type. It still counts as the call failing.
+    for invocation in changes.errors() {
+        if invocation.error_type() == Some("cannotCalculateChanges") {
+            println!("REFETCH  the server cannot compute this delta; re-read the type in full");
+        }
+    }
+    Ok(healthy && report(&changes))
 }
 
 /// Keep the four failure kinds apart in what the operator reads.

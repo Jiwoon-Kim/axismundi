@@ -63,7 +63,7 @@ c3ab    **이미 있는** 객체를 참조한다.  고치면 기록을 위조하
 ## 타입 대응 (RFC 8621 에서 필드명 확인)
 
 ```txt
-Identity           → Actor
+Identity           → **Actor 객체 자체**.  §아래 Identity 절 참조
                      8621 의 "Permission to Send from an Address" 가 우리 acting Actor 인가와
                      handle lock 의 자리다
 EmailSubmission    → Activity
@@ -75,7 +75,9 @@ EmailSubmission    → Activity
                      undoStatus                           ↔ Undo
                      threadId    (immutable; server-set)
 Email              → Object
-Message-ID         → Object URI.  전역 유일, 참조·스레딩의 기준
+Message-ID         → Object URI.  전역 유일, 참조·스레딩의 기준.
+                     **차이를 남긴다** — Message-ID 는 전역 식별자이고 GET 주소가 아니다.
+                     AS2 객체 URI 는 연합 식별자이면서 **역참조할 주소가 될 수 있다**
 JMAP Email id      → 우리 서버 지역 id.  Message-ID 가 아니다 → 이미 정한 id ≠ url 과 같다
 In-Reply-To /
 References         → inReplyTo
@@ -214,6 +216,56 @@ unread           JMAP 의 unreadEmails.  AP 에 없고 우리 Notifications 가 
 같은 주에 ①을 세 번 어겼다 — `TodoList/changes` 가 `$type . '/changes'` 로 조립 등록되는데
 리터럴 grep 으로 "없다" 고 한 것, 공개 Session 이 이미 구현됐는데 낡은 문서를 믿은 것,
 그리고 이것이다.
+
+## Identity — 우리에게는 선택 단계가 없다
+
+JMAP Mail 은 한 Account 안에 **여러 `Identity`** 를 둘 수 있다(보낼 수 있는 여러 주소).
+우리 Actor 기반 Account 는 **이미 Actor 하나를 가리킨다.**
+
+```txt
+JMAP        Account 선택 + Identity 선택 = 두 단계
+우리        **Actor Account 선택 한 번.**  그것이 발신 Actor 와 outbox 를 같이 정한다
+구분        "자격증명 하나에 Actor 하나" 가 아니다 — 같은 자격증명으로 Person 과 Group 을
+            둘 다 운영하면 Session 에 Account 가 둘 보인다 (2026-11-15 실측: 계정 4개)
+거부        요청 본문의 actor 가 다른 Actor 를 가리키면 서버가 거부한다.  기존 계약이다
+```
+
+구현 결과: **`Identity` 데이터 타입을 만들 이유가 없고**, 제출에 `identityId` 를 따로 두면
+`accountId` 와 중복된다. JMAP 의 두 단계가 우리에게는 한 단계로 접힌다.
+
+혼동하기 쉬운 곳을 적어 둔다 — **발신 Actor 가 하나라는 것은 귀속이 하나라는 뜻이 아니다.**
+권위는 `Create.actor` 이고 귀속 집합은 `attributedTo`(배열)다. 복수 귀속은 다른 축이다.
+
+## 세 층의 등록 — 개념은 맞고, 우리 코드는 아직 둘을 뭉쳐 둔다
+
+```txt
+① AS2 어휘 등록        Video 는 어떤 타입이고 duration 은 어떤 값인가
+                      → vocabulary-registry.php, vocabulary-context-registry.php
+② API 데이터 타입 등록   LocalObject API 는 무엇을 조회·편집할 수 있는가
+                      → axismundi_op_local_update_types() = Note, Video, Tombstone
+③ Session capability   이 Actor Account 에 어떤 API 표면이 제공되는가
+                      → axismundi/activitypub (소셜 프로토콜) ∥ axismundi/activitystreams
+                        (CMS) ∥ axismundi/jmap.  **셋은 별개 capability 다**
+```
+
+ActivityPub 은 capability 그 자체가 아니라 **capability 가 광고할 수 있는 프로토콜 표면
+하나**다. 그래서 세 가지를 따로 말할 수 있어야 한다 — 어떤 타입을 **안다**, 그 타입을
+**편집할 수 있다**, 그 타입에 대한 `Create` 를 **제출할 수 있다**.
+
+### 측정한 현재 상태 (2026-11-16)
+
+```txt
+①  별개로 존재한다.  어휘 레지스트리가 세 타입보다 훨씬 많이 안다
+②  존재한다 — axismundi_op_local_update_types()
+③  **JMAP 만 Session 으로 광고된다.**  activitypub·activitystreams 는 REST 네임스페이스이고
+    광고되는 capability 가 아니다 → 그것이 Session Pre-FEP 의 자리다
+②∥③ **같은 목록을 공유한다.**  c2s-local-object.php:53 이 Create 의 object.type 을
+    local_update_types() 로 검사한다 — 편집 가능 타입과 제출 가능 타입이 한 함수다
+```
+
+마지막 줄이 **지금 버그는 아니고 이름 붙인 이음새다.** 둘이 갈리는 순간 — 편집은 못 하지만
+제출은 되는 타입(uploadMedia 가 만든 `Video` 가 그 방향이다), 또는 편집은 되지만 연합하지
+않는 타입 — 한 함수가 두 질문에 답하게 된다. 그때 나눈다. 미리 나누지 않는다.
 
 ## 이미 설계한 것의 JMAP 이름 둘
 

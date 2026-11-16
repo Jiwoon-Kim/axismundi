@@ -54,6 +54,26 @@ authentication, `Core/echo` and the blob endpoints. A capability real servers al
 implement, such as Contacts (RFC 9610), is where a shared-capability claim could be
 earned.
 
+## Setting this up on another machine
+
+Nothing here is bound to this computer. The repository carries the workspace,
+the committed `Cargo.lock` and a minimum Rust version, so a clone builds with
+
+```bash
+cargo build
+```
+
+and the binary lands in `./target/debug/`. The `D:` paths in the next section
+are a local answer to a full system drive, not a requirement; leave those
+variables unset and Cargo uses its defaults.
+
+Two things are worth knowing because this machine cannot see them. Its
+`CARGO_TARGET_DIR` moves build output off the project, so a build directory
+that would appear under a shell never appears here, which is why `.gitignore`
+matches `target/` at any depth rather than only at the root. And
+`rust-version` is declared because edition 2024 needs Rust 1.85 or newer, which
+fails on an older toolchain with an error that does not say so.
+
 ## Toolchain on this machine
 
 Rust and all build output live on `D:` because the system drive is nearly full:

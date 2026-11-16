@@ -1,1 +1,7 @@
-/target
+# Nested, not rooted: a Tauri shell puts its own target under gui/src-tauri/.
+# On this machine CARGO_TARGET_DIR hides that directory, so a rooted pattern
+# would look correct here and fail on every other machine.
+target/
+node_modules/
+.angular/
+dist/

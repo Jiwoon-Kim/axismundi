@@ -9,6 +9,8 @@ use std::process::ExitCode;
 use axismundi_jmap_core::{CORE_CAPABILITY as CORE, Client, Credentials, Error, Session};
 use serde_json::{Value, json};
 
+mod todo_set;
+
 const TODO: &str = "urn:com.example:jmap:todo";
 
 struct Options {
@@ -28,6 +30,7 @@ fn usage() -> String {
         "  axj echo      --session-url URL [--user NAME] [--secret SECRET]",
         "  axj todo      --session-url URL [--user NAME] [--secret SECRET] [--account ID]",
         "  axj changes   ... [--account ID] [--since STATE]",
+        "  axj todo-set  ... [--account ID]  (loopback development server only)",
         "",
         "Credentials may come from AXJ_USER and AXJ_SECRET instead of the flags, which",
         "keeps the secret out of the shell history and the process list.",
@@ -180,11 +183,29 @@ fn run() -> Result<bool, String> {
     let argv: Vec<String> = std::env::args().skip(1).collect();
     let (command, rest) = argv.split_first().ok_or_else(usage)?;
     let options = options(rest)?;
-    let client = Client::new(Credentials {
+    let credentials = Credentials {
         user: options.user,
         secret: options.secret,
-    });
+    };
+    let probe_origin = if command == "todo-set" {
+        Some(todo_set::loopback_origin(&options.session_url)?)
+    } else {
+        None
+    };
+    let client = if probe_origin.is_some() {
+        Client::without_redirects(credentials)
+    } else {
+        Client::new(credentials)
+    };
     let session = client.session(&options.session_url).map_err(explain)?;
+    if let Some(origin) = probe_origin {
+        if todo_set::loopback_origin(&session.api_url)? != origin {
+            return Err("Todo write probe requires a same-origin apiUrl".into());
+        }
+        let account = choose(&session, TODO, options.account.as_deref())?;
+        todo_set::run(&client, &session, &account)?;
+        return Ok(true);
+    }
     describe(&session);
     if command == "session" {
         return Ok(true);

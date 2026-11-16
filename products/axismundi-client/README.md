@@ -27,7 +27,13 @@ axj session --session-url http://localhost:8884/wp-json/axismundi/jmap/session
 axj echo    --session-url http://localhost:8884/wp-json/axismundi/jmap/session
 axj todo    --session-url http://localhost:8884/wp-json/axismundi/jmap/session
 axj changes --session-url http://localhost:8884/wp-json/axismundi/jmap/session [--since STATE]
+axj todo-set --session-url http://localhost:8884/wp-json/axismundi/jmap/session [--account ID]
 ```
+
+`todo-set` is a write probe for loopback development servers only. It creates
+its own TodoList and Todo, checks optimistic concurrency and partial failures,
+and cleans up only the IDs returned by its own creates. If cleanup cannot be
+confirmed, it reports the known IDs and the fixture marker for inspection.
 
 Credentials come from `AXJ_USER` and `AXJ_SECRET` so the secret stays out of the
 shell history and the process list; `--user` and `--secret` also work. Against a

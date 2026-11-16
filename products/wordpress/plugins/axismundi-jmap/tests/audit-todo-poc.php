@@ -81,6 +81,8 @@ try {
 	wp_set_current_user( $a );
 	$cap = server()->accounts()->accounts->{$aa}->accountCapabilities->{PRINCIPALS};
 	$assert( property_exists( $cap, 'currentUserPrincipalId' ) && $pa === $cap->currentUserPrincipalId, 'Account capability advertises the requesting user Principal' );
+	$self = $call( 'Principal/get', array( 'accountId' => $aa, 'ids' => array( $cap->currentUserPrincipalId ) ) );
+	$assert( $pa === ( $self->list[0]->id ?? null ), 'Session currentUserPrincipalId resolves through Principal/get' );
 	$owner_grant = (object) array( $pa => (object) array( 'mayRead' => true, 'mayWrite' => false, 'mayAdmin' => false ) );
 	$refused = $call( 'TodoList/set', array( 'accountId' => $aa, 'create' => (object) array(
 		'self' => (object) array( 'name' => 'Not a share', 'shareWith' => $owner_grant ),
@@ -96,6 +98,7 @@ try {
 	$call( 'TodoList/set', array( 'accountId' => $aa, 'destroy' => array( $shared_group ) ) );
 	$directory = $call( 'Principal/get', array( 'accountId' => $aa, 'ids' => array( $pb ) ) );
 	$assert( $pb === ( $directory->list[0]->id ?? null ), 'Principal is discoverable through envelope' );
+	$recipient = $directory->list[0]->id;
 	$initial = $call( 'Todo/get', array( 'accountId' => $aa ) )->state;
 	$response = $batch( array(
 		array( 'TodoList/set', (object) array( 'accountId' => $aa, 'create' => (object) array( 'list' => (object) array( 'name' => 'Audit list' ) ) ), 'list' ),
@@ -139,7 +142,7 @@ try {
 	$call( 'Todo/set', array( 'accountId' => $aa, 'update' => (object) array( $todo => $whole ) ) );
 	$full = $call( 'Todo/get', array( 'accountId' => $aa, 'ids' => array( $todo ) ) )->list[0];
 	$assert( \Axismundi\Jmap\TodoPoc\patch_values_equal( $minimal, $full ), 'Minimal and whole-object patches produce identical objects' );
-	$share = (object) array( $pb => (object) array( 'mayRead' => true, 'mayWrite' => false, 'mayAdmin' => false ) );
+	$share = (object) array( $recipient => (object) array( 'mayRead' => true, 'mayWrite' => false, 'mayAdmin' => false ) );
 	$shared = $call( 'TodoList/set', array( 'accountId' => $aa, 'update' => (object) array( $list => (object) array( 'shareWith' => $share ) ) ) );
 	$assert( property_exists( $shared->updated, $list ), 'A shares read-only with B' );
 	wp_set_current_user( $b );
@@ -168,7 +171,17 @@ try {
 	wp_set_current_user( $a );
 	$call( 'TodoList/set', array( 'accountId' => $aa, 'update' => (object) array( $list => (object) array( 'shareWith' => $share ) ) ) );
 	wp_set_current_user( $b );
-	$subscription = $call( 'TodoList/set', array( 'accountId' => $aa, 'update' => (object) array( $list => (object) array( 'isSubscribed' => true ) ) ) );
+	$subscription_batch = $batch( array(
+		array( 'TodoList/set', (object) array( 'accountId' => $aa, 'update' => (object) array( $list => (object) array( 'isSubscribed' => true ) ) ), 'subscribe' ),
+		array( 'TodoList/set', (object) array( 'accountId' => $aa, 'update' => (object) array( $list => (object) array( 'name' => 'Forbidden rename' ) ) ), 'rename' ),
+		array( 'TodoList/get', (object) array( 'accountId' => $aa, 'ids' => array( $list ) ), 'verify' ),
+	) )->methodResponses;
+	$subscription = $subscription_batch[0][1];
+	$assert( 'TodoList/set' === $subscription_batch[0][0] && 'subscribe' === $subscription_batch[0][2]
+		&& 'TodoList/set' === $subscription_batch[1][0] && 'rename' === $subscription_batch[1][2]
+		&& 'forbidden' === ( $subscription_batch[1][1]->notUpdated->{$list}->type ?? null )
+		&& 'Audit list' === ( $subscription_batch[2][1]->list[0]->name ?? null ),
+		'Read-only subscriber can subscribe but cannot rename the same list in the same batch' );
 	$session = server()->accounts();
 	$assert( property_exists( $subscription->updated, $list ) && isset( $session->accounts->{$aa}, $session->accounts->{$ab} ) && $session->accounts->{$aa}->isReadOnly, 'Subscription exposes A alongside own B Account' );
 	$assert( ! axismundi_actors_account_role( $actors[0], $b ), 'Resource sharing adds no Actors manager grant' );

@@ -9,3 +9,4 @@ publish.workspace = true
 [dependencies]
 axismundi-jmap-core = { version = "0.1.0", path = "../core" }
 serde_json = "1.0.154"
+url = "2"

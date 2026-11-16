@@ -98,6 +98,57 @@ impl Invocation {
     pub fn error_type(&self) -> Option<&str> {
         self.arguments.get("type").and_then(Value::as_str)
     }
+
+    /// Decode a successful Set invocation. Method errors must be handled first.
+    pub fn set_outcome(&self) -> Result<SetOutcome, Error> {
+        if !self.name.ends_with("/set") {
+            return Err(Error::Shape("expected a successful /set invocation".into()));
+        }
+        serde_json::from_value(self.arguments.clone())
+            .map_err(|error| Error::Shape(format!("{}: {error}", self.name)))
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SetError {
+    #[serde(rename = "type")]
+    pub kind: String,
+    pub description: Option<String>,
+    pub properties: Option<Vec<String>>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SetOutcome {
+    pub account_id: String,
+    pub old_state: Option<String>,
+    pub new_state: String,
+    #[serde(default, deserialize_with = "null_as_default")]
+    pub created: BTreeMap<String, Value>,
+    #[serde(default, deserialize_with = "null_as_default")]
+    pub updated: BTreeMap<String, Option<Value>>,
+    #[serde(default, deserialize_with = "null_as_default")]
+    pub destroyed: Vec<String>,
+    #[serde(default, deserialize_with = "null_as_default")]
+    pub not_created: BTreeMap<String, SetError>,
+    #[serde(default, deserialize_with = "null_as_default")]
+    pub not_updated: BTreeMap<String, SetError>,
+    #[serde(default, deserialize_with = "null_as_default")]
+    pub not_destroyed: BTreeMap<String, SetError>,
+}
+
+impl SetOutcome {
+    pub fn fully_applied(&self) -> bool {
+        self.not_created.is_empty() && self.not_updated.is_empty() && self.not_destroyed.is_empty()
+    }
+}
+
+fn null_as_default<'de, D, T>(deserializer: D) -> Result<T, D::Error>
+where
+    D: serde::Deserializer<'de>,
+    T: Deserialize<'de> + Default,
+{
+    Ok(Option::<T>::deserialize(deserializer)?.unwrap_or_default())
 }
 
 #[derive(Debug)]
@@ -177,13 +228,24 @@ impl Client {
     }
 
     pub fn new(credentials: Credentials) -> Self {
+        Self::with_redirect_limit(credentials, None)
+    }
+
+    /// Keep a write probe on its explicitly selected development endpoint.
+    pub fn without_redirects(credentials: Credentials) -> Self {
+        Self::with_redirect_limit(credentials, Some(0))
+    }
+
+    fn with_redirect_limit(credentials: Credentials, limit: Option<u32>) -> Self {
         // Status codes carry meaning here: a 4xx may be a JMAP problem document that has
         // to be read, so the agent must not turn a status into an error and drop the body.
-        let agent: ureq::Agent = ureq::Agent::config_builder()
+        let mut config = ureq::Agent::config_builder()
             .http_status_as_error(false)
-            .user_agent("axismundi-jmap-client/0.1")
-            .build()
-            .into();
+            .user_agent("axismundi-jmap-client/0.1");
+        if let Some(limit) = limit {
+            config = config.max_redirects(limit);
+        }
+        let agent = config.build().into();
         Self { agent, credentials }
     }
 
@@ -351,6 +413,81 @@ fn verify_echo(batch: &Batch, expected: &Value, call_id: &str) -> Result<(), Err
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn set_outcome_preserves_partial_success_and_null_update_values() {
+        let reply = Invocation {
+            name: "Todo/set".into(),
+            call_id: "probe".into(),
+            arguments: json!({
+                "accountId": "a1", "oldState": null, "newState": "s2",
+                "created": {"local": {"id": "server-id"}},
+                "updated": {"object-id": null},
+                "destroyed": null,
+                "notCreated": {"bad-local": {"type": "invalidProperties", "properties": ["title"]}},
+                "notUpdated": {"bad-object": {"type": "forbidden"}},
+                "notDestroyed": {"missing": {"type": "notFound"}}
+            }),
+        };
+        let result = reply.set_outcome().unwrap();
+        assert_eq!(result.old_state, None);
+        assert_eq!(result.created["local"]["id"], "server-id");
+        assert_eq!(result.updated["object-id"], None);
+        assert!(result.destroyed.is_empty());
+        assert_eq!(
+            result.not_created["bad-local"]
+                .properties
+                .as_deref()
+                .unwrap(),
+            ["title"]
+        );
+        assert_eq!(result.not_updated["bad-object"].kind, "forbidden");
+        assert_eq!(result.not_destroyed["missing"].kind, "notFound");
+        assert!(!result.fully_applied());
+    }
+
+    /// The fixture above carries all three rejection maps at once, so it cannot
+    /// say which of them `fully_applied` actually reads: dropping one from the
+    /// check leaves it passing. These populate exactly one map at a time.
+    #[test]
+    fn each_rejection_map_alone_makes_the_outcome_partial() {
+        let clean = json!({
+            "accountId": "a1", "oldState": null, "newState": "s2",
+            "created": null, "updated": null, "destroyed": null,
+            "notCreated": null, "notUpdated": null, "notDestroyed": null
+        });
+        let invoke = |arguments: Value| Invocation {
+            name: "Todo/set".into(),
+            call_id: "probe".into(),
+            arguments,
+        };
+
+        assert!(
+            invoke(clean.clone()).set_outcome().unwrap().fully_applied(),
+            "nothing rejected means the set applied in full"
+        );
+
+        for field in ["notCreated", "notUpdated", "notDestroyed"] {
+            let mut arguments = clean.clone();
+            arguments[field] = json!({ "x": { "type": "forbidden" } });
+            assert!(
+                !invoke(arguments).set_outcome().unwrap().fully_applied(),
+                "{field} alone must make the outcome partial"
+            );
+        }
+    }
+
+    #[test]
+    fn set_method_errors_are_not_set_outcomes() {
+        let reply = Invocation {
+            name: "error".into(),
+            call_id: "probe".into(),
+            arguments: json!({"type": "stateMismatch"}),
+        };
+        assert!(reply.is_error());
+        assert_eq!(reply.error_type(), Some("stateMismatch"));
+        assert!(reply.set_outcome().is_err());
+    }
 
     #[test]
     fn session_resolves_the_advertised_api_reference() {

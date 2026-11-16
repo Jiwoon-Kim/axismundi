@@ -1,0 +1,8 @@
+Hello Plugin Review Team,
+
+Please reserve axismundi-s2s-bridge-for-activitypub as the new slug for Axismundi S2S Bridge for ActivityPub.
+
+This is an independent Axismundi add-on that uses the ActivityPub plugin for server-to-server federation. We also checked the distributed PHP for collisions; its declarations and plugin-owned settings use Axismundi-specific prefixes.
+
+Thank you,
+Jiwoon Kim

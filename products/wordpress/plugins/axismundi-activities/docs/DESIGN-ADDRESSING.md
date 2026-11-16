@@ -541,7 +541,7 @@ fetch 다. 그러므로 **비공개 액터의 답은 익명 GET 이 아니라 �
 갱신(이미 아는 액터)   검증된 활동의 완전한 인라인 문서를 받아도 된다 — 서명이 그 본문을
                       **이전에 fetch 해 둔 키**에 묶는다.  구현돼 있다:
                       bridge 가 axismundi_actors_apply_remote_actor_update() 를 호출하고
-                      (axismundi-activitypub-bridge.php:305), Actors 는
+                      (axismundi-s2s-bridge-for-activitypub.php:305), Actors 는
                       actor === object.id 일 때만 기존 **원격** Actor 를 갱신한다
                       (remote-discovery.php:222). 부분 문서 거부, **새 정체성 생성 안 함**
 등록(모르는 액터)      키가 아직 없다. 그러므로 레코드는 **fetch 에서** 나와야 한다.
@@ -747,11 +747,11 @@ UI 도 **전송 재시도**와 **요청 취소 후 다시 보내기**를 구분�
 
 압축은 **이미 일어난다.** 수신자마다
 `endpoints['shared_inbox'] ?? endpoints['inbox']` 로 해소하고
-([transport.php:280](../../axismundi-activitypub-bridge/includes/transport.php))
-`array_values( array_unique( $inboxes ) )` 로 접는다([:294](../../axismundi-activitypub-bridge/includes/transport.php)).
+([transport.php:280](../../axismundi-s2s-bridge-for-activitypub/includes/transport.php))
+`array_values( array_unique( $inboxes ) )` 로 접는다([:294](../../axismundi-s2s-bridge-for-activitypub/includes/transport.php)).
 배달 큐도 inbox 단위로 유니크하다(`UNIQUE KEY recipient (delivery_id, inbox_hash)`,
-[delivery.php:77](../../axismundi-activitypub-bridge/includes/delivery.php)). 팔로워
-펼치기도 있고([:244](../../axismundi-activitypub-bridge/includes/transport.php)),
+[delivery.php:77](../../axismundi-s2s-bridge-for-activitypub/includes/delivery.php)). 팔로워
+펼치기도 있고([:244](../../axismundi-s2s-bridge-for-activitypub/includes/transport.php)),
 원격 컬렉션을 펼칠 수 없을 때는 조용히 버리지 않고
 `axismundi_activitypub_bridge_unresolved_delivery_candidate` 로 드러낸다 — 위에서
 "실패로 인정해야 한다" 고 적은 것이 이미 그렇게 돼 있다.
@@ -859,7 +859,7 @@ PeerTube Video           audience: 채널 Group (to 에도 같은 값)
 
 `audience` 에 우리 Group 이 있으면 **sharedInbox 로 받은 액티비티도** 타깃이 된다 —
 `receipt_targets()` 가 다섯 필드를 액티비티와 그 객체 양쪽에서 모아 로컬 액터로
-해소한다([actor-inbox.php:80](../../axismundi-activitypub-bridge/includes/actor-inbox.php)).
+해소한다([actor-inbox.php:80](../../axismundi-s2s-bridge-for-activitypub/includes/actor-inbox.php)).
 그 제출에 대한 Group `Announce` 도 기록된다
 ([distribution.php:215](../../axismundi-forum/includes/distribution.php)).
 

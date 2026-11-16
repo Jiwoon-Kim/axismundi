@@ -32,7 +32,7 @@
     "C:/Users/thaum/dev/pwa/pwa.0.8.2/pwa",
     "../../../products/wordpress/plugins/axismundi-pwa",
     "https://downloads.wordpress.org/plugin/activitypub.zip",
-    "../../../products/wordpress/plugins/axismundi-activitypub-bridge"
+    "../../../products/wordpress/plugins/axismundi-s2s-bridge-for-activitypub"
   ],
   "port": 8885,
   "config": {

@@ -35,7 +35,7 @@
     "https://downloads.wordpress.org/plugin/pwa.zip",
     "./products/wordpress/plugins/axismundi-pwa",
     "https://downloads.wordpress.org/plugin/activitypub.zip",
-    "./products/wordpress/plugins/axismundi-activitypub-bridge",
+    "./products/wordpress/plugins/axismundi-s2s-bridge-for-activitypub",
     "./products/wordpress/plugins/axismundi-theme-controls"
   ],
   "port": 8884,

@@ -9,7 +9,7 @@ $allowed = array(
 	'axismundi-actors/includes/acting-actor.php::axismundi_actors_default_acting_actor' => 'E: disabled-rollout resolver',
 	'axismundi-actors/includes/account-operations.php::axismundi_actors_legacy_current_workspace' => 'E: disabled-rollout resolver',
 	'axismundi-actors/includes/routing.php::axismundi_actors_legacy_author_profile_redirect_url' => 'E: historical author redirect',
-	'axismundi-activitypub-bridge/includes/migration-scan.php::axismundi_activitypub_bridge_legacy_local_actor' => 'E: old official-plugin User identifiers',
+	'axismundi-s2s-bridge-for-activitypub/includes/migration-scan.php::axismundi_activitypub_bridge_legacy_local_actor' => 'E: old official-plugin User identifiers',
 	'axismundi-contacts/includes/lifecycle.php::axismundi_contacts_purge_for_deleted_user' => 'D: WP User deletion lifecycle; Contacts redesign is separate',
 );
 $calls = 0;

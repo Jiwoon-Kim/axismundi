@@ -94,7 +94,7 @@ addressed publicly, and only as a courtesy view beside the remote original.
    `application/activity+json` to see the result. It carries no `attributedTo` until
    something records who published it. Add **Axismundi Activities** for that, and for the
    four authored visibility levels and an Actor outbox with activities in it, and the
-   official **ActivityPub** plugin with **Axismundi ActivityPub Bridge** to send and
+   official **ActivityPub** plugin with **Axismundi S2S Bridge for ActivityPub** to send and
    receive.
 4. Remote observations, where there are any, are listed under **Tools > Remote Objects**.
 

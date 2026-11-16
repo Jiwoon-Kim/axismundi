@@ -1,9 +1,9 @@
 <?php
 /**
- * Plugin Name:       Axismundi ActivityPub Bridge
- * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi/tree/main/products/wordpress/plugins/axismundi-activitypub-bridge
- * Description:       Compatibility boundary between Axismundi's URI-keyed domain stores and the official ActivityPub plugin's S2S transport.
- * Version:           0.1.4
+ * Plugin Name:       Axismundi S2S Bridge for ActivityPub
+ * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi/tree/main/products/wordpress/plugins/axismundi-s2s-bridge-for-activitypub
+ * Description:       Connects Axismundi's actors, objects, and activities to the ActivityPub plugin for server-to-server federation.
+ * Version:           0.1.5
  * Requires at least: 6.7
  * Requires PHP:      8.1
  * Requires Plugins:  activitypub, axismundi-actors, axismundi-object-projections, axismundi-activities
@@ -11,7 +11,7 @@
  * Author URI:        https://designbusan.ai.kr
  * License:           GPL-3.0-or-later
  * License URI:       https://www.gnu.org/licenses/gpl-3.0.html
- * Text Domain:       axismundi-activitypub-bridge
+ * Text Domain:       axismundi-s2s-bridge-for-activitypub
  *
  * @package AxismundiActivityPubBridge
  *
@@ -31,7 +31,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACTIVITYPUB_BRIDGE_VERSION = '0.1.4';
+const AXISMUNDI_ACTIVITYPUB_BRIDGE_VERSION = '0.1.5';
 const AXISMUNDI_ACTIVITYPUB_BRIDGE_REWRITE_VERSION = 1;
 const AXISMUNDI_ACTIVITYPUB_BRIDGE_INBOX_RETRY_AFTER = 60;
 
@@ -241,13 +241,13 @@ function axismundi_activitypub_bridge_inbox_targets( array $activity, array $rec
  */
 function axismundi_activitypub_bridge_record_inbox( array $activity, array $recipient_user_ids = array(), bool $allow_mention_targets = false, ?Axismundi_Actor $route_actor = null, ?array $receipt_targets = null, string $received_via = '' ) {
 	if ( ! axismundi_activitypub_bridge_ready() ) {
-		return new WP_Error( 'ax_bridge_inbox_not_ready', __( 'The Axismundi Inbox repositories are unavailable.', 'axismundi-activitypub-bridge' ) );
+		return new WP_Error( 'ax_bridge_inbox_not_ready', __( 'The Axismundi Inbox repositories are unavailable.', 'axismundi-s2s-bridge-for-activitypub' ) );
 	}
 	if ( null !== $route_actor && ( ! $route_actor->is_local() || 'public' !== $route_actor->get_status() ) ) {
 		return new WP_Error( 'ax_bridge_inbox_no_target', 'The route recipient is unavailable.' );
 	}
 	if ( null === $route_actor && empty( $receipt_targets ) && empty( axismundi_activitypub_bridge_inbox_targets( $activity, $recipient_user_ids, $allow_mention_targets ) ) ) {
-		return new WP_Error( 'ax_bridge_inbox_no_target', __( 'No public local Actor target could be resolved.', 'axismundi-activitypub-bridge' ) );
+		return new WP_Error( 'ax_bridge_inbox_no_target', __( 'No public local Actor target could be resolved.', 'axismundi-s2s-bridge-for-activitypub' ) );
 	}
 
 	$actor_uri = function_exists( 'axismundi_act_member_uri' ) ? axismundi_act_member_uri( $activity['actor'] ?? '' ) : '';
@@ -256,7 +256,7 @@ function axismundi_activitypub_bridge_record_inbox( array $activity, array $reci
 		$actor = axismundi_actors_discover_remote_actor_uri( $actor_uri );
 	}
 	if ( ! $actor instanceof Axismundi_Actor || $actor->is_local() ) {
-		return new WP_Error( 'ax_bridge_inbox_actor', __( 'The remote Actor could not be resolved.', 'axismundi-activitypub-bridge' ) );
+		return new WP_Error( 'ax_bridge_inbox_actor', __( 'The remote Actor could not be resolved.', 'axismundi-s2s-bridge-for-activitypub' ) );
 	}
 	if ( function_exists( 'axismundi_actors_ensure_remote_instance_cached' ) ) {
 		axismundi_actors_ensure_remote_instance_cached( $actor );
@@ -303,7 +303,7 @@ function axismundi_activitypub_bridge_record_inbox( array $activity, array $reci
 		&& in_array( $object_type, array( 'Person', 'Organization', 'Application', 'Service', 'Group' ), true )
 	) {
 		if ( ! function_exists( 'axismundi_actors_apply_remote_actor_update' ) ) {
-			return new WP_Error( 'ax_bridge_actor_update_unavailable', __( 'The remote Actor update repository is unavailable.', 'axismundi-activitypub-bridge' ) );
+			return new WP_Error( 'ax_bridge_actor_update_unavailable', __( 'The remote Actor update repository is unavailable.', 'axismundi-s2s-bridge-for-activitypub' ) );
 		}
 		$updated = axismundi_actors_apply_remote_actor_update( $object, $actor_uri );
 		if ( is_wp_error( $updated ) ) {

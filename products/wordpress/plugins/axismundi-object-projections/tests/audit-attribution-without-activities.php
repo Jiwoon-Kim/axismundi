@@ -1,5 +1,5 @@
 <?php
-/** Run with --skip-plugins=axismundi-activities,axismundi-activitypub-bridge. */
+/** Run with --skip-plugins=axismundi-activities,axismundi-s2s-bridge-for-activitypub. */
 defined( 'ABSPATH' ) || exit( 1 );
 require_once ABSPATH . 'wp-admin/includes/user.php';
 if ( function_exists( 'axismundi_act_get_object_attribution' ) ) { throw new RuntimeException( 'Activities must be skipped, not merely unhooked.' ); }

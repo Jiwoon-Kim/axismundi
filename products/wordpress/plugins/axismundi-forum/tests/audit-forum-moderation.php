@@ -16,7 +16,7 @@ require_once WP_PLUGIN_DIR . '/axismundi-activities/includes/audience.php';
  * is exactly what the rest of this suite exists to prove.
  */
 if ( defined( 'AXISMUNDI_ACTIVITYPUB_BRIDGE_VERSION' ) ) {
-	require_once WP_PLUGIN_DIR . '/axismundi-activitypub-bridge/includes/transport.php';
+	require_once WP_PLUGIN_DIR . '/axismundi-s2s-bridge-for-activitypub/includes/transport.php';
 }
 require_once __DIR__ . '/../includes/repository.php';
 require_once __DIR__ . '/../includes/topics.php';

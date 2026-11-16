@@ -47,7 +47,7 @@ function axismundi_activitypub_bridge_import_legacy_actors( array &$result ) : v
 		$uri     = is_array( $payload ) ? axismundi_act_member_uri( $payload['id'] ?? $post->guid ) : '';
 		$record  = '' !== $uri && is_array( $payload )
 			? axismundi_actors_normalize_remote_actor_payload( $payload, $uri )
-			: new WP_Error( 'ax_bridge_legacy_actor_json', __( 'Stored Actor JSON has no valid canonical id.', 'axismundi-activitypub-bridge' ) );
+			: new WP_Error( 'ax_bridge_legacy_actor_json', __( 'Stored Actor JSON has no valid canonical id.', 'axismundi-s2s-bridge-for-activitypub' ) );
 		if ( is_wp_error( $record ) ) {
 			axismundi_activitypub_bridge_legacy_import_row( $result, 'ap_actor', (string) $post->ID, $uri, 'failed', $record->get_error_message() );
 			continue;
@@ -62,8 +62,8 @@ function axismundi_activitypub_bridge_import_legacy_actors( array &$result ) : v
 				$uri,
 				$status,
 				'verified_existing' === $status
-					? __( 'The canonical Actor already exists; the older official snapshot was not written over it.', 'axismundi-activitypub-bridge' )
-					: __( 'The existing Actor type conflicts with the official snapshot.', 'axismundi-activitypub-bridge' )
+					? __( 'The canonical Actor already exists; the older official snapshot was not written over it.', 'axismundi-s2s-bridge-for-activitypub' )
+					: __( 'The existing Actor type conflicts with the official snapshot.', 'axismundi-s2s-bridge-for-activitypub' )
 			);
 			continue;
 		}
@@ -74,7 +74,7 @@ function axismundi_activitypub_bridge_import_legacy_actors( array &$result ) : v
 		}
 		$verified = axismundi_actors_get_by_uri( $uri );
 		if ( ! $verified instanceof Axismundi_Actor || ! hash_equals( $verified->get_uri(), $uri ) || $verified->get_type() !== (string) $record['actor_type'] ) {
-			axismundi_activitypub_bridge_legacy_import_row( $result, 'ap_actor', (string) $post->ID, $uri, 'failed', __( 'The imported Actor could not be verified by canonical URI and type.', 'axismundi-activitypub-bridge' ) );
+			axismundi_activitypub_bridge_legacy_import_row( $result, 'ap_actor', (string) $post->ID, $uri, 'failed', __( 'The imported Actor could not be verified by canonical URI and type.', 'axismundi-s2s-bridge-for-activitypub' ) );
 			continue;
 		}
 		axismundi_activitypub_bridge_legacy_import_row(
@@ -83,7 +83,7 @@ function axismundi_activitypub_bridge_import_legacy_actors( array &$result ) : v
 			(string) $post->ID,
 			$uri,
 			'imported',
-			__( 'Verified in Axismundi Actors. The official ap_actor row remains runtime-required.', 'axismundi-activitypub-bridge' )
+			__( 'Verified in Axismundi Actors. The official ap_actor row remains runtime-required.', 'axismundi-s2s-bridge-for-activitypub' )
 		);
 	}
 }
@@ -94,7 +94,7 @@ function axismundi_activitypub_bridge_import_legacy_objects( array &$result ) : 
 	foreach ( axismundi_activitypub_bridge_legacy_posts( 'ap_post', $report ) as $post ) {
 		$payload = axismundi_activitypub_bridge_legacy_payload( $post );
 		if ( ! is_array( $payload ) ) {
-			axismundi_activitypub_bridge_legacy_import_row( $result, 'ap_post', (string) $post->ID, (string) $post->guid, 'failed', __( 'Stored Object JSON is invalid.', 'axismundi-activitypub-bridge' ) );
+			axismundi_activitypub_bridge_legacy_import_row( $result, 'ap_post', (string) $post->ID, (string) $post->guid, 'failed', __( 'Stored Object JSON is invalid.', 'axismundi-s2s-bridge-for-activitypub' ) );
 			continue;
 		}
 		$normalized = axismundi_op_remote_object_normalize( $payload );
@@ -113,8 +113,8 @@ function axismundi_activitypub_bridge_import_legacy_objects( array &$result ) : 
 				$uri,
 				$status,
 				'verified_existing' === $status
-					? __( 'The identical Object snapshot already exists and was not rewritten.', 'axismundi-activitypub-bridge' )
-					: __( 'The existing Object payload differs from the official snapshot; the newer cache was preserved.', 'axismundi-activitypub-bridge' )
+					? __( 'The identical Object snapshot already exists and was not rewritten.', 'axismundi-s2s-bridge-for-activitypub' )
+					: __( 'The existing Object payload differs from the official snapshot; the newer cache was preserved.', 'axismundi-s2s-bridge-for-activitypub' )
 			);
 			continue;
 		}
@@ -125,10 +125,10 @@ function axismundi_activitypub_bridge_import_legacy_objects( array &$result ) : 
 		}
 		$verified = axismundi_op_get_remote_object( $uri, false );
 		if ( ! is_array( $verified ) || ! hash_equals( (string) $verified['object_uri'], $uri ) || ! hash_equals( (string) $verified['payload_hash'], (string) $normalized['payload_hash'] ) ) {
-			axismundi_activitypub_bridge_legacy_import_row( $result, 'ap_post', (string) $post->ID, $uri, 'failed', __( 'The imported Object could not be verified by canonical URI and payload hash.', 'axismundi-activitypub-bridge' ) );
+			axismundi_activitypub_bridge_legacy_import_row( $result, 'ap_post', (string) $post->ID, $uri, 'failed', __( 'The imported Object could not be verified by canonical URI and payload hash.', 'axismundi-s2s-bridge-for-activitypub' ) );
 			continue;
 		}
-		axismundi_activitypub_bridge_legacy_import_row( $result, 'ap_post', (string) $post->ID, $uri, 'imported', __( 'Verified in the URI-keyed remote Object repository.', 'axismundi-activitypub-bridge' ) );
+		axismundi_activitypub_bridge_legacy_import_row( $result, 'ap_post', (string) $post->ID, $uri, 'imported', __( 'Verified in the URI-keyed remote Object repository.', 'axismundi-s2s-bridge-for-activitypub' ) );
 	}
 }
 
@@ -156,7 +156,7 @@ function axismundi_activitypub_bridge_import_legacy_inbox( array &$result ) : vo
 		$recipients   = array_map( 'intval', get_post_meta( $post->ID, '_activitypub_user_id', false ) );
 		$missing      = array_filter( $recipients, static fn( int $user_id ) : bool => ! axismundi_activitypub_bridge_legacy_local_actor( $user_id ) instanceof Axismundi_Actor );
 		if ( ! is_array( $payload ) || '' === $activity_uri || '' === $actor_uri || empty( $recipients ) || ! empty( $missing ) || ! axismundi_actors_get_by_uri( $actor_uri ) instanceof Axismundi_Actor ) {
-			axismundi_activitypub_bridge_legacy_import_row( $result, 'ap_inbox', (string) $post->ID, $activity_uri, 'failed', __( 'The Activity or its Actor/local recipient mapping is incomplete.', 'axismundi-activitypub-bridge' ) );
+			axismundi_activitypub_bridge_legacy_import_row( $result, 'ap_inbox', (string) $post->ID, $activity_uri, 'failed', __( 'The Activity or its Actor/local recipient mapping is incomplete.', 'axismundi-s2s-bridge-for-activitypub' ) );
 			continue;
 		}
 		$before   = axismundi_act_get( $activity_uri );
@@ -167,10 +167,10 @@ function axismundi_activitypub_bridge_import_legacy_inbox( array &$result ) : vo
 		}
 		$verified = axismundi_act_get( $activity_uri );
 		if ( ! $verified instanceof Axismundi_Activity || ! hash_equals( $verified->get_uri(), $activity_uri ) ) {
-			axismundi_activitypub_bridge_legacy_import_row( $result, 'ap_inbox', (string) $post->ID, $activity_uri, 'failed', __( 'The imported Activity could not be verified by canonical URI.', 'axismundi-activitypub-bridge' ) );
+			axismundi_activitypub_bridge_legacy_import_row( $result, 'ap_inbox', (string) $post->ID, $activity_uri, 'failed', __( 'The imported Activity could not be verified by canonical URI.', 'axismundi-s2s-bridge-for-activitypub' ) );
 			continue;
 		}
-		axismundi_activitypub_bridge_legacy_import_row( $result, 'ap_inbox', (string) $post->ID, $activity_uri, $before instanceof Axismundi_Activity ? 'verified_existing' : 'imported', __( 'Verified in the Activity ledger; relation state was derived by replay.', 'axismundi-activitypub-bridge' ) );
+		axismundi_activitypub_bridge_legacy_import_row( $result, 'ap_inbox', (string) $post->ID, $activity_uri, $before instanceof Axismundi_Activity ? 'verified_existing' : 'imported', __( 'Verified in the Activity ledger; relation state was derived by replay.', 'axismundi-s2s-bridge-for-activitypub' ) );
 	}
 }
 
@@ -192,7 +192,7 @@ function axismundi_activitypub_bridge_import_legacy_relation_snapshots( array &$
 			foreach ( get_post_meta( $post->ID, $set[0], false ) as $local_user_id ) {
 				$local = axismundi_activitypub_bridge_legacy_local_actor( (int) $local_user_id );
 				if ( ! $local instanceof Axismundi_Actor ) {
-					axismundi_activitypub_bridge_legacy_import_row( $result, $set[1], $post->ID . ':' . (int) $local_user_id, $remote_uri, 'failed', __( 'The referenced local user has no Axismundi Actor.', 'axismundi-activitypub-bridge' ) );
+					axismundi_activitypub_bridge_legacy_import_row( $result, $set[1], $post->ID . ':' . (int) $local_user_id, $remote_uri, 'failed', __( 'The referenced local user has no Axismundi Actor.', 'axismundi-s2s-bridge-for-activitypub' ) );
 					continue;
 				}
 				$subject  = $set[2] ? $remote_uri : $local->get_uri();
@@ -206,7 +206,7 @@ function axismundi_activitypub_bridge_import_legacy_relation_snapshots( array &$
 				}
 				$verified = axismundi_act_get_relation( 'follow', $subject, $object );
 				if ( ! is_array( $verified ) ) {
-					axismundi_activitypub_bridge_legacy_import_row( $result, $set[1], $post->ID . ':' . (int) $local_user_id, $subject . ' -> ' . $object, 'failed', __( 'The imported Follow snapshot could not be verified.', 'axismundi-activitypub-bridge' ) );
+					axismundi_activitypub_bridge_legacy_import_row( $result, $set[1], $post->ID . ':' . (int) $local_user_id, $subject . ' -> ' . $object, 'failed', __( 'The imported Follow snapshot could not be verified.', 'axismundi-s2s-bridge-for-activitypub' ) );
 					continue;
 				}
 				$status = 'imported';
@@ -216,7 +216,7 @@ function axismundi_activitypub_bridge_import_legacy_relation_snapshots( array &$
 						|| (string) ( $before['evidence_ref'] ?? '' ) !== (string) ( $verified['evidence_ref'] ?? '' );
 					$status = $changed ? 'updated' : 'verified_existing';
 				}
-				axismundi_activitypub_bridge_legacy_import_row( $result, $set[1], $post->ID . ':' . (int) $local_user_id, $subject . ' -> ' . $object, $status, 'legacy_pending' === $set[3] ? __( 'Pending state was preserved without retransmission.', 'axismundi-activitypub-bridge' ) : __( 'Accepted state was preserved as a provenance-marked legacy snapshot.', 'axismundi-activitypub-bridge' ) );
+				axismundi_activitypub_bridge_legacy_import_row( $result, $set[1], $post->ID . ':' . (int) $local_user_id, $subject . ' -> ' . $object, $status, 'legacy_pending' === $set[3] ? __( 'Pending state was preserved without retransmission.', 'axismundi-s2s-bridge-for-activitypub' ) : __( 'Accepted state was preserved as a provenance-marked legacy snapshot.', 'axismundi-s2s-bridge-for-activitypub' ) );
 			}
 		}
 	}
@@ -228,7 +228,7 @@ function axismundi_activitypub_bridge_import_legacy_data() : array {
 	$preflight = axismundi_activitypub_bridge_scan_legacy_data();
 	if ( ! empty( $preflight['truncated'] ) ) {
 		$result['complete'] = false;
-		axismundi_activitypub_bridge_legacy_import_row( $result, 'preflight', 'bounded-scan', '', 'failed', __( 'Import is blocked because the dry scan was truncated.', 'axismundi-activitypub-bridge' ) );
+		axismundi_activitypub_bridge_legacy_import_row( $result, 'preflight', 'bounded-scan', '', 'failed', __( 'Import is blocked because the dry scan was truncated.', 'axismundi-s2s-bridge-for-activitypub' ) );
 		return $result;
 	}
 	axismundi_activitypub_bridge_import_legacy_actors( $result );

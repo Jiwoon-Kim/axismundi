@@ -98,7 +98,7 @@ happen by accident.
 The code already works this way. Delivery is driven by audience, and the
 bridge's type checks are routing decisions rather than permissions: a public
 `Create` or `Update` whose object addresses a known Group takes a direct
-submission path (`axismundi-activitypub-bridge/includes/transport.php:149`).
+submission path (`axismundi-s2s-bridge-for-activitypub/includes/transport.php:149`).
 What the bridge does own is per-peer policy -- retries and backoff,
 shared-inbox selection, blocked instances, and what a rejection means.
 

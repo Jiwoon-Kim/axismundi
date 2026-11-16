@@ -63,8 +63,8 @@ without_explicit_target는 복원 근거가 없는 행 수이며 없는 수신�
 개발 wp-env에서만 실행한다.
 
 ```sh
-wp eval-file wp-content/plugins/axismundi-activitypub-bridge/tests/audit-actor-inbox.php --path=/var/www/html
-wp eval-file wp-content/plugins/axismundi-activitypub-bridge/tests/audit-inbox-handoff.php --path=/var/www/html
+wp eval-file wp-content/plugins/axismundi-s2s-bridge-for-activitypub/tests/audit-actor-inbox.php --path=/var/www/html
+wp eval-file wp-content/plugins/axismundi-s2s-bridge-for-activitypub/tests/audit-inbox-handoff.php --path=/var/www/html
 wp eval-file wp-content/plugins/axismundi-activities/tests/audit-repository.php --path=/var/www/html
 wp eval-file wp-content/plugins/axismundi-object-projections/tests/audit-collection-contracts.php --path=/var/www/html
 ```

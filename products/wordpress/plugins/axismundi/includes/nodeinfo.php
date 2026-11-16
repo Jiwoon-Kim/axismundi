@@ -4,7 +4,7 @@
  *
  * Axismundi Actors owns the NodeInfo endpoints, the discovery document, the live
  * local-actor count, and the per-host remote NodeInfo cache. That ownership is
- * recorded in `axismundi-activitypub-bridge/docs/OWNERSHIP.md` for one reason --
+ * recorded in `axismundi-s2s-bridge-for-activitypub/docs/OWNERSHIP.md` for one reason --
  * "Avoid competing identity and discovery URLs" -- so nothing here publishes a
  * route or reads an Actors table. This file subscribes to a filter Actors already
  * declares for it.

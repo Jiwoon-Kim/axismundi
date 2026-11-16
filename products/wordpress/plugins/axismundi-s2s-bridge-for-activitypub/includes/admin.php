@@ -10,8 +10,8 @@ defined( 'ABSPATH' ) || exit;
 /** Register the transport inspector. */
 function axismundi_activitypub_bridge_register_admin_page() : void {
 	add_management_page(
-		__( 'ActivityPub Bridge', 'axismundi-activitypub-bridge' ),
-		__( 'ActivityPub Bridge', 'axismundi-activitypub-bridge' ),
+		__( 'ActivityPub Bridge', 'axismundi-s2s-bridge-for-activitypub' ),
+		__( 'ActivityPub Bridge', 'axismundi-s2s-bridge-for-activitypub' ),
 		'manage_options',
 		'axismundi-activitypub-bridge',
 		'axismundi_activitypub_bridge_render_admin_page'
@@ -46,7 +46,7 @@ function axismundi_activitypub_bridge_requested_legacy_import() : ?array {
 			'generated_at'     => current_time( 'mysql', true ),
 			'official_version' => defined( 'ACTIVITYPUB_PLUGIN_VERSION' ) ? ACTIVITYPUB_PLUGIN_VERSION : '',
 			'summary'          => array( 'preflight' => array( 'failed' => 1 ) ),
-			'rows'             => array( array( 'source' => 'preflight', 'source_id' => 'confirmation', 'identity' => '', 'status' => 'failed', 'detail' => __( 'Type IMPORT exactly to run the migration.', 'axismundi-activitypub-bridge' ) ) ),
+			'rows'             => array( array( 'source' => 'preflight', 'source_id' => 'confirmation', 'identity' => '', 'status' => 'failed', 'detail' => __( 'Type IMPORT exactly to run the migration.', 'axismundi-s2s-bridge-for-activitypub' ) ) ),
 			'writes'           => 0,
 			'deletes'          => 0,
 			'network_requests' => 0,
@@ -85,12 +85,12 @@ function axismundi_activitypub_bridge_render_delivery_details( int $id, int $off
 	?>
 	<table class="widefat striped">
 		<thead><tr>
-			<th scope="col"><?php esc_html_e( 'Inbox', 'axismundi-activitypub-bridge' ); ?></th>
-			<th scope="col"><?php esc_html_e( 'Status', 'axismundi-activitypub-bridge' ); ?></th>
-			<th scope="col"><?php esc_html_e( 'HTTP', 'axismundi-activitypub-bridge' ); ?></th>
-			<th scope="col"><?php esc_html_e( 'Attempt', 'axismundi-activitypub-bridge' ); ?></th>
-			<th scope="col"><?php esc_html_e( 'Updated (UTC)', 'axismundi-activitypub-bridge' ); ?></th>
-			<th scope="col"><?php esc_html_e( 'Error', 'axismundi-activitypub-bridge' ); ?></th>
+			<th scope="col"><?php esc_html_e( 'Inbox', 'axismundi-s2s-bridge-for-activitypub' ); ?></th>
+			<th scope="col"><?php esc_html_e( 'Status', 'axismundi-s2s-bridge-for-activitypub' ); ?></th>
+			<th scope="col"><?php esc_html_e( 'HTTP', 'axismundi-s2s-bridge-for-activitypub' ); ?></th>
+			<th scope="col"><?php esc_html_e( 'Attempt', 'axismundi-s2s-bridge-for-activitypub' ); ?></th>
+			<th scope="col"><?php esc_html_e( 'Updated (UTC)', 'axismundi-s2s-bridge-for-activitypub' ); ?></th>
+			<th scope="col"><?php esc_html_e( 'Error', 'axismundi-s2s-bridge-for-activitypub' ); ?></th>
 		</tr></thead>
 		<tbody>
 		<?php foreach ( $report['inboxes'] as $inbox => $state ) : ?>
@@ -105,10 +105,10 @@ function axismundi_activitypub_bridge_render_delivery_details( int $id, int $off
 	</table>
 	<p>
 		<?php if ( $offset > 0 ) : ?>
-			<a class="button" href="<?php echo esc_url( add_query_arg( 'delivery_offset', max( 0, $offset - 50 ), $url ) ); ?>"><?php esc_html_e( 'Previous', 'axismundi-activitypub-bridge' ); ?></a>
+			<a class="button" href="<?php echo esc_url( add_query_arg( 'delivery_offset', max( 0, $offset - 50 ), $url ) ); ?>"><?php esc_html_e( 'Previous', 'axismundi-s2s-bridge-for-activitypub' ); ?></a>
 		<?php endif; ?>
 		<?php if ( $offset + 50 < $report['total'] ) : ?>
-			<a class="button" href="<?php echo esc_url( add_query_arg( 'delivery_offset', $offset + 50, $url ) ); ?>"><?php esc_html_e( 'Next', 'axismundi-activitypub-bridge' ); ?></a>
+			<a class="button" href="<?php echo esc_url( add_query_arg( 'delivery_offset', $offset + 50, $url ) ); ?>"><?php esc_html_e( 'Next', 'axismundi-s2s-bridge-for-activitypub' ); ?></a>
 		<?php endif; ?>
 	</p>
 	<?php
@@ -127,27 +127,27 @@ function axismundi_activitypub_bridge_report_counts( array $counts ) : string {
 /** Render the migration dry-run controls and optional ephemeral report. */
 function axismundi_activitypub_bridge_render_legacy_scan( ?array $report, ?array $import_result = null ) : void {
 	?>
-	<h2><?php esc_html_e( 'Legacy ActivityPub migration', 'axismundi-activitypub-bridge' ); ?></h2>
-	<p><?php esc_html_e( 'Scan official ActivityPub storage without changing any row, then explicitly import supported Actor, Object, and Inbox records through Axismundi repositories. Import never deletes official rows or performs network requests. Purge remains disabled.', 'axismundi-activitypub-bridge' ); ?></p>
+	<h2><?php esc_html_e( 'Legacy ActivityPub migration', 'axismundi-s2s-bridge-for-activitypub' ); ?></h2>
+	<p><?php esc_html_e( 'Scan official ActivityPub storage without changing any row, then explicitly import supported Actor, Object, and Inbox records through Axismundi repositories. Import never deletes official rows or performs network requests. Purge remains disabled.', 'axismundi-s2s-bridge-for-activitypub' ); ?></p>
 	<form method="post">
 		<?php wp_nonce_field( 'ax_bridge_legacy_scan' ); ?>
-		<?php submit_button( __( 'Run migration dry scan', 'axismundi-activitypub-bridge' ), 'secondary', 'ax_bridge_legacy_scan', false ); ?>
+		<?php submit_button( __( 'Run migration dry scan', 'axismundi-s2s-bridge-for-activitypub' ), 'secondary', 'ax_bridge_legacy_scan', false ); ?>
 	</form>
 	<form method="post" style="margin-top: 1em;">
 		<?php wp_nonce_field( 'ax_bridge_legacy_import' ); ?>
-		<label for="ax-bridge-legacy-confirmation"><?php esc_html_e( 'Type IMPORT to import and verify supported rows:', 'axismundi-activitypub-bridge' ); ?></label>
+		<label for="ax-bridge-legacy-confirmation"><?php esc_html_e( 'Type IMPORT to import and verify supported rows:', 'axismundi-s2s-bridge-for-activitypub' ); ?></label>
 		<input id="ax-bridge-legacy-confirmation" name="ax_bridge_legacy_confirmation" type="text" autocomplete="off" value="">
-		<?php submit_button( __( 'Import and verify', 'axismundi-activitypub-bridge' ), 'primary', 'ax_bridge_legacy_import', false ); ?>
+		<?php submit_button( __( 'Import and verify', 'axismundi-s2s-bridge-for-activitypub' ), 'primary', 'ax_bridge_legacy_import', false ); ?>
 	</form>
 	<?php if ( is_array( $import_result ) ) : ?>
-		<h3><?php esc_html_e( 'Import result', 'axismundi-activitypub-bridge' ); ?></h3>
+		<h3><?php esc_html_e( 'Import result', 'axismundi-s2s-bridge-for-activitypub' ); ?></h3>
 		<p>
-			<strong><?php echo esc_html( ! empty( $import_result['complete'] ) ? __( 'Complete', 'axismundi-activitypub-bridge' ) : __( 'Incomplete', 'axismundi-activitypub-bridge' ) ); ?></strong>
+			<strong><?php echo esc_html( ! empty( $import_result['complete'] ) ? __( 'Complete', 'axismundi-s2s-bridge-for-activitypub' ) : __( 'Incomplete', 'axismundi-s2s-bridge-for-activitypub' ) ); ?></strong>
 			<?php
 			echo esc_html(
 				sprintf(
 					/* translators: 1: writes, 2: deletes, 3: network requests. */
-					__( 'Repository writes: %1$d. Source deletes: %2$d. Network requests: %3$d.', 'axismundi-activitypub-bridge' ),
+					__( 'Repository writes: %1$d. Source deletes: %2$d. Network requests: %3$d.', 'axismundi-s2s-bridge-for-activitypub' ),
 					(int) $import_result['writes'],
 					(int) $import_result['deletes'],
 					(int) $import_result['network_requests']
@@ -156,7 +156,7 @@ function axismundi_activitypub_bridge_render_legacy_scan( ?array $report, ?array
 			?>
 		</p>
 		<table class="widefat striped">
-			<thead><tr><th><?php esc_html_e( 'Source', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Result', 'axismundi-activitypub-bridge' ); ?></th></tr></thead>
+			<thead><tr><th><?php esc_html_e( 'Source', 'axismundi-s2s-bridge-for-activitypub' ); ?></th><th><?php esc_html_e( 'Result', 'axismundi-s2s-bridge-for-activitypub' ); ?></th></tr></thead>
 			<tbody>
 			<?php foreach ( $import_result['summary'] as $source => $counts ) : ?>
 				<tr><td><code><?php echo esc_html( (string) $source ); ?></code></td><td><?php echo esc_html( axismundi_activitypub_bridge_report_counts( (array) $counts ) ); ?></td></tr>
@@ -164,7 +164,7 @@ function axismundi_activitypub_bridge_render_legacy_scan( ?array $report, ?array
 			</tbody>
 		</table>
 		<table class="widefat striped" style="margin-top: 1em;">
-			<thead><tr><th><?php esc_html_e( 'Source row', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Canonical identity', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Status', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Verification', 'axismundi-activitypub-bridge' ); ?></th></tr></thead>
+			<thead><tr><th><?php esc_html_e( 'Source row', 'axismundi-s2s-bridge-for-activitypub' ); ?></th><th><?php esc_html_e( 'Canonical identity', 'axismundi-s2s-bridge-for-activitypub' ); ?></th><th><?php esc_html_e( 'Status', 'axismundi-s2s-bridge-for-activitypub' ); ?></th><th><?php esc_html_e( 'Verification', 'axismundi-s2s-bridge-for-activitypub' ); ?></th></tr></thead>
 			<tbody>
 			<?php foreach ( $import_result['rows'] as $row ) : ?>
 				<tr>
@@ -178,12 +178,12 @@ function axismundi_activitypub_bridge_render_legacy_scan( ?array $report, ?array
 		</table>
 	<?php endif; ?>
 	<?php if ( ! is_array( $report ) ) : return; endif; ?>
-	<p><strong><?php esc_html_e( 'Result:', 'axismundi-activitypub-bridge' ); ?></strong>
+	<p><strong><?php esc_html_e( 'Result:', 'axismundi-s2s-bridge-for-activitypub' ); ?></strong>
 		<?php
 		echo esc_html(
 			sprintf(
 				/* translators: 1: official plugin version, 2: UTC scan time. */
-				__( 'ActivityPub %1$s, scanned at %2$s UTC. Writes: 0. Network requests: 0.', 'axismundi-activitypub-bridge' ),
+				__( 'ActivityPub %1$s, scanned at %2$s UTC. Writes: 0. Network requests: 0.', 'axismundi-s2s-bridge-for-activitypub' ),
 				(string) $report['official_version'],
 				(string) $report['generated_at']
 			)
@@ -191,10 +191,10 @@ function axismundi_activitypub_bridge_render_legacy_scan( ?array $report, ?array
 		?>
 	</p>
 	<?php if ( ! empty( $report['truncated'] ) ) : ?>
-		<div class="notice notice-warning inline"><p><?php esc_html_e( 'The bounded scan limit was reached. Increase the scan limit only after reviewing site size.', 'axismundi-activitypub-bridge' ); ?></p></div>
+		<div class="notice notice-warning inline"><p><?php esc_html_e( 'The bounded scan limit was reached. Increase the scan limit only after reviewing site size.', 'axismundi-s2s-bridge-for-activitypub' ); ?></p></div>
 	<?php endif; ?>
 	<table class="widefat striped">
-		<thead><tr><th><?php esc_html_e( 'Source', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Scanned / available', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Import decision', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Purge decision', 'axismundi-activitypub-bridge' ); ?></th></tr></thead>
+		<thead><tr><th><?php esc_html_e( 'Source', 'axismundi-s2s-bridge-for-activitypub' ); ?></th><th><?php esc_html_e( 'Scanned / available', 'axismundi-s2s-bridge-for-activitypub' ); ?></th><th><?php esc_html_e( 'Import decision', 'axismundi-s2s-bridge-for-activitypub' ); ?></th><th><?php esc_html_e( 'Purge decision', 'axismundi-s2s-bridge-for-activitypub' ); ?></th></tr></thead>
 		<tbody>
 		<?php foreach ( $report['summary'] as $source => $summary ) : ?>
 			<tr>
@@ -206,9 +206,9 @@ function axismundi_activitypub_bridge_render_legacy_scan( ?array $report, ?array
 		<?php endforeach; ?>
 		</tbody>
 	</table>
-	<h3><?php esc_html_e( 'Classified sample', 'axismundi-activitypub-bridge' ); ?></h3>
+	<h3><?php esc_html_e( 'Classified sample', 'axismundi-s2s-bridge-for-activitypub' ); ?></h3>
 	<table class="widefat striped">
-		<thead><tr><th><?php esc_html_e( 'Source row', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Canonical identity', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Import', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Purge', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Reason', 'axismundi-activitypub-bridge' ); ?></th></tr></thead>
+		<thead><tr><th><?php esc_html_e( 'Source row', 'axismundi-s2s-bridge-for-activitypub' ); ?></th><th><?php esc_html_e( 'Canonical identity', 'axismundi-s2s-bridge-for-activitypub' ); ?></th><th><?php esc_html_e( 'Import', 'axismundi-s2s-bridge-for-activitypub' ); ?></th><th><?php esc_html_e( 'Purge', 'axismundi-s2s-bridge-for-activitypub' ); ?></th><th><?php esc_html_e( 'Reason', 'axismundi-s2s-bridge-for-activitypub' ); ?></th></tr></thead>
 		<tbody>
 		<?php foreach ( $report['rows'] as $row ) : ?>
 			<tr>
@@ -247,14 +247,14 @@ function axismundi_activitypub_bridge_render_activity_rows( string $direction ) 
 		<?php
 	}
 	if ( 0 === $shown ) {
-		?><tr><td colspan="4"><?php esc_html_e( 'No matching activities.', 'axismundi-activitypub-bridge' ); ?></td></tr><?php
+		?><tr><td colspan="4"><?php esc_html_e( 'No matching activities.', 'axismundi-s2s-bridge-for-activitypub' ); ?></td></tr><?php
 	}
 }
 
 /** Render endpoint, ledger, and transport queue state. */
 function axismundi_activitypub_bridge_render_admin_page() : void {
 	if ( ! current_user_can( 'manage_options' ) ) {
-		wp_die( esc_html__( 'You cannot inspect federation transport.', 'axismundi-activitypub-bridge' ), '', array( 'response' => 403 ) );
+		wp_die( esc_html__( 'You cannot inspect federation transport.', 'axismundi-s2s-bridge-for-activitypub' ), '', array( 'response' => 403 ) );
 	}
 	$retry_result = axismundi_activitypub_bridge_requested_delivery_retry();
 	$cancel_result = axismundi_activitypub_bridge_requested_delivery_cancel();
@@ -268,30 +268,30 @@ function axismundi_activitypub_bridge_render_admin_page() : void {
 	$legacy_import = axismundi_activitypub_bridge_requested_legacy_import();
 	?>
 	<div class="wrap">
-		<h1><?php esc_html_e( 'ActivityPub Bridge', 'axismundi-activitypub-bridge' ); ?></h1>
+		<h1><?php esc_html_e( 'ActivityPub Bridge', 'axismundi-s2s-bridge-for-activitypub' ); ?></h1>
 		<form method="post" action="options.php">
 			<?php settings_fields( 'ax_bridge_disclosure' ); ?>
 			<input type="hidden" name="ax_bridge_shared_inbox_public" value="0">
-			<label><input type="checkbox" name="ax_bridge_shared_inbox_public" value="1" <?php checked( (bool) get_option( 'ax_bridge_shared_inbox_public', true ) ); ?>> <?php esc_html_e( 'Public shared Inbox collection', 'axismundi-activitypub-bridge' ); ?></label>
-			<?php submit_button( __( 'Save', 'axismundi-activitypub-bridge' ), 'secondary', 'submit', false ); ?>
+			<label><input type="checkbox" name="ax_bridge_shared_inbox_public" value="1" <?php checked( (bool) get_option( 'ax_bridge_shared_inbox_public', true ) ); ?>> <?php esc_html_e( 'Public shared Inbox collection', 'axismundi-s2s-bridge-for-activitypub' ); ?></label>
+			<?php submit_button( __( 'Save', 'axismundi-s2s-bridge-for-activitypub' ), 'secondary', 'submit', false ); ?>
 		</form>
-		<p><?php esc_html_e( 'Axismundi owns Actor representations and Activity state. The Bridge owns this outbound queue and reuses the official ActivityPub plugin only for HTTP signature generation and Inbox verification.', 'axismundi-activitypub-bridge' ); ?></p>
+		<p><?php esc_html_e( 'Axismundi owns Actor representations and Activity state. The Bridge owns this outbound queue and reuses the official ActivityPub plugin only for HTTP signature generation and Inbox verification.', 'axismundi-s2s-bridge-for-activitypub' ); ?></p>
 		<?php if ( true === $retry_result ) : ?>
-			<div class="notice notice-success inline"><p><?php esc_html_e( 'The failed delivery was queued for retry.', 'axismundi-activitypub-bridge' ); ?></p></div>
+			<div class="notice notice-success inline"><p><?php esc_html_e( 'The failed delivery was queued for retry.', 'axismundi-s2s-bridge-for-activitypub' ); ?></p></div>
 		<?php elseif ( is_wp_error( $retry_result ) ) : ?>
 			<div class="notice notice-error inline"><p><?php echo esc_html( $retry_result->get_error_message() ); ?></p></div>
 		<?php endif; ?>
 		<?php if ( true === $cancel_result ) : ?>
-			<div class="notice notice-success inline"><p><?php esc_html_e( 'Transport canceled. The Activity record is unchanged.', 'axismundi-activitypub-bridge' ); ?></p></div>
+			<div class="notice notice-success inline"><p><?php esc_html_e( 'Transport canceled. The Activity record is unchanged.', 'axismundi-s2s-bridge-for-activitypub' ); ?></p></div>
 		<?php elseif ( is_wp_error( $cancel_result ) ) : ?>
 			<div class="notice notice-error inline"><p><?php echo esc_html( $cancel_result->get_error_message() ); ?></p></div>
 		<?php endif; ?>
 
 		<?php axismundi_activitypub_bridge_render_legacy_scan( $legacy_report, $legacy_import ); ?>
 
-		<h2><?php esc_html_e( 'Endpoints', 'axismundi-activitypub-bridge' ); ?></h2>
-		<p><strong><?php esc_html_e( 'Shared Inbox', 'axismundi-activitypub-bridge' ); ?>:</strong> <code><?php echo esc_html( axismundi_activitypub_bridge_shared_inbox_url() ); ?></code></p>
-		<table class="widefat striped"><thead><tr><th><?php esc_html_e( 'Actor', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Inbox', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Outbox', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Signing key', 'axismundi-activitypub-bridge' ); ?></th></tr></thead><tbody>
+		<h2><?php esc_html_e( 'Endpoints', 'axismundi-s2s-bridge-for-activitypub' ); ?></h2>
+		<p><strong><?php esc_html_e( 'Shared Inbox', 'axismundi-s2s-bridge-for-activitypub' ); ?>:</strong> <code><?php echo esc_html( axismundi_activitypub_bridge_shared_inbox_url() ); ?></code></p>
+		<table class="widefat striped"><thead><tr><th><?php esc_html_e( 'Actor', 'axismundi-s2s-bridge-for-activitypub' ); ?></th><th><?php esc_html_e( 'Inbox', 'axismundi-s2s-bridge-for-activitypub' ); ?></th><th><?php esc_html_e( 'Outbox', 'axismundi-s2s-bridge-for-activitypub' ); ?></th><th><?php esc_html_e( 'Signing key', 'axismundi-s2s-bridge-for-activitypub' ); ?></th></tr></thead><tbody>
 		<?php foreach ( axismundi_activitypub_bridge_public_actors() as $actor ) : $sender = axismundi_activitypub_bridge_sender( $actor ); $outbox = function_exists( 'axismundi_op_actor_outbox_url' ) ? axismundi_op_actor_outbox_url( $actor ) : ''; ?>
 			<tr>
 				<td><a href="<?php echo esc_url( $actor->get_profile_url() ); ?>"><code><?php echo esc_html( $actor->get_uri() ); ?></code></a></td>
@@ -302,14 +302,14 @@ function axismundi_activitypub_bridge_render_admin_page() : void {
 		<?php endforeach; ?>
 		</tbody></table>
 
-		<h2><?php esc_html_e( 'Inbox ledger', 'axismundi-activitypub-bridge' ); ?></h2>
-		<table class="widefat striped"><thead><tr><th><?php esc_html_e( 'Activity', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Actor', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Object', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Status', 'axismundi-activitypub-bridge' ); ?></th></tr></thead><tbody><?php axismundi_activitypub_bridge_render_activity_rows( 'inbound' ); ?></tbody></table>
+		<h2><?php esc_html_e( 'Inbox ledger', 'axismundi-s2s-bridge-for-activitypub' ); ?></h2>
+		<table class="widefat striped"><thead><tr><th><?php esc_html_e( 'Activity', 'axismundi-s2s-bridge-for-activitypub' ); ?></th><th><?php esc_html_e( 'Actor', 'axismundi-s2s-bridge-for-activitypub' ); ?></th><th><?php esc_html_e( 'Object', 'axismundi-s2s-bridge-for-activitypub' ); ?></th><th><?php esc_html_e( 'Status', 'axismundi-s2s-bridge-for-activitypub' ); ?></th></tr></thead><tbody><?php axismundi_activitypub_bridge_render_activity_rows( 'inbound' ); ?></tbody></table>
 
-		<h2><?php esc_html_e( 'Inbox diagnostics', 'axismundi-activitypub-bridge' ); ?></h2>
-		<p><?php esc_html_e( 'Recent verified Inbox outcomes. Payload content and recipient data are never copied into this diagnostic buffer.', 'axismundi-activitypub-bridge' ); ?></p>
-		<table class="widefat striped"><thead><tr><th><?php esc_html_e( 'UTC time', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Route', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Type', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Activity hash', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Outcome', 'axismundi-activitypub-bridge' ); ?></th></tr></thead><tbody>
+		<h2><?php esc_html_e( 'Inbox diagnostics', 'axismundi-s2s-bridge-for-activitypub' ); ?></h2>
+		<p><?php esc_html_e( 'Recent verified Inbox outcomes. Payload content and recipient data are never copied into this diagnostic buffer.', 'axismundi-s2s-bridge-for-activitypub' ); ?></p>
+		<table class="widefat striped"><thead><tr><th><?php esc_html_e( 'UTC time', 'axismundi-s2s-bridge-for-activitypub' ); ?></th><th><?php esc_html_e( 'Route', 'axismundi-s2s-bridge-for-activitypub' ); ?></th><th><?php esc_html_e( 'Type', 'axismundi-s2s-bridge-for-activitypub' ); ?></th><th><?php esc_html_e( 'Activity hash', 'axismundi-s2s-bridge-for-activitypub' ); ?></th><th><?php esc_html_e( 'Outcome', 'axismundi-s2s-bridge-for-activitypub' ); ?></th></tr></thead><tbody>
 		<?php $diagnostics = axismundi_activitypub_bridge_inbox_diagnostics(); ?>
-		<?php if ( empty( $diagnostics ) ) : ?><tr><td colspan="5"><?php esc_html_e( 'No Inbox diagnostics recorded yet.', 'axismundi-activitypub-bridge' ); ?></td></tr><?php endif; ?>
+		<?php if ( empty( $diagnostics ) ) : ?><tr><td colspan="5"><?php esc_html_e( 'No Inbox diagnostics recorded yet.', 'axismundi-s2s-bridge-for-activitypub' ); ?></td></tr><?php endif; ?>
 		<?php foreach ( $diagnostics as $entry ) : ?>
 			<tr>
 				<td><?php echo esc_html( (string) ( $entry['time'] ?? '' ) ); ?></td>
@@ -321,12 +321,12 @@ function axismundi_activitypub_bridge_render_admin_page() : void {
 		<?php endforeach; ?>
 		</tbody></table>
 
-		<h2><?php esc_html_e( 'Outbox ledger', 'axismundi-activitypub-bridge' ); ?></h2>
-		<table class="widefat striped"><thead><tr><th><?php esc_html_e( 'Activity', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Actor', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Object', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Status', 'axismundi-activitypub-bridge' ); ?></th></tr></thead><tbody><?php axismundi_activitypub_bridge_render_activity_rows( 'outbound' ); ?></tbody></table>
+		<h2><?php esc_html_e( 'Outbox ledger', 'axismundi-s2s-bridge-for-activitypub' ); ?></h2>
+		<table class="widefat striped"><thead><tr><th><?php esc_html_e( 'Activity', 'axismundi-s2s-bridge-for-activitypub' ); ?></th><th><?php esc_html_e( 'Actor', 'axismundi-s2s-bridge-for-activitypub' ); ?></th><th><?php esc_html_e( 'Object', 'axismundi-s2s-bridge-for-activitypub' ); ?></th><th><?php esc_html_e( 'Status', 'axismundi-s2s-bridge-for-activitypub' ); ?></th></tr></thead><tbody><?php axismundi_activitypub_bridge_render_activity_rows( 'outbound' ); ?></tbody></table>
 
-		<h2><?php esc_html_e( 'Transport queue', 'axismundi-activitypub-bridge' ); ?></h2>
-		<table class="widefat striped"><thead><tr><th><?php esc_html_e( 'Activity', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Sender', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Status', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Undo status', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Attempt', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Last error', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Action', 'axismundi-activitypub-bridge' ); ?></th></tr></thead><tbody>
-		<?php if ( empty( $queue ) ) : ?><tr><td colspan="7"><?php esc_html_e( 'No transport jobs.', 'axismundi-activitypub-bridge' ); ?></td></tr><?php endif; ?>
+		<h2><?php esc_html_e( 'Transport queue', 'axismundi-s2s-bridge-for-activitypub' ); ?></h2>
+		<table class="widefat striped"><thead><tr><th><?php esc_html_e( 'Activity', 'axismundi-s2s-bridge-for-activitypub' ); ?></th><th><?php esc_html_e( 'Sender', 'axismundi-s2s-bridge-for-activitypub' ); ?></th><th><?php esc_html_e( 'Status', 'axismundi-s2s-bridge-for-activitypub' ); ?></th><th><?php esc_html_e( 'Undo status', 'axismundi-s2s-bridge-for-activitypub' ); ?></th><th><?php esc_html_e( 'Attempt', 'axismundi-s2s-bridge-for-activitypub' ); ?></th><th><?php esc_html_e( 'Last error', 'axismundi-s2s-bridge-for-activitypub' ); ?></th><th><?php esc_html_e( 'Action', 'axismundi-s2s-bridge-for-activitypub' ); ?></th></tr></thead><tbody>
+		<?php if ( empty( $queue ) ) : ?><tr><td colspan="7"><?php esc_html_e( 'No transport jobs.', 'axismundi-s2s-bridge-for-activitypub' ); ?></td></tr><?php endif; ?>
 		<?php foreach ( $queue as $job ) : ?>
 			<tr>
 				<td><code><?php echo esc_html( (string) $job->activity_uri ); ?></code></td>
@@ -340,17 +340,17 @@ function axismundi_activitypub_bridge_render_admin_page() : void {
 					<form method="post">
 						<?php wp_nonce_field( 'ax_bridge_retry_delivery_' . (int) $job->id ); ?>
 						<input type="hidden" name="ax_bridge_delivery_id" value="<?php echo esc_attr( (string) $job->id ); ?>">
-						<?php submit_button( __( 'Retry', 'axismundi-activitypub-bridge' ), 'small', 'ax_bridge_retry_delivery', false ); ?>
+						<?php submit_button( __( 'Retry', 'axismundi-s2s-bridge-for-activitypub' ), 'small', 'ax_bridge_retry_delivery', false ); ?>
 					</form>
 				<?php endif; ?>
 				<?php if ( 'pending' === $job->undo_status && 'clear' === $job->send_evidence && null === $job->lock_token && in_array( $job->status, array( 'queued', 'retrying', 'failed' ), true ) ) : ?>
 					<form method="post">
 						<?php wp_nonce_field( 'ax_bridge_cancel_delivery_' . (int) $job->id ); ?>
 						<input type="hidden" name="ax_bridge_delivery_id" value="<?php echo esc_attr( (string) $job->id ); ?>">
-						<?php submit_button( __( 'Cancel delivery', 'axismundi-activitypub-bridge' ), 'small', 'ax_bridge_cancel_delivery', false ); ?>
+						<?php submit_button( __( 'Cancel delivery', 'axismundi-s2s-bridge-for-activitypub' ), 'small', 'ax_bridge_cancel_delivery', false ); ?>
 					</form>
 				<?php endif; ?>
-				<a href="<?php echo esc_url( $details === (int) $job->id ? $queue_url : add_query_arg( 'delivery', (int) $job->id, $queue_url ) . '#ax-delivery-details' ); ?>"><?php echo esc_html( $details === (int) $job->id ? __( 'Hide Inbox details', 'axismundi-activitypub-bridge' ) : __( 'Inbox details', 'axismundi-activitypub-bridge' ) ); ?></a>
+				<a href="<?php echo esc_url( $details === (int) $job->id ? $queue_url : add_query_arg( 'delivery', (int) $job->id, $queue_url ) . '#ax-delivery-details' ); ?>"><?php echo esc_html( $details === (int) $job->id ? __( 'Hide Inbox details', 'axismundi-s2s-bridge-for-activitypub' ) : __( 'Inbox details', 'axismundi-s2s-bridge-for-activitypub' ) ); ?></a>
 				</td>
 			</tr>
 			<?php if ( $details === (int) $job->id ) : ?>

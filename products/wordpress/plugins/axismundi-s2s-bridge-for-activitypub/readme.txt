@@ -1,15 +1,15 @@
-=== Axismundi ActivityPub Bridge ===
+=== Axismundi S2S Bridge for ActivityPub ===
 Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.1
 Requires PHP: 8.1
 Requires Plugins: activitypub, axismundi-actors, axismundi-object-projections, axismundi-activities
-Stable tag: 0.1.4
+Stable tag: 0.1.5
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, federation, compatibility, adapter
 
-Connects Axismundi's domain stores to the official ActivityPub plugin's server-to-server transport.
+Connects Axismundi's actors, objects, and activities to the ActivityPub plugin for server-to-server federation.
 
 == Description ==
 
@@ -85,6 +85,10 @@ delivery succeeding or failing changes the queue row rather than the record of w
 Activation creates this plugin's own delivery table. Nothing is contacted on the internet
 during installation.
 
+If you installed a prerelease under the previous folder name, deactivate that copy before
+activating this one. The new folder is a separate plugin entry in WordPress; it uses the
+same settings and delivery table. Do not activate both copies together.
+
 == External services ==
 
 This plugin sends your site's public content to other servers on the Fediverse. That is what it
@@ -115,6 +119,9 @@ Receiving is described above: the official ActivityPub plugin owns the inbox and
 check, and this plugin only handles what that plugin has already verified.
 
 == Changelog ==
+
+= 0.1.5 =
+* Rename the plugin and distribution slug to clarify that this is a third-party server-to-server integration.
 
 = 0.1.4 =
 * First public release.

@@ -1,4 +1,4 @@
-# Axismundi ActivityPub Bridge
+# Axismundi S2S Bridge for ActivityPub
 
 > Status: **0.0.16 existing Inbox action composition, Bridge-owned delivery spool, and
 > provenance-aware legacy import implemented.**

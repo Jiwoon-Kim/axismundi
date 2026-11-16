@@ -16,7 +16,7 @@
 | Axismundi Actors | 0.1.2 | 정체성 레코드, handle, WebFinger, 원격 actor 관측 |
 | Axismundi Activities | 0.1.0 | Activity 원장, 관계 상태 |
 | Axismundi Object Projections (OP) | 0.1.0 | AS2 JSON-LD 표현, URI 소유, `@context` |
-| Axismundi ActivityPub Bridge | 0.1.0 | 검증된 Inbox 소비, 전송 필드, 배달 |
+| Axismundi S2S Bridge for ActivityPub | 0.1.0 | 검증된 Inbox 소비, 전송 필드, 배달 |
 
 **규범 출처 (원문을 읽고 인용한다)**
 
@@ -194,7 +194,7 @@ NodeInfo는 Actors가 소유한다(`axismundi-actors/includes/nodeinfo.php`). �
 Bridge의 inbound는 **타입에 무관하다.** 서명이 검증된 Activity는 공식 플러그인의
 `activitypub_inbox` / `activitypub_inbox_shared` 액션에서 그대로
 `axismundi_act_record_activity( $activity, 'inbound' )`로 원장에 기록된다
-(`axismundi-activitypub-bridge.php:216`). Bridge에서 타입을 보는 유일한 지점은 원격 Actor
+(`axismundi-s2s-bridge-for-activitypub.php:216`). Bridge에서 타입을 보는 유일한 지점은 원격 Actor
 `Update` 하나다(Person/Organization/Application/Service/Group). 공식 핸들러 25개는
 composition에서 dormant 처리된다.
 

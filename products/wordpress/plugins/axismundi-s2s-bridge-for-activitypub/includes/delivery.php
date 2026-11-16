@@ -175,34 +175,34 @@ function axismundi_activitypub_bridge_find_delivery( string $activity_uri ) : in
 function axismundi_activitypub_bridge_enqueue_delivery( array $payload, array $sender, array $inboxes, bool $schedule = true ) {
 	global $wpdb;
 	if ( ! axismundi_activitypub_bridge_delivery_ready() ) {
-		return new WP_Error( 'ax_bridge_delivery_schema', __( 'The delivery spool is unavailable.', 'axismundi-activitypub-bridge' ) );
+		return new WP_Error( 'ax_bridge_delivery_schema', __( 'The delivery spool is unavailable.', 'axismundi-s2s-bridge-for-activitypub' ) );
 	}
 	if ( isset( $sender['private_key'] ) ) {
-		return new WP_Error( 'ax_bridge_delivery_private_key', __( 'Private key material must not be persisted in the delivery spool.', 'axismundi-activitypub-bridge' ) );
+		return new WP_Error( 'ax_bridge_delivery_private_key', __( 'Private key material must not be persisted in the delivery spool.', 'axismundi-s2s-bridge-for-activitypub' ) );
 	}
 	$activity_uri = axismundi_activitypub_bridge_delivery_uri( $payload['id'] ?? '' );
 	$actor_uri    = axismundi_activitypub_bridge_delivery_uri( $sender['actor_uri'] ?? '' );
 	$key_id       = axismundi_activitypub_bridge_delivery_uri( $sender['key_id'] ?? '' );
 	if ( '' === $activity_uri || '' === $actor_uri || '' === $key_id || axismundi_activitypub_bridge_delivery_member_uri( $payload['actor'] ?? '' ) !== $actor_uri ) {
-		return new WP_Error( 'ax_bridge_delivery_sender', __( 'The Activity or signing descriptor is invalid.', 'axismundi-activitypub-bridge' ) );
+		return new WP_Error( 'ax_bridge_delivery_sender', __( 'The Activity or signing descriptor is invalid.', 'axismundi-s2s-bridge-for-activitypub' ) );
 	}
 
 	$recipients = array();
 	foreach ( $inboxes as $inbox ) {
 		$inbox = axismundi_activitypub_bridge_delivery_uri( $inbox, true );
 		if ( '' === $inbox || ! wp_http_validate_url( $inbox ) ) {
-			return new WP_Error( 'ax_bridge_delivery_inbox', __( 'Every recipient Inbox must be a public HTTPS URL.', 'axismundi-activitypub-bridge' ) );
+			return new WP_Error( 'ax_bridge_delivery_inbox', __( 'Every recipient Inbox must be a public HTTPS URL.', 'axismundi-s2s-bridge-for-activitypub' ) );
 		}
 		$recipients[] = $inbox;
 	}
 	$recipients = array_values( array_unique( $recipients ) );
 	if ( empty( $recipients ) ) {
-		return new WP_Error( 'ax_bridge_delivery_recipients', __( 'At least one recipient Inbox is required.', 'axismundi-activitypub-bridge' ) );
+		return new WP_Error( 'ax_bridge_delivery_recipients', __( 'At least one recipient Inbox is required.', 'axismundi-s2s-bridge-for-activitypub' ) );
 	}
 
 	$json = wp_json_encode( $payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
 	if ( ! is_string( $json ) || strlen( $json ) > MB_IN_BYTES ) {
-		return new WP_Error( 'ax_bridge_delivery_payload', __( 'The Activity payload is invalid or exceeds one MiB.', 'axismundi-activitypub-bridge' ) );
+		return new WP_Error( 'ax_bridge_delivery_payload', __( 'The Activity payload is invalid or exceeds one MiB.', 'axismundi-s2s-bridge-for-activitypub' ) );
 	}
 	$existing = axismundi_activitypub_bridge_find_delivery( $activity_uri );
 	if ( $existing > 0 ) {
@@ -232,7 +232,7 @@ function axismundi_activitypub_bridge_enqueue_delivery( array $payload, array $s
 	);
 	if ( false === $ok ) {
 		$existing = axismundi_activitypub_bridge_find_delivery( $activity_uri );
-		return $existing > 0 ? $existing : new WP_Error( 'ax_bridge_delivery_insert', __( 'The delivery job could not be queued.', 'axismundi-activitypub-bridge' ) );
+		return $existing > 0 ? $existing : new WP_Error( 'ax_bridge_delivery_insert', __( 'The delivery job could not be queued.', 'axismundi-s2s-bridge-for-activitypub' ) );
 	}
 	$id = (int) $wpdb->insert_id;
 	if ( $schedule ) {
@@ -313,11 +313,11 @@ function axismundi_activitypub_bridge_retry_failed_delivery( int $id ) {
 	global $wpdb;
 	$job = axismundi_activitypub_bridge_get_delivery( $id );
 	if ( ! is_object( $job ) || 'failed' !== (string) $job->status ) {
-		return new WP_Error( 'ax_bridge_delivery_retry_state', __( 'Only a failed delivery can be retried.', 'axismundi-activitypub-bridge' ) );
+		return new WP_Error( 'ax_bridge_delivery_retry_state', __( 'Only a failed delivery can be retried.', 'axismundi-s2s-bridge-for-activitypub' ) );
 	}
 	$inboxes = json_decode( (string) $job->inboxes_json, true );
 	if ( ! is_array( $inboxes ) || empty( $inboxes ) ) {
-		return new WP_Error( 'ax_bridge_delivery_retry_recipients', __( 'The original recipient set is unavailable.', 'axismundi-activitypub-bridge' ) );
+		return new WP_Error( 'ax_bridge_delivery_retry_recipients', __( 'The original recipient set is unavailable.', 'axismundi-s2s-bridge-for-activitypub' ) );
 	}
 	$now   = current_time( 'mysql', true );
 	$table = axismundi_activitypub_bridge_delivery_table();
@@ -331,18 +331,18 @@ function axismundi_activitypub_bridge_retry_failed_delivery( int $id ) {
 		)
 	);
 	if ( 1 !== $updated ) {
-		return new WP_Error( 'ax_bridge_delivery_retry_race', __( 'The delivery state changed before it could be retried.', 'axismundi-activitypub-bridge' ) );
+		return new WP_Error( 'ax_bridge_delivery_retry_race', __( 'The delivery state changed before it could be retried.', 'axismundi-s2s-bridge-for-activitypub' ) );
 	}
 	$scheduled = wp_schedule_single_event( time() + 1, AXISMUNDI_ACTIVITYPUB_BRIDGE_DELIVERY_HOOK, array( $id, 1 ), true );
 	if ( is_wp_error( $scheduled ) || false === $scheduled ) {
 		$wpdb->update(
 			$table,
-			array( 'status' => 'failed', 'last_error' => __( 'The retry worker could not be scheduled.', 'axismundi-activitypub-bridge' ), 'updated_at' => $now ),
+			array( 'status' => 'failed', 'last_error' => __( 'The retry worker could not be scheduled.', 'axismundi-s2s-bridge-for-activitypub' ), 'updated_at' => $now ),
 			array( 'id' => $id, 'status' => 'retrying' ),
 			array( '%s', '%s', '%s' ),
 			array( '%d', '%s' )
 		);
-		return is_wp_error( $scheduled ) ? $scheduled : new WP_Error( 'ax_bridge_delivery_retry_schedule', __( 'The retry worker could not be scheduled.', 'axismundi-activitypub-bridge' ) );
+		return is_wp_error( $scheduled ) ? $scheduled : new WP_Error( 'ax_bridge_delivery_retry_schedule', __( 'The retry worker could not be scheduled.', 'axismundi-s2s-bridge-for-activitypub' ) );
 	}
 	return true;
 }
@@ -351,14 +351,14 @@ function axismundi_activitypub_bridge_retry_failed_delivery( int $id ) {
 function axismundi_activitypub_bridge_cancel_delivery( int $id ) {
 	global $wpdb;
 	if ( ! current_user_can( 'manage_options' ) ) {
-		return new WP_Error( 'ax_bridge_delivery_forbidden', __( 'Delivery access denied.', 'axismundi-activitypub-bridge' ), array( 'status' => 403 ) );
+		return new WP_Error( 'ax_bridge_delivery_forbidden', __( 'Delivery access denied.', 'axismundi-s2s-bridge-for-activitypub' ), array( 'status' => 403 ) );
 	}
 	$changed = axismundi_activitypub_bridge_delivery_ready() ? $wpdb->query( $wpdb->prepare(
 		"UPDATE %i SET undo_status = 'canceled', status = 'canceled', updated_at = %s
 		 WHERE id = %d AND undo_status = 'pending' AND lock_token IS NULL AND send_evidence = 'clear' AND status IN ('queued', 'retrying', 'failed')",
 		axismundi_activitypub_bridge_delivery_table(), current_time( 'mysql', true ), $id
 	) ) : false;
-	return 1 === $changed ? true : new WP_Error( 'ax_bridge_cannot_unsend', __( 'This delivery cannot be safely canceled.', 'axismundi-activitypub-bridge' ), array( 'status' => 409 ) );
+	return 1 === $changed ? true : new WP_Error( 'ax_bridge_cannot_unsend', __( 'This delivery cannot be safely canceled.', 'axismundi-s2s-bridge-for-activitypub' ), array( 'status' => 409 ) );
 }
 
 /** Bounded peer error detail for transport diagnostics. */
@@ -382,11 +382,11 @@ function axismundi_activitypub_bridge_delivery_error( $response, int $code ) : s
 function axismundi_activitypub_bridge_delivery_identity( object $job ) {
 	$actor = axismundi_actors_get_by_uri( (string) $job->actor_uri );
 	if ( ! $actor instanceof Axismundi_Actor || ! $actor->is_local() || 'public' !== $actor->get_status() ) {
-		return new WP_Error( 'ax_bridge_delivery_actor', __( 'The local signing Actor is unavailable.', 'axismundi-activitypub-bridge' ) );
+		return new WP_Error( 'ax_bridge_delivery_actor', __( 'The local signing Actor is unavailable.', 'axismundi-s2s-bridge-for-activitypub' ) );
 	}
 	$expected = axismundi_activitypub_bridge_sender( $actor );
 	if ( ! hash_equals( $expected['key_id'], (string) $job->key_id ) ) {
-		return new WP_Error( 'ax_bridge_delivery_key_mismatch', __( 'The signing key reference no longer matches the Actor.', 'axismundi-activitypub-bridge' ) );
+		return new WP_Error( 'ax_bridge_delivery_key_mismatch', __( 'The signing key reference no longer matches the Actor.', 'axismundi-s2s-bridge-for-activitypub' ) );
 	}
 	// Never emit signed traffic while the matching public key cannot be projected.
 	// A remote that fetched the Actor during this
@@ -395,7 +395,7 @@ function axismundi_activitypub_bridge_delivery_identity( object $job ) {
 	// preserved for the key-recovery track.
 	$public_key = axismundi_activitypub_bridge_public_key( $actor );
 	if ( '' === $public_key ) {
-		return new WP_Error( 'ax_bridge_delivery_key_unready', __( 'The Actor public key cannot be projected yet.', 'axismundi-activitypub-bridge' ) );
+		return new WP_Error( 'ax_bridge_delivery_key_unready', __( 'The Actor public key cannot be projected yet.', 'axismundi-s2s-bridge-for-activitypub' ) );
 	}
 	$key = axismundi_activitypub_bridge_private_key( $actor );
 	$private = '' !== $key ? openssl_pkey_get_private( $key ) : false;
@@ -405,7 +405,7 @@ function axismundi_activitypub_bridge_delivery_identity( object $job ) {
 	}
 	return is_string( $key ) && '' !== $key
 		? array( 'key_id' => (string) $job->key_id, 'private_key' => $key )
-		: new WP_Error( 'ax_bridge_delivery_key_unready', __( 'The private signing key is unavailable.', 'axismundi-activitypub-bridge' ) );
+		: new WP_Error( 'ax_bridge_delivery_key_unready', __( 'The private signing key is unavailable.', 'axismundi-s2s-bridge-for-activitypub' ) );
 }
 
 /** Atomically claim one due job. */
@@ -578,7 +578,7 @@ function axismundi_activitypub_bridge_continue_delivery( int $id, string $token,
 	// state rather than using the token-only terminal transition.
 	$wpdb->update(
 		$table,
-		array( 'status' => 'failed', 'last_error' => __( 'The next delivery batch could not be scheduled.', 'axismundi-activitypub-bridge' ), 'updated_at' => current_time( 'mysql', true ) ),
+		array( 'status' => 'failed', 'last_error' => __( 'The next delivery batch could not be scheduled.', 'axismundi-s2s-bridge-for-activitypub' ), 'updated_at' => current_time( 'mysql', true ) ),
 		array( 'id' => $id, 'status' => 'queued', 'lock_token' => null ),
 		array( '%s', '%s', '%s' ),
 		array( '%d', '%s', '%s' )

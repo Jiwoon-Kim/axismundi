@@ -131,7 +131,7 @@ publicKey.id   .../actors/{uuid}#main-key
 ### S3 가 하는 일
 
 2026-10-24: 바인딩 분리와 Account Block은 S3a로 구현했다.
-[구현 범위](../../axismundi-activitypub-bridge/docs/IMPLEMENTATION-TRANSPORT-SCOPE.md).
+[구현 범위](../../axismundi-s2s-bridge-for-activitypub/docs/IMPLEMENTATION-TRANSPORT-SCOPE.md).
 S3a 시점에는 기존·신규 모두 provider를 보존했다. 현재 S3b는 신규 Actor의 독립 키와
 기존 Actor의 명시 회전을 구현했다. [키 수명주기](IMPLEMENTATION-SIGNING-KEYS.md)의
 독립 리뷰 전에는 S4를 열지 않는다. 기존 Actor의 provider는 명시 회전 전까지 유지한다.
@@ -854,7 +854,7 @@ S9의 shared Inbox는 Actor별 Inbox와 별개 최적화다. Application Actor�
 - 순서: Codex 구현 -> Opus 리뷰 -> 빌드 -> 스테이징 검증. 이번 변경에서 배포하지 않는다.
 
 S6–S7의 구현·검증·남은 한계는
-[Actor Inbox 구현 기록](../../axismundi-activitypub-bridge/docs/IMPLEMENTATION-ACTOR-INBOX.md)을 참고한다.
+[Actor Inbox 구현 기록](../../axismundi-s2s-bridge-for-activitypub/docs/IMPLEMENTATION-ACTOR-INBOX.md)을 참고한다.
 
 ## Users 인접 화면의 축 — 측정 (2026-10-26)
 

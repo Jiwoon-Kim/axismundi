@@ -47,7 +47,7 @@ ledger does not own delivery, and the projection layer does not own state.
 | [Actors](products/wordpress/plugins/axismundi-actors/) | Identity registry: one immutable URI and one profile hub per local person and cached remote actor |
 | [Object Projections](products/wordpress/plugins/axismundi-object-projections/) | Projects WordPress objects into ActivityStreams JSON-LD through one transformer registry |
 | [Activities](products/wordpress/plugins/axismundi-activities/) | The activity ledger and social relationship state. Owns no inbox, no signatures, no delivery queue |
-| [ActivityPub Bridge](products/wordpress/plugins/axismundi-activitypub-bridge/) | Boundary between these URI-keyed stores and the official ActivityPub plugin's S2S transport |
+| [Axismundi S2S Bridge for ActivityPub](products/wordpress/plugins/axismundi-s2s-bridge-for-activitypub/) | Boundary between these URI-keyed stores and the ActivityPub plugin's server-to-server transport |
 | [Notifications](products/wordpress/plugins/axismundi-notifications/) | One inbox per Actor, projected from the ledger by the domains that own each transition |
 | [Contacts](products/wordpress/plugins/axismundi-contacts/) | Address books of JSContact Cards. Imports and federation are sources; the Card is the record |
 

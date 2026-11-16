@@ -317,7 +317,7 @@ function axismundi_activitypub_bridge_queue_outbound( Axismundi_Activity $activi
 		&& $original->get_payload() === $embedded;
 	$payload = function_exists( 'axismundi_op_finalize_activity' )
 		? axismundi_op_finalize_activity( $document, $activity->get_uri(), $preserve_original )
-		: new WP_Error( 'ax_bridge_activity_renderer', __( 'The Activity JSON-LD renderer is unavailable.', 'axismundi-activitypub-bridge' ) );
+		: new WP_Error( 'ax_bridge_activity_renderer', __( 'The Activity JSON-LD renderer is unavailable.', 'axismundi-s2s-bridge-for-activitypub' ) );
 	if ( is_wp_error( $payload ) ) {
 		return;
 	}

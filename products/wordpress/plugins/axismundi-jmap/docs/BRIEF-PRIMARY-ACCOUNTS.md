@@ -31,6 +31,10 @@ JMAP     지원하는 capability 에 대해서만 그 선호를 해석한다.
 
 Principal 때와 같은 분할이다. 저장은 Actors, 프로토콜 표현은 JMAP.
 
+구현은 이미 Account provider 등록의 `purpose` 로 이 매핑을 보관한다.
+Todo는 `todo_poc`, Principal 디렉터리는 `principals_poc` 를 쓴다.
+Session의 빈 맵은 내보낼 수 있는 기본값이 없다는 뜻이지, 투영이 없다는 뜻이 아니다.
+
 ## RFC 8620 §2 가 정한 것 (원문 확인)
 
 ```txt

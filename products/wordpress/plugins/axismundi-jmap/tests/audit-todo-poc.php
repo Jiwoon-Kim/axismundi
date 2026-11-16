@@ -78,6 +78,35 @@ try {
 	$assert( $pb === $group_caps->{PRINCIPALS}->currentUserPrincipalId
 		&& $pg === $group_caps->{\Axismundi\Jmap\TodoPoc\PRINCIPAL_OWNER}->principalId && $pg !== $pb,
 		'A managed Account does not make its owner Principal the request user' );
+	$assert( true === axismundi_actors_set_principal_role( $actors[2], 'wp_user', $b, 'owner' ),
+		'Grant access to a second writable Todo Account for default selection' );
+	$session = server()->accounts();
+	$assert( isset( $session->accounts->{$ab}->accountCapabilities->{CAPABILITY}, $session->accounts->{$ac}->accountCapabilities->{CAPABILITY} )
+		&& ! property_exists( $session->primaryAccounts, CAPABILITY ), 'Multiple Todo Accounts do not imply a default' );
+	$assert( true === axismundi_actors_set_default_account( $b, 'todo_poc', $actors[2] ), 'Store a non-first Todo Account as the default' );
+	$session = server()->accounts();
+	$assert( array( CAPABILITY => $ac ) === get_object_vars( $session->primaryAccounts )
+		&& isset( $session->accounts->{$ac}->accountCapabilities->{\Axismundi\Jmap\TodoPoc\PRINCIPAL_OWNER} ),
+		'Only the saved Todo primary is projected, not Core or the Principal owner marker' );
+
+	wp_set_current_user( $admin );
+	$registry = \Axismundi\Jmap\runtime_registry();
+	$assert( true === \Axismundi\Jmap\set_account_policy( $actors[2], CAPABILITY, false, new stdClass(), $registry ), 'Disable Todo for the saved primary only' );
+	wp_set_current_user( $b );
+	$session = server()->accounts();
+	$assert( isset( $session->accounts->{$ac}, $session->accounts->{$ab}->accountCapabilities->{CAPABILITY} )
+		&& ! isset( $session->accounts->{$ac}->accountCapabilities->{CAPABILITY} )
+		&& ! property_exists( $session->primaryAccounts, CAPABILITY ),
+		'Saved Account remains visible but loses its primary when it stops advertising Todo' );
+
+	wp_set_current_user( $admin );
+	$assert( true === \Axismundi\Jmap\set_account_policy( $actors[2], CAPABILITY, true, new stdClass(), $registry ), 'Restore Todo for the saved primary' );
+	wp_set_current_user( $b );
+	$assert( $ac === ( server()->accounts()->primaryAccounts->{CAPABILITY} ?? null ), 'Restoring Todo restores the same stored primary' );
+	$assert( true === axismundi_actors_set_principal_role( $actors[2], 'wp_user', $b, null ), 'Revoke access to the saved Todo Account' );
+	$session = server()->accounts();
+	$assert( ! property_exists( $session->accounts, $ac ) && isset( $session->accounts->{$ab}->accountCapabilities->{CAPABILITY} )
+		&& ! property_exists( $session->primaryAccounts, CAPABILITY ), 'Revoked primary is omitted without falling back to another Todo Account' );
 	wp_set_current_user( $a );
 	$cap = server()->accounts()->accounts->{$aa}->accountCapabilities->{PRINCIPALS};
 	$assert( property_exists( $cap, 'currentUserPrincipalId' ) && $pa === $cap->currentUserPrincipalId, 'Account capability advertises the requesting user Principal' );

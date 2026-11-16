@@ -111,6 +111,7 @@ final class SessionProjector {
 		}
 		$account = (object) array(
 			'name' => $actor->get_display_name(),
+			'actorUri' => $actor->get_uri(),
 			'isPersonal' => axismundi_actors_account_is_personal( $actor, $user_id ),
 			'isReadOnly' => ! $writable,
 			'accountCapabilities' => $caps,

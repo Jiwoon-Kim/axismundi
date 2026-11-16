@@ -3,7 +3,7 @@
 defined( 'ABSPATH' ) || exit;
 
 /** Authenticate a WP transport without accepting an unverified Authorization header. */
-function axismundi_act_outbox_permission( WP_REST_Request $request ) {
+function axismundi_act_c2s_transport_permission( WP_REST_Request $request ) {
 	if ( get_current_user_id() <= 0 ) {
 		return new WP_Error( 'ax_c2s_authentication', 'Authentication is required.', array( 'status' => 401 ) );
 	}
@@ -11,6 +11,12 @@ function axismundi_act_outbox_permission( WP_REST_Request $request ) {
 		&& ! wp_verify_nonce( sanitize_text_field( (string) $request->get_header( 'X-WP-Nonce' ) ), 'wp_rest' ) ) {
 		return new WP_Error( 'ax_c2s_nonce', 'Cookie authentication requires a REST nonce.', array( 'status' => 403 ) );
 	}
+	return true;
+}
+
+function axismundi_act_outbox_permission( WP_REST_Request $request ) {
+	$permission = axismundi_act_c2s_transport_permission( $request );
+	if ( true !== $permission ) { return $permission; }
 	$actor = axismundi_actors_get_by_uuid( (string) $request->get_url_params()['uuid'] );
 	return axismundi_act_outbox_authorize( get_current_user_id(), $actor );
 }

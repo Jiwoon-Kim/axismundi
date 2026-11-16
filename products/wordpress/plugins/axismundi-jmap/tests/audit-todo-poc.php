@@ -214,6 +214,19 @@ try {
 	$session = server()->accounts();
 	$assert( property_exists( $subscription->updated, $list ) && isset( $session->accounts->{$aa}, $session->accounts->{$ab} ) && $session->accounts->{$aa}->isReadOnly, 'Subscription exposes A alongside own B Account' );
 	$assert( ! axismundi_actors_account_role( $actors[0], $b ), 'Resource sharing adds no Actors manager grant' );
+	if ( function_exists( 'axismundi_act_c2s_session' ) ) {
+		wp_set_current_user( $a );
+		axismundi_actors_register_handle( $actors[0], get_userdata( $a )->user_login );
+		axismundi_actors_set_status( $actors[0], 'public' );
+		$shared_actor = axismundi_actors_get_by_identity( $actors[0] );
+		$assert( true === axismundi_act_outbox_authorize( $a, $shared_actor ), 'Shared Todo Account has an activated outbox for its owner' );
+		wp_set_current_user( $b );
+		$ap_session = axismundi_act_c2s_session();
+		$assert( ! is_wp_error( $ap_session )
+			&& $shared_actor->get_uri() === $session->accounts->{$aa}->actorUri
+			&& ! in_array( $shared_actor->get_uri(), array_column( $ap_session['actors'], 'id' ), true ),
+			'Subscribed JMAP reader gets the Actor URI but cannot discover its AP submission endpoint' );
+	}
 	$list_state = $call( 'TodoList/get', array( 'accountId' => $aa ) )->state;
 	wp_set_current_user( $a );
 	$rename_list = $call( 'TodoList/set', array( 'accountId' => $aa, 'update' => (object) array( $list => (object) array( 'name' => 'Renamed shared list' ) ) ) );

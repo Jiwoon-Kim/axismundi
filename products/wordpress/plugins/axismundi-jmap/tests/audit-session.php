@@ -74,6 +74,7 @@ try {
 		remove_filter( 'pre_option_ax_actors_account_access_version', $not_ready );
 	}
 	$assert( 3 === count( get_object_vars( $base->accounts ) ), 'All accessible Accounts exposed without handle requirement' );
+	$assert( axismundi_actors_get_by_identity( $fixtures[0] )->get_uri() === $base->accounts->{$ids[0]}->actorUri, 'JMAP Account exposes the canonical local Actor URI' );
 	$assert( $base->accounts->{$ids[0]}->isPersonal && $base->accounts->{$ids[1]}->isPersonal && ! $base->accounts->{$ids[2]}->isPersonal, 'Multiple personal Accounts, organization operational owner not personal' );
 	$assert( '{}' === json_encode( $base->accounts->{$ids[0]}->accountCapabilities ) && $base->accounts->{$ids[0]}->isReadOnly, 'No implicit capabilities or writes from ownership' );
 	$assert( '{}' === json_encode( $base->primaryAccounts ) && 1 === count( get_object_vars( $base->capabilities ) ), 'Core only, no fake Contacts capability or primary' );

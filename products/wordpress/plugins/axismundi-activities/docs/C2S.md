@@ -894,3 +894,22 @@ document types to be referenced in activities" 한 문장이다. (§6.11 은 Del
 두 경로가 외부에 **완전히** 같은 사건으로 보이는지는 와이어에서 재지 않았다. 임베드와
 URI 참조는 수신 구현에 다르게 보일 수 있고(Mastodon 의 `object` 문자열 처리), 그것이
 c3ab 가 묻고 있는 질문이다. "외부에서 같다" 는 우리 의도이며, 측정된 사실로 적지 않는다.
+
+## 15. Authenticated Session discovery
+
+`GET /wp-json/axismundi/activitypub/session` is an Axismundi-specific
+authentication and discovery surface, not a public AS2 document or a
+standardized AP Session. It uses the same WordPress transport authentication
+as outbox submission (Application Password or authenticated cookie with a REST
+nonce). Responses are private and not cached. A successful login with no
+eligible Actor receives `{"actors":[]}`.
+
+Each entry contains `id` (the canonical Actor URI), `type`, `name`, and
+`outboxSubmitUrl` (the existing POST endpoint). The list uses live outbox
+authorization, not the current browser selection, JMAP Accounts, or a Principal
+ID. It does not advertise signed fetch or imply authorization for every payload.
+Outbox POST rechecks authority independently of discovery.
+
+Axismundi's JMAP Account extension `actorUri` refers to the same canonical
+Actor URI. Compare those URIs when linking entries; use the original JMAP
+Account ID for JMAP methods. Membership and authorization remain independent.

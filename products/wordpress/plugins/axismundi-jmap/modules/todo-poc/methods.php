@@ -14,6 +14,13 @@ const PRINCIPAL_OWNER = 'urn:ietf:params:jmap:principals:owner';
 function state( string $account, string $type, int $user, ?int $revision = null ) : string {
 	$body = ( null === $revision ? read_clock( $account ) : $revision ) . '.' . read_acl_revision( $account );
 	$scope = $account . ':' . $type . ':' . $user . ':' . (int) operator( $account, $user );
+	if ( ! operator( $account, $user ) ) {
+		// A delegated Account can lose a member without a write to this Account's ACL.
+		$visible = array();
+		foreach ( visible_lists( $account, $user ) as $list ) { $visible[ $list['id'] ] = rights( $list, $user ); }
+		ksort( $visible, SORT_STRING );
+		$scope .= ':' . wp_json_encode( $visible );
+	}
 	return $body . '.' . substr( hash_hmac( 'sha256', $scope . ':' . $body, wp_salt( 'auth' ) ), 0, 32 );
 }
 
@@ -46,9 +53,17 @@ function subscribed( string $id, int $user, string $account ) : bool {
 
 function list_object( array $row, int $user ) : \stdClass {
 	$rights = rights( $row, $user );
+	$shares = null;
+	if ( $rights->mayAdmin ) {
+		$stored = json_decode( $row['shares_json'], false, 32, JSON_THROW_ON_ERROR );
+		if ( $stored instanceof \stdClass ) {
+			$visible = array_filter( get_object_vars( $stored ), static fn( $id ) => null !== get_principal_row( (string) $id ), ARRAY_FILTER_USE_KEY );
+			$shares = $visible ? (object) $visible : null;
+		}
+	}
 	return (object) array( 'id' => $row['id'], 'name' => $row['name'],
 		'isSubscribed' => subscribed( $row['id'], $user, $row['account_id'] ), 'myRights' => $rights,
-		'shareWith' => $rights->mayAdmin ? json_decode( $row['shares_json'], false, 32, JSON_THROW_ON_ERROR ) : null );
+		'shareWith' => $shares );
 }
 
 function todo_object( array $row ) : \stdClass {
@@ -259,7 +274,7 @@ function validate_shares( mixed $shares, string $account ) : void {
 	if ( ! $shares instanceof \stdClass ) { throw new MethodError( 'invalidProperties', 'shareWith' ); }
 	foreach ( $shares as $id => $grant ) {
 		$row = get_principal_row( (string) $id );
-		if ( ! $row || empty( $row['user_id'] ) || ! get_userdata( (int) $row['user_id'] ) || (string) $id === principal_for_account( $account )
+		if ( ! $row || ! live_account( 'a' . $row['actor_id'] ) || (string) $id === principal_for_account( $account )
 			|| ! $grant instanceof \stdClass || array_diff( array_keys( get_object_vars( $grant ) ), array( 'mayRead', 'mayWrite', 'mayAdmin' ) ) ) { throw new MethodError( 'invalidProperties', 'shareWith' ); }
 		foreach ( array( 'mayRead', 'mayWrite', 'mayAdmin' ) as $key ) { if ( ! is_bool( $grant->{$key} ?? null ) ) { throw new MethodError( 'invalidProperties', 'shareWith' ); } }
 	}
@@ -280,10 +295,16 @@ function save_object( string $account, string $type, ?string $id, \stdClass $val
 		// Echoing the caller's projection is not a request to change its hidden fields.
 		if ( ( ! $current_rights->mayWrite && ! patch_values_equal( $old->name, $new->name ) ) || ( ! $current_rights->mayAdmin && ! patch_values_equal( $old->shareWith, $new->shareWith ) ) ) { throw new MethodError( 'forbidden' ); }
 		if ( ! is_string( $new->name ) || '' === trim( $new->name ) || strlen( $new->name ) > 255 || ! is_bool( $new->isSubscribed ) ) { throw new MethodError( 'invalidProperties' ); }
-		if ( $create || wp_json_encode( $new->shareWith ) !== wp_json_encode( $old->shareWith ) ) { validate_shares( $new->shareWith, $account ); }
+		$edited_shares = ! patch_values_equal( $old->shareWith, $new->shareWith );
+		if ( $create || $edited_shares ) { validate_shares( $new->shareWith, $account ); }
 		$shares = wp_json_encode( $new->shareWith );
-		// A non-admin sees null, but cannot erase the stored sharing map by renaming.
-		if ( ! $current_rights->mayAdmin && $existing ) { $shares = $existing['shares_json']; }
+		// Echoing the visible share map must not erase hidden legacy grants.
+		if ( $existing && ! $edited_shares ) { $shares = $existing['shares_json']; }
+		if ( $existing && $edited_shares ) {
+			$stored = json_decode( $existing['shares_json'], false, 32, JSON_THROW_ON_ERROR );
+			$legacy = array_filter( (array) $stored, static fn( $id ) => null === get_principal_row( (string) $id ), ARRAY_FILTER_USE_KEY );
+			if ( $legacy ) { $shares = wp_json_encode( (object) ( (array) $new->shareWith + $legacy ) ); }
+		}
 		$changed_shares = $existing && $shares !== $existing['shares_json'];
 		$data = array( 'account_id' => $account, 'name' => $new->name, 'shares_json' => $shares, 'revision' => read_clock( $account ) + 1 );
 		$ok = $create ? $wpdb->insert( table( 'lists' ), array_merge( array( 'id' => $id ), $data ) ) : $wpdb->update( table( 'lists' ), $data, array( 'id' => $id, 'account_id' => $account ) );

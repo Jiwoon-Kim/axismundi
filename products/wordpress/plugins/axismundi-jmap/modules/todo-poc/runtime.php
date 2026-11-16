@@ -92,25 +92,35 @@ function decorate_account( \stdClass $object, \Axismundi_Actor $actor, int $user
 	return $object;
 }
 
+/** This PoC directory only includes explicitly provisioned, live Accounts. */
+function current_user_principal( int $user ) : ?string {
+	$ids = array();
+	foreach ( account_actors( $user ) as $account => $actor ) {
+		if ( ! axismundi_actors_account_is_personal( $actor, $user ) || ! live_account( $account ) ) { continue; }
+		$id = principal_for_account( $account );
+		if ( null !== $id ) { $ids[] = $id; }
+	}
+	// Never substitute a managed Account's owner or guess among personal identities.
+	return 1 === count( $ids ) ? $ids[0] : null;
+}
+
 function principal_objects( int $user ) : array {
 	global $wpdb;
-	$rows = $wpdb->get_results( 'SELECT * FROM ' . table( 'principals' ) . ' ORDER BY id', ARRAY_A );
+	$rows = $wpdb->get_results( 'SELECT id,actor_id FROM ' . table( 'principals' ) . ' WHERE actor_id IS NOT NULL ORDER BY id', ARRAY_A );
+	check_db();
 	$result = array();
 	foreach ( $rows as $row ) {
-		$person = $row['user_id'] ? get_userdata( (int) $row['user_id'] ) : null;
-		$actor = $row['actor_id'] ? account_actor( 'a' . $row['actor_id'] ) : null;
-		if ( ! $person && ( ! $actor || ! live_account( 'a' . $row['actor_id'] ) ) ) { continue; }
+		$id = 'a' . $row['actor_id'];
+		$actor = account_actor( $id );
+		if ( ! $actor || ! live_account( $id ) ) { continue; }
 		$accounts = new \stdClass();
-		$associated = $person ? account_actors( (int) $person->ID ) : array( 'a' . $row['actor_id'] => $actor );
-		foreach ( $associated as $id => $candidate ) {
-			if ( $person && ! axismundi_actors_account_is_personal( $candidate, (int) $person->ID ) ) { continue; }
-			if ( available( $id, $user ) ) { $accounts->{$id} = server()->authorize( $id, CAPABILITY ); }
+		if ( available( $id, $user ) ) {
+			$accounts->{$id} = ( new \Axismundi\Jmap\SessionProjector( runtime_registry() ) )->authorize( $id, $user, CAPABILITY, false );
 		}
 		$ids = array_keys( get_object_vars( $accounts ) );
-		$result[] = (object) array( 'id' => $row['id'], 'type' => $person ? 'individual' : 'other',
-			'name' => $person ? $person->display_name : $actor->get_display_name(), 'description' => null,
-			'email' => $person && (int) $person->ID === $user ? $person->user_email : null, 'timeZone' => null,
-			'capabilities' => (object) array( CAPABILITY => (object) array( 'accountId' => $ids[0] ?? null, 'mayShareWith' => (bool) $person ) ),
+		$result[] = (object) array( 'id' => $row['id'], 'type' => 'other',
+			'name' => $actor->get_display_name(), 'description' => null, 'email' => null, 'timeZone' => null,
+			'capabilities' => (object) array( CAPABILITY => (object) array( 'accountId' => $ids[0] ?? null, 'mayShareWith' => true ) ),
 			'accounts' => $ids ? $accounts : null );
 	}
 	return $result;
@@ -153,7 +163,8 @@ function register( Registry $registry ) : void {
 		return (object) array( 'accountId' => $a->accountId, 'oldState' => $current, 'newState' => $current, 'hasMoreChanges' => false, 'created' => array(), 'updated' => array(), 'destroyed' => array() );
 	}, true );
 	$registry->register_account_provider( CAPABILITY, new \stdClass(), static fn( $actor, $user ) => grant( 'a' . $actor->get_identity_id(), $user ), 'todo_poc', null, __NAMESPACE__ . '\\shared_accounts' );
-	$registry->register_account_provider( PRINCIPALS, new \stdClass(), static fn( $actor, $user ) => available( 'a' . $actor->get_identity_id(), $user ) ? new AccountCapability( new \stdClass(), false ) : null, 'principals_poc' );
+	$registry->register_account_provider( PRINCIPALS, new \stdClass(), static fn( $actor, $user ) => available( 'a' . $actor->get_identity_id(), $user )
+		? new AccountCapability( (object) array( 'currentUserPrincipalId' => current_user_principal( $user ) ), false ) : null, 'principals_poc' );
 }
 
 /** Admin transport exercises the same registry, engine and live Account resolver. */
@@ -161,14 +172,10 @@ function execute( string $json ) : \stdClass {
 	return \Axismundi\Jmap\execute_json( $json );
 }
 
-function register_user( int $user ) : void {
-	if ( '1' === get_option( 'ax_jmap_todo_poc_version' ) ) { principal_for_user( $user, true ); }
-}
-
-function delete_user( int $user ) : void {
-	if ( '1' !== get_option( 'ax_jmap_todo_poc_version' ) ) { return; }
+function retire_principal( int $actor, string $status ) : void {
+	if ( 'tombstone' !== $status || '1' !== get_option( 'ax_jmap_todo_poc_version' ) ) { return; }
 	global $wpdb;
-	$principal = principal_for_user( $user );
+	$principal = principal_for_account( 'a' . $actor );
 	if ( null !== $principal ) {
 		foreach ( $wpdb->get_col( 'SELECT account_id FROM ' . table( 'accounts' ) ) as $account ) {
 			begin( $account );
@@ -186,11 +193,13 @@ function delete_user( int $user ) : void {
 			} catch ( \Throwable $error ) { rollback(); throw $error; }
 		}
 	}
-	$wpdb->delete( table( 'principals' ), array( 'user_id' => $user ) );
-	$wpdb->delete( table( 'subscriptions' ), array( 'user_id' => $user ) );
 }
 
 add_action( 'axismundi_jmap_register', __NAMESPACE__ . '\\register' );
 add_filter( 'axismundi_jmap_account_projection', __NAMESPACE__ . '\\decorate_account', 10, 3 );
-add_action( 'user_register', __NAMESPACE__ . '\\register_user' );
-add_action( 'deleted_user', __NAMESPACE__ . '\\delete_user' );
+add_action( 'axismundi_actors_status_changed', __NAMESPACE__ . '\\retire_principal', 10, 2 );
+add_action( 'deleted_user', static function ( int $user ): void {
+	if ( '1' !== get_option( 'ax_jmap_todo_poc_version' ) ) { return; }
+	global $wpdb;
+	$wpdb->delete( table( 'subscriptions' ), array( 'user_id' => $user ) );
+} );

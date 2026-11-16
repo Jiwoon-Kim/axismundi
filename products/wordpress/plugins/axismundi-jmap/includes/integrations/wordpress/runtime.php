@@ -7,7 +7,7 @@ defined( 'ABSPATH' ) || exit;
 function render_account_session_panel( int $user_id ) : void {
 	if ( ! current_user_can( 'edit_user', $user_id ) ) { return; }
 	$projection = ( new SessionProjector( runtime_registry() ) )->accounts( $user_id );
-	$principal = '1' === get_option( 'ax_jmap_todo_poc_version' ) ? TodoPoc\principal_for_user( $user_id, false ) : null;
+	$principal = '1' === get_option( 'ax_jmap_todo_poc_version' ) ? TodoPoc\current_user_principal( $user_id ) : null;
 	echo '<h3>JMAP</h3><p>' . esc_html__( 'Principal:', 'axismundi-jmap' ) . ' <code>' . esc_html( $principal ?? __( 'Not provisioned', 'axismundi-jmap' ) ) . '</code></p>';
 	if ( ! get_object_vars( $projection->accounts ) ) {
 		echo '<p>' . esc_html__( 'No accessible accounts.', 'axismundi-jmap' ) . '</p>';

@@ -4,7 +4,7 @@ defined( 'ABSPATH' ) || exit( 1 );
 require_once ABSPATH . 'wp-admin/includes/user.php';
 use const Axismundi\Jmap\CORE;
 use const Axismundi\Jmap\TodoPoc\{CAPABILITY, PRINCIPALS};
-use function Axismundi\Jmap\TodoPoc\{execute, enable_account, install, table, principal_for_user};
+use function Axismundi\Jmap\TodoPoc\{execute, enable_account, install, table, principal_for_account};
 use function Axismundi\Jmap\server;
 
 global $wpdb;
@@ -58,10 +58,42 @@ try {
 	wp_set_current_user( $a );
 	$assert( is_wp_error( enable_account( $aa ) ), 'Subscriber cannot enable entitlement' );
 	wp_set_current_user( $admin );
-	$assert( true === enable_account( $aa ) && true === enable_account( $ab ), 'Administrator explicitly enables A and B' );
-	$pb = principal_for_user( $b );
-	$assert( is_string( $pb ) && (int) $wpdb->get_var( $wpdb->prepare( 'SELECT user_id FROM %i WHERE id=%s', table( 'principals' ), $pb ) ) === $b, 'B has opaque user Principal mapping' );
+	$assert( true === enable_account( $aa ) && true === enable_account( $ab ) && true === enable_account( $ac ), 'Administrator explicitly enables the personal Accounts' );
+	$group = axismundi_actors_create_local( array( 'actor_type' => 'Group', 'initial_owner_user_id' => $b, 'display_name' => 'Todo shared recipient' ) );
+	$assert( $group instanceof Axismundi_Actor, 'Non-personal sharing fixture created' );
+	$actors[] = $group->get_identity_id();
+	$ag = 'a' . $group->get_identity_id();
+	$assert( true === enable_account( $ag ), 'Administrator explicitly provisions the non-personal Account' );
+	$pg = principal_for_account( $ag );
+	$pa = principal_for_account( $aa );
+	$pb = principal_for_account( $ab );
+	$assert( is_string( $pb ) && (int) $wpdb->get_var( $wpdb->prepare( 'SELECT actor_id FROM %i WHERE id=%s', table( 'principals' ), $pb ) ) === $actors[1], 'B has an opaque Account Principal mapping' );
+	$assert( null === \Axismundi\Jmap\TodoPoc\current_user_principal( $admin ), 'A user with no provisioned personal Account has no current Principal' );
+	$assert( true === axismundi_actors_set_principal_role( $group->get_identity_id(), 'wp_user', $admin, 'owner' ), 'Actorless user can operate a non-personal Account' );
+	$actorless_caps = server()->accounts()->accounts->{$ag}->accountCapabilities->{PRINCIPALS};
+	$assert( property_exists( $actorless_caps, 'currentUserPrincipalId' ) && null === $actorless_caps->currentUserPrincipalId,
+		'Session emits null rather than omitting or substituting a Principal for the Actorless user' );
+	wp_set_current_user( $b );
+	$group_caps = server()->accounts()->accounts->{$ag}->accountCapabilities;
+	$assert( $pb === $group_caps->{PRINCIPALS}->currentUserPrincipalId
+		&& $pg === $group_caps->{\Axismundi\Jmap\TodoPoc\PRINCIPAL_OWNER}->principalId && $pg !== $pb,
+		'A managed Account does not make its owner Principal the request user' );
 	wp_set_current_user( $a );
+	$cap = server()->accounts()->accounts->{$aa}->accountCapabilities->{PRINCIPALS};
+	$assert( property_exists( $cap, 'currentUserPrincipalId' ) && $pa === $cap->currentUserPrincipalId, 'Account capability advertises the requesting user Principal' );
+	$owner_grant = (object) array( $pa => (object) array( 'mayRead' => true, 'mayWrite' => false, 'mayAdmin' => false ) );
+	$refused = $call( 'TodoList/set', array( 'accountId' => $aa, 'create' => (object) array(
+		'self' => (object) array( 'name' => 'Not a share', 'shareWith' => $owner_grant ),
+	) ) );
+	$assert( 'invalidProperties' === ( $refused->notCreated->self->type ?? null ), 'The Account owner Principal cannot be added to shareWith' );
+	$shared_group = $call( 'TodoList/set', array( 'accountId' => $aa, 'create' => (object) array(
+		'group' => (object) array( 'name' => 'Group share', 'shareWith' => (object) array( $pg => (object) array( 'mayRead' => true, 'mayWrite' => false, 'mayAdmin' => false ) ) ),
+	) ) )->created->group->id ?? null;
+	wp_set_current_user( $b );
+	$assert( $shared_group && $shared_group === ( $call( 'TodoList/get', array( 'accountId' => $aa, 'ids' => array( $shared_group ) ) )->list[0]->id ?? null ),
+		'A user authorized for the recipient Account can read a list shared to that Account Principal' );
+	wp_set_current_user( $a );
+	$call( 'TodoList/set', array( 'accountId' => $aa, 'destroy' => array( $shared_group ) ) );
 	$directory = $call( 'Principal/get', array( 'accountId' => $aa, 'ids' => array( $pb ) ) );
 	$assert( $pb === ( $directory->list[0]->id ?? null ), 'Principal is discoverable through envelope' );
 	$initial = $call( 'Todo/get', array( 'accountId' => $aa ) )->state;
@@ -256,13 +288,12 @@ try {
 	wp_set_current_user( $c );
 	$assert( 'accountNotFound' === ( $call( 'Todo/get', array( 'accountId' => $aa ) )->type ?? null ), 'Unauthorized C cannot read A' );
 	wp_set_current_user( $a );
-	$pc = principal_for_user( $c );
+	$pc = principal_for_account( $ac );
 	$assert( is_string( $pc ), 'Deletion target has a Principal' );
 	$share->{$pc} = (object) array( 'mayRead' => true, 'mayWrite' => false, 'mayAdmin' => false );
 	$target = $call( 'TodoList/set', array( 'accountId' => $aa, 'update' => (object) array( $list => (object) array( 'shareWith' => $share ) ) ) );
 	$assert( property_exists( $target->updated, $list ), 'C is explicitly shared before deletion' );
-	$assert( wp_delete_user( $c ), 'Shared target C deleted' );
-	$assert( null === principal_for_user( $c ), 'Deleted user Principal mapping removed' );
+	$assert( axismundi_actors_set_status( $actors[2], 'tombstone' ), 'Shared target Account identity retired' );
 	$after_delete = $call( 'TodoList/get', array( 'accountId' => $aa, 'ids' => array( $list ) ) )->list[0];
 	$assert( ! isset( $after_delete->shareWith->{$pc} ) && isset( $after_delete->shareWith->{$pb} ), 'Deleted C share removed while B share survives' );
 	$renamed = $call( 'TodoList/set', array( 'accountId' => $aa, 'update' => (object) array( $list => (object) array( 'name' => 'Renamed after deletion' ) ) ) );

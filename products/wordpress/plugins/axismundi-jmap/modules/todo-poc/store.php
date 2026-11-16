@@ -115,34 +115,22 @@ function operator( string $account, int $user ) : bool {
 	return user_can( $user, 'read' ) && 'owner' === axismundi_actors_account_role( $actor->get_identity_id(), $user );
 }
 
-/** The two identity domains intentionally allocate different Principal rows. */
-function mapped_principal( string $column, int $value, bool $create ) : ?string {
-	global $wpdb;
-	if ( ! in_array( $column, array( 'user_id', 'actor_id' ), true ) || $value <= 0 ) { return null; }
-	$id = $wpdb->get_var( $wpdb->prepare( 'SELECT id FROM %i WHERE %i=%d', table( 'principals' ), $column, $value ) );
-	check_db();
-	if ( null !== $id || ! $create ) { return $id; }
-	$id = 'P' . wp_generate_uuid4();
-	// A concurrent provisioner may win the unique mapping; preserve its opaque ID.
-	db_execute( $wpdb->prepare( 'INSERT INTO %i (id,%i) VALUES (%s,%d) ON DUPLICATE KEY UPDATE id=id', table( 'principals' ), $column, $id, $value ) );
-	return mapped_principal( $column, $value, false );
-}
-
-/** create=true is reserved for explicit enable/registration/admin workflows. */
-function principal_for_user( int $user, bool $create = false ) : ?string {
-	if ( $user <= 0 || ( $create && ! get_userdata( $user ) ) ) { return null; }
-	return mapped_principal( 'user_id', $user, $create );
-}
-
 function principal_for_account( string $account, bool $create = false ) : ?string {
+	global $wpdb;
 	$actor = \Axismundi\Jmap\account_actor( $account );
 	if ( ! $actor || ( $create && ! live_account( $account ) ) ) { return null; }
-	return mapped_principal( 'actor_id', (int) $actor->get_identity_id(), $create );
+	$value = $actor->get_identity_id();
+	$id = $wpdb->get_var( $wpdb->prepare( 'SELECT id FROM %i WHERE actor_id=%d', table( 'principals' ), $value ) );
+	check_db();
+	if ( null !== $id || ! $create ) { return $id; }
+	// A concurrent provisioner may win the unique mapping; preserve its opaque ID.
+	db_execute( $wpdb->prepare( 'INSERT INTO %i (id,actor_id) VALUES (%s,%d) ON DUPLICATE KEY UPDATE id=id', table( 'principals' ), 'P' . wp_generate_uuid4(), $value ) );
+	return principal_for_account( $account );
 }
 
 function get_principal_row( string $id ) : ?array {
 	global $wpdb;
-	$row = $wpdb->get_row( $wpdb->prepare( 'SELECT id,user_id,actor_id FROM %i WHERE id=%s', table( 'principals' ), $id ), ARRAY_A );
+	$row = $wpdb->get_row( $wpdb->prepare( 'SELECT id,actor_id FROM %i WHERE id=%s AND actor_id IS NOT NULL', table( 'principals' ), $id ), ARRAY_A );
 	check_db();
 	return $row ?: null;
 }
@@ -152,7 +140,6 @@ function provision_todo_account( string $account ) : void {
 	global $wpdb;
 	if ( ! live_account( $account ) ) { throw new \InvalidArgumentException( 'A live local Account is required.' ); }
 	principal_for_account( $account, true );
-	foreach ( get_users( array( 'fields' => 'ID' ) ) as $user ) { principal_for_user( (int) $user, true ); }
 	db_execute( $wpdb->prepare( 'INSERT INTO %i (account_id,actor_id) VALUES (%s,%d) ON DUPLICATE KEY UPDATE account_id=account_id', table( 'accounts' ), $account, (int) substr( $account, 1 ) ) );
 }
 
@@ -170,12 +157,15 @@ function rights( array $list, int $user ) : \stdClass {
 	$account = (string) ( $list['account_id'] ?? '' );
 	if ( $user <= 0 || ! live_account( $account ) ) { return $result; }
 	if ( operator( $account, $user ) ) { return (object) array_fill_keys( $names, true ); }
-	$principal = principal_for_user( $user, false );
-	if ( null === $principal ) { return $result; }
 	$shares = json_decode( (string) ( $list['shares_json'] ?? '{}' ), false, 32, JSON_THROW_ON_ERROR );
-	$grant = $shares instanceof \stdClass ? ( $shares->{$principal} ?? null ) : null;
-	if ( ! $grant instanceof \stdClass || true !== ( $grant->mayRead ?? false ) ) { return $result; }
-	foreach ( $names as $name ) { $result->{$name} = true === ( $grant->{$name} ?? false ); }
+	if ( ! $shares instanceof \stdClass || ! get_object_vars( $shares ) ) { return $result; }
+	foreach ( $shares as $id => $grant ) {
+		if ( ! $grant instanceof \stdClass || true !== ( $grant->mayRead ?? false ) ) { continue; }
+		$principal = get_principal_row( (string) $id );
+		$target = 'a' . ( $principal['actor_id'] ?? 0 );
+		if ( ! live_account( $target ) || ! \Axismundi\Jmap\resolve_account_actor( $target, $user ) ) { continue; }
+		foreach ( $names as $name ) { $result->{$name} = $result->{$name} || true === ( $grant->{$name} ?? false ); }
+	}
 	return $result;
 }
 

@@ -76,7 +76,12 @@ fails on an older toolchain with an error that does not say so.
 
 ## Toolchain on this machine
 
-Rust and all build output live on `D:` because the system drive is nearly full:
+Rust and its build output live on `D:`, a 2.8 TB spinning disk, while the
+project and its npm dependencies stay on the NVMe system drive. The split is by
+size and access pattern rather than by necessity: a Tauri build tree runs to
+several gigabytes and is only touched when Rust changes, whereas node_modules
+and the Angular cache are tens of thousands of small files that a dev server
+reads continuously, which is the worst case for a hard disk.
 
 ```txt
 RUSTUP_HOME       D:\rust\rustup

@@ -47,18 +47,35 @@ Session의 빈 맵은 내보낼 수 있는 기본값이 없다는 뜻이지, 투
 core    "urn:ietf:params:jmap:core **SHOULD NOT** be present"
 ```
 
-### 제외 목록에 `principals:owner` 도 넣는다
+### `principals:owner` 는 primary 키가 아니다 — 이유를 정확히
 
-`urn:ietf:params:jmap:principals:owner` 는 `accountCapabilities` 에 나타나지만(우리 a199
-실측) **데이터 capability 가 아니라 계정 표식**이다(§1.5.2 — 세션 capabilities 에는 나오지
-않는다). 기본 계정을 물을 대상이 아니다.
+**등록된 capability 가 맞다.** §7.2 가 `urn:ietf:params:jmap:principals:owner` 를
+"JMAP Capabilities" 레지스트리에 등록하고, `Intended Use: common` 이다 — `principals`(§7.1)와
+같은 값이라 그 필드는 둘을 가르지 않는다. "capability 가 아니다" 라고 쓰지 말 것.
 
-독립 구현이 같은 판단을 한다 — Stalwart 는 `principals:owner` 를 광고하면서
-`primaryAccounts` 에는 넣지 않는다(2026-11-15 실측).
+그리고 §1.5.2 대로 `accountCapabilities` 에 나타난다(우리 a199 실측). 그러니 RFC 8620 §2 의
+"capability URIs **as found in accountCapabilities**" 기준으로는 **문법적으로 키가 될 수 있다.**
+
+제외하는 이유는 의미 쪽이다.
 
 ```txt
-제외   urn:ietf:params:jmap:core            RFC SHOULD NOT
-       urn:ietf:params:jmap:principals:owner  계정 표식이다
+primaryAccounts 가 묻는 것   "이 capability 에 **딸린 데이터**를 열 기본 계정은 어디인가"
+principals:owner 가 답하는 것  "**이** Account 를 소유한 Principal 은 누구이고 어디서 가져오나"
+                            → 딸린 데이터가 없다.  물음 자체가 성립하지 않는다
+RFC 8620 §2                "there is no appropriate way to determine a default account"
+                            → **생략이 정답이고, 그 조항이 정확히 이 경우를 덮는다**
+```
+
+독립 구현이 같은 결론이다 — Stalwart 는 `principals:owner` 를 광고하면서 `primaryAccounts`
+에는 넣지 않는다(2026-11-15 실측).
+
+**우리 코드에서는 애초에 들어갈 길이 없다.** 투영 루프가 `account_providers()` 만 돌고, 그건
+`purpose` 를 달고 등록된 것뿐이다. `principals:owner` 는 `decorate_account()` 가 붙인다. 그래서
+제외가 **유지해야 할 목록이 아니라 구조**다. 목록을 들고 있지 않아도 된다.
+
+```txt
+core                   RFC 가 SHOULD NOT 이라고 적었다
+principals:owner       딸린 데이터가 없어 기본 계정을 물을 수 없다.  구조적으로도 키가 못 된다
 ```
 
 ## 넣는 조건 — 셋 다 만족할 때만

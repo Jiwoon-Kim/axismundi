@@ -92,25 +92,105 @@ ureq 기본값   RedirectAuthHeaders::Never
 오리진이 바뀌었으면 그 사실을 말하고 승인을 다시 받는다
 ```
 
-## 발견 — 프로토콜마다 다르고, **라우트 존재는 권한이 아니다**
+## 탐침 셋 — 다른 질문, 다른 층
+
+"이 도메인이 WordPress 인가 · AP 를 하는가 · JMAP 을 하는가" 는 **서로 다른 세 질문**이고
+표준도 셋이다. 우리 서버에서 실측(2026-11-17):
 
 ```txt
-WordPress REST  GET /wp-json/ 의 namespace 목록.  존재가 단서다
-JMAP            .well-known/jmap → Session.  Session 의 accountCapabilities 가
-                **계정별로 무엇이 열려 있는지** 답한다
-AP              WebFinger / Actor 문서.  **capability 광고가 없다**
-OGC API         OpenAPI 문서가 security scheme 을 선언한다 → 자동 발견 가능
+① WordPress?    GET /wp-json/
+                → 200.  name="Axismundi Workspace", namespaces 16개
+                답하는 것: 어떤 **표면**이 있는가
+
+② JMAP?         GET /.well-known/jmap          (RFC 8620 §2.2)
+                → 302 → /wp-json/axismundi/jmap/session
+                답하는 것: JMAP 이 있는가 + **Session 이 어디인가**
+                그 뒤 Session 의 accountCapabilities 가 **이 계정**이 무엇을 쓸 수 있는지 답한다
+
+③ ActivityPub?  GET /.well-known/nodeinfo → .../nodeinfo/2.1
+                → protocols: ["activitypub"], software: axismundi 0.1.0-alpha0.1
+                답하는 것: 이 **서버**가 AP 를 하는가
+                WebFinger 는 별개로 **특정 Actor** 를 해석한다 (resource 없이 부르면 404 다)
 ```
 
-**AP 가 유일하게 답하지 못한다.** Actor 의 `outbox` 가 보인다고 해서 (a) 거기에 무슨
-자격증명으로 POST 할 수 있는지, (b) 로그인한 사용자가 그 Actor 로 행위할 수 있는지를 알 수
-없다. outbox 는 컬렉션 주소다(AP §5.1).
+**탐침이 셋이라는 것은 구현 비용이지 구조적 장벽이 아니다.** 메일 클라이언트도 계정 추가에서
+autodiscover·SRV·well-known 을 차례로 때린다. 호스트는 어떤 조합이든 될 수 있고 — WordPress
+인데 AP 가 없을 수도, AP 는 하는데 JMAP 이 없을 수도(Mastodon), JMAP 만 할 수도(Stalwart) —
+결과는 **capability 집합**이다.
+
+### 못 만드는 것은 범용 클라이언트가 아니라 **프로토콜 이름을 단 클라이언트**다
 
 ```txt
-금지   공개 Actor 문서만 보고 AP C2S 제출이나 서명 위임을 **켜지 않는다**
+"JMAP 클라이언트"   Mastodon 글을 못 읽는다
+"AP 클라이언트"     Todo 를 동기화 못 한다
+제품은 둘 다 필요하다 → 이름은 **프로토콜이 아니라 사용자가 하는 일**로 붙인다
+```
+
+### 진짜 비대칭 — 답하는 **층**이 다르다
+
+```txt
+WordPress 인덱스   표면 단위   namespaces
+JMAP Session      **계정 단위** accountCapabilities
+NodeInfo          **서버 단위** protocols
+```
+
+세 탐침 중 **둘은 "이 사용자가 무엇을 할 수 있는가" 에 닿고, NodeInfo 는 서버까지만** 닿는다.
+"내가 이 Actor 로 outbox 에 제출할 수 있는가" 를 답하는 것이 **없다**.
+
+```txt
+AP 에 있는 것     NodeInfo (서버 수준, 그나마 W3C 가 아니라 fediverse 관행)
+                 WebFinger (Actor 해석)
+AP 에 없는 것     accountCapabilities 에 해당하는 것
+```
+
+그래서 Session Pre-FEP 의 근거가 "있으면 좋겠다" 가 아니라 **"탐침 셋 중 둘은 답하는데 하나만
+못 답한다"** 가 된다. 돌아가는 클라이언트가 못 하는 일이다.
+
+## 라우트 존재는 권한이 아니다
+
+위 탐침표가 "무엇이 있는가" 를 답한다. **"내가 그것을 쓸 수 있는가" 는 다른 질문이고**, AP
+에서만 답이 없다.
+
+Actor 의 `outbox` 가 보인다고 해서 (a) 거기에 무슨 자격증명으로 POST 할 수 있는지, (b)
+로그인한 사용자가 그 Actor 로 행위할 수 있는지를 알 수 없다. outbox 는 **컬렉션 주소**다
+(AP §5.1). NodeInfo 가 `protocols: ["activitypub"]` 를 광고해도 그것은 **서버**가 AP 를
+한다는 말이지 **이 사용자**가 제출할 수 있다는 말이 아니다.
+
+```txt
+금지   공개 Actor 문서나 NodeInfo 만 보고 AP C2S 제출이나 서명 위임을 **켜지 않는다**
 기록   이 구멍이 Session Pre-FEP 의 가장 구체적인 사례다 —
       "발견은 했는데 권한은 알 수 없다" 를 돌아가는 클라이언트가 못 하는 일로 보일 수 있다
 ```
+
+OGC API 는 나중에 더해질 때 **OpenAPI 문서가 security scheme 을 선언**하므로 그쪽은 자동
+발견이 된다. 레인 A 라 이 모델을 바꾸지 않는다.
+
+### 발견 결과는 **세 상태**다 — 둘로 뭉개지 않는다
+
+```txt
+JMAP 미지원            그 호스트에 JMAP 이 없다
+로그인 필요             JMAP 은 있는데 미인증이다
+**인증됨, Account 없음**  인증은 성공했고 **정체성이 아직 없다**
+```
+
+셋째가 실재한다. 실측(2026-11-17): Actor 가 없는 WordPress 사용자는 Session 을 받되
+`accounts` 가 비어 있고, 투영기가 던지지 않는다.
+
+```txt
+accounts: 0        primaryAccounts: {}        오류가 아니다
+```
+
+순진한 클라이언트는 셋을 전부 "뭔가 잘못됨" 으로 뭉갠다. 특히 셋째를 인증 실패로 보여주면
+사용자는 비밀번호를 다시 친다.
+
+```txt
+안내   "Actor 를 만들어야 JMAP·AP 기능이 켜집니다" + **어디서 만드는지**(관리 화면)
+금지   클라이언트가 대신 Actor 를 만드는 것.  정체성 발급은 Actors 의 결정이고
+      클라이언트가 끌어낼 일이 아니다 — 공유 기능에 건 것과 같은 선이다
+```
+
+그래서 WordPress 인증까지는 Actor 없이 끝나고(`wp/v2` 는 바로 열린다), 나머지는 "기능이
+꺼져 있다" 가 아니라 **"한 걸음 더"** 로 안내된다.
 
 ## 가정하지 않고 발견하고, 없으면 끈다
 

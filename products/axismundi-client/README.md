@@ -56,7 +56,19 @@ earned.
 
 ## Toolchain on this machine
 
-Rust lives on `D:` because the system drive is nearly full:
-`RUSTUP_HOME=D:\rust\rustup`, `CARGO_HOME=D:\rust\cargo`. The MSVC linker and the
-Windows SDK were already present, so the default `x86_64-pc-windows-msvc` target
-links without installing the Visual Studio C++ workload.
+Rust and all build output live on `D:` because the system drive is nearly full:
+
+```txt
+RUSTUP_HOME       D:\rust\rustup
+CARGO_HOME        D:\rust\cargo
+CARGO_TARGET_DIR  D:\rust\target      ← so `target/` is NOT under this directory
+```
+
+The binary is therefore at `D:\rust\target\debug\axj.exe`, not `./target/debug/`.
+`CARGO_TARGET_DIR` is set in the user environment, so it applies to every Rust
+build on this machine, and a Tauri shell's dependency tree will land there too
+rather than filling the system drive.
+
+The MSVC linker and the Windows SDK were already present, so the default
+`x86_64-pc-windows-msvc` target links without installing the Visual Studio C++
+workload.

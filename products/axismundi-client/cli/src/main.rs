@@ -6,6 +6,7 @@
 
 use std::process::ExitCode;
 
+use axismundi_jmap_core::discovery::{Probe, discover};
 use axismundi_jmap_core::{CORE_CAPABILITY as CORE, Client, Credentials, Error, Session};
 use serde_json::{Value, json};
 
@@ -26,6 +27,7 @@ fn usage() -> String {
         "axj - a JMAP probe that learns everything from the Session resource",
         "",
         "usage:",
+        "  axj discover  HOST_OR_URL  (anonymous)",
         "  axj session   --session-url URL [--user NAME] [--secret SECRET]",
         "  axj echo      --session-url URL [--user NAME] [--secret SECRET]",
         "  axj todo      --session-url URL [--user NAME] [--secret SECRET] [--account ID]",
@@ -182,6 +184,36 @@ fn report(batch: &axismundi_jmap_core::Batch) -> bool {
 fn run() -> Result<bool, String> {
     let argv: Vec<String> = std::env::args().skip(1).collect();
     let (command, rest) = argv.split_first().ok_or_else(usage)?;
+    if command == "discover" {
+        let [input] = rest else {
+            return Err("usage: axj discover HOST_OR_URL".into());
+        };
+        let result = discover(input)?;
+        println!("base          {}", result.base);
+        print_probe("wordpress", result.wordpress, |details| {
+            format!(
+                "name={:?} namespaces={}",
+                details.name,
+                details.namespaces.join(", ")
+            )
+        });
+        print_probe("jmap", result.jmap, |details| {
+            let change = if details.origin_changed {
+                " (different origin)"
+            } else {
+                ""
+            };
+            format!("session={}{change}", details.session_url)
+        });
+        print_probe("activitypub", result.activitypub, |details| {
+            format!(
+                "protocols=[{}] software={}",
+                details.protocols.join(", "),
+                details.software.as_deref().unwrap_or("(not advertised)")
+            )
+        });
+        return Ok(true);
+    }
     let options = options(rest)?;
     let credentials = Credentials {
         user: options.user,
@@ -277,6 +309,16 @@ fn run() -> Result<bool, String> {
         }
     }
     Ok(healthy && report(&changes))
+}
+
+fn print_probe<T>(label: &str, result: Probe<T>, details: impl FnOnce(T) -> String) {
+    let (state, reason) = match result {
+        Probe::Found(info) => ("yes", details(info)),
+        Probe::LoginRequired(info) => ("login required", details(info)),
+        Probe::NotFound(reason) => ("not advertised", reason),
+        Probe::Unconfirmed(reason) => ("unconfirmed", reason),
+    };
+    println!("{label:14}{state:16}{reason}");
 }
 
 /// Keep the four failure kinds apart in what the operator reads.

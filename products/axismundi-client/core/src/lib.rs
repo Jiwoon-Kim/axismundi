@@ -10,8 +10,10 @@
 use std::collections::BTreeMap;
 use std::fmt;
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
+
+pub mod discovery;
 
 pub const CORE_CAPABILITY: &str = "urn:ietf:params:jmap:core";
 
@@ -41,6 +43,18 @@ pub struct Account {
     pub is_read_only: bool,
     #[serde(rename = "accountCapabilities", default)]
     pub account_capabilities: BTreeMap<String, Value>,
+    #[serde(rename = "actorUri", default)]
+    pub actor_uri: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ActingActor {
+    pub id: String,
+    pub name: String,
+    #[serde(rename = "type")]
+    pub kind: String,
+    pub outbox_submit_url: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -243,10 +257,36 @@ impl Client {
             .http_status_as_error(false)
             .user_agent("axismundi-jmap-client/0.1");
         if let Some(limit) = limit {
-            config = config.max_redirects(limit);
+            config = config
+                .max_redirects(limit)
+                .timeout_global(Some(std::time::Duration::from_secs(30)));
         }
         let agent = config.build().into();
         Self { agent, credentials }
+    }
+
+    /// Axismundi's authenticated AP discovery projection.
+    pub fn acting_actors(&self, session_url: &str) -> Result<Vec<ActingActor>, Error> {
+        #[derive(Deserialize)]
+        struct ActingSession {
+            actors: Vec<ActingActor>,
+        }
+        let (body, _) = self.get(session_url)?;
+        serde_json::from_str::<ActingSession>(&body)
+            .map(|session| session.actors)
+            .map_err(|error| Error::Shape(format!("AP Session: {error}")))
+    }
+
+    /// Verify a WordPress login at the discovered users/me endpoint.
+    pub fn wordpress_user(&self, user_url: &str) -> Result<String, Error> {
+        #[derive(Deserialize)]
+        struct User {
+            name: String,
+        }
+        let (body, _) = self.get(user_url)?;
+        serde_json::from_str::<User>(&body)
+            .map(|user| user.name)
+            .map_err(|error| Error::Shape(format!("WordPress user: {error}")))
     }
 
     fn authorization(&self) -> String {

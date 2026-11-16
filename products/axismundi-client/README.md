@@ -23,12 +23,19 @@ because it would only ever work against the server it was written for.
 ## Running it
 
 ```bash
+axj discover http://localhost:8884
 axj session --session-url http://localhost:8884/wp-json/axismundi/jmap/session
 axj echo    --session-url http://localhost:8884/wp-json/axismundi/jmap/session
 axj todo    --session-url http://localhost:8884/wp-json/axismundi/jmap/session
 axj changes --session-url http://localhost:8884/wp-json/axismundi/jmap/session [--since STATE]
 axj todo-set --session-url http://localhost:8884/wp-json/axismundi/jmap/session [--account ID]
 ```
+
+`discover` sends no credentials. It checks WordPress REST, JMAP Session
+discovery, and the server's NodeInfo protocol advertisement independently.
+A JMAP login challenge is not a missing JMAP endpoint. A host without a scheme
+defaults to HTTPS; use an explicit HTTP URL for local development. NodeInfo
+does not establish permission to submit ActivityPub activities.
 
 `todo-set` is a write probe for loopback development servers only. It creates
 its own TodoList and Todo, checks optimistic concurrency and partial failures,

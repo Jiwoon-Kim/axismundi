@@ -1,8 +1,4 @@
-// Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
-}
+mod connection;
 
 /// The application's wiring, kept apart from `run` so a test can build the same
 /// thing against a mock runtime. A test that registered its own handler would
@@ -11,7 +7,11 @@ fn greet(name: &str) -> String {
 pub fn configure<R: tauri::Runtime>(builder: tauri::Builder<R>) -> tauri::Builder<R> {
     builder
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![greet])
+        .manage(connection::Connection::default())
+        .invoke_handler(tauri::generate_handler![
+            connection::discover_server,
+            connection::connect_server,
+        ])
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -25,10 +25,7 @@ pub fn run() {
 mod tests {
     use tauri::test::{mock_context, noop_assets};
 
-    /// The front end calls `invoke("greet", { name })`. This drives the same
-    /// request through the registered handler, so the scaffold's claim that the
-    /// webview can reach Rust rests on something repeatable rather than on one
-    /// person having clicked a button once.
+    /// A request reaches the real Rust command without opening a network socket.
     #[test]
     fn the_registered_command_answers_an_ipc_request() {
         let app = super::configure(tauri::test::mock_builder())
@@ -41,20 +38,19 @@ mod tests {
         let response = tauri::test::get_ipc_response(
             &webview,
             tauri::webview::InvokeRequest {
-                cmd: "greet".into(),
+                cmd: "discover_server".into(),
                 callback: tauri::ipc::CallbackFn(0),
                 error: tauri::ipc::CallbackFn(1),
                 url: "http://tauri.localhost".parse().unwrap(),
-                body: serde_json::json!({ "name": "Axismundi" }).into(),
+                body: serde_json::json!({ "input": "ftp://example.test/" }).into(),
                 headers: Default::default(),
                 invoke_key: tauri::test::INVOKE_KEY.to_string(),
             },
         );
 
-        let body = response.expect("the command answers rather than erroring");
         assert_eq!(
-            body.deserialize::<String>().unwrap(),
-            "Hello, Axismundi! You've been greeted from Rust!"
+            response.unwrap_err(),
+            "discovery requires HTTP(S) URLs without embedded credentials or fragments"
         );
     }
 

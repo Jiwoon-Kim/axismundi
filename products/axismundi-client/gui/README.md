@@ -12,7 +12,13 @@ npm ci
 npm run tauri dev
 ```
 
-The starter's Greet button tests the WebView-to-Rust IPC path. It does not
-connect to a server or depend on the protocol core yet. The Tauri shell has its
-own Cargo workspace and lockfile, so CLI-only builds do not pull in GUI
-dependencies. No drive letter or mobile SDK is required for desktop builds.
+Enter a server address and discover its services before signing in. For a
+WordPress connection, use a WordPress username and Application Password.
+The shell uses the shared Rust client for discovery and sign-in; secrets are
+not saved. JMAP accounts and ActivityPub actors are shown separately and
+linked only when their canonical Actor URIs match.
+
+The Tauri shell has its own Cargo workspace and lockfile, so CLI-only builds
+do not pull in GUI dependencies. No drive letter or mobile SDK is required
+for desktop builds. `npm run start` previews the layout in a browser;
+connecting requires the Tauri app.

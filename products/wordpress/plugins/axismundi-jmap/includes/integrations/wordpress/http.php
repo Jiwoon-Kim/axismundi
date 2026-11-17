@@ -3,6 +3,9 @@
 namespace Axismundi\Jmap\Http;
 defined( 'ABSPATH' ) || exit;
 
+const SESSION_NAMESPACE = 'axismundi/v1';
+const SESSION_ROUTE = '/users/me/session';
+
 function permission( \WP_REST_Request $request ) {
 	$nonce = sanitize_text_field( (string) $request->get_header( 'X-WP-Nonce' ) );
 	$query = $request->get_query_params();
@@ -67,7 +70,8 @@ add_filter( 'rest_pre_dispatch', function ( $result, $server, $request ) {
 }, 10, 3 );
 
 add_filter( 'rest_post_dispatch', function ( $response, $server, $request ) {
-	if ( preg_match( '#^/axismundi/jmap(?:/|$)#', $request->get_route() ) ) {
+	if ( 0 === strcasecmp( '/' . SESSION_NAMESPACE . SESSION_ROUTE, untrailingslashit( $request->get_route() ) )
+		|| preg_match( '#^/axismundi/jmap(?:/|$)#i', $request->get_route() ) ) {
 		$response = rest_ensure_response( $response );
 		$response->header( 'Cache-Control', 'private, no-store' );
 		$response->header( 'Vary', 'Authorization, Cookie' );
@@ -76,7 +80,9 @@ add_filter( 'rest_post_dispatch', function ( $response, $server, $request ) {
 }, 10, 3 );
 
 add_action( 'rest_api_init', function () {
-	register_rest_route( 'axismundi/jmap', '/session', array( 'methods' => 'GET', 'permission_callback' => __NAMESPACE__ . '\\permission', 'callback' => __NAMESPACE__ . '\\session' ) );
+	$session = array( 'methods' => 'GET', 'permission_callback' => __NAMESPACE__ . '\\permission', 'callback' => __NAMESPACE__ . '\\session' );
+	register_rest_route( SESSION_NAMESPACE, SESSION_ROUTE, $session );
+	register_rest_route( 'axismundi/jmap', '/session', $session );
 	register_rest_route( 'axismundi/jmap', '/eventsource', array( 'methods' => 'GET', 'permission_callback' => __NAMESPACE__ . '\\permission', 'callback' => __NAMESPACE__ . '\\unavailable' ) );
 	/*
 	 * The method batch is the namespace path itself, because JMAP advertises a single apiUrl.
@@ -105,7 +111,7 @@ add_action( 'parse_request', function ( \WP $wp ) : void {
 	if ( ! in_array( $method, array( 'GET', 'HEAD' ), true ) ) {
 		status_header( 405 ); header( 'Allow: GET, HEAD' ); exit;
 	}
-	wp_safe_redirect( rest_url( 'axismundi/jmap/session' ), 302 );
+	wp_safe_redirect( rest_url( SESSION_NAMESPACE . SESSION_ROUTE ), 302 );
 	exit;
 
 }, 0 );

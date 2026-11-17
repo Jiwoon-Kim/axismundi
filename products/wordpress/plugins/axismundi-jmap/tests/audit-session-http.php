@@ -32,17 +32,21 @@ try {
 	$_COOKIE[LOGGED_IN_COOKIE] = $cookie;
 	$auth = array( 'Cookie' => LOGGED_IN_COOKIE . '=' . $cookie, 'X-WP-Nonce' => wp_create_nonce( 'wp_rest' ) );
 	$base = '/wp-json/axismundi/jmap';
+	$session_path = '/wp-json/axismundi/v1/users/me/session';
 	$discovery = $request( 'GET', '/.well-known/jmap' );
-	$assert( 302 === $discovery[0] && rest_url( 'axismundi/jmap/session' ) === (string) $discovery[2]['location'], 'Discovery redirects to the canonical Session' );
+	$assert( 302 === $discovery[0] && rest_url( 'axismundi/v1/users/me/session' ) === (string) $discovery[2]['location'], 'Discovery redirects to the canonical Session' );
 	$assert( 405 === $request( 'POST', '/.well-known/jmap' )[0], 'Discovery does not redirect POST' );
 	foreach ( array( array(), array( 'Cookie' => $auth['Cookie'] ), array_merge( $auth, array( 'X-WP-Nonce' => 'invalid' ) ) ) as $bad ) {
-		$r = $request( 'GET', $base . '/session', $bad );
+		$r = $request( 'GET', $session_path, $bad );
 		$assert( in_array( $r[0], array( 401, 403 ), true ), 'Unauthenticated or invalid cookie request denied' );
 		$assert( str_contains( (string) $r[2]['cache-control'], 'no-store' ), 'Permission error is not cacheable' );
 	}
-	$session = $request( 'GET', $base . '/session', $auth );
+	$session = $request( 'GET', $session_path, $auth );
 	$assert( 200 === $session[0] && isset( $session[1]['capabilities']['urn:ietf:params:jmap:core'], $session[1]['accounts'], $session[1]['state'] ), 'Authenticated browser gets a complete Session' );
 	$assert( isset( $session[1]['accounts']['a' . $actor->get_identity_id()] ), 'Session contains the accessible Actor Account' );
+	$assert( str_contains( (string) $session[2]['cache-control'], 'no-store' ), 'Canonical Session is not cacheable' );
+	$legacy = $request( 'GET', $base . '/session', $auth );
+	$assert( 200 === $legacy[0] && $session[1] === $legacy[1] && empty( $legacy[2]['location'] ), 'Legacy Session returns the same document without redirecting' );
 	foreach ( array( 'apiUrl', 'downloadUrl', 'uploadUrl', 'eventSourceUrl' ) as $field ) {
 		$url = (string) ( $session[1][ $field ] ?? '' );
 		// apiUrl is the namespace path itself, so requiring a trailing slash there would pass only
@@ -67,10 +71,10 @@ try {
 	$app = WP_Application_Passwords::create_new_application_password( $user, array( 'name' => 'Disposable JMAP HTTP fixture' ) );
 	$assert( is_array( $app ), 'Temporary Application Password created' );
 	$basic = array( 'Authorization' => 'Basic ' . base64_encode( get_userdata( $user )->user_login . ':' . $app[0] ) );
-	$assert( 200 === $request( 'GET', $base . '/session', $basic )[0], 'Real Application Password reads Session without nonce' );
+	$assert( 200 === $request( 'GET', $session_path, $basic )[0], 'Real Application Password reads Session without nonce' );
 	$assert( 200 === $request( 'POST', $base, $basic, $body )[0], 'Real Application Password invokes API without nonce' );
 	WP_Application_Passwords::delete_application_password( $user, $app[1]['uuid'] );
-	$assert( in_array( $request( 'GET', $base . '/session', $basic )[0], array( 401, 403 ), true ), 'Revoked Application Password is denied' );
+	$assert( in_array( $request( 'GET', $session_path, $basic )[0], array( 401, 403 ), true ), 'Revoked Application Password is denied' );
 	echo "PASS $checks real HTTP Session checks\n";
 } finally {
 	global $wpdb;

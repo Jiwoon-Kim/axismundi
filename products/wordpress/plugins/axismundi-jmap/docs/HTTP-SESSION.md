@@ -7,7 +7,8 @@ POST는 405이고 본문·자격증명을 다른 경로로 재전송하도록 �
 
 | 경로 | 메서드 | 동작 |
 | --- | --- | --- |
-| /wp-json/axismundi/jmap/session | GET | 인증된 현재 User의 Session |
+| /wp-json/axismundi/v1/users/me/session | GET | 인증된 현재 User의 JMAP Session |
+| /wp-json/axismundi/jmap/session | GET | 기존 클라이언트 호환용. 리다이렉트 없이 같은 응답 |
 | /wp-json/axismundi/jmap | POST | 단일 JMAP 메서드 배치.  GET 은 코어 네임스페이스 인덱스 |
 | /wp-json/axismundi/jmap/todo* | 기존 메서드 | 기존 개발 UI 어댑터 |
 

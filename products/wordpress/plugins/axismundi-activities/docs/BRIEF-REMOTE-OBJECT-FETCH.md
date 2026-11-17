@@ -31,11 +31,15 @@
 Activity의 가시성이 현재 Object의 가시성과 항상 같다는 계약은 아니다. 브라우저 선택
 없이 B가 읽히는지, B를 대신할 권한이 없는 로그인은 B를 명시해도 거부되는지도 따로 잰다.
 
-로컬 구현의 인증 읽기는 `GET /wp-json/axismundi/v1/actors/{uuid}/document?actor={uri}`와
-`GET /wp-json/axismundi/v1/objects/{id}?actor={uri}`를 사용한다. 전자는 본인 Actor 문서용이고,
-아직 제출할 수 없는 로컬 프로필도 Workspace 권한으로 읽을 수 있다. 후자는 기존 숫자 ID
-경로에서 명시적 Actor로 로컬 비공개 Object를 읽는 계약이다. 기존 공개 URI와 `actor`를
-생략한 브라우저 호출은 변경하지 않는다.
+로컬 구현의 인증 읽기는 `GET /wp-json/axismundi/activitypub/actors?ids={actorUris}`와
+`GET /wp-json/axismundi/activitypub/objects?ids={objectUris}&actor={viewerUri}`를 사용한다.
+`ids`는 쉼표로 구분한 정규 URI 목록이다(최대 20개, 디코딩된 값 6000바이트 이하).
+한 건이어도 `OrderedCollection`의 `orderedItems`로 반환하고, 없거나 권한이 없는 항목은
+구분 없이 생략한다. 전자는 Workspace 권한으로 자기 Actor 문서를 읽고,
+후자는 명시한 Actor의 열람 권한으로 로컬 Object를 읽는다. URI를 숫자 ID로 바꾸는 작업은
+클라이언트에 맡기지 않는다. 기존 숫자 ID 경로와 정규 공개 URI는 유지하며 새 GET은 원격
+요청을 하지 않는다. `axismundi/activitystreams`의 미발행 객체 GET/PATCH 및 타입 발견은
+별도 계약으로 남는다.
 
 읽기 허가와 별개로, 인증된 Actor에게는 해당 문서의 최상위 `bto`·`bcc`를 보여줄 수 있다.
 Object는 자기 `attributedTo`, Activity는 자기 `actor`의 모든 URI와 비교한다. Object에

@@ -119,6 +119,26 @@ try {
 	$ax_op_outbox_page_size = static fn() : int => 20;
 	add_filter( 'axismundi_op_outbox_page_size', $ax_op_outbox_page_size );
 	$first_page = axismundi_op_transform_collection( new Axismundi_OP_Actor_Outbox( $actor, true ) );
+	$filtered_request = static function ( string $type, array $params = array( 'page' => 1 ) ) use ( $actor ) : WP_REST_Response {
+		$request = new WP_REST_Request( 'GET', '/axismundi/activitypub/actors/' . $actor->get_uuid() . '/outbox' );
+		$request->set_query_params( array( 'type' => $type ) + $params );
+		return rest_do_request( $request );
+	};
+	$filtered = $filtered_request( 'Create' );
+	$filtered_data = $filtered->get_data();
+	$filtered_root = $filtered_request( 'Create', array() );
+	ax_op_outbox_assert( $ax_op_outbox_results, 'filtered root and page agree on collection identity',
+		200 === $filtered_root->get_status() && isset( $filtered_root->get_data()['id'], $filtered_root->get_data()['first'] )
+		&& $filtered_root->get_data()['id'] === ( $filtered_data['partOf'] ?? null )
+		&& $filtered_root->get_data()['first'] === ( $filtered_data['id'] ?? null ) );
+	ax_op_outbox_assert( $ax_op_outbox_results, 'type narrows results and survives continuation: ' . ( $filtered_data['message'] ?? 'valid response' ),
+		200 === $filtered->get_status() && 20 === count( $filtered_data['orderedItems'] ?? array() )
+		&& array( 'Create' ) === array_values( array_unique( array_column( $filtered_data['orderedItems'], 'type' ) ) )
+		&& str_contains( $filtered_data['next'] ?? '', 'type=Create' ) );
+	$lowercase = $filtered_request( 'create' );
+	ax_op_outbox_assert( $ax_op_outbox_results, 'type rejects wrong case, non-Activity terms and multiple values',
+		400 === $lowercase->get_status() && str_contains( $lowercase->get_data()['message'], 'Create' )
+		&& 400 === $filtered_request( 'Note' )->get_status() && 400 === $filtered_request( 'Create,Announce' )->get_status() );
 	$ledger_page = axismundi_act_get_public_outbox_page( $actor->get_uri(), 20 );
 	$legacy_page = array(
 		'id' => axismundi_op_actor_outbox_page_url( $actor ),

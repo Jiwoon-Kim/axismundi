@@ -72,10 +72,15 @@ function axismundi_op_outbox_page_size() : int {
 function axismundi_op_actor_outbox_page_url( Axismundi_Actor $actor, string $cursor = '', string $activity_type = '' ) : string {
 	$args = array( 'page' => 1 );
 	if ( '' !== $activity_type ) {
-		$args['activity_type'] = rawurlencode( $activity_type );
+		$args['type'] = rawurlencode( $activity_type );
 	}
 	$url = add_query_arg( $args, axismundi_op_actor_outbox_url( $actor ) );
 	return '' === $cursor ? $url : $url . '&cursor=' . rawurlencode( $cursor );
+}
+
+function axismundi_op_actor_outbox_root_url( Axismundi_Actor $actor, string $activity_type ) : string {
+	$url = axismundi_op_actor_outbox_url( $actor );
+	return '' === $activity_type ? $url : add_query_arg( 'type', rawurlencode( $activity_type ), $url );
 }
 
 /** Stable Followers URI owned by the representation layer. */
@@ -288,10 +293,7 @@ function axismundi_op_actor_outbox_transform( Axismundi_OP_Actor_Outbox $source 
 	 * preserving the old empty response when Activities is not installed.
 	 */
 	$type = $source->activity_type;
-	$root = axismundi_op_actor_outbox_url( $actor );
-	if ( '' !== $type ) {
-		$root = add_query_arg( 'activity_type', rawurlencode( $type ), $root );
-	}
+	$root = axismundi_op_actor_outbox_root_url( $actor, $type );
 	$page  = function_exists( 'axismundi_act_get_public_outbox_page' )
 		? axismundi_act_get_public_outbox_page( $actor->get_uri(), axismundi_op_outbox_page_size(), $source->get_cursor(), $source->get_reader(), true, $type )
 		: ( function_exists( 'axismundi_op_read_collection_contract' ) && is_array( axismundi_op_collection_contract( 'ap-outbox' ) )
@@ -450,8 +452,8 @@ function axismundi_op_register_actor_transformers() : void {
 		array(
 			'supports'       => static fn( $source ) : bool => $source instanceof Axismundi_OP_Actor_Outbox,
 			'collection_uri' => static fn( Axismundi_OP_Actor_Outbox $source ) : string => $source->is_page()
-				? axismundi_op_actor_outbox_page_url( $source->get_actor(), $source->get_cursor() )
-				: axismundi_op_actor_outbox_url( $source->get_actor() ),
+				? axismundi_op_actor_outbox_page_url( $source->get_actor(), $source->get_cursor(), $source->activity_type )
+				: axismundi_op_actor_outbox_root_url( $source->get_actor(), $source->activity_type ),
 			'transform'      => 'axismundi_op_actor_outbox_transform',
 			'visible'        => 'axismundi_op_actor_outbox_visible',
 			'priority'       => 5,
@@ -487,7 +489,8 @@ function axismundi_op_register_actor_outbox_route() : void {
 				'uuid' => array( 'required' => true, 'type' => 'string', 'pattern' => '^[0-9a-f-]{36}$' ),
 				'page' => array( 'required' => false, 'type' => 'integer', 'minimum' => 1 ),
 				'cursor' => array( 'required' => false, 'type' => 'string' ),
-				'activity_type' => array( 'required' => false, 'type' => 'string', 'pattern' => '^[A-Za-z][A-Za-z0-9]{0,63}$' ),
+				'type' => array( 'required' => false, 'type' => 'string' ),
+				'activity_type' => array( 'required' => false, 'type' => 'string' ),
 			),
 		)
 	);
@@ -657,7 +660,21 @@ function axismundi_op_get_actor_outbox( WP_REST_Request $request ) {
 		return new WP_Error( 'ax_op_outbox_not_found', __( 'The Actor outbox was not found.', 'axismundi-object-projections' ), array( 'status' => 404 ) );
 	}
 	list( $reader, $owner ) = axismundi_op_actor_collection_reader( $actor );
-	return axismundi_op_actor_collection_response( axismundi_op_transform_collection( new Axismundi_OP_Actor_Outbox( $actor, absint( $request['page'] ) > 0, (string) $request['cursor'], $reader, $owner, (string) $request['activity_type'] ) ) );
+	$type = $request['type'] ?? $request['activity_type'];
+	if ( null !== $request['type'] && null !== $request['activity_type'] && $request['type'] !== $request['activity_type'] ) {
+		return new WP_Error( 'ax_op_outbox_invalid_type', 'The type filters disagree.', array( 'status' => 400 ) );
+	}
+	if ( null !== $type && ! axismundi_op_vocabulary_is_a( $type, 'Activity' ) ) {
+		$message = 'Use one registered AS2 Activity type with its exact spelling.';
+		foreach ( array_keys( axismundi_op_vocabulary_types() ) as $term ) {
+			if ( 0 === strcasecmp( $term, $type ) && axismundi_op_vocabulary_is_a( $term, 'Activity' ) ) {
+				$message = sprintf( 'Use %s as the Activity type.', $term );
+				break;
+			}
+		}
+		return new WP_Error( 'ax_op_outbox_invalid_type', $message, array( 'status' => 400 ) );
+	}
+	return axismundi_op_actor_collection_response( axismundi_op_transform_collection( new Axismundi_OP_Actor_Outbox( $actor, absint( $request['page'] ) > 0, (string) $request['cursor'], $reader, $owner, (string) $type ) ) );
 }
 
 function axismundi_op_actor_collection_reader( Axismundi_Actor $actor, ?Axismundi_Actor $viewer = null ) : array {

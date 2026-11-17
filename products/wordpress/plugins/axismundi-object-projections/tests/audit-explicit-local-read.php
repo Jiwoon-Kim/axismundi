@@ -15,9 +15,10 @@ $assert = static function ( bool $ok, string $label ) use ( &$checks ) : void {
 $network = 0;
 $block = static function () use ( &$network ) { ++$network; return new WP_Error( 'audit_network', 'No network during local read audit' ); };
 add_filter( 'pre_http_request', $block, PHP_INT_MAX );
-$request = static function ( string $route, ?string $uri = null ) : WP_REST_Response {
+$request = static function ( string $route, ?string $uri = null, array $query = array() ) : WP_REST_Response {
 	$request = new WP_REST_Request( 'GET', $route );
-	if ( null !== $uri ) { $request->set_query_params( array( 'actor' => $uri ) ); }
+	if ( null !== $uri ) { $query['actor'] = $uri; }
+	$request->set_query_params( $query );
 	$request->set_header( 'X-WP-Nonce', wp_create_nonce( 'wp_rest' ) );
 	return rest_do_request( $request );
 };
@@ -42,12 +43,17 @@ try {
 	}
 	[ $a, $b, $c, $draft ] = $actors;
 	$assert( ! axismundi_op_actor_visible( $draft ), 'Draft profile is not publicly visible' );
-	$self_route = '/axismundi/v1/actors/' . $draft->get_uuid() . '/document';
-	$self = $request( $self_route, $draft->get_uri() );
-	$assert( 200 === $self->get_status() && $draft->get_uri() === $self->get_data()['id']
+	$self_route = '/axismundi/activitypub/actors';
+	$self_query = array( 'ids' => $draft->get_uri() );
+	$self = $request( $self_route, null, $self_query );
+	$assert( 200 === $self->get_status() && 'OrderedCollection' === $self->get_data()['type']
+		&& ! isset( $self->get_data()['id'] ) && $draft->get_uri() === $self->get_data()['orderedItems'][0]['id']
 		&& str_contains( $self->get_headers()['Cache-Control'], 'no-store' ), 'Owner can read own nonpublic Actor document without selecting it in a browser: ' . $self->get_status() . ' ' . ( $self->get_data()['code'] ?? '' ) );
-	$assert( 400 === $request( $self_route )->get_status(), 'Actor document requires explicit actor' );
-	$assert( 404 === $request( $self_route, $a->get_uri() )->get_status(), 'Another Actor is not a self read' );
+	$assert( 400 === $request( $self_route, null, array( 'id' => $draft->get_uri() ) )->get_status(), 'Actor collection requires ids, not id' );
+	$actors_result = $request( $self_route, null, array( 'ids' => implode( ',', array( $draft->get_uri(), 'https://example.test/missing', $a->get_uri(), $draft->get_uri() ) ) ) );
+	$assert( 200 === $actors_result->get_status() && array( $draft->get_uri(), $a->get_uri() ) === array_column( $actors_result->get_data()['orderedItems'], 'id' ), 'Actor collection preserves requested order, omits missing IDs and removes duplicates' );
+	$assert( 400 === $request( $self_route, null, array( 'ids' => implode( ',', array_fill( 0, 21, $a->get_uri() ) ) ) )->get_status(), 'Over-limit batches are rejected before deduplication' );
+	$assert( 400 === $request( $self_route, null, array( 'ids' => $a->get_uri() . ',' ) )->get_status(), 'A malformed member rejects the batch' );
 	$assert( ! in_array( $draft->get_uri(), array_column( axismundi_act_c2s_session()['actors'], 'id' ), true ),
 		'Self-readable draft is not advertised as a submission Actor' );
 
@@ -64,6 +70,7 @@ try {
 	$assert( ! is_wp_error( axismundi_op_write_local_object( $doc, $uuid ) ), 'Followers-only Object stored' );
 	$object = axismundi_op_get_object_by_uri( $uri );
 	$route = '/axismundi/v1/objects/' . $object['id'];
+	$uri_route = '/axismundi/activitypub/objects';
 	$snapshot = Axismundi_Activity::from_row( array(
 		'direction' => 'outbound', 'effective_status' => 'active', 'activity_type' => 'Create', 'audience' => array( 'to' => $doc['to'] ),
 		'payload' => array( 'id' => home_url( '/activities/' . wp_generate_uuid4() ), 'type' => 'Create', 'actor' => $a->get_uri(), 'to' => $doc['to'], 'object' => $uri ),
@@ -75,7 +82,14 @@ try {
 		$assert( $allowed === is_array( $reader( $snapshot ) )
 			&& ( $allowed ? 200 === $response->get_status() && $uri === $response->get_data()['id'] : 404 === $response->get_status() ),
 			'Matching Activity and Object audience for ' . $viewer->get_display_name() );
+		$by_uri = $request( $uri_route, $viewer->get_uri(), array( 'ids' => $snapshot->get_payload()['object'] ) );
+		$assert( 200 === $by_uri->get_status() && 'OrderedCollection' === $by_uri->get_data()['type']
+			&& ( $allowed ? array( $response->get_data() ) : array() ) === $by_uri->get_data()['orderedItems'],
+			'The Object collection preserves the numeric route disclosure policy' );
 	}
+	$assert( 400 === $request( $uri_route, $a->get_uri(), array( 'object' => $uri ) )->get_status(), 'Object lookup requires ids, not object' );
+	$unknown = $request( $uri_route, $a->get_uri(), array( 'ids' => 'https://example.test/unknown' ) );
+	$assert( 200 === $unknown->get_status() && array() === $unknown->get_data()['orderedItems'], 'Unknown Object URI is not fetched or separately reported' );
 	$assert( ! array_key_exists( 'bcc', $request( $route, $b->get_uri() )->get_data() ), 'Follower response does not disclose blind recipients' );
 	$assert( $doc['bcc'] === ( $request( $route, $a->get_uri() )->get_data()['bcc'] ?? null ), 'Explicit author sees the stored top-level blind recipients' );
 	$coauthored = $doc;
@@ -108,15 +122,19 @@ try {
 	$public_doc = array_replace( $doc, array( 'id' => $public_uri, 'url' => $public_uri, 'to' => array( 'https://www.w3.org/ns/activitystreams#Public' ) ) );
 	$assert( ! is_wp_error( axismundi_op_write_local_object( $public_doc, $public_uuid ) ), 'Public Object with blind recipients stored' );
 	$public_id = (int) axismundi_op_get_object_by_uri( $public_uri )['id'];
+	$batch = $request( $uri_route, $c->get_uri(), array( 'ids' => $uri . ',https://example.test/unknown,' . $public_uri ) );
+	$assert( 200 === $batch->get_status() && array( $public_uri ) === array_column( $batch->get_data()['orderedItems'], 'id' ), 'Mixed Object batch omits inaccessible and unknown members alike' );
 	$assert( $doc['bcc'] === ( $request( '/axismundi/v1/objects/' . $public_id, $a->get_uri() )->get_data()['bcc'] ?? null )
 		&& ! isset( axismundi_op_read_object_jsonld( $public_id )['bcc'] ), 'Public body has blind recipients only in explicit author response' );
 	$assert( is_wp_error( axismundi_op_read_object_jsonld( (int) $object['id'] ) ), 'Public read still conceals restricted Object' );
 	wp_set_current_user( $users[1] );
 	$assert( 403 === $request( $route, $a->get_uri() )->get_status(), 'Another login cannot impersonate author' );
-	$assert( 403 === $request( $self_route, $draft->get_uri() )->get_status(), 'Another login cannot reveal draft Actor' );
+	$hidden = $request( $self_route, null, $self_query );
+	$assert( 200 === $hidden->get_status() && array() === $hidden->get_data()['orderedItems'], 'Another login cannot distinguish a draft Actor from a missing Actor' );
+	$assert( 403 === $request( $uri_route, $a->get_uri(), array( 'ids' => $uri ) )->get_status(), 'URI lookup cannot impersonate the author' );
 	wp_set_current_user( 0 );
 	$assert( 401 === $request( $route, $a->get_uri() )->get_status(), 'Anonymous explicit Object request denied' );
-	$assert( 401 === $request( $self_route, $draft->get_uri() )->get_status(), 'Anonymous Actor document request denied' );
+	$assert( 401 === $request( $self_route, null, $self_query )->get_status(), 'Anonymous Actor document request denied' );
 	$assert( 0 === $network, 'Local reads do not fetch remote resources' );
 	printf( "PASS: %d explicit local read checks\n", $checks );
 } finally {

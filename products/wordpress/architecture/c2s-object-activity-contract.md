@@ -132,7 +132,7 @@ pending         사용자가 발행을 요청·예약해 제출 작업이 실제
 ## 결정 ③ Update 후보 조회는 기존 outbox 를 쓴다 — 새 라우트도 투영 테이블도 없다
 
 ```txt
-GET axismundi/activitypub/actors/{uuid}/outbox?activity_type=Create&page=1
+GET axismundi/activitypub/actors/{uuid}/outbox?type=Create&page=1
 그 다음은 응답의 next 를 따라간다 — 페이지 번호를 증가시키지 않는다
 ```
 

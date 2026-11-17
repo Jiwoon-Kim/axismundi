@@ -258,5 +258,20 @@ The built-in `core-post-article` transformer is available in standalone mode. Ad
 may filter `axismundi_op_post_object_uri` to preserve an established external id and
 `axismundi_op_post_actor_uri` to bridge another Actor provider.
 
+## Application Object collection
+
+Use `wp axismundi objects backfill-core` to register missing Core posts and
+attachments on an existing site. The command is replay-safe, skips auto-drafts,
+does not publish Activities, and does not assign authorship from `post_author`.
+It neither registers Core pages nor deletes old registry rows.
+
+`GET /wp-json/axismundi/activitypub/objects?type=Article` lists readable local
+and cached remote Objects. Exact AS2 types may be comma-separated. Optional
+`attributedTo` matches explicit source attribution; unattributed public
+Objects remain eligible for unfiltered lists. Private Objects are considered
+only when that filter names the authorized viewing Actor, and existing source
+permissions still apply. Follow `next` even when a scan returns a short or
+empty page. This surface never schedules a remote fetch.
+
 See TRANSFORMERS.md (contract detail), ROUTING.md (URI contract), COMPATIBILITY.md
 (ActivityPub co-existence), PHASES.md (roadmap).

@@ -124,6 +124,18 @@ try {
 	$public_id = (int) axismundi_op_get_object_by_uri( $public_uri )['id'];
 	$batch = $request( $uri_route, $c->get_uri(), array( 'ids' => $uri . ',https://example.test/unknown,' . $public_uri ) );
 	$assert( 200 === $batch->get_status() && array( $public_uri ) === array_column( $batch->get_data()['orderedItems'], 'id' ), 'Mixed Object batch omits inaccessible and unknown members alike' );
+	$list = array( 'type' => 'Note', 'attributedTo' => $a->get_uri() );
+	$own_list = $request( $uri_route, $a->get_uri(), $list );
+	$follower_list = $request( $uri_route, $b->get_uri(), $list );
+	$assert( array( $public_uri, $uri ) === array_column( $own_list->get_data()['orderedItems'], 'id' ), 'Owner-filtered listing includes their readable restricted Object' );
+	$assert( array( $public_uri ) === array_column( $follower_list->get_data()['orderedItems'], 'id' ), 'Follower listing is public-only even when the restricted Object can be read by ID' );
+	$remote_uri = 'https://lookup-audit.example/articles/' . wp_generate_uuid4() . '?one=1&two=2';
+	$assert( ! is_wp_error( axismundi_op_store_remote_object( array(
+		'id' => $remote_uri, 'type' => 'Article', 'to' => array( 'https://www.w3.org/ns/activitystreams#Public' ), 'content' => 'Cached fixture',
+	) ) ), 'Remote query-bearing Article registered' );
+	parse_str( http_build_query( array( 'ids' => $public_uri . ',' . $remote_uri ), '', '&', PHP_QUERY_RFC3986 ), $ids_query );
+	$batch = $request( $uri_route, $a->get_uri(), $ids_query );
+	$assert( array( $public_uri, $remote_uri ) === array_column( $batch->get_data()['orderedItems'], 'id' ), 'Encoded batch resolves both local and cached remote Objects through the same registry' );
 	$assert( $doc['bcc'] === ( $request( '/axismundi/v1/objects/' . $public_id, $a->get_uri() )->get_data()['bcc'] ?? null )
 		&& ! isset( axismundi_op_read_object_jsonld( $public_id )['bcc'] ), 'Public body has blind recipients only in explicit author response' );
 	$assert( is_wp_error( axismundi_op_read_object_jsonld( (int) $object['id'] ) ), 'Public read still conceals restricted Object' );

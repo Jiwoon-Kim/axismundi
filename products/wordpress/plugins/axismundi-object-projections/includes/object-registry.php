@@ -412,6 +412,48 @@ function axismundi_op_register_saved_attachment_object( int $post_id ) : void {
 add_action( 'add_attachment', 'axismundi_op_register_saved_attachment_object', 100 );
 add_action( 'edit_attachment', 'axismundi_op_register_saved_attachment_object', 100 );
 
+/** Register missing Core sources only; never infer authorship or emit Activities. */
+function axismundi_op_backfill_core_objects() {
+	global $wpdb;
+	$last = 0;
+	$added = 0;
+	$ceiling = (int) $wpdb->get_var( "SELECT MAX(ID) FROM {$wpdb->posts}" );
+	if ( $wpdb->last_error ) { return new WP_Error( 'ax_op_core_backfill_read', 'Could not read Core posts.' ); }
+	do {
+		$ids = $wpdb->get_col( $wpdb->prepare(
+			"SELECT ID FROM %i WHERE ID > %d AND ID <= %d AND post_type IN ('post','attachment') AND post_status <> 'auto-draft' ORDER BY ID LIMIT 100",
+			$wpdb->posts, $last, $ceiling
+		) );
+		if ( $wpdb->last_error ) { return new WP_Error( 'ax_op_core_backfill_read', 'Could not read Core posts.' ); }
+		foreach ( $ids as $id ) {
+			$last = (int) $id;
+			$post = get_post( $last );
+			if ( ! $post instanceof WP_Post || ! in_array( $post->post_type, array( 'post', 'attachment' ), true ) || 'auto-draft' === $post->post_status ) { continue; }
+			$profile = axismundi_op_local_object_profile( $post );
+			if ( 'wordpress-core' !== ( $profile['owner'] ?? null ) ) { continue; }
+			$existing = axismundi_op_get_object_by_uri( $profile['uri'] );
+			if ( $existing ) {
+				if ( 'wordpress-core' !== $existing['source_owner'] || $profile['kind'] !== $existing['source_kind'] || $last !== (int) $existing['source_ref'] ) {
+					return new WP_Error( 'ax_op_core_backfill_conflict', sprintf( 'Registry provenance conflicts with Core post %d.', $last ) );
+				}
+				continue;
+			}
+			$result = axismundi_op_register_local_post_object( $post );
+			if ( is_wp_error( $result ) ) { return $result; }
+			if ( is_array( $result ) ) { ++$added; }
+		}
+	} while ( $ids );
+	return $added;
+}
+
+if ( defined( 'WP_CLI' ) && WP_CLI ) {
+	WP_CLI::add_command( 'axismundi objects backfill-core', static function () : void {
+		$result = axismundi_op_backfill_core_objects();
+		if ( is_wp_error( $result ) ) { WP_CLI::error( $result->get_error_message() ); }
+		WP_CLI::success( sprintf( 'Registered %d missing Core Objects.', $result ) );
+	} );
+}
+
 /** Refresh a WP source shadow after a committed lifecycle event; admission needs no Create. */
 function axismundi_op_register_recorded_wp_source( Axismundi_Activity $activity ) : void {
 	if ( ! in_array( $activity->get_type(), array( 'Create', 'Update', 'Delete' ), true ) || 'inbound' === $activity->get_direction() ) { return; }

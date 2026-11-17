@@ -160,16 +160,86 @@ function axismundi_op_application_id_collection( WP_REST_Request $request, strin
 		if ( is_wp_error( $item ) ) { return $item; }
 		if ( is_array( $item ) ) { $items[] = $item; }
 	}
+	return axismundi_op_application_collection_response( $resource, $items );
+}
+
+function axismundi_op_application_collection_response( string $resource, array $items, ?string $next = null ) : WP_REST_Response {
+	$document = array(
+		'@context'     => 'https://www.w3.org/ns/activitystreams',
+		'type'         => 'OrderedCollection',
+		'url'          => rest_url( 'axismundi/activitypub/' . $resource ),
+		'orderedItems' => $items,
+	);
+	if ( null !== $next ) { $document['next'] = $next; }
 	return new WP_REST_Response(
-		array(
-			'@context'     => 'https://www.w3.org/ns/activitystreams',
-			'type'         => 'OrderedCollection',
-			'url'          => rest_url( 'axismundi/activitypub/' . $resource ),
-			'orderedItems' => $items,
-		),
+		$document,
 		200,
 		axismundi_op_application_read_headers() + array( 'Content-Type' => 'application/activity+json' )
 	);
+}
+
+function axismundi_op_application_object_collection( WP_REST_Request $request ) {
+	global $wpdb;
+	$query = $request->get_query_params();
+	$types = array();
+	if ( array_key_exists( 'type', $query ) ) {
+		$types = is_string( $query['type'] ) ? explode( ',', $query['type'], 21 ) : array( '' );
+		if ( count( $types ) > 20 || array_diff( $types, array_keys( axismundi_op_vocabulary_types() ) ) ) {
+			return new WP_Error( 'ax_op_object_list_type', 'Supply registered AS2 types with exact spelling.', array( 'status' => 400 ) );
+		}
+		$types = array_values( array_unique( $types ) );
+	}
+	$attributed = $query['attributedTo'] ?? null;
+	if ( null !== $attributed && ( ! is_string( $attributed ) || ! preg_match( '~^[a-z][a-z0-9+.-]*:[^\x00-\x20\x7f]+$~iD', $attributed ) ) ) {
+		return new WP_Error( 'ax_op_object_list_attribution', 'Supply one attributedTo URI.', array( 'status' => 400 ) );
+	}
+	$cursor = $query['cursor'] ?? null;
+	if ( null !== $cursor && ( ! is_string( $cursor ) || ! ctype_digit( $cursor ) || (int) $cursor < 1 || (string) (int) $cursor !== $cursor ) ) {
+		return new WP_Error( 'ax_op_object_list_cursor', 'Invalid Object collection cursor.', array( 'status' => 400 ) );
+	}
+	$viewer = array_key_exists( 'actor', $query ) ? axismundi_op_application_explicit_actor( $request ) : null;
+	if ( is_wp_error( $viewer ) ) { return $viewer; }
+	$own = null !== $viewer && $viewer->get_uri() === $attributed;
+	$where = "status = 'public' AND NOT (source_owner = 'wordpress-core' AND source_kind NOT IN ('post','attachment'))";
+	$args = array( axismundi_op_objects_table() );
+	if ( null !== $cursor ) {
+		$where .= ' AND id < %d';
+		$args[] = (int) $cursor;
+	}
+	if ( null !== $attributed ) {
+		$where .= ' AND attributed_to_uri_hash = %s AND attributed_to_uri = %s';
+		array_push( $args, hash( 'sha256', $attributed ), $attributed );
+	}
+	if ( $types ) {
+		$where .= ' AND as2_type IN (' . implode( ', ', array_fill( 0, count( $types ), '%s' ) ) . ')';
+		array_push( $args, ...$types );
+	}
+	// Bound work even when most candidates are stale. Continue after the last examined row.
+	$ids = $wpdb->get_col( $wpdb->prepare( "SELECT id FROM %i WHERE {$where} ORDER BY id DESC LIMIT 101", $args ) );
+	if ( $wpdb->last_error ) {
+		return new WP_Error( 'ax_op_object_list_failed', 'Could not query the Object registry.', array( 'status' => 500 ) );
+	}
+	$items = array();
+	$examined = 0;
+	$last = null;
+	foreach ( $ids as $id ) {
+		if ( $examined >= 100 || count( $items ) >= 20 ) { break; }
+		++$examined;
+		$last = $id;
+		$document = $own ? axismundi_op_read_application_object( (int) $id, $viewer ) : axismundi_op_read_object_jsonld( (int) $id );
+		if ( ! is_array( $document ) || 'Tombstone' === ( $document['type'] ?? '' )
+			|| ( $types && ! in_array( $document['type'] ?? null, $types, true ) )
+			|| ( null !== $attributed && ! in_array( $attributed, axismundi_op_application_recipient_uris( $document['attributedTo'] ?? null ), true ) ) ) {
+			continue;
+		}
+		$items[] = $document;
+	}
+	$next = null;
+	if ( $examined < count( $ids ) ) {
+		$filters = array_intersect_key( $query, array_flip( array( 'type', 'attributedTo', 'actor' ) ) );
+		$next = add_query_arg( array_map( 'rawurlencode', $filters + array( 'cursor' => (string) $last ) ), rest_url( 'axismundi/activitypub/objects' ) );
+	}
+	return axismundi_op_application_collection_response( 'objects', $items, $next );
 }
 
 function axismundi_op_application_read_headers() : array {
@@ -197,13 +267,23 @@ add_action( 'rest_api_init', static function () : void {
 		'methods' => WP_REST_Server::READABLE,
 		'permission_callback' => '__return_true',
 		'callback' => static function ( WP_REST_Request $request ) {
+			$query = $request->get_query_params();
+			if ( ! array_key_exists( 'ids', $query ) ) {
+				if ( array_key_exists( 'id', $query ) || array_key_exists( 'object', $query ) ) {
+					return new WP_Error( 'ax_op_read_invalid_ids', 'Use ids to look up Object URIs.', array( 'status' => 400 ) );
+				}
+				return axismundi_op_application_object_collection( $request );
+			}
+			if ( array_intersect_key( $query, array_flip( array( 'type', 'attributedTo', 'cursor' ) ) ) ) {
+				return new WP_Error( 'ax_op_object_list_arguments', 'Use ids or collection filters, not both.', array( 'status' => 400 ) );
+			}
 			$viewer = axismundi_op_application_explicit_actor( $request );
 			if ( is_wp_error( $viewer ) ) { return $viewer; }
 			return axismundi_op_application_id_collection( $request, 'objects', static function ( string $uri ) use ( $viewer ) {
 				$object = axismundi_op_get_object_by_uri( $uri );
 				if ( ! $object ) { return null; }
 				$result = axismundi_op_read_application_object( (int) $object['id'], $viewer );
-				return is_wp_error( $result ) && 'ax_op_object_read_not_found' === $result->get_error_code() ? null : $result;
+				return is_wp_error( $result ) && 404 === ( $result->get_error_data()['status'] ?? null ) ? null : $result;
 			} );
 		},
 	) );

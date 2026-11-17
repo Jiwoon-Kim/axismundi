@@ -52,6 +52,7 @@ UUID·URI·귀속·Create를 재생성하지 않는다.
 **물리 컬럼 제거는 아직 하지 않았다.** 브리프의 순서는 읽기 전환 → 검사 → 별도 커밋의
 컬럼/인덱스 삭제다. `actor_scope`, `scope_type`, 구 설치용 소유·언어 백필, 구 생성 인자의
 호환 쓰기는 그 다음 변경에서 걷어낸다. 이번 diff와 함께 DROP했다고 보고하지 않는다.
+후속 순서와 시스템 Actor 권한 경계는 [scope 제거 인계](BRIEF-REMOVE-ACTOR-SCOPE.md)를 따른다.
 
 ## V2
 

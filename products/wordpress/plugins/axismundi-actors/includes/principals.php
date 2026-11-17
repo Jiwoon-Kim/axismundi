@@ -24,7 +24,8 @@ function axismundi_actors_create_principal_account( array $args, string $owner_k
 
 /** Internal creation-only WP login boundary, inside create_local's transaction. Never updates a grant. */
 function axismundi_actors_seed_account_owner( int $account_id, int $user_id ) {
-	if ( ! axismundi_actors_principals_ready() || $account_id <= 0 || ! axismundi_actors_resolve_principal( 'wp_user', $user_id ) ) {
+	if ( ! axismundi_actors_principals_ready() || $account_id <= 0 || $account_id === (int) get_option( 'ax_actors_system_actor_id', 0 )
+		|| ! axismundi_actors_resolve_principal( 'wp_user', $user_id ) ) {
 		return new WP_Error( 'ax_actors_principal_unavailable', 'The initial owner is unavailable.' );
 	}
 	global $wpdb;
@@ -101,8 +102,13 @@ function axismundi_actors_accounts_for_principal( string $kind, int $id, ?string
  */
 function axismundi_actors_set_principal_role( int $account_id, string $kind, int $id, ?string $role, bool $create_only = false ) {
 	$account = axismundi_actors_get_by_identity( $account_id );
+	$system_id = (int) get_option( 'ax_actors_system_actor_id', 0 );
+	$system_target = $system_id > 0 && $account_id === $system_id;
+	if ( null !== $role && ( $system_target || ( 'local_account' === $kind && $system_id > 0 && $id === $system_id ) ) ) {
+		return new WP_Error( 'ax_actors_system_account_role', 'The system Actor cannot participate in user Account grants.' );
+	}
 	if ( ! axismundi_actors_account_access_ready() || ! $account instanceof Axismundi_Actor || ! $account->is_local()
-		|| in_array( $account->get_status(), array( 'disabled', 'tombstone' ), true )
+		|| ( ! $system_target && in_array( $account->get_status(), array( 'disabled', 'tombstone' ), true ) )
 		|| $id <= 0 || ! in_array( $kind, array( 'wp_user', 'local_account', 'remote_actor' ), true )
 		|| ( 'remote_actor' === $kind && null !== $role )
 		|| ( null !== $role && ( ! axismundi_actors_resolve_principal( $kind, $id ) || ! isset( axismundi_actors_principal_roles()[ $role ] ) ) ) ) {
@@ -120,7 +126,7 @@ function axismundi_actors_set_principal_role( int $account_id, string $kind, int
 				return $existing === $role ? true : new WP_Error( 'ax_actors_principal_conflict', 'The selected Account already has a different explicit role.' );
 			}
 		}
-		if ( 'wp_user' === $kind && 'owner' !== $role ) {
+		if ( ! $system_target && 'wp_user' === $kind && 'owner' !== $role ) {
 			if ( $id === $account->get_personal_owner_user_id() ) {
 				return new WP_Error( 'ax_actors_personal_owner', 'Transfer personal ownership before changing its owner access.' );
 			}
@@ -189,6 +195,8 @@ function axismundi_actors_resolve_principal( string $kind, int $id ) : ?array {
 function axismundi_actors_principal_account_role( int $account_id, string $kind, int $id ) : string {
 	// Remote identities may hold domain roles, but even a stale stored grant is not Account access.
 	if ( 'remote_actor' === $kind ) { return ''; }
+	$system_id = (int) get_option( 'ax_actors_system_actor_id', 0 );
+	if ( $system_id > 0 && ( $account_id === $system_id || ( 'local_account' === $kind && $id === $system_id ) ) ) { return ''; }
 	if ( $account_id <= 0 || ! axismundi_actors_account_access_ready() || ! axismundi_actors_resolve_principal( $kind, $id ) ) {
 		return '';
 	}

@@ -49,6 +49,33 @@ $wpdb->query( 'START TRANSACTION' );
 $icon_url = 'https://branding.example/site-icon.png';
 $icon_filter = static function () use ( &$icon_url ) : string { return $icon_url; };
 try {
+	$user_id = (int) ( get_users( array( 'role' => 'administrator', 'fields' => 'ID', 'number' => 1 ) )[0] ?? 0 );
+	$assert( $user_id > 0, 'An administrator is available for the operating access audit' );
+	$denied = axismundi_actors_set_principal_role( $id, 'wp_user', $user_id, 'owner' );
+	$assert( is_wp_error( $denied ) && 'ax_actors_system_account_role' === $denied->get_error_code(), 'Even an administrator cannot receive a system Actor grant' );
+	$grant = array(
+		'identity_id' => $id, 'principal_kind' => 'wp_user', 'principal_id' => $user_id,
+		'user_id' => $user_id, 'role' => 'owner', 'created_at' => current_time( 'mysql', true ), 'updated_at' => current_time( 'mysql', true ),
+	);
+	$assert( 1 === $wpdb->insert( axismundi_actors_managers_table(), $grant ), 'Simulated a stale owner grant' );
+	$assert( '' === axismundi_actors_account_role( $id, $user_id ) && ! axismundi_actors_can_act_as( $actor, $user_id ), 'A stale grant cannot operate as the system Actor' );
+	$assert( ! isset( axismundi_actors_workspace_options( $user_id )[ $id ] ), 'A stale grant does not enter the workspace list' );
+	$previous_user = get_current_user_id();
+	wp_set_current_user( $user_id );
+	try {
+		if ( function_exists( 'axismundi_act_c2s_session' ) ) {
+			$session = axismundi_act_c2s_session();
+			$assert( is_array( $session ) && ! in_array( $actor->get_uri(), array_column( $session['actors'], 'id' ), true ), 'A stale grant does not enter AP Session' );
+			$assert( is_wp_error( axismundi_act_outbox_authorize( $user_id, $actor ) ), 'A stale grant cannot submit to the system outbox' );
+		}
+		if ( function_exists( 'Axismundi\\Jmap\\server' ) ) {
+			$accounts = \Axismundi\Jmap\server()->accounts()->accounts;
+			$assert( ! isset( $accounts->{ 'a' . $id } ), 'A stale grant does not enter JMAP Accounts' );
+		}
+	} finally {
+		wp_set_current_user( $previous_user );
+	}
+	$assert( true === axismundi_actors_set_principal_role( $id, 'wp_user', $user_id, null ), 'Stale system owner remains revocable' );
 	update_option( 'blogname', 'System branding audit' );
 	update_option( 'site_icon', 0 );
 	add_filter( 'get_site_icon_url', $icon_filter );

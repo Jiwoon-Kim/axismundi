@@ -27,6 +27,7 @@ function axismundi_actors_migrate_account_access() : bool {
 	$actors = axismundi_actors_actors_table();
 	$identities = axismundi_actors_identities_table();
 	$managers = axismundi_actors_managers_table();
+	$system_id = (int) get_option( 'ax_actors_system_actor_id', 0 );
 	if ( false === $wpdb->query( 'START TRANSACTION' ) ) { // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- migration transaction.
 		return false;
 	}
@@ -34,8 +35,8 @@ function axismundi_actors_migrate_account_access() : bool {
 	$updated = $wpdb->query( $wpdb->prepare(
 		"UPDATE %i a INNER JOIN %i i ON i.id = a.identity_id INNER JOIN %i u ON u.ID = a.local_user_id
 		 SET a.personal_owner_user_id = a.local_user_id
-		 WHERE i.origin = 'local' AND a.actor_scope = 'user' AND a.personal_owner_user_id IS NULL",
-		$actors, $identities, $wpdb->users
+		 WHERE i.origin = 'local' AND a.identity_id <> %d AND a.actor_scope = 'user' AND a.personal_owner_user_id IS NULL",
+		$actors, $identities, $wpdb->users, $system_id
 	) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- fixed schema backfill.
 	$inserted = false;
 	if ( false !== $updated ) {
@@ -43,9 +44,9 @@ function axismundi_actors_migrate_account_access() : bool {
 			"INSERT INTO %i (identity_id, principal_kind, principal_id, user_id, role, created_at, updated_at)
 			 SELECT a.identity_id, 'wp_user', a.personal_owner_user_id, a.personal_owner_user_id, 'owner', UTC_TIMESTAMP(), UTC_TIMESTAMP()
 			 FROM %i a INNER JOIN %i i ON i.id = a.identity_id INNER JOIN %i u ON u.ID = a.personal_owner_user_id
-			 WHERE i.origin = 'local' AND a.actor_scope <> 'site'
+			 WHERE i.origin = 'local' AND a.identity_id <> %d AND a.actor_scope <> 'site'
 			 ON DUPLICATE KEY UPDATE role = role",
-			$managers, $actors, $identities, $wpdb->users
+			$managers, $actors, $identities, $wpdb->users, $system_id
 		) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- preserves existing manager roles.
 	}
 	$inconsistent = 1;
@@ -55,8 +56,8 @@ function axismundi_actors_migrate_account_access() : bool {
 			"SELECT COUNT(*) FROM %i a INNER JOIN %i i ON i.id = a.identity_id
 			 INNER JOIN %i u ON u.ID = a.personal_owner_user_id
 			 LEFT JOIN %i m ON m.identity_id = a.identity_id AND m.principal_kind = 'wp_user' AND m.principal_id = a.personal_owner_user_id
-			 WHERE i.origin = 'local' AND a.actor_scope <> 'site' AND (m.role IS NULL OR m.role <> 'owner')",
-			$actors, $identities, $wpdb->users, $managers
+			 WHERE i.origin = 'local' AND a.identity_id <> %d AND a.actor_scope <> 'site' AND (m.role IS NULL OR m.role <> 'owner')",
+			$actors, $identities, $wpdb->users, $managers, $system_id
 		) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- migration invariant check.
 	}
 	if ( false === $updated || false === $inserted || null === $inconsistent || 0 !== (int) $inconsistent ) {

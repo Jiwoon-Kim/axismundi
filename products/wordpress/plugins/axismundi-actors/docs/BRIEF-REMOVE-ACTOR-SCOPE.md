@@ -36,7 +36,8 @@ Activities 의 Group 판정, Calendar 백필도 scope 를 쓰지 않는다. `get
    거부한다. 시스템 Actor를 `local_account` principal로 사용하는 사용자 Account 권한도
    열지 않는다. 기존 오염은 역할 판정 및 Account 열거에서 무효로 처리하고, 정리 경로의
    회수는 가능하게 한다. 직접 SQL 백필과 생성 시 owner 부여도 함께 점검한다.
-2. 읽기 전용 점검으로 현재 바인딩, 레거시 퇴역 영수증, 귀속과 직접 owner 관계를
+2. `wp eval-file wp-content/plugins/axismundi-actors/tests/report-actor-scope-retirement.php`
+   읽기 전용 점검으로 현재 바인딩, 레거시 퇴역 영수증, 귀속과 직접 owner 관계를
    대조한다. 로컬 scope 누락, `user`인데 귀속이나 WP User가 없는 행, 레거시
    `site` 후보를 따로 보고한다. 예전 측정 수치는 완료 조건이 아니다. 기존에
    승인된 백필만 쓰고, 불명확한 활성 행은 해당 설치에서 DROP 전에 명시적으로

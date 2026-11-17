@@ -10,6 +10,10 @@ C2S 제출     로컬 클라이언트가 outbox 로 제출할 수 있는가
 도메인 집행  수신했을 때 실제로 상태가 바뀌는가
 ```
 
+`QuoteRequest`처럼 원장에 기록되는 확장도, 그 사실만으로 특정 Actor의 제출 동작을
+광고하지 않는다. [AP Session의 확장 광고 경계](C2S.md#15-authenticated-session-discovery)를
+따른다.
+
 ## 앞의 두 칸은 빈 자리가 없다
 
 `axismundi_op_vocabulary_types()` 를 `axismundi_op_vocabulary_is_a($term,'Activity')` 로 걸러

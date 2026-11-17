@@ -913,3 +913,10 @@ Outbox POST rechecks authority independently of discovery.
 Axismundi's JMAP Account extension `actorUri` refers to the same canonical
 Actor URI. Compare those URIs when linking entries; use the original JMAP
 Account ID for JMAP methods. Membership and authorization remain independent.
+
+Future extension advertisement describes operations the selected Actor can
+actually use, not every term the vocabulary registry recognizes. A registered
+FEP term, a renderable document, or an Activity accepted by the ledger is not
+evidence of C2S submission support. JSON-LD context alone is not a submission
+form contract: it does not describe required inputs, validation, or effects.
+See [Activity type support](TYPE-SUPPORT.md).

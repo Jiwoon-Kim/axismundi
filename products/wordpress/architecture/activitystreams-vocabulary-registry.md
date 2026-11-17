@@ -322,6 +322,13 @@ where a local decision needs explanation, such as the distinction between
 당장 사용하는 타입만 골라 넣지 않는다. 표준 타입을 안다는 것과 그 행위의 효과·저장·UI를
 구현했다는 것은 별개이다.
 
+데스크톱 클라이언트는 빌드할 때 OP의
+[`data/activitystreams-vocabulary.json`](../plugins/axismundi-object-projections/data/activitystreams-vocabulary.json)을
+원본 경로에서 읽어 번들에 포함한다. 별도 관리하는 사본을 두지 않고, `schema_version`으로
+클라이언트가 이해하는 데이터 형식인지 확인한다. 어휘는 입력을 설명하는 데 쓰되,
+[AP Session](../plugins/axismundi-activities/docs/C2S.md#15-authenticated-session-discovery)은
+서버와 Actor가 실제로 제공하는 동작을 따로 발견하는 곳이다.
+
 근거는 [AS2 Vocabulary](https://www.w3.org/TR/activitystreams-vocabulary/#types)와
 [AS2 Core 모델](https://www.w3.org/TR/activitystreams-core/#model)이다. 2017 W3C
 Recommendation의 유한한 타입·속성 정의를 버전이 명확한 의미 데이터로 보관하는 것은,
@@ -992,6 +999,10 @@ registration API that declares a product's terms unconditionally would be a
 compatibility bridge in the strict sense: the registry-driven context for a
 document must equal what the filter produces today, including for a document
 that uses no emoji at all.
+
+The future client emoji picker reads a dedicated emoji catalog; it does not derive
+its choices from the general Object cache or the Activity ledger. The catalog
+API shape is not decided here.
 
 FEP-de8d (`emojiCatalog`, draft, received 2026-07-19) is not implemented and is
 recorded only so the shape is known. It advertises a `Collection` of FEP-9098

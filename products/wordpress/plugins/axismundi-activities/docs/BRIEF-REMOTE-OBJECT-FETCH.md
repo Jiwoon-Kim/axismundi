@@ -5,6 +5,41 @@
 > 이웃: [C2S.md](C2S.md) · AP Session(`includes/c2s-session.php`) ·
 > OP 의 원격 캐시(`axismundi-object-projections/includes/remote-objects.php`)
 
+## 구현 순서
+
+1. **로컬 인증 읽기.** OP에서 로컬 Actor 문서와 로컬 Object의 읽기 판정을 검증한다.
+   WordPress 인증 주체와 요청에 명시된 viewer Actor를 따로 확인하며, 브라우저가 선택한
+   acting Actor를 대신 쓰지 않는다. Actor 자기 문서 접근과 Object의 audience 판정도
+   별개다. 공개 GET과 기존 URL은 그대로 두고, 이 단계에서 resolve 경로나 원격 호출을
+   추가하지 않는다.
+2. **로컬 resolve.** URI, 사람용 URL, WebFinger 식별자(`acct:` 또는 핸들)를 한 동작으로
+   받는다. 식별자 해석 실패와 문서 조회 실패를 구분한다. 로컬의 기존 URI/별칭/핸들만
+   해석하고, 원격 WebFinger나 GET은 이 단계에서 실행하지 않는다. 클라이언트는 세션의
+   Actor URI로 자기 문서를 조회하고, 세션에 전체 Actor 문서를 중복해서 싣지 않는다.
+3. **원격 resolve.** OP가 읽기 동작을 소유하고 브리지가 서명 GET 전송을 맡는다. OP는
+   개인키를 읽지 않는다. 응답 문서의 타입으로 분기하고 기존 Actor/Object 저장소의
+   소유권을 유지한다. 컬렉션(outbox, sharedInbox 등)과 조회만 한 Activity는 읽기 전용
+   결과로 반환하며, 별도 캐시나 원장 행을 만들지 않는다. GET으로 본 Activity는 배달이
+   아니며 Inbox 처리기나 활동 부작용을 실행하지 않는다. 원격이 컬렉션 GET을
+   거부하거나 지원하지 않는 것은 정상 조회 결과다.
+
+**첫 단계의 감사:** 공개 조건을 통과하지 않은 Actor의 자기 문서는 권한 있는 사용자만
+읽을 수 있어야 한다. 이 사실이 AP Session에 outbox 제출 주소를 추가할 근거는 아니다.
+그 세션은 기존 제출 권한을 계속 광고한다. 같은 audience로 발행한 제한 공개
+`Create`와 Object 조합은 A(저자)·B(허용된 팔로워)에게 둘 다 보이고 C(무관)에게
+둘 다 보이지 않아야 한다. 이 단정은 같은 audience의 픽스처에 한정한다. 수신된 모든
+Activity의 가시성이 현재 Object의 가시성과 항상 같다는 계약은 아니다. 브라우저 선택
+없이 B가 읽히는지, B를 대신할 권한이 없는 로그인은 B를 명시해도 거부되는지도 따로 잰다.
+
+**원격 단계의 범위:** [ActivityPub B.5](https://www.w3.org/TR/activitypub/#security-recursive-objects)에
+따라 컬렉션 항목이나 페이지 링크를 자동으로 따라가지 않는다.
+[B.9](https://www.w3.org/TR/activitypub/#security-c2s-response-dos)에 따라 반환할 페이지
+크기를 제한하되, 너무 큰 원격 페이지를 조용히 잘라 완전한 페이지처럼 내주지 않는다.
+기존 URL 검증, 리다이렉트 검증, 응답 바이트 한도는 유지한다. 사용자·Actor별
+**조회 횟수 제한**과 그 광고 형식은 보류한다.
+[B.8](https://www.w3.org/TR/activitypub/#security-c2s-ratelimiting)의 제출 제한을
+조회 횟수 제한의 근거로 쓰지 않는다.
+
 ## 메우려는 공백
 
 ActivityPub 에 **"이 원격 URI 를 대신 조회해 달라"는 C2S 메서드가 없다.**
@@ -55,7 +90,7 @@ URI 만 온 상태를 캐시 테이블에 미리 예약하지 **않는다.** 측
 ② 홈 서버              그 사용자에게 can_act_as(Actor) 가 있는지 확인
 ③ 홈 서버 → 원본        **그 Actor 의 키로 새 GET 을 서명**한다
 ④ 원본                팔로우·멘션 등 접근 조건을 **원본이** 판단한다
-⑤ 홈 서버 → 클라이언트   그 결과를 그대로 돌려준다
+⑤ 홈 서버 → 클라이언트   원본의 성공·거부를 보존하고, 성공한 문서만 읽기용으로 투영한다
 ```
 
 ```txt
@@ -67,6 +102,19 @@ URI 만 온 상태를 캐시 테이블에 미리 예약하지 **않는다.** 측
 ```
 
 ## 캐시 — 본문 보유와 열람 허가는 다르다
+
+[OP의 원격 객체 계약](../../axismundi-object-projections/docs/REMOTE-OBJECTS.md#6-cache-levels-and-binary-boundary)에
+캐시 범위를 둔다. 서명 GET은 같은 문서에서 이미 예고한 Federation fetch capability를
+브리지가 제공하는 일이다. **사용자가 명시적으로 요청한 resolve만** 원격으로 나가며, 기존
+렌더 경로에서 캐시 미스로 네트워크에 동기 접근하지 않는 규칙은 그대로다.
+
+읽기용 투영은 원본 및 저장본의 `id`, 저자, 주소 지정과 알 수 없는 확장 속성을 보존한다.
+로컬 문서는 기존 렌더 결과를 쓰고 resolve에서 다시 표백하거나 미디어를 치환하지 않는다.
+원격 문서에서는 표시용 HTML을 정화하되 어휘를 잘라내지 않는다. URL 치환은 **원격 Actor의
+아바타·헤더**에 한해, 공개로 제공해도 되는 기존 캐시본이 있을 때만 응답에 적용한다.
+원격 Object의 Image나 첨부에는 바이너리 사본이 없으므로 URL을 바꾸지 않는다. 나머지
+외부 미디어를 불러올지는 클라이언트의 사용자 옵션이 결정한다. 이 투영은 원본의 거부를
+성공으로 바꾸거나 다른 Actor에게 열람 권한을 주지 않는다.
 
 ```txt
 본문은 URI 당 한 벌로 저장해도 된다
@@ -102,7 +150,7 @@ WordPress 사용자가 운영**하게 한다. 그래야 Account 와 Actor 를 �
 
 ```txt
 세는 것   원본 GET **횟수**를 센다.  "되더라" 가 아니라 몇 번 나갔는지가 ①③의 전부다
-변이     can_act_as 검사를 지우면 ④가 실패해야 한다.
+변이     can_act_as 검사를 지우면 별도 로그인이 A를 명시한 요청의 거부 단정이 실패해야 한다.
         캐시 반환 조건에서 Actor 판정을 빼면 ④가 실패해야 한다.
         거부 시 캐시 폴백을 넣으면 ⑤가 실패해야 한다
 ```

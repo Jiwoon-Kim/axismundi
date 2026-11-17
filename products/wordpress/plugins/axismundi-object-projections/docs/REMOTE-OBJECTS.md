@@ -193,10 +193,23 @@ administrator preview removes `img`, `video`, `audio`, `source`, iframe, and emb
 No remote media URL is loaded by the browser. A future hotlink option, if added, is an
 explicit site policy and defaults off; sensitive media must not silently opt into it.
 
-This table stores object metadata, not media bytes. Remote avatar/header and future
-attachment binaries use the separate remote-blob substrate. A later Media Library shadow
-attachment points to the canonical remote object/blob; it does not convert this cache row
-into a second local identity.
+This table stores object metadata, not media bytes. Remote Actor and Object documents
+use their respective stores. A Collection or Activity fetched only for inspection does
+not get a persistent cache entry. This does not change the ledger's record of Activities
+actually received or submitted.
+
+The current remote binary cache is limited to Actor avatars/headers and approved custom
+emoji. Remote Object attachments, including standalone Image objects, have no cached
+binary substitute. Not storing bytes does not mean fetching them from the browser:
+the administrator inspector still loads no external media, and the dedicated client's
+external-media preference governs whether it loads a remaining remote URL.
+
+For the planned explicit client resolve response, only a remote Actor's avatar/header
+may point to an already available, verified public local derivative. This is a display
+projection, not a rewrite of the source payload. Local documents use the existing
+renderer; remote Object image URLs are not substituted. A later Media Library shadow
+attachment would point to the canonical remote object/blob, not give this cache row a
+second local identity. See the [resolve brief](../../axismundi-activities/docs/BRIEF-REMOTE-OBJECT-FETCH.md).
 
 ## 7. Object-relation projection
 

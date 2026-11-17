@@ -897,12 +897,19 @@ c3ab 가 묻고 있는 질문이다. "외부에서 같다" 는 우리 의도이�
 
 ## 15. Authenticated Session discovery
 
-`GET /wp-json/axismundi/activitypub/session` is an Axismundi-specific
+`GET /wp-json/axismundi/v1/users/me` is an Axismundi-specific
 authentication and discovery surface, not a public AS2 document or a
 standardized AP Session. It uses the same WordPress transport authentication
 as outbox submission (Application Password or authenticated cookie with a REST
-nonce). Responses are private and not cached. A successful login with no
-eligible Actor receives `{"actors":[]}`.
+nonce). The client requests, and the server returns,
+`application/ld+json; profile="https://www.w3.org/ns/activitystreams"`.
+The private, non-cacheable `c2s:Session` has no top-level `id`; its `url`
+names the endpoint, not the authenticated snapshot. A successful login with
+no eligible Actor receives an empty `actors` array.
+
+The client uses this route relative to the WordPress REST root. This local
+contract does not implement the pre-FEP's proposed
+`/.well-known/activitypub` discovery or claim conformance to the draft.
 
 Each entry contains `id` (the canonical Actor URI), `type`, `name`, and
 `outboxSubmitUrl` (the existing POST endpoint). The list uses live outbox

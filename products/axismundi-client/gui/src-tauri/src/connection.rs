@@ -299,7 +299,7 @@ mod tests {
             [
                 "https://blog.test/sub/wp-json/wp/v2/users/me",
                 "https://blog.test/session",
-                "https://blog.test/sub/wp-json/axismundi/activitypub/session",
+                "https://blog.test/sub/wp-json/axismundi/v1/users/me",
             ]
         );
         assert!(credential_url("http://blog.test/session").is_none());

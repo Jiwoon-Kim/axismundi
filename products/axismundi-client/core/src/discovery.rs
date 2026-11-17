@@ -8,7 +8,7 @@ use url::Url;
 
 use crate::CORE_CAPABILITY;
 
-pub const AP_SESSION_ROUTE: &str = "/axismundi/activitypub/session";
+pub const AP_SESSION_ROUTE: &str = "/axismundi/v1/users/me";
 
 #[derive(Debug, Serialize)]
 #[serde(tag = "status", content = "detail", rename_all = "snake_case")]
@@ -341,7 +341,7 @@ mod tests {
         let target = format!("{}/session", origin(&session));
         let site = serve(site, [
             ("/blog/wp-json/".into(), "200 OK".into(), String::new(),
-                r#"{"name":"Fixture","namespaces":["wp/v2"],"routes":{"/axismundi/activitypub/session":{"methods":["GET"]}}}"#.into()),
+                r#"{"name":"Fixture","namespaces":["wp/v2"],"routes":{"/axismundi/v1/users/me":{"methods":["GET"]}}}"#.into()),
             ("/.well-known/jmap".into(), "302 Found".into(), "Location: /jmap-entry\r\n".into(), String::new()),
             ("/jmap-entry".into(), "307 Temporary Redirect".into(), format!("Location: {target}\r\n"), String::new()),
             ("/.well-known/nodeinfo".into(), "200 OK".into(), String::new(),

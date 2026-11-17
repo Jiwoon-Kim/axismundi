@@ -27,12 +27,34 @@ function axismundi_act_c2s_session() {
 }
 
 add_action( 'rest_api_init', static function () : void {
-	register_rest_route( 'axismundi/activitypub', '/session', array(
+	register_rest_route( 'axismundi/v1', '/users/me', array(
 		'methods'             => WP_REST_Server::READABLE,
 		'permission_callback' => 'axismundi_act_c2s_transport_permission',
 		'callback'            => static function () {
 			$session = axismundi_act_c2s_session();
-			return is_wp_error( $session ) ? $session : new WP_REST_Response( $session, 200, array( 'Cache-Control' => 'private, no-store' ) );
+			if ( is_wp_error( $session ) ) {
+				return $session;
+			}
+			return new WP_REST_Response(
+				array(
+					'@context' => array(
+						'https://www.w3.org/ns/activitystreams',
+						array(
+							'c2s'             => 'https://github.com/Jiwoon-Kim/axismundi#c2s-',
+							'actors'          => array( '@id' => 'c2s:actors', '@container' => '@set' ),
+							'outboxSubmitUrl' => array( '@id' => 'c2s:outboxSubmitUrl', '@type' => '@id' ),
+						),
+					),
+					'type'     => 'c2s:Session',
+					'url'      => rest_url( 'axismundi/v1/users/me' ),
+					'actors'   => $session['actors'],
+				),
+				200,
+				array(
+					'Content-Type'  => 'application/ld+json; profile="https://www.w3.org/ns/activitystreams"',
+					'Cache-Control' => 'private, no-store',
+				)
+			);
 		},
 	) );
 } );

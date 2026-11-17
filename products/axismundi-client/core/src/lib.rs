@@ -271,7 +271,10 @@ impl Client {
         struct ActingSession {
             actors: Vec<ActingActor>,
         }
-        let (body, _) = self.get(session_url)?;
+        let (body, _) = self.get_with_accept(
+            session_url,
+            r#"application/ld+json; profile="https://www.w3.org/ns/activitystreams""#,
+        )?;
         serde_json::from_str::<ActingSession>(&body)
             .map(|session| session.actors)
             .map_err(|error| Error::Shape(format!("AP Session: {error}")))
@@ -350,12 +353,16 @@ impl Client {
     }
 
     fn get(&self, url: &str) -> Result<(String, String), Error> {
+        self.get_with_accept(url, "application/json")
+    }
+
+    fn get_with_accept(&self, url: &str, accept: &str) -> Result<(String, String), Error> {
         use ureq::ResponseExt as _;
         let response = self
             .agent
             .get(url)
             .header("Authorization", self.authorization())
-            .header("Accept", "application/json")
+            .header("Accept", accept)
             .call()
             .map_err(|error| Error::Transport(error.to_string()))?;
         let response_url = response.get_uri().to_string();

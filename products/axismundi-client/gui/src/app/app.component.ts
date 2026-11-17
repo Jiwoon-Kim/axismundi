@@ -1,10 +1,13 @@
 import { Component, computed, signal } from "@angular/core";
+import { JsonPipe } from "@angular/common";
 import { MatButton } from "@angular/material/button";
 import { MatDivider } from "@angular/material/divider";
 import { MatFormField, MatLabel } from "@angular/material/form-field";
 import { MatInput } from "@angular/material/input";
 import { MatList, MatListItem } from "@angular/material/list";
 import { MatProgressBar } from "@angular/material/progress-bar";
+import { MatAccordion, MatExpansionPanel, MatExpansionPanelHeader, MatExpansionPanelTitle } from "@angular/material/expansion";
+import { MatSelect, MatOption } from "@angular/material/select";
 import { MatToolbar } from "@angular/material/toolbar";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 
@@ -33,24 +36,45 @@ interface Account {
 
 interface Actor {id: string; name: string; type: string}
 interface Connected {
+  id: number;
   wordpress: string | null;
+  wordpress_document: object | null;
   jmap: Account[] | null;
+  jmap_document: object | null;
   activitypub: Actor[] | null;
+  activitypub_document: object | null;
   errors: string[];
 }
 
+type Outbox = {orderedItems?: {object?: string | {id?: string}}[]};
+
 @Component({
   selector: "app-root",
-  imports: [MatButton, MatDivider, MatFormField, MatInput, MatLabel, MatList, MatListItem, MatProgressBar, MatToolbar],
+  imports: [JsonPipe, MatAccordion, MatButton, MatDivider, MatExpansionPanel, MatExpansionPanelHeader, MatExpansionPanelTitle,
+    MatFormField, MatInput, MatLabel, MatList, MatListItem, MatOption, MatProgressBar, MatSelect, MatToolbar],
   templateUrl: "./app.component.html",
   styleUrl: "./app.component.css",
 })
 export class AppComponent {
   protected readonly native = isTauri();
-  protected readonly loading = signal<"discover" | "connect" | null>(null);
+  protected readonly loading = signal<"discover" | "connect" | "actor" | "object" | "disconnect" | null>(null);
   protected readonly discovered = signal<Discovery | null>(null);
   protected readonly connected = signal<Connected | null>(null);
   protected readonly error = signal("");
+  protected readonly actorId = signal("");
+  protected readonly actorDocument = signal<object | null>(null);
+  protected readonly outbox = signal<Outbox | null>(null);
+  protected readonly objectId = signal("");
+  protected readonly objectDocument = signal<object | null>(null);
+  protected readonly objectIds = computed(() => {
+    const items = this.outbox()?.orderedItems;
+    if (!Array.isArray(items)) return [];
+    return [...new Set(items.flatMap(item => {
+      const object = item?.object;
+      const id = typeof object === "string" ? object : object?.id;
+      return typeof id === "string" && id ? [id] : [];
+    }))];
+  });
   protected readonly addresses = computed(() => {
     const login = this.discovered()?.login;
     return login ? [login.wordpress, login.jmap, login.activitypub].filter((url): url is string => url !== null) : [];
@@ -61,10 +85,75 @@ export class AppComponent {
     if (this.loading()) return;
     this.discovered.set(null);
     this.connected.set(null);
+    this.clearDocuments();
     this.error.set("");
     this.loading.set("discover");
     try {
       this.discovered.set(await invoke<Discovery>("discover_server", { input: address }));
+    } catch (error) {
+      this.error.set(String(error));
+    } finally {
+      this.loading.set(null);
+    }
+  }
+
+  private clearDocuments(): void {
+    this.actorId.set("");
+    this.actorDocument.set(null);
+    this.outbox.set(null);
+    this.objectId.set("");
+    this.objectDocument.set(null);
+  }
+
+  protected async disconnect(): Promise<void> {
+    const connectionId = this.connected()?.id;
+    if (connectionId === undefined || this.loading()) return;
+    this.loading.set("disconnect");
+    this.error.set("");
+    try {
+      await invoke("disconnect_server", {connectionId});
+      this.connected.set(null);
+      this.clearDocuments();
+    } catch (error) {
+      this.error.set(String(error));
+    } finally {
+      this.loading.set(null);
+    }
+  }
+
+  protected async selectActor(actorId: string): Promise<void> {
+    const connectionId = this.connected()?.id;
+    if (connectionId === undefined || this.loading()) return;
+    this.clearDocuments();
+    this.actorId.set(actorId);
+    this.error.set("");
+    this.loading.set("actor");
+    try {
+      const args = {connectionId, actorId};
+      const [actor, outbox] = await Promise.allSettled([
+        invoke<object>("actor_document", args),
+        invoke<Outbox>("outbox_page", args),
+      ]);
+      if (actor.status === "fulfilled") this.actorDocument.set(actor.value);
+      if (outbox.status === "fulfilled") this.outbox.set(outbox.value);
+      this.error.set([actor, outbox].flatMap(result =>
+        result.status === "rejected" ? [String(result.reason)] : []
+      ).join(" "));
+    } finally {
+      this.loading.set(null);
+    }
+  }
+
+  protected async selectObject(objectId: string): Promise<void> {
+    const connectionId = this.connected()?.id;
+    const actorId = this.actorId();
+    if (connectionId === undefined || !actorId || this.loading()) return;
+    this.objectId.set(objectId);
+    this.objectDocument.set(null);
+    this.error.set("");
+    this.loading.set("object");
+    try {
+      this.objectDocument.set(await invoke<object>("object_by_id", {connectionId, actorId, objectId}));
     } catch (error) {
       this.error.set(String(error));
     } finally {

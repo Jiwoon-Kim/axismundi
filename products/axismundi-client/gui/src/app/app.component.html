@@ -54,6 +54,26 @@
     <section aria-labelledby="connection-result">
       <h2 id="connection-result">Connected</h2>
       @if (result.wordpress) { <p>WordPress · {{ result.wordpress }}</p> }
+      <mat-accordion multi>
+        @if (result.wordpress_document; as document) {
+          <mat-expansion-panel>
+            <mat-expansion-panel-header><mat-panel-title>WordPress users/me</mat-panel-title></mat-expansion-panel-header>
+            <pre>{{ document | json }}</pre>
+          </mat-expansion-panel>
+        }
+        @if (result.activitypub_document; as document) {
+          <mat-expansion-panel>
+            <mat-expansion-panel-header><mat-panel-title>ActivityPub Session</mat-panel-title></mat-expansion-panel-header>
+            <pre>{{ document | json }}</pre>
+          </mat-expansion-panel>
+        }
+        @if (result.jmap_document; as document) {
+          <mat-expansion-panel>
+            <mat-expansion-panel-header><mat-panel-title>JMAP Session</mat-panel-title></mat-expansion-panel-header>
+            <pre>{{ document | json }}</pre>
+          </mat-expansion-panel>
+        }
+      </mat-accordion>
       @for (message of result.errors; track message) { <p class="error" role="status">{{ message }}</p> }
       @if (result.jmap; as accounts) {
         <h3>JMAP accounts</h3>
@@ -73,17 +93,50 @@
       }
       @if (result.activitypub; as actors) {
         <h3>ActivityPub actors</h3>
-        <mat-list aria-label="ActivityPub actors">
-          @for (actor of actors; track actor.id) {
-            <mat-list-item>
-              <div class="entry"><strong>{{ actor.name || actor.type }}</strong><span>{{ actor.id }}</span></div>
-            </mat-list-item>
-          } @empty {
-            <mat-list-item>No actors can submit with this login.</mat-list-item>
-          }
-        </mat-list>
+        @if (actors.length) {
+          <mat-form-field class="document-select" appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Actor</mat-label>
+            <mat-select [value]="actorId()" [disabled]="!!loading()" (selectionChange)="selectActor($event.value)">
+              @for (actor of actors; track actor.id) {
+                <mat-option [value]="actor.id">{{ actor.name || actor.id }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        } @else {
+          <p>No actors can submit with this login.</p>
+        }
       }
-      <button matButton="outlined" type="button" (click)="connected.set(null)">Disconnect</button>
+      <mat-accordion multi>
+        @if (actorDocument(); as document) {
+          <mat-expansion-panel>
+            <mat-expansion-panel-header><mat-panel-title>Actor document</mat-panel-title></mat-expansion-panel-header>
+            <pre>{{ document | json }}</pre>
+          </mat-expansion-panel>
+        }
+        @if (outbox(); as document) {
+          <mat-expansion-panel>
+            <mat-expansion-panel-header><mat-panel-title>Outbox · First page</mat-panel-title></mat-expansion-panel-header>
+            <pre>{{ document | json }}</pre>
+          </mat-expansion-panel>
+        }
+      </mat-accordion>
+      @if (objectIds().length) {
+        <mat-form-field class="document-select" appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Outbox object</mat-label>
+          <mat-select [value]="objectId()" [disabled]="!!loading()" (selectionChange)="selectObject($event.value)">
+            @for (id of objectIds(); track id) { <mat-option [value]="id">{{ id }}</mat-option> }
+          </mat-select>
+        </mat-form-field>
+      } @else if (outbox()) {
+        <p>No Object links on this page.</p>
+      }
+      @if (objectDocument(); as document) {
+        <mat-expansion-panel expanded>
+          <mat-expansion-panel-header><mat-panel-title>Object response</mat-panel-title></mat-expansion-panel-header>
+          <pre>{{ document | json }}</pre>
+        </mat-expansion-panel>
+      }
+      <button class="disconnect" matButton="outlined" type="button" [disabled]="!!loading()" (click)="disconnect()">Disconnect</button>
     </section>
   }
 </main>

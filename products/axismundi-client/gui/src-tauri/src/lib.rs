@@ -11,6 +11,10 @@ pub fn configure<R: tauri::Runtime>(builder: tauri::Builder<R>) -> tauri::Builde
         .invoke_handler(tauri::generate_handler![
             connection::discover_server,
             connection::connect_server,
+            connection::disconnect_server,
+            connection::actor_document,
+            connection::outbox_page,
+            connection::object_by_id,
         ])
 }
 

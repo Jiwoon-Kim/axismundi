@@ -42,6 +42,15 @@ dd { margin: 0; }
 mat-list-item { --mat-list-list-item-one-line-container-height: auto; }
 .entry { display: grid; gap: 4px; white-space: normal; padding-block: 8px; }
 .entry span { color: var(--mat-sys-on-surface-variant); }
+.document-select { display: block; margin-block: 12px; }
+.disconnect { margin-block-start: 16px; }
+pre {
+  margin: 0;
+  max-block-size: 24rem;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
 
 @media (max-width: 540px) {
   main { padding-inline: 16px; }

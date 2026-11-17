@@ -24,11 +24,11 @@ because it would only ever work against the server it was written for.
 
 ```bash
 axj discover http://localhost:8884
-axj session --session-url http://localhost:8884/wp-json/axismundi/jmap/session
-axj echo    --session-url http://localhost:8884/wp-json/axismundi/jmap/session
-axj todo    --session-url http://localhost:8884/wp-json/axismundi/jmap/session
-axj changes --session-url http://localhost:8884/wp-json/axismundi/jmap/session [--since STATE]
-axj todo-set --session-url http://localhost:8884/wp-json/axismundi/jmap/session [--account ID]
+axj session --session-url http://localhost:8884/wp-json/axismundi/v1/users/me/session
+axj echo    --session-url http://localhost:8884/wp-json/axismundi/v1/users/me/session
+axj todo    --session-url http://localhost:8884/wp-json/axismundi/v1/users/me/session
+axj changes --session-url http://localhost:8884/wp-json/axismundi/v1/users/me/session [--since STATE]
+axj todo-set --session-url http://localhost:8884/wp-json/axismundi/v1/users/me/session [--account ID]
 ```
 
 `discover` sends no credentials. It checks WordPress REST, JMAP Session

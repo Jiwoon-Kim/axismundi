@@ -267,29 +267,42 @@ impl Client {
 
     /// Axismundi's authenticated AP discovery projection.
     pub fn acting_actors(&self, session_url: &str) -> Result<Vec<ActingActor>, Error> {
+        self.acting_session(session_url).map(|(actors, _)| actors)
+    }
+
+    pub fn acting_session(&self, session_url: &str) -> Result<(Vec<ActingActor>, Value), Error> {
         #[derive(Deserialize)]
         struct ActingSession {
             actors: Vec<ActingActor>,
         }
-        let (body, _) = self.get_with_accept(
-            session_url,
-            r#"application/ld+json; profile="https://www.w3.org/ns/activitystreams""#,
-        )?;
-        serde_json::from_str::<ActingSession>(&body)
-            .map(|session| session.actors)
-            .map_err(|error| Error::Shape(format!("AP Session: {error}")))
+        let document = self.activitypub_document(session_url)?;
+        let session: ActingSession = serde_json::from_value(document.clone())
+            .map_err(|error| Error::Shape(format!("AP Session: {error}")))?;
+        Ok((session.actors, document))
     }
 
-    /// Verify a WordPress login at the discovered users/me endpoint.
-    pub fn wordpress_user(&self, user_url: &str) -> Result<String, Error> {
-        #[derive(Deserialize)]
-        struct User {
-            name: String,
-        }
+    pub fn activitypub_document(&self, url: &str) -> Result<Value, Error> {
+        let (body, _) = self.get_with_accept(
+            url,
+            r#"application/ld+json; profile="https://www.w3.org/ns/activitystreams", application/activity+json"#,
+        )?;
+        serde_json::from_str(&body).map_err(|error| Error::Shape(format!("ActivityPub: {error}")))
+    }
+
+    /// Read and validate the discovered WordPress users/me response.
+    pub fn wordpress_user_document(&self, user_url: &str) -> Result<Value, Error> {
         let (body, _) = self.get(user_url)?;
-        serde_json::from_str::<User>(&body)
-            .map(|user| user.name)
-            .map_err(|error| Error::Shape(format!("WordPress user: {error}")))
+        let value: Value = serde_json::from_str(&body)
+            .map_err(|error| Error::Shape(format!("WordPress user: {error}")))?;
+        if value.get("name").and_then(Value::as_str).is_none() {
+            return Err(Error::Shape("WordPress user has no name".into()));
+        }
+        Ok(value)
+    }
+
+    pub fn wordpress_user(&self, user_url: &str) -> Result<String, Error> {
+        self.wordpress_user_document(user_url)
+            .map(|value| value["name"].as_str().unwrap_or_default().to_owned())
     }
 
     fn authorization(&self) -> String {
@@ -303,11 +316,17 @@ impl Client {
 
     /// Read the Session resource. This is the only URL the caller supplies.
     pub fn session(&self, session_url: &str) -> Result<Session, Error> {
+        self.session_document(session_url).map(|(session, _)| session)
+    }
+
+    pub fn session_document(&self, session_url: &str) -> Result<(Session, Value), Error> {
         let (body, response_url) = self.get(session_url)?;
-        let mut session: Session = serde_json::from_str(&body)
+        let document: Value = serde_json::from_str(&body)
+            .map_err(|error| Error::Shape(format!("session: {error}")))?;
+        let mut session: Session = serde_json::from_value(document.clone())
             .map_err(|error| Error::Shape(format!("session: {error}")))?;
         session.api_url = resolve_api_url(&response_url, &session.api_url)?;
-        Ok(session)
+        Ok((session, document))
     }
 
     /// Send a method batch to the `apiUrl` the Session advertised.

@@ -47,7 +47,7 @@ function axismundi_op_object_payload_fallbacks() : array {
 }
 
 /** Normalize known fallback descriptor fields without interpreting unknown extensions. */
-function axismundi_op_clean_object_read_value( $value, int $depth = 0 ) {
+function axismundi_op_clean_object_read_value( $value, int $depth = 0, bool $show_top_level_blind = false ) {
 	if ( $depth > 16 ) {
 		return null;
 	}
@@ -56,7 +56,7 @@ function axismundi_op_clean_object_read_value( $value, int $depth = 0 ) {
 	}
 	$out = array();
 	foreach ( $value as $key => $member ) {
-		if ( in_array( $key, array( '@context', 'bto', 'bcc' ), true ) ) {
+		if ( '@context' === $key || ( in_array( $key, array( 'bto', 'bcc' ), true ) && ! ( $show_top_level_blind && 0 === $depth ) ) ) {
 			continue;
 		}
 		if ( in_array( $key, array( 'content', 'summary' ), true ) && is_string( $member ) ) {

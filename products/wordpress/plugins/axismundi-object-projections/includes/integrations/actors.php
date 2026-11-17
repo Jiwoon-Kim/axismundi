@@ -660,11 +660,11 @@ function axismundi_op_get_actor_outbox( WP_REST_Request $request ) {
 	return axismundi_op_actor_collection_response( axismundi_op_transform_collection( new Axismundi_OP_Actor_Outbox( $actor, absint( $request['page'] ) > 0, (string) $request['cursor'], $reader, $owner, (string) $request['activity_type'] ) ) );
 }
 
-function axismundi_op_actor_collection_reader( Axismundi_Actor $actor ) : array {
+function axismundi_op_actor_collection_reader( Axismundi_Actor $actor, ?Axismundi_Actor $viewer = null ) : array {
 	$reader = null;
 	$owner = false;
 	if ( get_current_user_id() && function_exists( 'axismundi_act_outbox_authorize' ) && function_exists( 'axismundi_act_get_public_outbox_page' ) ) {
-		$viewer = axismundi_act_current_local_actor();
+		$viewer ??= axismundi_act_current_local_actor();
 		$viewer_uri = $viewer && axismundi_actors_can_act_as( $viewer, get_current_user_id() ) ? $viewer->get_uri() : '';
 		$owner = $viewer_uri === $actor->get_uri() && true === axismundi_act_outbox_authorize( get_current_user_id(), $actor );
 		$follow = '' !== $viewer_uri ? axismundi_act_get_relation( 'follow', $viewer_uri, $actor->get_uri() ) : null;
@@ -672,17 +672,20 @@ function axismundi_op_actor_collection_reader( Axismundi_Actor $actor ) : array 
 		if ( $owner || '' !== $viewer_uri ) {
 			$reader = static function ( Axismundi_Activity $activity ) use ( $owner, $viewer_uri, $followers ) : ?array {
 				$payload = $activity->get_payload();
-				if ( $owner ) { return $payload; }
+				$blind = axismundi_op_application_blind_members( $payload, 'actor', $viewer_uri );
+				foreach ( $blind as &$recipients ) {
+					if ( is_array( $recipients ) ) { $recipients = axismundi_act_omit_blind_addresses( $recipients ); }
+				}
+				unset( $recipients );
+				if ( $owner ) { return axismundi_act_omit_blind_addresses( $payload ) + $blind; }
 				$public = apply_filters( 'axismundi_act_public_outbox_payload', axismundi_act_public_payload( $activity ), $activity );
-				if ( is_array( $public ) ) { return $public; }
+				if ( is_array( $public ) ) { return axismundi_act_omit_blind_addresses( $public ) + $blind; }
 				$visible = false;
 				foreach ( array( 'to', 'cc', 'bto', 'bcc', 'audience' ) as $field ) {
 					$members = axismundi_op_application_recipient_uris( $payload[ $field ] ?? null );
 					$visible = $visible || in_array( $viewer_uri, $members, true ) || ( '' !== $followers && in_array( $followers, array_map( 'axismundi_actors_collection_target_uri', $members ), true ) );
 				}
-				unset( $payload['bto'], $payload['bcc'] );
-				if ( is_array( $payload['object'] ?? null ) ) { unset( $payload['object']['bto'], $payload['object']['bcc'] ); }
-				return $visible ? $payload : null;
+				return $visible ? axismundi_act_omit_blind_addresses( $payload ) + $blind : null;
 			};
 		}
 	}

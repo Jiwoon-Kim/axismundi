@@ -31,6 +31,18 @@
 Activity의 가시성이 현재 Object의 가시성과 항상 같다는 계약은 아니다. 브라우저 선택
 없이 B가 읽히는지, B를 대신할 권한이 없는 로그인은 B를 명시해도 거부되는지도 따로 잰다.
 
+로컬 구현의 인증 읽기는 `GET /wp-json/axismundi/v1/actors/{uuid}/document?actor={uri}`와
+`GET /wp-json/axismundi/v1/objects/{id}?actor={uri}`를 사용한다. 전자는 본인 Actor 문서용이고,
+아직 제출할 수 없는 로컬 프로필도 Workspace 권한으로 읽을 수 있다. 후자는 기존 숫자 ID
+경로에서 명시적 Actor로 로컬 비공개 Object를 읽는 계약이다. 기존 공개 URI와 `actor`를
+생략한 브라우저 호출은 변경하지 않는다.
+
+읽기 허가와 별개로, 인증된 Actor에게는 해당 문서의 최상위 `bto`·`bcc`를 보여줄 수 있다.
+Object는 자기 `attributedTo`, Activity는 자기 `actor`의 모든 URI와 비교한다. Object에
+대응하는 Create를 원장에서 조회하거나, 중첩 Object의 저작을 바깥 Activity에 적용하지 않는다.
+중첩 문서·익명 조회·연합 배달에는 이 예외를 적용하지 않는다. 복수 값 판정은 쓰기 모델을
+확장하거나 기존 본문 열람 권한을 넓히지 않는다.
+
 **원격 단계의 범위:** [ActivityPub B.5](https://www.w3.org/TR/activitypub/#security-recursive-objects)에
 따라 컬렉션 항목이나 페이지 링크를 자동으로 따라가지 않는다.
 [B.9](https://www.w3.org/TR/activitypub/#security-c2s-response-dos)에 따라 반환할 페이지

@@ -3,6 +3,19 @@
 2026-11-18. 기존 [어휘 축소 구현](IMPLEMENTATION-VOCABULARY-REDUCTION.md)의
 읽기 전환 이후 남은 작업이다. 이 문서는 설계이며 스키마 변경을 적용하지 않는다.
 
+**이미 끝난 범위를 먼저 적는다.** 접근·개인 귀속 판정의 site scope 가드는 그 구현에서
+제거됐고, principal 과 status 가 판정한다(같은 문서 43행). Group 디렉터리, Forum·
+Activities 의 Group 판정, Calendar 백필도 scope 를 쓰지 않는다. `get_scope()` 와
+`is_managed()` 는 구 클라이언트용 파생 호환 어댑터다. 그러므로 이 브리프가 여는 것은
+**새 방향이 아니라 남은 물리 삭제**다. 스키마에 컬럼이 남아 있다는 이유로 그것을 살아
+있는 판정 축으로 읽지 말 것 — 2026-11-18 에 그렇게 읽고 걷어낸 가드를 되돌리자는 제안이
+나왔다.
+
+**순서 제약.** `actors?type=` 은 이 작업 **뒤에** 만든다. `actor_type` 을 담은 인덱스는
+`scope_type(actor_scope, actor_type)` 하나뿐이고 선두가 scope 라, 지금 만들면 인덱스를
+못 타거나 그것을 태우려고 `?scope=` 를 API 에 노출시키게 된다. 걷어내는 중인 축을 공개
+계약으로 만드는 것이 가장 비싼 실수다.
+
 ## 모델
 
 - 인증 주체는 WordPress User다. AP Session과 JMAP Session은 그 주체의 접근 관계를

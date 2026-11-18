@@ -72,7 +72,7 @@ try {
 
 	update_option( AXISMUNDI_MEDIA_MODE_OPTION, 'independent' );
 	add_filter( 'axismundi_op_media_attachment_actor_uri', static fn() : string => 'https://example.com/actors/media-owner' );
-	$article_actor = axismundi_actors_create_local( array( 'actor_type' => 'Person', 'actor_scope' => 'user', 'preferred_username' => 'media-article-' . strtolower( wp_generate_password( 8, false, false ) ) ) );
+	$article_actor = axismundi_actors_create_local( array( 'actor_type' => 'Person', 'preferred_username' => 'media-article-' . strtolower( wp_generate_password( 8, false, false ) ) ) );
 	if ( $article_actor instanceof Axismundi_Actor ) {
 		$ax_media_projection_actor_id = $article_actor->get_identity_id();
 		axismundi_actors_set_status( $ax_media_projection_actor_id, 'public' );

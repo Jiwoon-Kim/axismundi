@@ -94,7 +94,7 @@ try {
 		$assert( is_int( $user ), 'Temporary user created: ' . $label ); $users[] = $user;
 	}
 	wp_set_current_user( $users[0] );
-	$actor = axismundi_actors_create_local( array( 'actor_type' => 'Person', 'actor_scope' => 'user', 'personal_owner_user_id' => $users[0], 'initial_owner_user_id' => $users[0], 'display_name' => 'Blob Person fixture' ) );
+	$actor = axismundi_actors_create_local( array( 'actor_type' => 'Person', 'personal_owner_user_id' => $users[0], 'initial_owner_user_id' => $users[0], 'display_name' => 'Blob Person fixture' ) );
 	$assert( $actor instanceof Axismundi_Actor, 'Person Account is available for blob upload' ); $actors[] = $actor;
 	$account = 'a' . $actor->get_identity_id();
 	axismundi_actors_write_manager_row( $actor->get_identity_id(), $users[1], 'editor' );
@@ -308,7 +308,7 @@ try {
 	Blobs\expire();
 	$assert( is_wp_error( Blobs\row( $account, $id ) ) && ! is_file( $disk ), 'Expiry removes only unreferenced bytes and their row' );
 	$assert( true === Blobs\remove( $account, $raw_data['blobId'] ), 'Uploader can explicitly delete an unreferenced blob' );
-	$group = axismundi_actors_create_local( array( 'actor_type' => 'Group', 'actor_scope' => 'managed', 'initial_owner_user_id' => $users[0], 'display_name' => 'Blob Group fixture' ) );
+	$group = axismundi_actors_create_local( array( 'actor_type' => 'Group', 'initial_owner_user_id' => $users[0], 'display_name' => 'Blob Group fixture' ) );
 	$assert( $group instanceof Axismundi_Actor, 'Group Account fixture created' ); $actors[] = $group;
 	$group_account = 'a' . $group->get_identity_id();
 	$group_upload = $http( 'POST', '/wp-json/axismundi/jmap/upload/' . $group_account, array_merge( $auth, array( 'Content-Type' => 'text/plain' ) ), $bytes );

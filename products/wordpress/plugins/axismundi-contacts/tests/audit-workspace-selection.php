@@ -23,7 +23,7 @@ try {
 	$user = (int) $created;
 	wp_set_current_user( $user );
 	foreach ( array( 'A', 'B' ) as $name ) {
-		$actor = axismundi_actors_create_local( array( 'actor_type' => 'Person', 'actor_scope' => 'user', 'personal_owner_user_id' => $user, 'initial_owner_user_id' => $user, 'display_name' => 'Workspace ' . $name ) );
+		$actor = axismundi_actors_create_local( array( 'actor_type' => 'Person', 'personal_owner_user_id' => $user, 'initial_owner_user_id' => $user, 'display_name' => 'Workspace ' . $name ) );
 		$assert( $actor instanceof Axismundi_Actor, 'Account fixture created' );
 		$fixtures[] = $actor->get_identity_id();
 	}

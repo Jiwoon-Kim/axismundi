@@ -46,9 +46,9 @@ try {
 		$assert( ! is_wp_error( $id ), 'Temporary User created' );
 		$users[] = (int) $id;
 	}
-	$first = $make( array( 'actor_type' => 'Person', 'actor_scope' => 'user', 'personal_owner_user_id' => $users[0], 'display_name' => 'Account A' ) );
-	$second = $make( array( 'actor_type' => 'Person', 'actor_scope' => 'user', 'personal_owner_user_id' => $users[0], 'display_name' => 'Account B' ) );
-	$foreign = $make( array( 'actor_type' => 'Organization', 'actor_scope' => 'managed', 'initial_owner_user_id' => $users[1], 'display_name' => 'Foreign Account' ) );
+	$first = $make( array( 'actor_type' => 'Person', 'personal_owner_user_id' => $users[0], 'display_name' => 'Account A' ) );
+	$second = $make( array( 'actor_type' => 'Person', 'personal_owner_user_id' => $users[0], 'display_name' => 'Account B' ) );
+	$foreign = $make( array( 'actor_type' => 'Organization', 'initial_owner_user_id' => $users[1], 'display_name' => 'Foreign Account' ) );
 	wp_set_current_user( $users[0] );
 	$expiration = time() + 600;
 	$token = WP_Session_Tokens::get_instance( $users[0] )->create( $expiration );

@@ -23,7 +23,7 @@ $request = static function ( string $method, string $path, array $headers = arra
 try {
 	$user = wp_insert_user( array( 'user_login' => 'jmaphttp' . strtolower( wp_generate_password( 10, false, false ) ), 'user_pass' => wp_generate_password(), 'role' => 'subscriber' ) );
 	$assert( is_int( $user ), 'Temporary principal created' );
-	$actor = axismundi_actors_create_local( array( 'actor_type' => 'Person', 'actor_scope' => 'user', 'personal_owner_user_id' => $user, 'initial_owner_user_id' => $user, 'display_name' => 'JMAP HTTP fixture' ) );
+	$actor = axismundi_actors_create_local( array( 'actor_type' => 'Person', 'personal_owner_user_id' => $user, 'initial_owner_user_id' => $user, 'display_name' => 'JMAP HTTP fixture' ) );
 	$assert( $actor instanceof Axismundi_Actor, 'Actor Account fixture created' );
 	wp_set_current_user( $user );
 	$expires = time() + 600;

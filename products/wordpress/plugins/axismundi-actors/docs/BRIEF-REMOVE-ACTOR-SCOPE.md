@@ -1,5 +1,8 @@
 # Actor scope 제거 인계
 
+완료 기록: [물리 제거 및 Actor 디렉터리](IMPLEMENTATION-REMOVE-ACTOR-SCOPE.md).
+시스템 Actor도 공개 디렉터리에 포함한다. 사용자 Account 권한과는 별개다.
+
 2026-11-18. 기존 [어휘 축소 구현](IMPLEMENTATION-VOCABULARY-REDUCTION.md)의
 읽기 전환 이후 남은 작업이다. 이 문서는 설계이며 스키마 변경을 적용하지 않는다.
 

@@ -24,7 +24,7 @@ try {
 		throw new RuntimeException( $user->get_error_message() );
 	}
 	wp_set_current_user( $user );
-	$actor = axismundi_actors_create_local( array( 'actor_type' => 'Person', 'actor_scope' => 'user', 'personal_owner_user_id' => $user ) );
+	$actor = axismundi_actors_create_local( array( 'actor_type' => 'Person', 'personal_owner_user_id' => $user ) );
 	if ( ! $actor instanceof Axismundi_Actor ) {
 		throw new RuntimeException( 'Actor fixture failed' );
 	}

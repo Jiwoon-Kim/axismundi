@@ -49,7 +49,7 @@ try {
 	wp_set_current_user( $users[0] );
 	$first = axismundi_actors_ensure_for_user( $users[0] );
 	$assert( $first instanceof Axismundi_Actor, 'Canonical Person created' ); $actors[] = $first;
-	$second = axismundi_actors_create_local( array( 'actor_type' => 'Person', 'actor_scope' => 'user', 'local_user_id' => $users[0], 'personal_owner_user_id' => $users[0] ) );
+	$second = axismundi_actors_create_local( array( 'actor_type' => 'Person', 'local_user_id' => $users[0], 'personal_owner_user_id' => $users[0] ) );
 	$assert( $second instanceof Axismundi_Actor, 'Second Person with same legacy user link can be stored' ); $actors[] = $second;
 	foreach ( array( $first, $second ) as $actor ) {
 		axismundi_actors_register_handle( $actor->get_identity_id(), 'axs4' . strtolower( wp_generate_password( 12, false ) ) );

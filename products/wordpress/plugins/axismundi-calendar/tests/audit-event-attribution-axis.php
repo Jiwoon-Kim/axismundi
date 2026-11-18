@@ -20,8 +20,7 @@ try {
 	$user = (int) $created;
 	wp_set_current_user( $user );
 	foreach ( array( 'Person', 'Organization' ) as $type ) {
-		$actor = axismundi_actors_create_local( array( 'actor_type' => $type, 'actor_scope' => 'Person' === $type ? 'user' : 'managed',
-			'local_user_id' => 'Person' === $type ? $user : null,
+		$actor = axismundi_actors_create_local( array( 'actor_type' => $type, 'local_user_id' => 'Person' === $type ? $user : null,
 			'personal_owner_user_id' => 'Person' === $type ? $user : null, 'initial_owner_user_id' => $user,
 			'preferred_username' => 'axeventaxis' . strtolower( wp_generate_password( 10, false, false ) ) ) );
 		$assert( $actor instanceof Axismundi_Actor, 'Account fixture created' );

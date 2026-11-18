@@ -44,7 +44,6 @@ function axismundi_actors_create_account( array $args ) {
 	return axismundi_actors_create_local( array(
 		'actor_type' => $type,
 		...( array_key_exists( 'federation_profile', $args ) ? array( 'federation_profile' => $args['federation_profile'] ) : array() ),
-		'actor_scope' => $personal ? 'user' : 'managed',
 		'personal_owner_user_id' => $personal ? $user_id : null,
 		'initial_owner_user_id' => $user_id,
 		'display_name' => $name,

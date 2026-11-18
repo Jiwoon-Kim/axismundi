@@ -75,9 +75,8 @@ function axismundi_actors_retire_legacy_site_actor() : bool {
 	global $wpdb;
 	$id = (int) get_option( 'ax_actors_instance_identity_id', 0 );
 	if ( $id <= 0 ) {
-		$ids = $wpdb->get_col( $wpdb->prepare( "SELECT id FROM %i WHERE origin='local' AND actor_scope='site' LIMIT 2", axismundi_actors_actors_table() ) );
-		if ( $wpdb->last_error || count( $ids ) > 1 ) { return false; }
-		$id = (int) ( $ids[0] ?? 0 );
+		// An unbound historical row is not authority to adopt or retire an Actor.
+		$id = 0;
 	}
 	if ( $id === $system->get_identity_id() ) { return false; }
 	$old = $id > 0 ? axismundi_actors_get_by_identity( $id ) : null;

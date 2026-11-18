@@ -47,7 +47,7 @@ function axismundi_actors_manager_role_rank( string $role ) : int {
  * differ in what they mean to a peer, which is why the type is a parameter and not three functions.
  *
  * The actor is created through the same local-actor path Person/Site actors use
- * (`actor_scope='managed'`, `actor_type='Group'`, `local_user_id=NULL`), then the
+ * (`actor_type='Group'`, `local_user_id=NULL`), then the
  * owner relation is written in create_local's transaction. Failure rolls back
  * the identity and initial grant together.
  *
@@ -68,7 +68,6 @@ function axismundi_actors_create_managed_actor( array $args ) {
 		array(
 			'actor_type'         => $type,
 			...( array_key_exists( 'federation_profile', $args ) ? array( 'federation_profile' => $args['federation_profile'] ) : array() ),
-			'actor_scope'        => 'managed',
 			'preferred_username' => (string) ( $args['preferred_username'] ?? '' ),
 			'status'             => (string) ( $args['status'] ?? 'public' ),
 			// local_user_id stays NULL: a managed actor is not a WP-user Person.

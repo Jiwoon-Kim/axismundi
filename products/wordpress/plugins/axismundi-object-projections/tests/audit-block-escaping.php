@@ -45,7 +45,7 @@ try {
 	$author_id = (int) wp_insert_user( array( 'user_login' => 'ax-esc-' . wp_generate_password( 8, false, false ), 'user_pass' => wp_generate_password( 20 ), 'role' => 'administrator' ) );
 	$ax_esc_users[] = $author_id;
 	wp_set_current_user( $author_id );
-	$actor = axismundi_actors_create_local( array( 'actor_type' => 'Person', 'actor_scope' => 'user', 'local_user_id' => $author_id, 'preferred_username' => 'esc-' . strtolower( wp_generate_password( 8, false, false ) ) ) );
+	$actor = axismundi_actors_create_local( array( 'actor_type' => 'Person', 'personal_owner_user_id' => $author_id, 'local_user_id' => $author_id, 'preferred_username' => 'esc-' . strtolower( wp_generate_password( 8, false, false ) ) ) );
 	if ( $actor instanceof Axismundi_Actor ) {
 		$ax_esc_ids[] = $actor->get_identity_id();
 		axismundi_actors_set_status( $actor->get_identity_id(), 'public' );

@@ -35,9 +35,9 @@ try {
 		$users[] = (int) $id;
 	}
 	$name = 's10_' . strtolower( wp_generate_password( 10, false, false ) );
-	$personal = $make( array( 'actor_type' => 'Person', 'actor_scope' => 'user', 'local_user_id' => $users[0], 'preferred_username' => $name, 'status' => 'public' ) );
-	$draft = $make( array( 'actor_type' => 'Person', 'actor_scope' => 'user', 'personal_owner_user_id' => $users[0] ) );
-	$organization = $make( array( 'actor_type' => 'Organization', 'actor_scope' => 'managed', 'initial_owner_user_id' => $users[1], 'preferred_username' => $name . '_org', 'status' => 'public' ) );
+	$personal = $make( array( 'actor_type' => 'Person', 'personal_owner_user_id' => $users[0], 'local_user_id' => $users[0], 'preferred_username' => $name, 'status' => 'public' ) );
+	$draft = $make( array( 'actor_type' => 'Person', 'personal_owner_user_id' => $users[0] ) );
+	$organization = $make( array( 'actor_type' => 'Organization', 'initial_owner_user_id' => $users[1], 'preferred_username' => $name . '_org', 'status' => 'public' ) );
 	wp_set_current_user( $users[0] );
 	$cookie_name = axismundi_actors_selection_cookie_name();
 	unset( $_COOKIE[ $cookie_name ], $_COOKIE[ LOGGED_IN_COOKIE ] );

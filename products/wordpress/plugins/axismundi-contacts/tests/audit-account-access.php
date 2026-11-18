@@ -34,7 +34,7 @@ try {
 	}
 	wp_set_current_user( $users[0] );
 	foreach ( array( 'Person', 'Person', 'Organization' ) as $index => $type ) {
-		$actor = axismundi_actors_create_local( array( 'actor_type' => $type, 'actor_scope' => 'Person' === $type ? 'user' : 'managed', 'personal_owner_user_id' => 'Person' === $type ? $users[0] : null, 'initial_owner_user_id' => $users[0], 'display_name' => 'Contacts Account ' . $index ) );
+		$actor = axismundi_actors_create_local( array( 'actor_type' => $type, 'personal_owner_user_id' => 'Person' === $type ? $users[0] : null, 'initial_owner_user_id' => $users[0], 'display_name' => 'Contacts Account ' . $index ) );
 		if ( ! $actor instanceof Axismundi_Actor ) {
 			throw new RuntimeException( 'Account fixture failed' );
 		}

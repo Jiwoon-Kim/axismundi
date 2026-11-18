@@ -24,7 +24,6 @@ try {
 	$actor = axismundi_actors_create_local(
 		array(
 			'actor_type'         => 'Person',
-			'actor_scope'        => 'user',
 			'preferred_username' => 'actor-update-' . strtolower( wp_generate_password( 8, false, false ) ),
 		)
 	);

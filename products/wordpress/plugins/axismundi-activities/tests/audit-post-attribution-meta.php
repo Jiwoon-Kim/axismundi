@@ -24,7 +24,7 @@ try {
 	}
 	wp_set_current_user( $users[0] );
 	foreach ( array( $users[0], $users[0], $users[1] ) as $user ) {
-		$actor = axismundi_actors_create_local( array( 'actor_type' => 'Person', 'actor_scope' => 'user', 'personal_owner_user_id' => $user, 'initial_owner_user_id' => $user, 'preferred_username' => 'attr' . strtolower( wp_generate_password( 12, false, false ) ) ) );
+		$actor = axismundi_actors_create_local( array( 'actor_type' => 'Person', 'personal_owner_user_id' => $user, 'initial_owner_user_id' => $user, 'preferred_username' => 'attr' . strtolower( wp_generate_password( 12, false, false ) ) ) );
 		$assert( $actor instanceof Axismundi_Actor, 'Actor fixture created' );
 		axismundi_actors_set_status( $actor->get_identity_id(), 'public' );
 		$actors[] = axismundi_actors_get_by_identity( $actor->get_identity_id() );

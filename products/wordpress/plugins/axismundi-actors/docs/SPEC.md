@@ -76,7 +76,7 @@ row is a *profile* attached to one identity row.
 wp_ax_identities   uuid + canonical_uri + object_kind + origin + status
         ▲
         │ identity_id (1:1 for actors)
-wp_ax_actors       actor_type + actor_scope + preferred_username + local_user_id …
+wp_ax_actors       actor_type + preferred_username + local_user_id …
 ```
 
 `actor_uri` is **not** a column on the actor row — it *is* the linked identity's
@@ -90,6 +90,11 @@ public interface is frozen in PROJECTIONS §1.5, so domain plugins never touch t
 tables directly.
 
 ## 4. Seeded actors (on activation)
+
+Historical activation description below: stored `actor_scope` is now retired;
+the current system identity uses `ax_actors_system_actor_id`, not a scope label.
+See [scope retirement](IMPLEMENTATION-REMOVE-ACTOR-SCOPE.md). This cleanup does
+not restore automatic user Actor provisioning.
 
 Seeding is `internal` and must **never** depend on a specific admin account
 existing — WordPress has no single `site_owner` (`user_id=1`, "first admin", and the

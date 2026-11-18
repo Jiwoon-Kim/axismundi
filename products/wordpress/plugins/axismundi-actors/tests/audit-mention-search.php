@@ -23,7 +23,6 @@ try {
 	$local = axismundi_actors_create_local(
 		array(
 			'actor_type'         => 'Person',
-			'actor_scope'        => 'user',
 			'preferred_username' => 'mention_local_' . strtolower( wp_generate_password( 6, false, false ) ),
 			'status'             => 'public',
 		)

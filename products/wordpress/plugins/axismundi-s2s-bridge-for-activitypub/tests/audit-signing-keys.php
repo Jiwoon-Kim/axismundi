@@ -16,7 +16,7 @@ try {
 	}
 	wp_set_current_user( $users[0] );
 	foreach ( array( 'Group', 'Service', 'Person' ) as $type ) {
-		$actor = axismundi_actors_create_local( array( 'actor_type' => $type, 'actor_scope' => 'Person' === $type ? 'user' : 'managed', 'personal_owner_user_id' => 'Person' === $type ? $users[0] : null, 'initial_owner_user_id' => $users[0], 'status' => 'public', 'preferred_username' => 'axkey' . strtolower( wp_generate_password( 12, false ) ) ) );
+		$actor = axismundi_actors_create_local( array( 'actor_type' => $type, 'personal_owner_user_id' => 'Person' === $type ? $users[0] : null, 'initial_owner_user_id' => $users[0], 'status' => 'public', 'preferred_username' => 'axkey' . strtolower( wp_generate_password( 12, false ) ) ) );
 		$assert( $actor instanceof Axismundi_Actor, $type . ' created with key' );
 		$actors[] = $actor;
 		$assert( 'actor' === axismundi_actors_transport_binding( $actor )['kind'], 'New Actor uses independent provider' );
@@ -108,7 +108,7 @@ try {
 			return ( ( 'commit' === $stage && 'COMMIT' === $sql ) || ( 'insert' === $stage && str_starts_with( $sql, 'INSERT INTO' ) && str_contains( $sql, $table ) ) ) ? 'SELECT * FROM ax_missing_create_key_audit' : $sql;
 		};
 		add_filter( 'query', $fail ); $suppress = $wpdb->suppress_errors();
-		try { $result = axismundi_actors_create_local( array( 'actor_type' => 'Service', 'actor_scope' => 'managed', 'initial_owner_user_id' => $users[0] ) ); }
+		try { $result = axismundi_actors_create_local( array( 'actor_type' => 'Service', 'initial_owner_user_id' => $users[0] ) ); }
 		finally { remove_filter( 'query', $fail ); $fail = null; $wpdb->suppress_errors( $suppress ); }
 		$assert( is_wp_error( $result ) && $count === (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM %i WHERE origin = 'local'", axismundi_actors_identities_table() ) ), 'New Actor ' . $stage . ' failure rolls back identity and key' );
 	}

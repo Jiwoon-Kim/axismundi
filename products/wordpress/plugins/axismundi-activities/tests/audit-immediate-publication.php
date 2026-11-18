@@ -52,8 +52,7 @@ try {
 	$user = (int) $created;
 	wp_set_current_user( $user );
 	foreach ( array( 'Person', 'Organization' ) as $type ) {
-		$actor = axismundi_actors_create_local( array( 'actor_type' => $type, 'actor_scope' => 'Person' === $type ? 'user' : 'managed',
-			'personal_owner_user_id' => 'Person' === $type ? $user : null, 'initial_owner_user_id' => $user,
+		$actor = axismundi_actors_create_local( array( 'actor_type' => $type, 'personal_owner_user_id' => 'Person' === $type ? $user : null, 'initial_owner_user_id' => $user,
 			'preferred_username' => 'aximmediate' . strtolower( wp_generate_password( 12, false, false ) ), 'display_name' => $type ) );
 		$assert( $actor instanceof Axismundi_Actor, 'Account fixture created' );
 		$actors[] = $actor->get_identity_id();

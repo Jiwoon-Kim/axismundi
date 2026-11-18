@@ -10,7 +10,7 @@ $checks = 0;
 $assert = static function ( $ok, string $label ) use ( &$checks ) : void { if ( ! $ok ) { throw new RuntimeException( $label ); } ++$checks; echo "PASS $label\n"; };
 try {
 	wp_set_current_user( $user );
-	$actor = axismundi_actors_create_local( array( 'actor_type' => 'Person', 'actor_scope' => 'user', 'personal_owner_user_id' => $user, 'initial_owner_user_id' => $user, 'preferred_username' => 'opattr' . strtolower( wp_generate_password( 12, false, false ) ) ) );
+	$actor = axismundi_actors_create_local( array( 'actor_type' => 'Person', 'personal_owner_user_id' => $user, 'initial_owner_user_id' => $user, 'preferred_username' => 'opattr' . strtolower( wp_generate_password( 12, false, false ) ) ) );
 	axismundi_actors_set_status( $actor->get_identity_id(), 'public' );
 	foreach ( array( 'post', 'attachment' ) as $type ) {
 		$id = wp_insert_post( array( 'post_type' => $type, 'post_author' => $user, 'post_status' => 'attachment' === $type ? 'inherit' : 'publish', 'post_title' => 'OP-only attribution', 'post_content' => 'body', 'post_mime_type' => 'attachment' === $type ? 'image/png' : '' ) );

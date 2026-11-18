@@ -31,12 +31,12 @@ try {
 		$assert( ! is_wp_error( $user ), 'Temporary User created' );
 		$users[] = (int) $user;
 	}
-	$first = $make( array( 'actor_type' => 'Person', 'actor_scope' => 'user', 'local_user_id' => $users[0], 'preferred_username' => $handle, 'status' => 'public' ) );
-	$second = $make( array( 'actor_type' => 'Person', 'actor_scope' => 'user', 'personal_owner_user_id' => $users[0], 'preferred_username' => $handle . '_two', 'status' => 'public' ) );
+	$first = $make( array( 'actor_type' => 'Person', 'personal_owner_user_id' => $users[0], 'local_user_id' => $users[0], 'preferred_username' => $handle, 'status' => 'public' ) );
+	$second = $make( array( 'actor_type' => 'Person', 'personal_owner_user_id' => $users[0], 'preferred_username' => $handle . '_two', 'status' => 'public' ) );
 	$unscoped = $make( array( 'actor_type' => 'Person', 'personal_owner_user_id' => $users[0], 'status' => 'public' ) );
-	$legacy = $make( array( 'actor_type' => 'Person', 'actor_scope' => 'user', 'local_user_id' => $users[0], 'status' => 'public' ) );
+	$legacy = $make( array( 'actor_type' => 'Person', 'personal_owner_user_id' => $users[0], 'local_user_id' => $users[0], 'status' => 'public' ) );
 	$wpdb->update( axismundi_actors_actors_table(), array( 'personal_owner_user_id' => null ), array( 'identity_id' => $legacy->get_identity_id() ) );
-	$organization = $make( array( 'actor_type' => 'Organization', 'actor_scope' => 'managed', 'initial_owner_user_id' => $users[0], 'status' => 'public' ) );
+	$organization = $make( array( 'actor_type' => 'Organization', 'initial_owner_user_id' => $users[0], 'status' => 'public' ) );
 	$assert( null === $second->get_local_user_id(), 'Personal Account without legacy binding is covered' );
 	$assert( 'owner' === axismundi_actors_account_role( $organization->get_identity_id(), $users[0] ) && ! axismundi_actors_account_is_personal( $organization, $users[0] ), 'Operating owner is not personal attribution' );
 	$assert( null !== axismundi_actors_signing_key_snapshot( $first ), 'Live Actor can sign before deletion' );
@@ -81,7 +81,7 @@ try {
 	$assert( 0 === axismundi_actors_handle_owner( $handle . '_old' ), 'Former handle reservation released too' );
 	$assert( ! axismundi_actors_set_status( $first->get_identity_id(), 'public' ), 'Deleted identity cannot be resurrected' );
 	$assert( axismundi_actors_set_status( $first->get_identity_id(), 'tombstone' ), 'Repeated tombstone is idempotent' );
-	$replacement = $make( array( 'actor_type' => 'Person', 'actor_scope' => 'user', 'personal_owner_user_id' => $users[1], 'preferred_username' => $handle, 'status' => 'public' ) );
+	$replacement = $make( array( 'actor_type' => 'Person', 'personal_owner_user_id' => $users[1], 'preferred_username' => $handle, 'status' => 'public' ) );
 	axismundi_actors_record_handle_address( $replacement->get_identity_id(), $handle );
 	$assert( $replacement->get_uuid() !== $first->get_uuid() && $replacement->get_uri() !== $first->get_uri(), 'Reused handle never reuses identity' );
 	$assert( $replacement->get_identity_id() === axismundi_actors_get_by_handle( $handle )->get_identity_id(), 'Handle resolves only to replacement Actor' );
@@ -92,7 +92,7 @@ try {
 	$assert( axismundi_actors_is_reserved_handle( 'admin' ), 'System reserved handles are unchanged' );
 
 	// Emulate pre-S2 data without bypassing the production migration under test.
-	$old = $make( array( 'actor_type' => 'Person', 'actor_scope' => 'user', 'preferred_username' => $handle . '_prior' ) );
+	$old = $make( array( 'actor_type' => 'Person', 'preferred_username' => $handle . '_prior' ) );
 	axismundi_actors_record_handle_address( $old->get_identity_id(), $handle . '_prior' );
 	$wpdb->update( axismundi_actors_identities_table(), array( 'status' => 'tombstone' ), array( 'id' => $old->get_identity_id() ) );
 	$assert( 1 === $wpdb->query( $wpdb->prepare(

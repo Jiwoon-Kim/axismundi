@@ -40,7 +40,6 @@ try {
 	$site   = axismundi_actors_create_local(
 		array(
 			'actor_type'        => 'Person',
-			'actor_scope'       => 'user',
 			'preferred_username' => 'audience-author-' . strtolower( wp_generate_password( 8, false, false ) ),
 		)
 	);

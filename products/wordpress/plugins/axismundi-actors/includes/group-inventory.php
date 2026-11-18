@@ -12,7 +12,7 @@
  * whose audience named the Group, or from a plain fetch. Read a zero here as "no current
  * followers", nothing more.
  *
- * Actor scope and AS2 Actor type are different axes. A `site` scope Group is not thereby wrong.
+ * AS2 Actor type is not operating authority. System identity uses its explicit binding.
  *
  * @package AxismundiActors
  */
@@ -144,7 +144,7 @@ function axismundi_actors_inventory_forum_evidence( int $identity_id ) : array {
 function axismundi_actors_group_inventory() : array {
 	global $wpdb;
 	$actors = axismundi_actors_actors_table();
-	$rows = $wpdb->get_results( "SELECT identity_id, actor_scope, preferred_username, status, followers_total, created_at FROM {$actors} WHERE actor_type='Group' AND origin='local' ORDER BY identity_id", ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- read-only survey.
+	$rows = $wpdb->get_results( "SELECT identity_id, preferred_username, status, followers_total, created_at FROM {$actors} WHERE actor_type='Group' AND origin='local' ORDER BY identity_id", ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- read-only survey.
 	$out = array();
 	foreach ( (array) $rows as $row ) {
 		$identity_id = (int) $row['identity_id'];
@@ -163,7 +163,6 @@ function axismundi_actors_group_inventory() : array {
 			'handle'          => (string) $row['preferred_username'],
 			'profile'         => $profile,
 			'status'          => (string) $row['status'],
-			'scope'           => (string) $row['actor_scope'],
 			'created_at'      => (string) $row['created_at'],
 			'followers_total' => (int) $row['followers_total'],
 			'follows_current' => $follows['current'],
@@ -193,7 +192,7 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 			WP_CLI::log( 'No local Group Actors.' );
 			return;
 		}
-		$fields = array( 'identity_id', 'handle', 'profile', 'status', 'scope', 'followers_total', 'follows_current', 'follows_ever', 'activities', 'forum_entries', 'forum_members', 'principals', 'moderators', 'created_at', 'uri' );
+		$fields = array( 'identity_id', 'handle', 'profile', 'status', 'followers_total', 'follows_current', 'follows_ever', 'activities', 'forum_entries', 'forum_members', 'principals', 'moderators', 'created_at', 'uri' );
 		WP_CLI\Utils\format_items( $assoc['format'] ?? 'table', $rows, $fields );
 		WP_CLI::log( sprintf( '%d local Group Actors. "%s" means this survey could not read that source, which is not the same as zero.', count( $rows ), AXISMUNDI_ACTORS_INVENTORY_UNSUPPORTED ) );
 	} );

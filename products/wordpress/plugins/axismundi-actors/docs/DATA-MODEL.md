@@ -129,7 +129,6 @@ fields, not identity truth (that is the identity row) and not content.
 ```
 identity_id       BIGINT UNSIGNED  PK         -- = wp_ax_identities.id (1:1; NO separate actor id)
 actor_type        VARCHAR(16)      NOT NULL   -- Person | Organization | Application | Service | Group
-actor_scope       VARCHAR(8)       NULL       -- site | user for local; NULL for remote (origin is the truth)
 preferred_username VARCHAR(191)    NULL       -- real handle (NOT unique; NULL until a local actor registers one; remote actors on different domains share handles)
 local_handle_key  VARCHAR(191)     NULL       -- normalized handle for LOCAL actors only; NULL for remote and until registration
 handle_locked_at  DATETIME         NULL       -- set once when a local handle is registered; then immutable
@@ -149,7 +148,6 @@ UNIQUE KEY local_handle_key (local_handle_key)       -- one handle per LOCAL act
 KEY local_user_lookup (local_user_id)                -- compatibility links may repeat (S4)
 UNIQUE KEY legacy_transport_user (transport_user_id) -- one legacy route per user; multiple NULLs
 KEY preferred_username (preferred_username)          -- lookup only (non-unique)
-KEY scope_type (actor_scope, actor_type)
 ENGINE=InnoDB
 ```
 
@@ -160,15 +158,10 @@ Notes:
   primary key here and the foreign key into `wp_ax_identities`. `actor_uri` is the
   identity's `canonical_uri`, never a column here.
 - `origin` (local|remote) and `status` live on the **identity** row, the single
-  source of truth. `actor_scope` sub-classifies *local* actors: v0.1 uses `site`
-  (the one site actor) and `user` (a 1:1 WP-user Person). **`managed` is reserved**
-  for admin-created actors that are neither the site nor tied to a WP user — a
-  `Group` (forum / Lemmy community / subreddit-like space) or a `Service` /
-  `Organization` publisher (e.g. a geodata service). A `managed` actor has
-  `local_user_id = NULL` and is administered through the reserved
-  `wp_ax_actor_managers` table. `actor_scope` is `NULL` for remote actors, where
-  `origin = remote` is the discriminator. (There is no `s2s` scope — federation is a
-  delivery concern, not an identity scope.)
+  source of truth. Stored `actor_scope` and its index were removed on 2026-11-18.
+  Personal attribution uses `personal_owner_user_id`; operating access uses
+  principal roles. The system Actor uses `ax_actors_system_actor_id`, never type
+  or absence of roles. See [scope retirement](IMPLEMENTATION-REMOVE-ACTOR-SCOPE.md).
 - **`preferred_username` is NOT globally unique** — the actor table also holds
   remote actors, and `alice@example.com`, `alice@remote.example`,
   `alice@another.example` legitimately share the handle `alice`. Uniqueness applies
@@ -608,7 +601,7 @@ lookup + the actor profile only; the followers / following endpoint *content* is
 **projected** from the relation store, never stored on the actor row (counts included).
 
 ### 9.8 Multisite scope is a runtime decision, not a stored column
-`actor_scope` stays `site | user | managed`. **`site-local` / `network-local` /
+Stored `actor_scope` is retired. **`site-local` / `network-local` /
 `remote` are computed at request time** (they depend on *which* site is asking) from
 the actor URI + a network index — do **not** freeze them onto the actor row, and do
 **not** add `blog_id` to the current per-site tables (the table prefix is the

@@ -5,6 +5,12 @@ global $wpdb;
 $system = axismundi_actors_get_system_actor();
 $actors = axismundi_actors_actors_table();
 $managers = axismundi_actors_managers_table();
+if ( ! in_array( 'actor_scope', $wpdb->get_col( $wpdb->prepare( 'SHOW COLUMNS FROM %i', $actors ) ), true ) ) {
+	echo wp_json_encode( array( 'scope_retired' => true, 'system_identity_id' => $system ? $system->get_identity_id() : null,
+		'counts' => $wpdb->get_results( $wpdb->prepare( 'SELECT origin, status, COUNT(*) AS total FROM %i GROUP BY origin, status', $actors ), ARRAY_A ),
+	), JSON_PRETTY_PRINT ) . "\n";
+	return;
+}
 $rows = $wpdb->get_results( $wpdb->prepare(
 	"SELECT a.identity_id, a.actor_type, a.actor_scope, a.status, a.local_user_id, a.personal_owner_user_id,
 	        (legacy.ID IS NOT NULL) AS legacy_user_exists, (personal.ID IS NOT NULL) AS personal_user_exists, m.role AS personal_role

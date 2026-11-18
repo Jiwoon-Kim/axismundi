@@ -18,9 +18,9 @@ switch ( $mode ) {
 	case 'scope':
 		$name = 'axismundi_actors_principal_account_role';
 		$from = '$account = axismundi_actors_get_by_identity( $account_id );';
-		// Force the retired stored-scope dependency, not the derived compatibility label.
-		$to = $from . " global \$wpdb; if ( 'site' === \$wpdb->get_var( \$wpdb->prepare( 'SELECT actor_scope FROM %i WHERE identity_id = %d', axismundi_actors_actors_table(), \$account_id ) ) ) { return ''; }";
-		$expected = 'Stale site scope cannot deny a principal grant';
+		// Reintroduce classification-based authorization through a retired adapter.
+		$to = $from . " if ( \$account instanceof Axismundi_Actor && 'managed' === \$account->get_scope() ) { return ''; }";
+		$expected = 'Retired scope labels cannot deny a principal grant';
 		break;
 	case 'signing':
 		$name = 'axismundi_actors_signing_key_snapshot';

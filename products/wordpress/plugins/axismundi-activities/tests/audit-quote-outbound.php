@@ -28,7 +28,7 @@ function ax_oq_capture( Axismundi_Activity $request, string $decision, string $a
 /** Create one public local Person actor and return its URI. */
 function ax_oq_actor( array &$actor_ids ) : string {
 	$actor = axismundi_actors_create_local(
-		array( 'actor_type' => 'Person', 'actor_scope' => 'user', 'preferred_username' => 'oq' . strtolower( wp_generate_password( 8, false, false ) ) )
+		array( 'actor_type' => 'Person', 'preferred_username' => 'oq' . strtolower( wp_generate_password( 8, false, false ) ) )
 	);
 	if ( ! $actor instanceof Axismundi_Actor ) {
 		return '';

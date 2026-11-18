@@ -25,7 +25,7 @@ try {
 	$users[] = (int) $user;
 	wp_set_current_user( $user );
 	foreach ( array( 'A', 'B', 'Private' ) as $name ) {
-		$args = array( 'actor_type' => 'Person', 'actor_scope' => 'user', 'personal_owner_user_id' => $user, 'initial_owner_user_id' => $user, 'display_name' => $name );
+		$args = array( 'actor_type' => 'Person', 'personal_owner_user_id' => $user, 'initial_owner_user_id' => $user, 'display_name' => $name );
 		if ( 'Private' !== $name ) { $args['preferred_username'] = 'axpub' . strtolower( wp_generate_password( 12, false, false ) ); }
 		$actor = axismundi_actors_create_local( $args );
 		$assert( $actor instanceof Axismundi_Actor, 'Account fixture created' );

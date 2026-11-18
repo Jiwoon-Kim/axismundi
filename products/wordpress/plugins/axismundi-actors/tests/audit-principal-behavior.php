@@ -10,7 +10,7 @@ $assert = static function ( bool $ok, string $label ) use ( &$checks ) : void {
 	++$checks;
 };
 try {
-	$subject = axismundi_actors_create_local( array( 'actor_type' => 'Person', 'actor_scope' => 'managed', 'status' => 'public' ) );
+	$subject = axismundi_actors_create_local( array( 'actor_type' => 'Person', 'status' => 'public' ) );
 	$assert( $subject instanceof Axismundi_Actor, 'Local subject created' );
 	$actors[] = $subject->get_identity_id();
 	$n = $subject->get_identity_id();
@@ -18,7 +18,7 @@ try {
 	$assert( false !== $wpdb->insert( $wpdb->users, array( 'ID' => $n, 'user_login' => 'axprincipal' . $n, 'user_pass' => wp_hash_password( wp_generate_password() ), 'user_nicename' => 'axprincipal' . $n, 'user_email' => '', 'user_registered' => current_time( 'mysql', true ), 'display_name' => 'Principal fixture' ) ), 'Independent User sequence fixture inserted' );
 	$user_id = $n;
 	clean_user_cache( $n );
-	$target = axismundi_actors_create_local( array( 'actor_type' => 'Group', 'actor_scope' => 'managed', 'status' => 'public' ) );
+	$target = axismundi_actors_create_local( array( 'actor_type' => 'Group', 'status' => 'public' ) );
 	$assert( $target instanceof Axismundi_Actor, 'Target Account created' );
 	$actors[] = $target->get_identity_id();
 	$id = $target->get_identity_id();

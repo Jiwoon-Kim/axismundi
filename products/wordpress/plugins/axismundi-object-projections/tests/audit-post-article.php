@@ -87,7 +87,6 @@ try {
 	$fixture_actor = axismundi_actors_create_local(
 		array(
 			'actor_type'         => 'Person',
-			'actor_scope'        => 'user',
 			'preferred_username' => 'article-author-' . strtolower( wp_generate_password( 8, false, false ) ),
 		)
 	);

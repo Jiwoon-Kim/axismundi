@@ -39,9 +39,9 @@ try {
 		$a = axismundi_actors_get_by_identity( $id );
 		$assert( null !== axismundi_actors_signing_key_snapshot( $a ) && null !== axismundi_actors_local_public_key( $a ), 'Published Actor signs with its advertised key' );
 	}
-	$wpdb->update( axismundi_actors_actors_table(), array( 'actor_scope' => 'site' ), array( 'identity_id' => $ids[1] ) );
+	$assert( ! in_array( 'actor_scope', $wpdb->get_col( 'SHOW COLUMNS FROM ' . axismundi_actors_actors_table() ), true ), 'Retired scope column is absent' );
 	$group = axismundi_actors_get_by_identity( $ids[1] );
-	$assert( 'owner' === axismundi_actors_principal_account_role( $ids[1], 'wp_user', $user ) && axismundi_actors_can_access_workspace( $group, $user ), 'Stale site scope cannot deny a principal grant' );
+	$assert( 'owner' === axismundi_actors_principal_account_role( $ids[1], 'wp_user', $user ) && axismundi_actors_can_access_workspace( $group, $user ), 'Retired scope labels cannot deny a principal grant' );
 	$assert( $group->has_principals() && ! axismundi_actors_account_is_personal( $group, $user ), 'Shared Account access is not personal attribution' );
 	$grant = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM %i WHERE identity_id = %d', axismundi_actors_managers_table(), $ids[2] ), ARRAY_A );
 	try {

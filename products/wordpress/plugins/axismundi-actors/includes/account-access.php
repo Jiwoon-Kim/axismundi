@@ -31,20 +31,21 @@ function axismundi_actors_migrate_account_access() : bool {
 	if ( false === $wpdb->query( 'START TRANSACTION' ) ) { // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- migration transaction.
 		return false;
 	}
-	// Only existing user-bound local identities are personal. Managed owner roles stay unchanged.
-	$updated = $wpdb->query( $wpdb->prepare(
-		"UPDATE %i a INNER JOIN %i i ON i.id = a.identity_id INNER JOIN %i u ON u.ID = a.local_user_id
-		 SET a.personal_owner_user_id = a.local_user_id
-		 WHERE i.origin = 'local' AND a.identity_id <> %d AND a.actor_scope = 'user' AND a.personal_owner_user_id IS NULL",
-		$actors, $identities, $wpdb->users, $system_id
-	) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- fixed schema backfill.
+	// Historical scope-derived attribution must already have been migrated by the
+	// preceding release. Never reinterpret legacy local_user_id as personal ownership.
+	$columns = $wpdb->get_col( $wpdb->prepare( 'SHOW COLUMNS FROM %i', $actors ) );
+	if ( $wpdb->last_error || ( in_array( 'actor_scope', $columns, true ) && (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i', $actors ) ) > 0 ) ) {
+		$wpdb->query( 'ROLLBACK' );
+		return false;
+	}
+	$updated = true;
 	$inserted = false;
 	if ( false !== $updated ) {
 		$inserted = $wpdb->query( $wpdb->prepare(
 			"INSERT INTO %i (identity_id, principal_kind, principal_id, user_id, role, created_at, updated_at)
 			 SELECT a.identity_id, 'wp_user', a.personal_owner_user_id, a.personal_owner_user_id, 'owner', UTC_TIMESTAMP(), UTC_TIMESTAMP()
 			 FROM %i a INNER JOIN %i i ON i.id = a.identity_id INNER JOIN %i u ON u.ID = a.personal_owner_user_id
-			 WHERE i.origin = 'local' AND a.identity_id <> %d AND a.actor_scope <> 'site'
+			 WHERE i.origin = 'local' AND a.identity_id <> %d
 			 ON DUPLICATE KEY UPDATE role = role",
 			$managers, $actors, $identities, $wpdb->users, $system_id
 		) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- preserves existing manager roles.
@@ -56,7 +57,7 @@ function axismundi_actors_migrate_account_access() : bool {
 			"SELECT COUNT(*) FROM %i a INNER JOIN %i i ON i.id = a.identity_id
 			 INNER JOIN %i u ON u.ID = a.personal_owner_user_id
 			 LEFT JOIN %i m ON m.identity_id = a.identity_id AND m.principal_kind = 'wp_user' AND m.principal_id = a.personal_owner_user_id
-			 WHERE i.origin = 'local' AND a.identity_id <> %d AND a.actor_scope <> 'site' AND (m.role IS NULL OR m.role <> 'owner')",
+			 WHERE i.origin = 'local' AND a.identity_id <> %d AND (m.role IS NULL OR m.role <> 'owner')",
 			$actors, $identities, $wpdb->users, $managers, $system_id
 		) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- migration invariant check.
 	}

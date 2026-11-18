@@ -64,7 +64,7 @@ try {
 	// --- a second Person for the same user is accepted, but does not take the legacy route ---
 	// S4 moved uniqueness from local_user_id to transport_user_id, so the user link may repeat
 	// while the old per-user address stays bound to whichever Actor reserved it first.
-	$dup = axismundi_actors_create_local( array( 'actor_type' => 'Person', 'actor_scope' => 'user', 'preferred_username' => 'alice-again', 'local_user_id' => $uid ) );
+	$dup = axismundi_actors_create_local( array( 'actor_type' => 'Person', 'preferred_username' => 'alice-again', 'personal_owner_user_id' => $uid, 'local_user_id' => $uid ) );
 	$dup_ok = $dup instanceof Axismundi_Actor;
 	if ( $dup_ok ) {
 		$ax_ids[] = $dup->get_identity_id();
@@ -90,8 +90,8 @@ try {
 	ax_rep_assert( $ax_results, 'get_by_uri and get_for_user resolve the same actor', axismundi_actors_get_by_uri( $uri0 ) instanceof Axismundi_Actor && axismundi_actors_get_for_user( $uid )->get_identity_id() === $alice->get_identity_id() );
 
 	// --- create_local with a handle (seed style) auto-resolves collisions and locks ---
-	$c1 = axismundi_actors_create_local( array( 'actor_type' => 'Person', 'actor_scope' => 'user', 'preferred_username' => 'dupe' ) );
-	$c2 = axismundi_actors_create_local( array( 'actor_type' => 'Person', 'actor_scope' => 'user', 'preferred_username' => 'dupe' ) );
+	$c1 = axismundi_actors_create_local( array( 'actor_type' => 'Person', 'preferred_username' => 'dupe' ) );
+	$c2 = axismundi_actors_create_local( array( 'actor_type' => 'Person', 'preferred_username' => 'dupe' ) );
 	if ( $c1 instanceof Axismundi_Actor ) {
 		$ax_ids[] = $c1->get_identity_id();
 	}
@@ -103,7 +103,7 @@ try {
 	ax_rep_assert( $ax_results, 'create_local handle collision auto-resolves to distinct locked handles', '' !== $k1 && '' !== $k2 && $k1 !== $k2 && $c1->get_preferred_username() === $k1 && $c2->get_preferred_username() === $k2 && $c1->is_handle_locked() && axismundi_actors_get_by_handle( $k2 )->get_identity_id() === $c2->get_identity_id() );
 
 	// --- registering a taken handle on a handle-less actor is blocked ---
-	$fresh = axismundi_actors_create_local( array( 'actor_type' => 'Person', 'actor_scope' => 'user' ) );
+	$fresh = axismundi_actors_create_local( array( 'actor_type' => 'Person' ) );
 	if ( $fresh instanceof Axismundi_Actor ) {
 		$ax_ids[] = $fresh->get_identity_id();
 	}
@@ -130,10 +130,10 @@ try {
 
 	// --- CLI activation: system Actor reused, no Person for a phantom user ---
 	wp_set_current_user( 0 );
-	$person_before = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$actors} WHERE actor_scope = 'user'" ); // phpcs:ignore WordPress.DB
+	$person_before = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$actors} WHERE actor_type = 'Person' AND origin = 'local'" ); // phpcs:ignore WordPress.DB
 	axismundi_actors_seed();
 	$site = axismundi_actors_get_system_actor();
-	$person_after = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$actors} WHERE actor_scope = 'user'" ); // phpcs:ignore WordPress.DB
+	$person_after = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$actors} WHERE actor_type = 'Person' AND origin = 'local'" ); // phpcs:ignore WordPress.DB
 	ax_rep_assert( $ax_results, 'CLI seed reuses the system Application and creates no Person', $site instanceof Axismundi_Actor && 'Application' === $site->get_type() && $person_before === $person_after );
 
 	// seed is idempotent (no duplicate site actor)

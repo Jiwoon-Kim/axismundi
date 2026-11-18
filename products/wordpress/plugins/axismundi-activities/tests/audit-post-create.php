@@ -47,7 +47,7 @@ try {
 	$author_id = (int) wp_insert_user( array( 'user_login' => 'ax-create-author-' . wp_generate_password( 8, false, false ), 'user_pass' => wp_generate_password( 20 ), 'role' => 'administrator' ) );
 	$ax_create_users[] = $author_id;
 	wp_set_current_user( $author_id );
-	$site = axismundi_actors_create_local( array( 'actor_type' => 'Person', 'actor_scope' => 'user', 'local_user_id' => $author_id, 'preferred_username' => 'create-author-' . strtolower( wp_generate_password( 8, false, false ) ) ) );
+	$site = axismundi_actors_create_local( array( 'actor_type' => 'Person', 'personal_owner_user_id' => $author_id, 'local_user_id' => $author_id, 'preferred_username' => 'create-author-' . strtolower( wp_generate_password( 8, false, false ) ) ) );
 	if ( $site instanceof Axismundi_Actor ) {
 		$ax_create_identity_id = $site->get_identity_id();
 		axismundi_actors_set_status( $ax_create_identity_id, 'public' );
@@ -145,7 +145,7 @@ try {
 	ax_create_assert( $ax_create_results, 'a committed lifecycle settles attribution, so a later save never re-derives it', $actor_uri === $recorded_wins );
 
 	$proxy_id = (int) wp_insert_user( array( 'user_login' => 'ax-create-proxy-' . wp_generate_password( 8, false, false ), 'user_pass' => wp_generate_password( 20 ), 'role' => 'administrator' ) );
-	$proxy_actor = $proxy_id > 0 ? axismundi_actors_create_local( array( 'actor_type' => 'Person', 'actor_scope' => 'user', 'local_user_id' => $proxy_id, 'preferred_username' => 'create-proxy-' . strtolower( wp_generate_password( 8, false, false ) ) ) ) : null;
+	$proxy_actor = $proxy_id > 0 ? axismundi_actors_create_local( array( 'actor_type' => 'Person', 'personal_owner_user_id' => $proxy_id, 'local_user_id' => $proxy_id, 'preferred_username' => 'create-proxy-' . strtolower( wp_generate_password( 8, false, false ) ) ) ) : null;
 	if ( $proxy_actor instanceof Axismundi_Actor ) {
 		$ax_create_identities[] = $proxy_actor->get_identity_id();
 		axismundi_actors_set_status( $proxy_actor->get_identity_id(), 'public' );

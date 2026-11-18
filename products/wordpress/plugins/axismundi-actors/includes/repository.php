@@ -12,6 +12,7 @@ defined( 'ABSPATH' ) || exit;
 const AXISMUNDI_ACTORS_DB_VERSION = '39.0';
 
 require_once __DIR__ . '/actor-body.php';
+require_once __DIR__ . '/scope-retirement.php';
 require_once __DIR__ . '/group-profile.php';
 
 /** Historical table accessor; after cutover this is the Actor body itself. */
@@ -157,7 +158,6 @@ function axismundi_actors_install() : void {
 		"CREATE TABLE {$actors} (
 			identity_id bigint(20) unsigned NOT NULL,
 			actor_type varchar(16) NOT NULL,
-			actor_scope varchar(8) DEFAULT NULL,
 			preferred_username varchar(191) DEFAULT NULL,
 			local_handle_key varchar(191) DEFAULT NULL,
 			handle_locked_at datetime DEFAULT NULL,
@@ -188,8 +188,7 @@ function axismundi_actors_install() : void {
 			KEY local_user_lookup (local_user_id),
 			KEY personal_owner_user_id (personal_owner_user_id),
 			UNIQUE KEY legacy_transport_user (transport_user_id),
-			KEY preferred_username (preferred_username),
-			KEY scope_type (actor_scope, actor_type)
+			KEY preferred_username (preferred_username)
 		) ENGINE=InnoDB {$charset};"
 	);
 
@@ -501,7 +500,7 @@ function axismundi_actors_install() : void {
 		: str_replace( '_', '-', (string) get_locale() );
 	if ( '' !== $site_language ) {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-off schema upgrade backfill on a custom table.
-		$wpdb->query( $wpdb->prepare( "UPDATE %i SET default_language = %s WHERE default_language IS NULL AND actor_scope IN ('site','user')", $actors, $site_language ) );
+		$wpdb->query( $wpdb->prepare( "UPDATE %i SET default_language = %s WHERE default_language IS NULL AND personal_owner_user_id IS NOT NULL", $actors, $site_language ) );
 	}
 
 	// Backfill: every local actor that already has a handle gets a `primary`
@@ -1034,10 +1033,13 @@ function axismundi_actors_unique_local_handle( string $base ) : string {
  * Create a local actor (identity + actor rows) in one transaction. Remote actors
  * are a later phase; this path always sets origin=local and a local_handle_key.
  *
- * @param array<string,mixed> $args actor_type, actor_scope, preferred_username, local_user_id.
+ * @param array<string,mixed> $args actor_type, personal_owner_user_id, preferred_username, local_user_id.
  * @return Axismundi_Actor|WP_Error
  */
 function axismundi_actors_create_local( array $args ) {
+	if ( array_key_exists( 'actor_scope', $args ) ) {
+		return new WP_Error( 'ax_actors_scope_retired', 'Actor scope is retired; specify ownership and principal relations explicitly.' );
+	}
 	if ( '1' !== get_option( 'ax_actors_body_version' ) ) { return new WP_Error( 'ax_actors_body_pending', 'The Actor body migration must finish before creation.' ); }
 	global $wpdb;
 	if ( AXISMUNDI_ACTORS_DB_VERSION !== (string) get_option( 'ax_actors_db_version', '' ) ) {
@@ -1050,23 +1052,15 @@ function axismundi_actors_create_local( array $args ) {
 	if ( ! in_array( $status, array( 'public', 'disabled' ), true ) ) {
 		return new WP_Error( 'ax_actors_actor_status', __( 'New Actors must be public or disabled.', 'axismundi-actors' ) );
 	}
-	$scope = isset( $args['actor_scope'] ) ? (string) $args['actor_scope'] : null;
 	$uid   = isset( $args['local_user_id'] ) ? (int) $args['local_user_id'] : null;
 	$route_user = $uid > 0 && ! axismundi_actors_get_transport_actor_for_user( $uid ) ? $uid : null;
-	$personal_owner = isset( $args['personal_owner_user_id'] ) ? (int) $args['personal_owner_user_id']
-		: ( 'user' === $scope && $uid > 0 ? $uid : null );
+	$personal_owner = isset( $args['personal_owner_user_id'] ) ? (int) $args['personal_owner_user_id'] : null;
 	if ( null !== $personal_owner && ( $personal_owner <= 0 || ! get_userdata( $personal_owner ) ) ) {
 		return new WP_Error( 'ax_actors_account_owner', __( 'A personal account requires a valid user.', 'axismundi-actors' ) );
 	}
-	if ( 'site' === $scope && null !== $personal_owner ) {
-		return new WP_Error( 'ax_actors_account_owner', __( 'The site Actor cannot be a personal account.', 'axismundi-actors' ) );
-	}
-	if ( 'user' === $scope && $uid > 0 && $personal_owner !== $uid ) {
-		return new WP_Error( 'ax_actors_account_owner', __( 'The legacy user binding and initial personal owner must agree.', 'axismundi-actors' ) );
-	}
 	$initial_owner = isset( $args['initial_owner_user_id'] ) ? (int) $args['initial_owner_user_id'] : $personal_owner;
 	if ( null !== $initial_owner && ( $initial_owner <= 0 || ! get_userdata( $initial_owner )
-		|| 'site' === $scope || ( null !== $personal_owner && $initial_owner !== $personal_owner ) ) ) {
+		|| ( null !== $personal_owner && $initial_owner !== $personal_owner ) ) ) {
 		return new WP_Error( 'ax_actors_account_owner', __( 'The initial operating owner is invalid.', 'axismundi-actors' ) );
 	}
 
@@ -1131,7 +1125,6 @@ function axismundi_actors_create_local( array $args ) {
 		array(
 			'identity_id'        => $identity_id,
 			'actor_type'         => $type,
-			'actor_scope'        => $scope,
 			'preferred_username' => $username,
 			'local_handle_key'   => $handle_key,
 			'handle_locked_at'   => $handle_locked,
@@ -2117,7 +2110,6 @@ function axismundi_actors_upsert_remote( array $record ) {
 	$existing = axismundi_actors_get_by_uri( $uri );
 	$fields   = array(
 		'actor_type'         => $type,
-		'actor_scope'        => null,
 		'preferred_username' => (string) ( $record['preferred_username'] ?? '' ),
 		'local_handle_key'   => null,
 		'handle_locked_at'   => null,
@@ -2334,7 +2326,7 @@ function axismundi_actors_ensure_for_user( int $user_id ) {
 	return axismundi_actors_create_local(
 		array(
 			'actor_type'    => 'Person',
-			'actor_scope'   => 'user',
+			'personal_owner_user_id' => $user_id,
 			'local_user_id' => $user_id,
 			'status'        => 'public',
 		)

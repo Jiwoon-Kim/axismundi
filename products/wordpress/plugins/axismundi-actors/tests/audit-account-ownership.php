@@ -38,7 +38,7 @@ try {
 	$assert( is_wp_error( axismundi_actors_remove_manager( $legacy_id, $users[0] ) ), 'Legacy removal cannot detach personal ownership' );
 
 	// Low-level storage fixture only: additional-account UI and lifecycle are the next slice.
-	$second = axismundi_actors_create_local( array( 'actor_type' => 'Person', 'actor_scope' => 'user', 'personal_owner_user_id' => $users[0], 'status' => 'public' ) );
+	$second = axismundi_actors_create_local( array( 'actor_type' => 'Person', 'personal_owner_user_id' => $users[0], 'status' => 'public' ) );
 	if ( ! $second instanceof Axismundi_Actor ) {
 		throw new RuntimeException( 'Second personal fixture failed.' );
 	}
@@ -64,7 +64,6 @@ try {
 	$assert( null === axismundi_actors_resolve_workspace( $second->get_identity_id(), $users[1] ), 'Personal delegation revocation takes effect' );
 
 	// Simulate a pre-upgrade personal identity while keeping its canonical identifiers.
-	$wpdb->update( axismundi_actors_actors_table(), array( 'personal_owner_user_id' => null ), array( 'identity_id' => $legacy_id ) );
 	$wpdb->delete( axismundi_actors_managers_table(), array( 'identity_id' => $legacy_id, 'user_id' => $users[0] ) );
 	delete_option( 'ax_actors_account_access_version' );
 	$assert( array() === axismundi_actors_workspace_options( $users[0] ), 'Incomplete migration fails closed' );
@@ -82,7 +81,7 @@ try {
 		$wpdb->suppress_errors( $prior_errors );
 	}
 	$assert( ! $failed && ! axismundi_actors_account_access_ready(), 'SQL failure does not mark migration complete' );
-	$assert( null === axismundi_actors_get_by_identity( $legacy_id )->get_personal_owner_user_id(), 'Backfill rolls back when access insert fails' );
+	$assert( $users[0] === axismundi_actors_get_by_identity( $legacy_id )->get_personal_owner_user_id(), 'Failed access repair preserves explicit personal attribution' );
 	$assert( axismundi_actors_migrate_account_access(), 'Migration resumes successfully' );
 	$after = axismundi_actors_get_by_identity( $legacy_id );
 	$assert( $legacy_uri === $after->get_uri() && $legacy_uuid === $after->get_uuid() && $legacy_id === $after->get_identity_id(), 'Identity, UUID and URI preserved' );
@@ -105,7 +104,7 @@ try {
 	add_filter( 'query', $fail_migration );
 	$prior_errors = $wpdb->suppress_errors( true );
 	try {
-		$failed_account = axismundi_actors_create_local( array( 'actor_type' => 'Person', 'actor_scope' => 'user', 'personal_owner_user_id' => $users[0] ) );
+		$failed_account = axismundi_actors_create_local( array( 'actor_type' => 'Person', 'personal_owner_user_id' => $users[0] ) );
 	} finally {
 		remove_filter( 'query', $fail_migration );
 		$fail_migration = null;

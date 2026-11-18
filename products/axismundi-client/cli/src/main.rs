@@ -20,6 +20,8 @@ struct Options {
     secret: String,
     account: Option<String>,
     since: Option<String>,
+    db: Option<String>,
+    profile: Option<String>,
 }
 
 fn usage() -> String {
@@ -33,6 +35,8 @@ fn usage() -> String {
         "  axj todo      --session-url URL [--user NAME] [--secret SECRET] [--account ID]",
         "  axj changes   ... [--account ID] [--since STATE]",
         "  axj todo-set  ... [--account ID]  (loopback development server only)",
+        "  axj contacts  ... --db PATH --profile ID [--account ID] (sync and list)",
+        "  axj contacts-offline --db PATH --profile ID --account ID (no credentials/network)",
         "",
         "Credentials may come from AXJ_USER and AXJ_SECRET instead of the flags, which",
         "keeps the secret out of the shell history and the process list.",
@@ -48,6 +52,8 @@ fn options(args: &[String]) -> Result<Options, String> {
     let mut secret = std::env::var("AXJ_SECRET").unwrap_or_default();
     let mut account = None;
     let mut since = None;
+    let mut db = None;
+    let mut profile = None;
     let mut rest = args.iter();
     while let Some(flag) = rest.next() {
         let value = || {
@@ -62,6 +68,8 @@ fn options(args: &[String]) -> Result<Options, String> {
             "--secret" => secret = value()?,
             "--account" => account = Some(value()?),
             "--since" => since = Some(value()?),
+            "--db" => db = Some(value()?),
+            "--profile" => profile = Some(value()?),
             other => return Err(format!("unknown argument: {other}")),
         }
         if flag.starts_with("--") {
@@ -80,6 +88,8 @@ fn options(args: &[String]) -> Result<Options, String> {
         secret,
         account,
         since,
+        db,
+        profile,
     })
 }
 
@@ -214,6 +224,41 @@ fn run() -> Result<bool, String> {
         });
         return Ok(true);
     }
+    if command == "contacts-offline" {
+        let mut flags = std::collections::BTreeMap::new();
+        if rest.len() % 2 != 0 {
+            return Err("expected --db PATH --profile ID --account ID".into());
+        }
+        for pair in rest.chunks(2) {
+            if !matches!(pair[0].as_str(), "--db" | "--profile" | "--account")
+                || flags.insert(pair[0].as_str(), pair[1].as_str()).is_some()
+            {
+                return Err("invalid offline argument".into());
+            }
+        }
+        let get = |name| {
+            flags
+                .get(name)
+                .copied()
+                .ok_or_else(|| format!("{name} is required"))
+        };
+        let path = get("--db")?;
+        if !std::path::Path::new(path).is_file() {
+            return Err("offline cache does not exist".into());
+        }
+        let store = axismundi_jmap_core::contacts::Store::open(path, get("--profile")?)
+            .map_err(|e| e.to_string())?;
+        let account = get("--account")?;
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&json!({
+                "addressBooks":store.list(account,"AddressBook").map_err(|e|e.to_string())?,
+                "contactCards":store.list(account,"ContactCard").map_err(|e|e.to_string())?
+            }))
+            .map_err(|e| e.to_string())?
+        );
+        return Ok(true);
+    }
     let options = options(rest)?;
     let credentials = Credentials {
         user: options.user,
@@ -229,7 +274,34 @@ fn run() -> Result<bool, String> {
     } else {
         Client::new(credentials)
     };
-    let session = client.session(&options.session_url).map_err(explain)?;
+    let (session, session_document) = client
+        .session_document(&options.session_url)
+        .map_err(explain)?;
+    if command == "contacts" {
+        let db = options.db.as_deref().ok_or("--db is required")?;
+        let profile = options.profile.as_deref().ok_or("--profile is required")?;
+        let account =
+            axismundi_jmap_core::contacts::choose_account(&session, options.account.as_deref())
+                .map_err(|e| e.to_string())?;
+        let mut store =
+            axismundi_jmap_core::contacts::Store::open(db, profile).map_err(|e| e.to_string())?;
+        store
+            .remember_session(&client, &session, &session_document)
+            .map_err(|e| e.to_string())?;
+        for kind in ["AddressBook", "ContactCard"] {
+            axismundi_jmap_core::contacts::sync_type(&client, &session, &mut store, &account, kind)
+                .map_err(|e| e.to_string())?;
+        }
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&json!({"accountId":account,
+                "addressBooks":store.list(&account,"AddressBook").map_err(|e|e.to_string())?,
+                "contactCards":store.list(&account,"ContactCard").map_err(|e|e.to_string())?
+            }))
+            .map_err(|e| e.to_string())?
+        );
+        return Ok(true);
+    }
     if let Some(origin) = probe_origin {
         if todo_set::loopback_origin(&session.api_url)? != origin {
             return Err("Todo write probe requires a same-origin apiUrl".into());

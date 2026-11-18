@@ -1,6 +1,7 @@
 # axismundi-client
 
-A JMAP client that knows nothing about WordPress.
+A Rust client core with CLI and Tauri front ends for JMAP and ActivityPub,
+with optional WordPress integration. JMAP Contacts does not depend on WordPress.
 
 ```txt
 core/   the protocol.  Session, the method batch, the error model
@@ -29,6 +30,8 @@ axj echo    --session-url http://localhost:8884/wp-json/axismundi/v1/users/me/se
 axj todo    --session-url http://localhost:8884/wp-json/axismundi/v1/users/me/session
 axj changes --session-url http://localhost:8884/wp-json/axismundi/v1/users/me/session [--since STATE]
 axj todo-set --session-url http://localhost:8884/wp-json/axismundi/v1/users/me/session [--account ID]
+axj contacts --session-url http://127.0.0.1:18880/jmap/session --db contacts.sqlite --profile local-stalwart
+axj contacts-offline --db contacts.sqlite --profile local-stalwart --account ACCOUNT_ID
 ```
 
 `discover` sends no credentials. It checks WordPress REST, JMAP Session
@@ -66,6 +69,13 @@ The ground actually shared with a third-party server is Session discovery,
 authentication, `Core/echo` and the blob endpoints. A capability real servers also
 implement, such as Contacts (RFC 9610), is where a shared-capability claim could be
 earned.
+
+Contacts now has an independent-server round trip: see
+[Contacts storage and Stalwart E2E](docs/INTEROP-CONTACTS.md). The read commands
+above synchronize and display AddressBooks and ContactCards. Local queued update
+submission is a core API exercised by the opt-in integration test, not yet a CLI
+editing command or GUI. A profile ID is a persistent local identifier, not a
+domain or a server-provided account ID. Use a distinct profile/cache for each login.
 
 ## GUI document reads
 

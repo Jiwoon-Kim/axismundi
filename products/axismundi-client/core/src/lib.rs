@@ -14,6 +14,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 pub mod discovery;
+pub mod contacts;
 
 pub const CORE_CAPABILITY: &str = "urn:ietf:params:jmap:core";
 

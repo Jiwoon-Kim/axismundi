@@ -147,8 +147,9 @@ per-actor decision, not one giant site actor:
 - Actor repository: create, `get_by_uri`, `get_by_uuid`, `get_for_user`,
   `get_by_handle`, `ensure_for_user` (handle-less), `register_handle` (one-time,
   immutable), seed on activation, tombstone on user delete.
-- Handle lifecycle: a user's actor is handle-less until activation; the handle is
-  registered once and then immutable; public exposure requires a locked handle.
+- Handle lifecycle: a user's actor may be handle-less before activation; the handle is
+  registered once and then immutable. A public Actor's canonical URI is readable without
+  a handle; handle discovery and permission to submit remain separate.
 - Canonical identity endpoint `/actors/{uuid}` (plain fallback `/?ax_actor={uuid}`)
   + human `/@{username}/` hub with a block template, actor header, and projection
   navigation (the profile header ships in Phase 2; registry-driven navigation in

@@ -42,7 +42,7 @@ try {
 		$actors[] = axismundi_actors_get_by_identity( $id );
 	}
 	[ $a, $b, $c, $draft ] = $actors;
-	$assert( ! axismundi_op_actor_visible( $draft ), 'Draft profile is not publicly visible' );
+	$assert( axismundi_op_actor_visible( $draft ), 'Handle-less public Actor is directly readable' );
 	$self_route = '/axismundi/activitypub/actors';
 	$self_query = array( 'ids' => $draft->get_uri() );
 	$self = $request( $self_route, null, $self_query );
@@ -55,7 +55,7 @@ try {
 	$assert( 400 === $request( $self_route, null, array( 'ids' => implode( ',', array_fill( 0, 21, $a->get_uri() ) ) ) )->get_status(), 'Over-limit batches are rejected before deduplication' );
 	$assert( 400 === $request( $self_route, null, array( 'ids' => $a->get_uri() . ',' ) )->get_status(), 'A malformed member rejects the batch' );
 	$assert( ! in_array( $draft->get_uri(), array_column( axismundi_act_c2s_session()['actors'], 'id' ), true ),
-		'Self-readable draft is not advertised as a submission Actor' );
+		'Directly readable handle-less Actor is not advertised as a submission Actor' );
 
 	$wpdb->query( 'START TRANSACTION' );
 	$transaction = true;

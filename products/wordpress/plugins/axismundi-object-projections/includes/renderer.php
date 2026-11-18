@@ -199,10 +199,16 @@ function axismundi_op_finalize_object( array $object, string $expected_id, bool 
 	 * draft from a malformed or stripped one, and the conservative reading is the safe one.
 	 */
 	$actor_types = array( 'Application', 'Group', 'Organization', 'Person', 'Service' );
+	$is_actor = in_array( (string) ( $object['type'] ?? '' ), $actor_types, true );
+	if ( $is_actor ) {
+		foreach ( array( 'url', 'preferredUsername' ) as $member ) {
+			if ( isset( $object[ $member ] ) && '' === $object[ $member ] ) { unset( $object[ $member ] ); }
+		}
+	}
 	$attributable = ! $local_source && ! in_array( (string) ( $object['type'] ?? '' ), $actor_types, true );
 	$required     = $attributable
 		? array( 'id', 'type', 'attributedTo', 'url' )
-		: array( 'id', 'type', 'url' );
+		: ( $is_actor ? array( 'id', 'type' ) : array( 'id', 'type', 'url' ) );
 	foreach ( $required as $member ) {
 		if ( ! isset( $object[ $member ] ) || '' === $object[ $member ] ) {
 			return new WP_Error( 'ax_op_invalid_object', __( 'The projected value is missing a required member.', 'axismundi-object-projections' ) );

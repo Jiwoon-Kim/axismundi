@@ -257,12 +257,12 @@ ax_actors_site_actor_disabled     one-time retirement marker for the reserved Si
   stamps `handle_locked_at`. The site actor's handle (`blog` / site slug) is assigned
   and locked at seed. `uuid` and `actor_uri` never change (SPEC §2.3). Multisite
   network-wide actors are out of scope for v0.1 (per-site actors only).
-- **Public-exposure condition.** A profile is exposed publicly only when
-  `status = public AND preferred_username IS NOT NULL AND handle_locked_at IS NOT
-  NULL`. A `public` actor with no registered handle is still hidden from anonymous
-  viewers (owner / admin preview still applies). Activation is therefore two acts —
-  register the handle, then publish — and both are required before `/@handle/` or the
-  identity URI render to the public (SECURITY §1).
+- **Public-exposure condition (2026-11-18).** A public Actor with a canonical URI
+  is dereferenceable even before a handle is registered. Its document omits absent
+  `preferredUsername` and profile `url`; it retains identity, endpoints and public key.
+  Handle-based discovery still needs a registered handle. Submission authorization
+  is separate and is not granted merely because the document can be read.
+  Disabled and tombstoned Actors do not become public through this change.
 - **User deleted (`deleted_user`):** set the linked identity `status = tombstone`;
   keep both rows. Do not reassign `local_user_id`.
 - **Deactivate / uninstall:** tables and rows are **retained** (no destructive

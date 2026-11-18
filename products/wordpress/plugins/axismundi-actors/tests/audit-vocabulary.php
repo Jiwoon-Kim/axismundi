@@ -33,7 +33,7 @@ try {
 	}
 	$assert( is_wp_error( axismundi_actors_create_local( array( 'status' => 'internal' ) ) ), 'Actor creation rejects internal' );
 	$assert( ! axismundi_actors_set_status( $ids[0], 'internal' ), 'Actor transition rejects internal' );
-	$assert( null === axismundi_actors_signing_key_snapshot( axismundi_actors_get_by_identity( $ids[0] ) ), 'Handleless Actor cannot sign before its profile is advertised' );
+	$assert( null !== axismundi_actors_signing_key_snapshot( axismundi_actors_get_by_identity( $ids[0] ) ), 'Handleless public Actor has a key whose canonical profile is readable' );
 	foreach ( $ids as $id ) {
 		axismundi_actors_register_handle( $id, 'axvocab' . $id );
 		$a = axismundi_actors_get_by_identity( $id );

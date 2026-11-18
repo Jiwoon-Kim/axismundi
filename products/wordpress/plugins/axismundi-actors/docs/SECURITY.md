@@ -12,26 +12,21 @@ Creating an actor record and exposing its public profile are **separate** (SPEC
 
 | status | `/@handle/` & identity URI (public viewer) | usable as membership key |
 |---|---|---|
-| `internal` | 404 | yes |
 | `public` **+ registered handle** | 200 | yes |
-| `public` **without a handle** | 404 (hidden) | yes |
+| `public` **without a handle** | identity URI 200; no handle URL | yes |
 | `disabled` | 404 | no (hidden) |
 | `tombstone` | 404 (410 is reserved for the federation phase) | no |
 
-- Public exposure requires **both** `status = public` **and** a registered, locked
-  handle (`preferred_username` + `handle_locked_at` set). A handle-less `public`
-  actor is still 404 to anonymous viewers — it cannot leak before activation.
-- **Actor activation is opt-in and separate from WordPress account creation.** The
-  WordPress *"Membership: Anyone can register"* setting only governs WP accounts;
-  creating a WP account never mints a public actor. A user's actor stays handle-less
-  and `internal` until they explicitly activate it (register a handle, then publish).
-- Activation always seeds the Site Actor as `disabled`, and the site-owner Person
-  actor as `internal` **only when the activating user is a valid admin** (skipped on
-  CLI). Nothing is world-visible until it is published.
-- Existing users are **never bulk-published**. A user's actor is created lazily and
-  stays `internal` until the user (or an admin) opts in.
-- Owner and `manage_options` may **preview** their own non-public actor; everyone
-  else gets the same 404 as a nonexistent handle (no existence oracle).
+- As of 2026-11-18, `public` plus a canonical Actor URI permits anonymous
+  dereferencing, independently of a handle. Missing profile URLs and handles are
+  omitted; no synthetic URL is substituted for identity.
+- User signup and Actor provisioning are unchanged by this slice. Existing users
+  without an Actor are not backfilled. Handle registration and outbox submission
+  remain separate operations with their existing authorization.
+- The retired `internal` status and old site-Actor seeding policy are not current
+  privacy controls. See IMPLEMENTATION-VOCABULARY-REDUCTION.md and SYSTEM-ACTOR.md.
+- Workspace/profile recovery permissions do not make disabled or tombstoned
+  canonical Actor documents public.
 - **`status` is lifecycle, not a privacy dial — do not add a `followers` status.**
   A federated *locked* account is still publicly fetchable as an Actor document, so
   "followers-only" is never an actor status. Reach/privacy are **separate axes**

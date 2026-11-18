@@ -4,11 +4,13 @@ defined( 'ABSPATH' ) || exit;
 
 /** Extract exact addressing identities, not Mention tags or display URLs. */
 function axismundi_op_application_recipient_uris( $value ) : array {
+	if ( $value instanceof stdClass ) { $value = get_object_vars( $value ); }
 	if ( is_string( $value ) ) { return array( $value ); }
 	if ( ! is_array( $value ) ) { return array(); }
 	if ( isset( $value['id'] ) ) { return is_string( $value['id'] ) ? array( $value['id'] ) : array(); }
 	$uris = array();
 	foreach ( $value as $member ) {
+		if ( $member instanceof stdClass ) { $member = get_object_vars( $member ); }
 		if ( is_string( $member ) ) { $uris[] = $member; }
 		elseif ( is_array( $member ) && is_string( $member['id'] ?? null ) ) { $uris[] = $member['id']; }
 	}
@@ -59,7 +61,7 @@ function axismundi_op_read_application_object( int $id, ?Axismundi_Actor $viewer
 			$blind = axismundi_op_application_blind_members( $document, 'attributedTo', $viewer->get_uri() );
 		}
 		if ( ! is_wp_error( $public ) ) {
-			return $public + axismundi_op_clean_object_read_value( $blind, 0, true );
+			return axismundi_op_read_document_addresses( $public + $blind, ! empty( $blind ) );
 		}
 	} elseif ( null === $viewer && 'remote' === $object['origin'] && 'axismundi-object-projections' === $object['source_owner'] && 'remote-object-cache' === $object['source_kind'] ) {
 		$source = axismundi_op_load_registered_remote_source( $object, $object );
@@ -87,15 +89,14 @@ function axismundi_op_read_application_object( int $id, ?Axismundi_Actor $viewer
 	}
 	if ( $local ) {
 		if ( 'active' !== $row['object_status'] && ! axismundi_op_local_object_is_deleted( $row ) ) { return $public; }
-		$document = axismundi_op_transform_local_body( new Axismundi_OP_Local_Source( $row ) );
+		$document = $row['document'];
 	} else {
 		$document = axismundi_op_read_remote_jsonld_source( $source, $object, $object )['document'];
 	}
 	if ( ( $document['id'] ?? '' ) !== $uri || ( $document['type'] ?? '' ) !== $object['as2_type'] ) {
 		return new WP_Error( 'ax_op_object_read_mismatch', 'The source contradicts its registered identity or type.', array( 'status' => 409 ) );
 	}
-	$document = axismundi_op_clean_object_read_value( $document + $blind, 0, ! empty( $blind ) );
-	return axismundi_op_finalize_object( $document, $uri, $local, $local ? axismundi_op_local_object_is_deleted( $row ) : null );
+	return axismundi_op_read_document_addresses( $document + $blind, ! empty( $blind ) );
 }
 
 /** Authenticate application reads before resolving any protected identities. */
@@ -129,8 +130,6 @@ function axismundi_op_application_explicit_actor( WP_REST_Request $request ) {
 function axismundi_op_application_actor_document( Axismundi_Actor $actor ) {
 	$uri = $actor->get_uri();
 	$document = axismundi_op_actor_transform( $actor );
-	// An unactivated Actor has a canonical URI but may not yet have a profile URL.
-	if ( empty( $document['url'] ) ) { $document['url'] = $uri; }
 	return axismundi_op_finalize_object( $document, $uri, true );
 }
 

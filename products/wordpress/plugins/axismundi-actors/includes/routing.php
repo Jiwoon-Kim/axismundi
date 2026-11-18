@@ -170,12 +170,7 @@ function axismundi_actors_can_preview( Axismundi_Actor $actor, ?int $user_id = n
  * @return bool
  */
 function axismundi_actors_is_public_profile( Axismundi_Actor $actor ) : bool {
-	if ( ! $actor->is_local() ) {
-		return 'public' === $actor->get_status() && '' !== $actor->get_uri();
-	}
-	return 'public' === $actor->get_status()
-		&& $actor->is_handle_locked()
-		&& '' !== $actor->get_preferred_username();
+	return 'public' === $actor->get_status() && '' !== $actor->get_uri();
 }
 
 /**

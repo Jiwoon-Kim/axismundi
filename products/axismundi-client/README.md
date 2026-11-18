@@ -25,6 +25,7 @@ because it would only ever work against the server it was written for.
 
 ```bash
 axj discover http://localhost:8884
+axj discover https://localhost:18881 --jmap
 axj session --session-url http://localhost:8884/wp-json/axismundi/v1/users/me/session
 axj echo    --session-url http://localhost:8884/wp-json/axismundi/v1/users/me/session
 axj todo    --session-url http://localhost:8884/wp-json/axismundi/v1/users/me/session
@@ -36,7 +37,11 @@ axj contacts-offline --db contacts.sqlite --profile local-stalwart --account ACC
 
 `discover` sends no credentials. It checks WordPress REST, JMAP Session
 discovery, and the server's NodeInfo protocol advertisement independently.
-A JMAP login challenge is not a missing JMAP endpoint. A host without a scheme
+A JMAP login challenge is not a missing JMAP endpoint. Discovery flags select
+only the requested services; without flags the CLI retains the all-service probe.
+The GUI starts with only JMAP selected and exposes independent checkboxes.
+WordPress discovery reads the site's advertised HTML-head REST link rather than
+guessing `/wp-json/` on unrelated servers. A host without a scheme
 defaults to HTTPS; use an explicit HTTP URL for local development. NodeInfo
 does not establish permission to submit ActivityPub activities.
 
@@ -69,6 +74,10 @@ The ground actually shared with a third-party server is Session discovery,
 authentication, `Core/echo` and the blob endpoints. A capability real servers also
 implement, such as Contacts (RFC 9610), is where a shared-capability claim could be
 earned.
+
+Desktop connections use platform certificate verification and manually follow
+authenticated GET redirects only within the same origin. POST redirects are not
+followed. See [network trust and Session diagnostics](docs/IMPLEMENTATION-NETWORK-TRUST.md).
 
 Contacts now has an independent-server round trip: see
 [Contacts storage and Stalwart E2E](docs/INTEROP-CONTACTS.md). The read commands

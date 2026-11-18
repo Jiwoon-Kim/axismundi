@@ -10,6 +10,7 @@ publish.workspace = true
 base64 = "0.23.1"
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.154"
-ureq = "3.5.2"
+ureq = { version = "3.5.2", features = ["platform-verifier"] }
 url = "2"
 rusqlite = { version = "0.38", features = ["bundled"] }
+scraper = "0.24"

@@ -24,7 +24,7 @@ fn call(client: &Client, session: &Session, name: &str, args: Value) -> Value {
 }
 
 #[test]
-#[ignore = "requires explicitly supplied local Stalwart bootstrap credentials"]
+#[ignore = "requires explicitly supplied local Stalwart credentials"]
 fn contacts_round_trip() {
     let url = std::env::var("AXJ_SESSION_URL").expect("AXJ_SESSION_URL");
     let parsed = url::Url::parse(&url).unwrap();
@@ -32,7 +32,7 @@ fn contacts_round_trip() {
         parsed.host_str(),
         Some("127.0.0.1" | "localhost" | "[::1]")
     ));
-    let client = Client::without_redirects(Credentials {
+    let client = Client::new(Credentials {
         user: std::env::var("AXJ_USER").unwrap(),
         secret: std::env::var("AXJ_SECRET").unwrap(),
     });
@@ -42,6 +42,7 @@ fn contacts_round_trip() {
         parsed.origin()
     );
     let account = contacts::choose_account(&session, None).unwrap();
+    println!("Contacts account={account}; Session entry={url}; resolved API={}", session.api_url);
     let nonce = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap()

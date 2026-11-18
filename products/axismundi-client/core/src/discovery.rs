@@ -2,7 +2,7 @@
 
 use std::time::Duration;
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use url::Url;
 
@@ -13,6 +13,7 @@ pub const AP_SESSION_ROUTE: &str = "/axismundi/v1/users/me";
 #[derive(Debug, Serialize)]
 #[serde(tag = "status", content = "detail", rename_all = "snake_case")]
 pub enum Probe<T> {
+    Skipped,
     Found(T),
     LoginRequired(T),
     NotFound(String),
@@ -48,7 +49,22 @@ pub struct ActivityPub {
     pub software: Option<String>,
 }
 
+#[derive(Clone, Copy, Deserialize)]
+pub struct DiscoveryOptions {
+    pub wordpress: bool,
+    pub jmap: bool,
+    pub activitypub: bool,
+}
+
+impl Default for DiscoveryOptions {
+    fn default() -> Self { Self {wordpress:true,jmap:true,activitypub:true} }
+}
+
 pub fn discover(input: &str) -> Result<Discovery, String> {
+    discover_selected(input, DiscoveryOptions::default())
+}
+
+pub fn discover_selected(input: &str, options: DiscoveryOptions) -> Result<Discovery, String> {
     let input_url = input.trim();
     let mut site = if input_url.contains("://") {
         checked_url(Url::parse(input_url), None)?
@@ -65,20 +81,21 @@ pub fn discover(input: &str) -> Result<Discovery, String> {
     let origin = site.origin().ascii_serialization();
     let agent: ureq::Agent = ureq::Agent::config_builder()
         .http_status_as_error(false)
+        .tls_config(crate::platform_tls())
         .max_redirects(0)
         .timeout_global(Some(Duration::from_secs(20)))
         .user_agent("axismundi-discovery/0.1")
         .build()
         .into();
-    let wordpress = wordpress(&agent, site.join("wp-json/").expect("HTTP site URL"));
-    let jmap = jmap(
+    let wordpress = if options.wordpress { wordpress(&agent, site.clone()) } else { Probe::Skipped };
+    let jmap = if options.jmap { jmap(
         &agent,
         site.join("/.well-known/jmap").expect("HTTP site URL"),
-    );
-    let activitypub = activitypub(
+    ) } else { Probe::Skipped };
+    let activitypub = if options.activitypub { activitypub(
         &agent,
         site.join("/.well-known/nodeinfo").expect("HTTP site URL"),
-    );
+    ) } else { Probe::Skipped };
     Ok(Discovery {
         input: input.into(),
         base: origin,
@@ -89,6 +106,24 @@ pub fn discover(input: &str) -> Result<Discovery, String> {
 }
 
 fn wordpress(agent: &ureq::Agent, url: Url) -> Probe<WordPress> {
+    let (target, mut response) = match get_accept(agent,url,"text/html") {
+        Ok(value) => value,
+        Err(reason) => return Probe::Unconfirmed(reason),
+    };
+    if response.status().as_u16() != 200 {
+        return Probe::Unconfirmed(format!("{target}: HTTP {}",response.status().as_u16()));
+    }
+    let html=match response.body_mut().with_config().limit(1024*1024).read_to_string() {
+        Ok(body) => scraper::Html::parse_document(&body),
+        Err(error) => return Probe::Unconfirmed(format!("{target}: {error}")),
+    };
+    let selector=scraper::Selector::parse("head link[rel][href]").expect("static selector");
+    let advertised=html.select(&selector).find_map(|node| {
+        node.value().attr("rel")?.split_whitespace().any(|rel|rel=="https://api.w.org/")
+            .then(||node.value().attr("href")).flatten()
+    });
+    let Some(reference)=advertised else { return Probe::NotFound("Homepage does not advertise a WordPress REST root".into()); };
+    let url=match resolve(&target,reference) { Ok(url)=>url, Err(reason)=>return Probe::Unconfirmed(reason) };
     inspect(agent, url, |target, body| {
         let name = body.get("name")?.as_str()?.to_owned();
         let namespaces = strings(body.get("namespaces")?)?;
@@ -153,6 +188,7 @@ fn activitypub(agent: &ureq::Agent, url: Url) -> Probe<ActivityPub> {
         })
     });
     let url = match index {
+        Probe::Skipped => return Probe::Skipped,
         Probe::Found(url) => url,
         Probe::NotFound(reason) => return Probe::NotFound(reason),
         Probe::Unconfirmed(reason) => return Probe::Unconfirmed(reason),
@@ -228,11 +264,15 @@ fn json(response: &mut Response) -> Result<Value, String> {
     serde_json::from_str(&body).map_err(|error| error.to_string())
 }
 
-fn get(agent: &ureq::Agent, mut url: Url) -> Result<(Url, Response), String> {
+fn get(agent: &ureq::Agent, url: Url) -> Result<(Url, Response), String> {
+    get_accept(agent,url,"application/json")
+}
+
+fn get_accept(agent: &ureq::Agent, mut url: Url, accept: &str) -> Result<(Url, Response), String> {
     for hop in 0..=5 {
         let response = agent
             .get(url.as_str())
-            .header("Accept", "application/json")
+            .header("Accept", accept)
             .call()
             .map_err(|error| format!("{url}: {error}"))?;
         if !matches!(response.status().as_u16(), 301 | 302 | 303 | 307 | 308) {
@@ -340,6 +380,7 @@ mod tests {
         let site_url = origin(&site);
         let target = format!("{}/session", origin(&session));
         let site = serve(site, [
+            ("/blog/".into(), "200 OK".into(), String::new(), r#"<html><head><link rel="https://api.w.org/" href="/blog/wp-json/"></head></html>"#.into()),
             ("/blog/wp-json/".into(), "200 OK".into(), String::new(),
                 r#"{"name":"Fixture","namespaces":["wp/v2"],"routes":{"/axismundi/v1/users/me":{"methods":["GET"]}}}"#.into()),
             ("/.well-known/jmap".into(), "302 Found".into(), "Location: /jmap-entry\r\n".into(), String::new()),
@@ -380,7 +421,7 @@ mod tests {
             site,
             [
                 (
-                    "/wp-json/".into(),
+                    "/".into(),
                     "503 Service Unavailable".into(),
                     String::new(),
                     String::new(),
@@ -411,5 +452,27 @@ mod tests {
         assert!(resolve(&base, "https://user:secret@example.test/session").is_err());
         assert!(resolve(&base, "file:///etc/passwd").is_err());
         assert!(resolve(&base, " ").is_err());
+    }
+
+    #[test]
+    fn jmap_only_never_probes_other_services() {
+        let listener=TcpListener::bind("127.0.0.1:0").unwrap();
+        let address=origin(&listener);
+        let server=serve(listener,[("/.well-known/jmap".into(),"401 Unauthorized".into(),String::new(),String::new())]);
+        let result=discover_selected(&address,DiscoveryOptions{wordpress:false,jmap:true,activitypub:false}).unwrap();
+        assert!(matches!(result.wordpress,Probe::Skipped));
+        assert!(matches!(result.activitypub,Probe::Skipped));
+        assert!(matches!(result.jmap,Probe::LoginRequired(_)));
+        server.join().unwrap();
+    }
+
+    #[test]
+    fn wordpress_requires_a_homepage_advertisement() {
+        let listener=TcpListener::bind("127.0.0.1:0").unwrap();
+        let address=origin(&listener);
+        let server=serve(listener,[("/".into(),"200 OK".into(),String::new(),"<html><head></head><body>Not WordPress</body></html>".into())]);
+        let result=discover_selected(&address,DiscoveryOptions{wordpress:true,jmap:false,activitypub:false}).unwrap();
+        assert!(matches!(result.wordpress,Probe::NotFound(_)));
+        server.join().unwrap();
     }
 }

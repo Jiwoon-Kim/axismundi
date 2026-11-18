@@ -18,6 +18,12 @@ pub mod contacts;
 
 pub const CORE_CAPABILITY: &str = "urn:ietf:params:jmap:core";
 
+pub(crate) fn platform_tls() -> ureq::tls::TlsConfig {
+    ureq::tls::TlsConfig::builder()
+        .root_certs(ureq::tls::RootCerts::PlatformVerifier)
+        .build()
+}
+
 /// Username and secret for HTTP Basic. Never printed.
 pub struct Credentials {
     pub user: String,
@@ -56,6 +62,8 @@ pub struct ActingActor {
 
 #[derive(Debug, Deserialize)]
 pub struct Session {
+    #[serde(default)]
+    pub username: String,
     #[serde(rename = "apiUrl")]
     pub api_url: String,
     #[serde(rename = "downloadUrl", default)]
@@ -73,6 +81,15 @@ pub struct Session {
 }
 
 impl Session {
+    /// Report facts, not a guessed authentication failure: zero accounts can be valid.
+    pub fn empty_account_diagnostic(&self) -> Option<&'static str> {
+        if !self.accounts.is_empty() { return None; }
+        Some(if self.username.trim().is_empty() {
+            "Session returned no username and no accessible accounts; authentication is unconfirmed. Check credentials and the Session endpoint."
+        } else {
+            "Session returned a username but no accessible accounts; this may be a valid user without account access."
+        })
+    }
     /// The accounts that advertise a capability.
     ///
     /// RFC 8621 puts `accountCapabilities` on the account, so presence is per account
@@ -222,6 +239,7 @@ impl std::error::Error for Error {}
 pub struct Client {
     agent: ureq::Agent,
     credentials: Credentials,
+    redirect_limit: u32,
 }
 
 impl Client {
@@ -250,16 +268,14 @@ impl Client {
     fn with_redirect_limit(credentials: Credentials, limit: Option<u32>) -> Self {
         // Status codes carry meaning here: a 4xx may be a JMAP problem document that has
         // to be read, so the agent must not turn a status into an error and drop the body.
-        let mut config = ureq::Agent::config_builder()
+        let config = ureq::Agent::config_builder()
             .http_status_as_error(false)
+            .max_redirects(0)
+            .tls_config(platform_tls())
+            .timeout_global(Some(std::time::Duration::from_secs(30)))
             .user_agent("axismundi-jmap-client/0.1");
-        if let Some(limit) = limit {
-            config = config
-                .max_redirects(limit)
-                .timeout_global(Some(std::time::Duration::from_secs(30)));
-        }
         let agent = config.build().into();
-        Self { agent, credentials }
+        Self { agent, credentials, redirect_limit: limit.unwrap_or(8) }
     }
 
     /// Axismundi's authenticated AP discovery projection.
@@ -387,16 +403,21 @@ impl Client {
     }
 
     fn get_with_accept(&self, url: &str, accept: &str) -> Result<(String, String), Error> {
-        use ureq::ResponseExt as _;
-        let response = self
-            .agent
-            .get(url)
-            .header("Authorization", self.authorization())
-            .header("Accept", accept)
-            .call()
-            .map_err(|error| Error::Transport(error.to_string()))?;
-        let response_url = response.get_uri().to_string();
-        Ok((Self::read(response)?, response_url))
+        let mut current = checked_http_url(url)?;
+        for hop in 0..=self.redirect_limit {
+            let response = self.agent.get(current.as_str())
+                .header("Authorization", self.authorization()).header("Accept", accept)
+                .call().map_err(|error| Error::Transport(error.to_string()))?;
+            if matches!(response.status().as_u16(), 301 | 302 | 303 | 307 | 308) && self.redirect_limit > 0 {
+                if hop == self.redirect_limit { return Err(Error::Shape("authenticated redirect limit exceeded".into())); }
+                let location = response.headers().get("location").and_then(|v|v.to_str().ok())
+                    .ok_or_else(||Error::Shape("redirect has no valid Location".into()))?;
+                current = authenticated_redirect(&current, location)?;
+            } else {
+                return Ok((Self::read(response)?, current.into()));
+            }
+        }
+        unreachable!()
     }
 
     fn post(&self, url: &str, payload: String) -> Result<String, Error> {
@@ -447,6 +468,23 @@ impl Client {
         }
         Err(Error::Status { status, body: text })
     }
+}
+
+fn checked_http_url(value: &str) -> Result<url::Url, Error> {
+    let url = url::Url::parse(value).map_err(|_|Error::Shape("invalid HTTP URL".into()))?;
+    if !matches!(url.scheme(), "https" | "http") || !url.username().is_empty() || url.password().is_some() || url.fragment().is_some() {
+        return Err(Error::Shape("HTTP URL must not contain credentials or a fragment".into()));
+    }
+    Ok(url)
+}
+
+fn authenticated_redirect(from: &url::Url, location: &str) -> Result<url::Url, Error> {
+    let target = from.join(location).map_err(|_|Error::Shape("invalid redirect URL".into()))?;
+    let target = checked_http_url(target.as_str())?;
+    if target.origin() != from.origin() {
+        return Err(Error::Shape("authenticated redirect changes origin; select and authorize the new endpoint explicitly".into()));
+    }
+    Ok(target)
 }
 
 fn resolve_api_url(session_url: &str, advertised: &str) -> Result<String, Error> {
@@ -617,6 +655,86 @@ mod tests {
         );
         assert!(rendered.contains("admin"));
         assert!(!rendered.contains("abcd"));
+    }
+
+    #[test]
+    fn authenticated_redirects_require_the_same_origin() {
+        let from = url::Url::parse("https://example.test:8443/start").unwrap();
+        assert!(authenticated_redirect(&from,"/session").is_ok());
+        for location in ["http://example.test:8443/session", "https://example.test/session",
+            "https://elsewhere.test:8443/session", "https://user:secret@example.test:8443/session", "/session#fragment"] {
+            assert!(authenticated_redirect(&from, location).is_err());
+        }
+        let canonical = url::Url::parse("https://example.test/start").unwrap();
+        assert!(authenticated_redirect(&canonical,"https://example.test:443/session").is_ok());
+    }
+
+    #[test]
+    fn desktop_tls_uses_platform_trust_without_disabling_verification() {
+        let client=Client::new(Credentials{user:"u".into(),secret:"test-only".into()});
+        let tls=client.agent.config().tls_config();
+        assert!(matches!(tls.root_certs(),ureq::tls::RootCerts::PlatformVerifier));
+        assert!(!tls.disable_verification());
+        assert!(!platform_tls().disable_verification());
+    }
+
+    #[test]
+    fn empty_accounts_do_not_prove_authentication_failure() {
+        let mut session: Session=serde_json::from_value(json!({"apiUrl":"https://example.test/api","accounts":{}})).unwrap();
+        assert!(session.empty_account_diagnostic().unwrap().contains("unconfirmed"));
+        session.username="named-user".into();
+        assert!(session.empty_account_diagnostic().unwrap().contains("valid user"));
+        assert!(!session.empty_account_diagnostic().unwrap().contains("unsupported"));
+    }
+
+    #[test]
+    fn same_origin_redirect_keeps_authorization() {
+        use std::{io::{BufRead,BufReader,Write},net::TcpListener,thread,time::Duration};
+        let listener=TcpListener::bind("127.0.0.1:0").unwrap();
+        let endpoint=format!("http://{}",listener.local_addr().unwrap());
+        let server=thread::spawn(move || {
+            for hop in 0..2 {
+                let (mut stream,_)=listener.accept().unwrap();
+                stream.set_read_timeout(Some(Duration::from_secs(5))).unwrap();
+                let mut authorized=false;
+                for line in BufReader::new(&mut stream).lines() {
+                    let line=line.unwrap();
+                    if line.is_empty() { break; }
+                    if line.to_ascii_lowercase().starts_with("authorization: basic ") { authorized=true; }
+                }
+                assert!(authorized,"credentials missing on hop {hop}");
+                if hop==0 {
+                    write!(stream,"HTTP/1.1 307 Temporary Redirect\r\nLocation: /session\r\nContent-Length: 0\r\nConnection: close\r\n\r\n").unwrap();
+                } else {
+                    let body=json!({"apiUrl":"/api","username":"u","accounts":{}}).to_string();
+                    write!(stream,"HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",body.len(),body).unwrap();
+                }
+            }
+        });
+        let client=Client::new(Credentials{user:"u".into(),secret:"test-only".into()});
+        let session=client.session(&format!("{endpoint}/.well-known/jmap")).unwrap();
+        assert_eq!(session.username,"u");
+        assert_eq!(session.api_url,format!("{endpoint}/api"));
+        server.join().unwrap();
+    }
+
+    #[test]
+    fn cross_port_redirect_is_not_requested() {
+        use std::{io::{BufRead,BufReader,Write},net::TcpListener,thread};
+        let source=TcpListener::bind("127.0.0.1:0").unwrap();
+        let target=TcpListener::bind("127.0.0.1:0").unwrap();
+        target.set_nonblocking(true).unwrap();
+        let endpoint=format!("http://{}/start",source.local_addr().unwrap());
+        let location=format!("http://{}/target",target.local_addr().unwrap());
+        let server=thread::spawn(move || {
+            let (mut stream,_)=source.accept().unwrap();
+            for line in BufReader::new(&mut stream).lines() { if line.unwrap().is_empty() {break;} }
+            write!(stream,"HTTP/1.1 307 Temporary Redirect\r\nLocation: {location}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n").unwrap();
+        });
+        let client=Client::new(Credentials{user:"u".into(),secret:"test-only".into()});
+        assert!(client.session(&endpoint).unwrap_err().to_string().contains("changes origin"));
+        server.join().unwrap();
+        assert_eq!(target.accept().unwrap_err().kind(),std::io::ErrorKind::WouldBlock);
     }
 
     #[test]

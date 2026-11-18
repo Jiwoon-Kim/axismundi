@@ -6,7 +6,7 @@
 
 use std::process::ExitCode;
 
-use axismundi_jmap_core::discovery::{Probe, discover};
+use axismundi_jmap_core::discovery::{Probe, DiscoveryOptions, discover_selected};
 use axismundi_jmap_core::{CORE_CAPABILITY as CORE, Client, Credentials, Error, Session};
 use serde_json::{Value, json};
 
@@ -29,7 +29,7 @@ fn usage() -> String {
         "axj - a JMAP probe that learns everything from the Session resource",
         "",
         "usage:",
-        "  axj discover  HOST_OR_URL  (anonymous)",
+        "  axj discover  HOST_OR_URL [--jmap] [--wordpress] [--activitypub]  (anonymous)",
         "  axj session   --session-url URL [--user NAME] [--secret SECRET]",
         "  axj echo      --session-url URL [--user NAME] [--secret SECRET]",
         "  axj todo      --session-url URL [--user NAME] [--secret SECRET] [--account ID]",
@@ -94,6 +94,9 @@ fn options(args: &[String]) -> Result<Options, String> {
 }
 
 fn describe(session: &Session) {
+    if let Some(reason) = session.empty_account_diagnostic() {
+        println!("session note  {reason}");
+    }
     println!("apiUrl        {}", session.api_url);
     println!("state         {}", session.state);
     println!(
@@ -126,6 +129,7 @@ fn describe(session: &Session) {
 
 /// Choose the account to query, preferring the server's stated primary.
 fn choose(session: &Session, capability: &str, requested: Option<&str>) -> Result<String, String> {
+    if let Some(reason) = session.empty_account_diagnostic() { return Err(reason.into()); }
     let advertised = session.accounts_with(capability);
     if let Some(wanted) = requested {
         // An account the caller names still has to advertise the capability.
@@ -195,10 +199,11 @@ fn run() -> Result<bool, String> {
     let argv: Vec<String> = std::env::args().skip(1).collect();
     let (command, rest) = argv.split_first().ok_or_else(usage)?;
     if command == "discover" {
-        let [input] = rest else {
-            return Err("usage: axj discover HOST_OR_URL".into());
-        };
-        let result = discover(input)?;
+        let (input, flags) = rest.split_first().ok_or("usage: axj discover HOST_OR_URL [--jmap] [--wordpress] [--activitypub]")?;
+        if flags.iter().any(|f| !matches!(f.as_str(),"--jmap"|"--wordpress"|"--activitypub")) { return Err("unknown discovery option".into()); }
+        let options=if flags.is_empty() {DiscoveryOptions::default()} else {DiscoveryOptions {
+            wordpress:flags.iter().any(|f|f=="--wordpress"), jmap:flags.iter().any(|f|f=="--jmap"), activitypub:flags.iter().any(|f|f=="--activitypub") }};
+        let result = discover_selected(input, options)?;
         println!("base          {}", result.base);
         print_probe("wordpress", result.wordpress, |details| {
             format!(
@@ -385,6 +390,7 @@ fn run() -> Result<bool, String> {
 
 fn print_probe<T>(label: &str, result: Probe<T>, details: impl FnOnce(T) -> String) {
     let (state, reason) = match result {
+        Probe::Skipped => ("not requested",String::new()),
         Probe::Found(info) => ("yes", details(info)),
         Probe::LoginRequired(info) => ("login required", details(info)),
         Probe::NotFound(reason) => ("not advertised", reason),

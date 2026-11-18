@@ -239,6 +239,7 @@ impl Store {
 }
 
 pub fn choose_account(session: &Session, requested: Option<&str>) -> Result<String> {
+    if let Some(reason) = session.empty_account_diagnostic() { return Err(reason.into()); }
     if let Some(id) = requested {
         validate_account(session, id)?;
         return Ok(id.into());
@@ -254,6 +255,7 @@ pub fn choose_account(session: &Session, requested: Option<&str>) -> Result<Stri
 }
 
 fn validate_account(session: &Session, account: &str) -> Result<()> {
+    if let Some(reason) = session.empty_account_diagnostic() { return Err(reason.into()); }
     if !session.capabilities.contains_key(CAPABILITY)
         || !session.accounts_with(CAPABILITY).contains(&account)
     {

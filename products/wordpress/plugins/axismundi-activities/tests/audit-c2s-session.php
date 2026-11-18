@@ -36,6 +36,28 @@ try {
 		$users[] = $user;
 	}
 	[ $caller, $owner ] = $users;
+	$bare = axismundi_actors_create_local( array( 'actor_type' => 'Person', 'initial_owner_user_id' => $owner ) );
+	$assert( $bare instanceof Axismundi_Actor, 'Handle-less Actor fixture created' );
+	$ids[] = $bare->get_identity_id();
+	$bare_url = $origin . wp_parse_url( $bare->get_uri(), PHP_URL_PATH );
+	$bare_get = static function () use ( $bare_url, $host ) {
+		$response = wp_remote_get( $bare_url, array(
+			'redirection' => 0, 'timeout' => 30,
+			'headers' => array( 'Host' => $host, 'Accept' => 'application/ld+json; profile="https://www.w3.org/ns/activitystreams"' ),
+		) );
+		if ( is_wp_error( $response ) ) { throw new RuntimeException( $response->get_error_message() ); }
+		return $response;
+	};
+	$bare_response = $bare_get();
+	$bare_document = json_decode( wp_remote_retrieve_body( $bare_response ), true );
+	$assert( 200 === wp_remote_retrieve_response_code( $bare_response )
+		&& $bare->get_uri() === ( $bare_document['id'] ?? null ) && 'Person' === ( $bare_document['type'] ?? null )
+		&& ! empty( $bare_document['inbox'] ) && ! empty( $bare_document['outbox'] ) && ! empty( $bare_document['publicKey'] ),
+		'Anonymous canonical GET reads a handle-less Actor with inbox, outbox and key' );
+	$assert( ! array_key_exists( 'preferredUsername', $bare_document ) && ! array_key_exists( 'url', $bare_document ),
+		'Absent handle and profile URL are omitted, not fabricated' );
+	$assert( axismundi_actors_set_status( $bare->get_identity_id(), 'disabled' ), 'Disable handle-less Actor' );
+	$assert( 404 === wp_remote_retrieve_response_code( $bare_get() ), 'Disabled Actor remains hidden on canonical GET' );
 	$actor = axismundi_actors_ensure_for_user( $owner );
 	$assert( $actor instanceof Axismundi_Actor, 'Fixture Actor created' );
 	$id = $actor->get_identity_id();
@@ -62,9 +84,8 @@ try {
 		&& ! array_key_exists( 'id', $session ) && 'https://www.w3.org/ns/activitystreams' === ( $session['@context'][0] ?? null ),
 		'Session has an AS2 context and an endpoint URL, not a snapshot identifier' );
 	$entry = $session['actors'][0] ?? array();
-	$assert( 1 === count( $session['actors'] ) && $uri === ( $entry['id'] ?? null )
-		&& rest_url( 'axismundi/' . $path ) === ( $entry['outboxSubmitUrl'] ?? null ),
-		'Session advertises the canonical Actor URI and its real C2S endpoint' );
+	$assert( 1 === count( $session['actors'] ) && array( 'id' => $uri ) === $entry,
+		'Session advertises only the canonical Actor reference, not identity or endpoint copies' );
 	if ( function_exists( 'Axismundi\Jmap\server' ) ) {
 		$account = \Axismundi\Jmap\server()->accounts()->accounts->{ 'a' . $id } ?? null;
 		$assert( $uri === ( $account->actorUri ?? null )

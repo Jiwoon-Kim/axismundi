@@ -29,41 +29,57 @@ impl Connection {
 struct Active {
     client: Client,
     actors_url: Option<Url>,
-    outboxes: Vec<(String, String)>,
+    actor_ids: Vec<String>,
+    outboxes: Mutex<std::collections::BTreeMap<String, String>>,
 }
 
 impl Active {
+    fn remember_actor_document(&self, actor_id: &str, document: &Value) -> Result<(), String> {
+        if document["id"].as_str() != Some(actor_id)
+            || !matches!(
+                document["type"].as_str(),
+                Some("Person" | "Group" | "Organization" | "Service" | "Application")
+            )
+        {
+            return Err("The document does not describe the selected Actor".into());
+        }
+        let address = document["outbox"].as_str().ok_or("Actor has no outbox")?;
+        validated_outbox(
+            self.actors_url.as_ref().ok_or("No approved REST root")?,
+            address,
+        )
+        .ok_or("Actor outbox is outside the approved transport")?;
+        self.outboxes
+            .lock()
+            .map_err(|_| "Actor state is unavailable")?
+            .insert(actor_id.into(), address.into());
+        Ok(())
+    }
     fn actor_document_url(&self, actor_id: &str) -> Option<Url> {
-        self.outboxes.iter().find(|(id, _)| id == actor_id)?;
-        let mut url = self.actors_url.clone()?;
-        url.query_pairs_mut().append_pair("ids", actor_id);
-        Some(url)
+        self.actor_ids.iter().find(|id| id.as_str() == actor_id)?;
+        credential_url(actor_id)
     }
 
     fn outbox_page_url(&self, actor_id: &str) -> Option<Url> {
-        let (_, address) = self.outboxes.iter().find(|(id, _)| id == actor_id)?;
+        let outboxes = self.outboxes.lock().ok()?;
+        let address = outboxes.get(actor_id)?;
         let mut url = validated_outbox(self.actors_url.as_ref()?, address)?;
         url.query_pairs_mut().append_pair("page", "1");
         Some(url)
     }
 
     fn object_url(&self, actor_id: &str, object_id: &str) -> Option<Url> {
-        self.outboxes.iter().find(|(id, _)| id == actor_id)?;
+        self.actor_ids.iter().find(|id| id.as_str() == actor_id)?;
         let id = Url::parse(object_id).ok()?;
         if !matches!(id.scheme(), "http" | "https")
             || id.host().is_none()
             || !id.username().is_empty()
             || id.password().is_some()
             || object_id.len() > 6000
-            || object_id.contains(',')
         {
             return None;
         }
-        let mut url = self.actors_url.as_ref()?.join("objects").ok()?;
-        url.query_pairs_mut()
-            .append_pair("ids", object_id)
-            .append_pair("actor", actor_id);
-        Some(url)
+        Some(id)
     }
 }
 
@@ -233,10 +249,30 @@ pub async fn actor_document(
     actor_id: String,
     state: tauri::State<'_, Connection>,
 ) -> Result<Value, String> {
-    read_ap(&state, connection_id, |active| {
-        active.actor_document_url(&actor_id)
-    })
-    .await
+    let active = {
+        let state = state.lock()?;
+        if state.revision != connection_id {
+            return Err("This connection has ended".into());
+        }
+        state
+            .active
+            .clone()
+            .ok_or("Connect before reading documents")?
+    };
+    let url = active
+        .actor_document_url(&actor_id)
+        .ok_or("Actor is not available on this connection")?;
+    let expected = actor_id.clone();
+    let document =
+        tauri::async_runtime::spawn_blocking(move || Client::public_actor_document(url.as_str()))
+            .await
+            .map_err(|_| "Actor request did not complete")?
+            .map_err(|error| failure("Actor", &error))?;
+    if state.lock()?.revision != connection_id {
+        return Err("This connection has ended".into());
+    }
+    active.remember_actor_document(&expected, &document)?;
+    Ok(document)
 }
 
 #[tauri::command]
@@ -258,10 +294,32 @@ pub async fn object_by_id(
     object_id: String,
     state: tauri::State<'_, Connection>,
 ) -> Result<Value, String> {
-    read_ap(&state, connection_id, |active| {
-        active.object_url(&actor_id, &object_id)
-    })
-    .await
+    let active = {
+        let state = state.lock()?;
+        if state.revision != connection_id {
+            return Err("This connection has ended".into());
+        }
+        state
+            .active
+            .clone()
+            .ok_or("Connect before reading documents")?
+    };
+    let url = active
+        .object_url(&actor_id, &object_id)
+        .ok_or("Invalid Object URI or Actor")?;
+    let expected = object_id.clone();
+    let document =
+        tauri::async_runtime::spawn_blocking(move || Client::public_as2_document(url.as_str()))
+            .await
+            .map_err(|_| "Object request did not complete")?
+            .map_err(|error| failure("Object", &error))?;
+    if state.lock()?.revision != connection_id {
+        return Err("This connection has ended".into());
+    }
+    if document["id"].as_str() != Some(expected.as_str()) {
+        return Err("The response does not identify the requested Object".into());
+    }
+    Ok(document)
 }
 
 fn validated_outbox(actors_url: &Url, address: &str) -> Option<Url> {
@@ -405,18 +463,19 @@ fn connect(plan: LoginPlan, credentials: Credentials) -> Result<(Connected, Acti
         .as_deref()
         .and_then(credential_url)
         .and_then(|url| url.join("../../activitypub/actors").ok());
-    let outboxes = connected
+    let actor_ids = connected
         .activitypub
         .iter()
         .flatten()
-        .map(|actor| (actor.id.clone(), actor.outbox_submit_url.clone()))
+        .map(|actor| actor.id.clone())
         .collect();
     Ok((
         connected,
         Active {
             client,
             actors_url,
-            outboxes,
+            actor_ids,
+            outboxes: Mutex::new(Default::default()),
         },
     ))
 }
@@ -469,11 +528,11 @@ mod tests {
         let mut resolved = false;
         for actor in actors {
             let actor_url = active.actor_document_url(&actor.id).unwrap();
-            let document = active
-                .client
-                .activitypub_document(actor_url.as_str())
+            let document = Client::public_actor_document(actor_url.as_str()).unwrap();
+            assert_eq!(document["id"], actor.id);
+            active
+                .remember_actor_document(&actor.id, &document)
                 .unwrap();
-            assert_eq!(document["orderedItems"][0]["id"], actor.id);
             let outbox_url = active.outbox_page_url(&actor.id).unwrap();
             let page = active
                 .client
@@ -494,11 +553,10 @@ mod tests {
                 let Some(object_url) = active.object_url(&actor.id, id) else {
                     continue;
                 };
-                let object = active
-                    .client
-                    .activitypub_document(object_url.as_str())
-                    .unwrap();
-                if object["orderedItems"][0]["id"] == id {
+                let Ok(object) = Client::public_as2_document(object_url.as_str()) else {
+                    continue;
+                };
+                if object["id"] == id {
                     resolved = true;
                     break;
                 }
@@ -523,6 +581,56 @@ mod tests {
         assert!(validated_outbox(&actors, &address.replace("blog.test", "other.test")).is_none());
         assert!(validated_outbox(&actors, &address.replace("/outbox", "/inbox")).is_none());
         assert!(validated_outbox(&actors, &format!("{address}?rest_route=/wp/v2/users")).is_none());
+    }
+
+    #[test]
+    fn actor_reference_is_not_a_collection_query_and_outbox_comes_from_document() {
+        let id = "https://blog.test/actors/12345678-1234-1234-1234-123456789abc";
+        let root = Url::parse("https://blog.test/wp-json/axismundi/activitypub/actors").unwrap();
+        let address = format!("{root}/12345678-1234-1234-1234-123456789abc/outbox");
+        let active = Active {
+            client: Client::without_redirects(Credentials {
+                user: "user".into(),
+                secret: "secret".into(),
+            }),
+            actors_url: Some(root),
+            actor_ids: vec![id.into()],
+            outboxes: Mutex::new(Default::default()),
+        };
+        assert_eq!(active.actor_document_url(id).unwrap().as_str(), id);
+        assert!(
+            active
+                .actor_document_url("https://other.test/actor")
+                .is_none()
+        );
+        assert!(active.outbox_page_url(id).is_none());
+        let object_id = "https://other.test/?p=123&example=2";
+        assert_eq!(
+            active.object_url(id, object_id).unwrap().as_str(),
+            object_id
+        );
+        assert!(
+            active
+                .remember_actor_document(
+                    id,
+                    &serde_json::json!({
+                        "id": "https://other.test/actor", "type": "Person", "outbox": address
+                    })
+                )
+                .is_err()
+        );
+        active
+            .remember_actor_document(
+                id,
+                &serde_json::json!({
+                    "id": id, "type": "Person", "outbox": address
+                }),
+            )
+            .unwrap();
+        assert_eq!(
+            active.outbox_page_url(id).unwrap().as_str(),
+            format!("{address}?page=1")
+        );
     }
 
     #[test]

@@ -67,6 +67,15 @@ authentication, `Core/echo` and the blob endpoints. A capability real servers al
 implement, such as Contacts (RFC 9610), is where a shared-capability claim could be
 earned.
 
+## GUI document reads
+
+The GUI's Actor and Object document panels dereference the selected canonical
+URI with an ActivityStreams Accept header, without sending connection credentials.
+They do not substitute an Axismundi CMS collection or automatically retry through
+its authenticated registry reader. A denied canonical read remains a denied read;
+private retrieval through a home-server delegation is a separate feature.
+The outbox address comes from the retrieved Actor document, not a Session copy.
+
 ## Setting this up on another machine
 
 Nothing here is bound to this computer. The repository carries the workspace,

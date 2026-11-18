@@ -34,7 +34,7 @@ interface Account {
   capabilities: string[];
 }
 
-interface Actor {id: string; name: string; type: string}
+interface Actor {id: string}
 interface Connected {
   id: number;
   wordpress: string | null;
@@ -130,15 +130,10 @@ export class AppComponent {
     this.loading.set("actor");
     try {
       const args = {connectionId, actorId};
-      const [actor, outbox] = await Promise.allSettled([
-        invoke<object>("actor_document", args),
-        invoke<Outbox>("outbox_page", args),
-      ]);
-      if (actor.status === "fulfilled") this.actorDocument.set(actor.value);
-      if (outbox.status === "fulfilled") this.outbox.set(outbox.value);
-      this.error.set([actor, outbox].flatMap(result =>
-        result.status === "rejected" ? [String(result.reason)] : []
-      ).join(" "));
+      this.actorDocument.set(await invoke<object>("actor_document", args));
+      this.outbox.set(await invoke<Outbox>("outbox_page", args));
+    } catch (error) {
+      this.error.set(String(error));
     } finally {
       this.loading.set(null);
     }

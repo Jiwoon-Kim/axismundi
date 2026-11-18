@@ -911,8 +911,9 @@ The client uses this route relative to the WordPress REST root. This local
 contract does not implement the pre-FEP's proposed
 `/.well-known/activitypub` discovery or claim conformance to the draft.
 
-Each entry contains `id` (the canonical Actor URI), `type`, `name`, and
-`outboxSubmitUrl` (the existing POST endpoint). The list uses live outbox
+Each entry contains only `id` (the canonical Actor URI). Clients dereference
+that URI with an AS2 Accept header to read the Actor and discover its outbox.
+The list uses live outbox
 authorization, not the current browser selection, JMAP Accounts, or a Principal
 ID. It does not advertise signed fetch or imply authorization for every payload.
 Outbox POST rechecks authority independently of discovery.

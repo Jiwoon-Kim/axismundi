@@ -83,7 +83,7 @@
               <div class="entry">
                 <strong>{{ account.name || account.id }}</strong>
                 <span>{{ account.id }}{{ account.isPersonal ? " · Personal" : "" }}{{ account.isReadOnly ? " · Read-only" : "" }}</span>
-                @if (actorFor(account, result.activitypub); as actor) { <span>Actor: {{ actor.name || actor.id }}</span> }
+                @if (actorFor(account, result.activitypub); as actor) { <span>Actor: {{ actor.id }}</span> }
               </div>
             </mat-list-item>
           } @empty {
@@ -98,7 +98,7 @@
             <mat-label>Actor</mat-label>
             <mat-select [value]="actorId()" [disabled]="!!loading()" (selectionChange)="selectActor($event.value)">
               @for (actor of actors; track actor.id) {
-                <mat-option [value]="actor.id">{{ actor.name || actor.id }}</mat-option>
+                <mat-option [value]="actor.id">{{ actor.id }}</mat-option>
               }
             </mat-select>
           </mat-form-field>
@@ -132,7 +132,7 @@
       }
       @if (objectDocument(); as document) {
         <mat-expansion-panel expanded>
-          <mat-expansion-panel-header><mat-panel-title>Object response</mat-panel-title></mat-expansion-panel-header>
+          <mat-expansion-panel-header><mat-panel-title>Object document</mat-panel-title></mat-expansion-panel-header>
           <pre>{{ document | json }}</pre>
         </mat-expansion-panel>
       }

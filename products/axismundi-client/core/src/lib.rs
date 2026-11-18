@@ -51,10 +51,6 @@ pub struct Account {
 #[serde(rename_all = "camelCase")]
 pub struct ActingActor {
     pub id: String,
-    pub name: String,
-    #[serde(rename = "type")]
-    pub kind: String,
-    pub outbox_submit_url: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -287,6 +283,20 @@ impl Client {
             r#"application/ld+json; profile="https://www.w3.org/ns/activitystreams", application/activity+json"#,
         )?;
         serde_json::from_str(&body).map_err(|error| Error::Shape(format!("ActivityPub: {error}")))
+    }
+
+    /// Public dereference: never attach the connection's credentials.
+    pub fn public_actor_document(url: &str) -> Result<Value, Error> {
+        Self::public_as2_document(url)
+    }
+
+    pub fn public_as2_document(url: &str) -> Result<Value, Error> {
+        let client = Self::without_redirects(Credentials { user: String::new(), secret: String::new() });
+        let response = client.agent.get(url)
+            .header("Accept", r#"application/ld+json; profile="https://www.w3.org/ns/activitystreams", application/activity+json"#)
+            .call().map_err(|error| Error::Transport(error.to_string()))?;
+        let body = Self::read(response)?;
+        serde_json::from_str(&body).map_err(|error| Error::Shape(format!("AS2 document: {error}")))
     }
 
     /// Read and validate the discovered WordPress users/me response.
@@ -623,5 +633,29 @@ mod tests {
         // The session-level capability map must not make a2 look capable.
         assert_eq!(session.accounts_with("urn:example:todo"), vec!["a1"]);
         assert_eq!(session.primary_account("urn:example:todo"), None);
+    }
+
+    #[test]
+    fn public_actor_get_sends_as2_accept_without_credentials() {
+        use std::{io::{BufRead, BufReader, Write}, net::TcpListener, thread, time::Duration};
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = format!("http://{}/actors/fixture", listener.local_addr().unwrap());
+        let expected = address.clone();
+        let server = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            stream.set_read_timeout(Some(Duration::from_secs(5))).unwrap();
+            let mut accept = false;
+            for line in BufReader::new(&mut stream).lines() {
+                let line = line.unwrap().to_ascii_lowercase();
+                if line.is_empty() { break; }
+                assert!(!line.starts_with("authorization:") && !line.starts_with("cookie:"));
+                if line.starts_with("accept:") { accept = line.contains("application/ld+json"); }
+            }
+            assert!(accept);
+            let body = serde_json::json!({"id": expected, "type": "Person"}).to_string();
+            write!(stream, "HTTP/1.1 200 OK\r\nContent-Type: application/activity+json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}", body.len(), body).unwrap();
+        });
+        assert_eq!(Client::public_actor_document(&address).unwrap()["id"], address);
+        server.join().unwrap();
     }
 }

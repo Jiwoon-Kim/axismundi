@@ -16,12 +16,7 @@ function axismundi_act_c2s_session() {
 		if ( true !== axismundi_act_outbox_authorize( $user_id, $actor ) ) {
 			continue;
 		}
-		$actors[] = array(
-			'id'              => $actor->get_uri(),
-			'type'            => $actor->get_type(),
-			'name'            => $actor->get_display_name(),
-			'outboxSubmitUrl' => rest_url( 'axismundi/activitypub/actors/' . rawurlencode( $actor->get_uuid() ) . '/outbox' ),
-		);
+		$actors[] = array( 'id' => $actor->get_uri() );
 	}
 	return array( 'actors' => $actors );
 }
@@ -42,7 +37,6 @@ add_action( 'rest_api_init', static function () : void {
 						array(
 							'c2s'             => 'https://github.com/Jiwoon-Kim/axismundi#c2s-',
 							'actors'          => array( '@id' => 'c2s:actors', '@container' => '@set' ),
-							'outboxSubmitUrl' => array( '@id' => 'c2s:outboxSubmitUrl', '@type' => '@id' ),
 						),
 					),
 					'type'     => 'c2s:Session',

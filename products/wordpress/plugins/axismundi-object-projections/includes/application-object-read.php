@@ -245,12 +245,66 @@ function axismundi_op_application_read_headers() : array {
 	return array( 'Cache-Control' => 'private, no-store', 'Vary' => 'Authorization, Cookie, X-WP-Nonce', 'X-Content-Type-Options' => 'nosniff' );
 }
 
+/** Public registry directory, not the requesting principal's Account inventory. */
+function axismundi_op_application_actor_collection( WP_REST_Request $request ) {
+	global $wpdb;
+	$query = $request->get_query_params();
+	if ( array_diff( array_keys( $query ), array( 'type', 'origin', 'cursor', 'rest_route' ) ) ) {
+		return new WP_Error( 'ax_op_actor_list_arguments', 'Use type, origin and cursor for the Actor directory, or ids for an authenticated lookup.', array( 'status' => 400 ) );
+	}
+	$origin = $query['origin'] ?? 'local';
+	if ( ! is_string( $origin ) || ! in_array( $origin, array( 'local', 'remote' ), true ) ) {
+		return new WP_Error( 'ax_op_actor_list_origin', 'Origin must be local or remote.', array( 'status' => 400 ) );
+	}
+	$types = array();
+	if ( isset( $query['type'] ) ) {
+		$types = is_string( $query['type'] ) ? explode( ',', $query['type'], 6 ) : array( '' );
+		if ( array_diff( $types, array( 'Person', 'Group', 'Organization', 'Service', 'Application' ) ) ) {
+			return new WP_Error( 'ax_op_actor_list_type', 'Use exact Actor type names: Person, Group, Organization, Service, Application.', array( 'status' => 400 ) );
+		}
+		$types = array_values( array_unique( $types ) );
+	}
+	$cursor = $query['cursor'] ?? null;
+	if ( null !== $cursor && ( ! is_string( $cursor ) || ! ctype_digit( $cursor ) || (int) $cursor < 1 || (string) (int) $cursor !== $cursor ) ) {
+		return new WP_Error( 'ax_op_actor_list_cursor', 'Invalid Actor directory cursor.', array( 'status' => 400 ) );
+	}
+	$where = "origin=%s AND status='public'";
+	$args = array( axismundi_actors_actors_table(), $origin );
+	if ( $types ) {
+		$where .= ' AND actor_type IN (' . implode( ',', array_fill( 0, count( $types ), '%s' ) ) . ')';
+		array_push( $args, ...$types );
+	}
+	if ( null !== $cursor ) { $where .= ' AND id < %d'; $args[] = (int) $cursor; }
+	$ids = $wpdb->get_col( $wpdb->prepare( "SELECT id FROM %i WHERE {$where} ORDER BY id DESC LIMIT 21", $args ) );
+	if ( $wpdb->last_error ) { return new WP_Error( 'ax_op_actor_list_failed', 'Actor directory query failed.', array( 'status' => 500 ) ); }
+	$items = array();
+	foreach ( array_slice( $ids, 0, 20 ) as $id ) {
+		$actor = axismundi_actors_get_by_identity( (int) $id );
+		if ( ! $actor || ! axismundi_actors_is_public_profile( $actor ) || $actor->is_local() !== ( 'local' === $origin )
+			|| ( $types && ! in_array( $actor->get_type(), $types, true ) ) ) { continue; }
+		$document = $actor->is_local() ? axismundi_op_application_actor_document( $actor )
+			: json_decode( (string) axismundi_actors_get_meta( (int) $id, 'remote_payload' ) );
+		if ( $document instanceof stdClass ) { $document = get_object_vars( $document ); }
+		if ( ! is_array( $document ) || ( $document['id'] ?? null ) !== $actor->get_uri() ) { continue; }
+		$items[] = $document;
+	}
+	$next = count( $ids ) > 20 ? add_query_arg( array_map( 'rawurlencode', array_intersect_key( $query, array_flip( array( 'type', 'origin' ) ) )
+		+ array( 'cursor' => (string) $ids[19] ) ), rest_url( 'axismundi/activitypub/actors' ) ) : null;
+	return axismundi_op_application_collection_response( 'actors', $items, $next );
+}
+
 /** A separate application surface; the public AP and registry read routes stay unchanged. */
 add_action( 'rest_api_init', static function () : void {
 	register_rest_route( 'axismundi/activitypub', '/actors', array(
 		'methods' => WP_REST_Server::READABLE,
 		'permission_callback' => '__return_true',
 		'callback' => static function ( WP_REST_Request $request ) {
+			if ( ! array_key_exists( 'ids', $request->get_query_params() ) ) {
+				return axismundi_op_application_actor_collection( $request );
+			}
+			if ( array_intersect_key( $request->get_query_params(), array_flip( array( 'type', 'origin', 'cursor' ) ) ) ) {
+				return new WP_Error( 'ax_op_actor_list_arguments', 'Use ids or directory filters, not both.', array( 'status' => 400 ) );
+			}
 			$user = axismundi_op_application_read_user( $request );
 			if ( is_wp_error( $user ) ) { return $user; }
 			return axismundi_op_application_id_collection( $request, 'actors', static function ( string $uri ) use ( $user ) {

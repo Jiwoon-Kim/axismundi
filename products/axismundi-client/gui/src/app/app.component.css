@@ -27,6 +27,7 @@ section, mat-divider { margin-block: 24px; }
 }
 
 .login-form { grid-template-columns: repeat(2, minmax(0, 1fr)) auto; }
+.discovery-options { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-block-start: 12px; }
 
 .services {
   display: grid;

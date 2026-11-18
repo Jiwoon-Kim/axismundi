@@ -2,7 +2,7 @@ use std::sync::{Arc, Mutex};
 
 use axismundi_jmap_core::{
     ActingActor, Client, Credentials, Error,
-    discovery::{AP_SESSION_ROUTE, Discovery, Probe, discover},
+    discovery::{AP_SESSION_ROUTE, Discovery, DiscoveryOptions, Probe, discover_selected},
 };
 use serde::Serialize;
 use serde_json::Value;
@@ -133,6 +133,7 @@ pub struct Connected {
 #[tauri::command]
 pub async fn discover_server(
     input: String,
+    options: Option<DiscoveryOptions>,
     state: tauri::State<'_, Connection>,
 ) -> Result<DiscoveryResult, String> {
     let revision = {
@@ -142,7 +143,7 @@ pub async fn discover_server(
         state.active = None;
         state.revision
     };
-    let discovery = tauri::async_runtime::spawn_blocking(move || discover(&input))
+    let discovery = tauri::async_runtime::spawn_blocking(move || discover_selected(&input, options.unwrap_or_default()))
         .await
         .map_err(|_| "Discovery did not complete")??;
     let (login, notices) = login_plan(&discovery);
@@ -396,7 +397,7 @@ fn same_origin(a: &str, b: &str) -> bool {
 }
 
 fn connect(plan: LoginPlan, credentials: Credentials) -> Result<(Connected, Active), String> {
-    let client = Client::without_redirects(credentials);
+    let client = Client::new(credentials);
     let mut connected = Connected::default();
     if let Some(address) = &plan.wordpress {
         match client.wordpress_user_document(address) {
@@ -426,6 +427,9 @@ fn connect(plan: LoginPlan, credentials: Credentials) -> Result<(Connected, Acti
             });
         match session {
             Ok((session, document)) => {
+                if let Some(reason) = session.empty_account_diagnostic() {
+                    connected.errors.push(format!("JMAP: {reason}"));
+                }
                 connected.jmap_document = Some(document);
                 connected.jmap = Some(
                     session
@@ -494,7 +498,7 @@ fn failure(service: &str, error: &Error) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use axismundi_jmap_core::discovery::{Jmap, WordPress};
+    use axismundi_jmap_core::discovery::{Jmap, WordPress, discover};
 
     #[test]
     #[ignore = "requires a local Axismundi instance and a temporary Application Password"]

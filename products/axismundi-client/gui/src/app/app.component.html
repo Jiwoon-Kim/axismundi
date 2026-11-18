@@ -10,8 +10,13 @@
       <mat-label>Server address</mat-label>
       <input matInput #address required [disabled]="!!loading()" placeholder="example.org" autocapitalize="none" spellcheck="false">
     </mat-form-field>
-    <button matButton="filled" type="submit" [disabled]="!!loading() || !native">Discover</button>
+    <button matButton="filled" type="submit" [disabled]="!!loading() || !native || (!probeWordpress() && !probeJmap() && !probeActivitypub())">Discover</button>
   </form>
+  <div class="discovery-options">
+    <mat-checkbox [checked]="probeWordpress()" (change)="probeWordpress.set($event.checked)" [disabled]="!!loading()">WordPress / Axismundi</mat-checkbox>
+    <mat-checkbox [checked]="probeJmap()" (change)="probeJmap.set($event.checked)" [disabled]="!!loading()">JMAP</mat-checkbox>
+    <mat-checkbox [checked]="probeActivitypub()" (change)="probeActivitypub.set($event.checked)" [disabled]="!!loading()">NodeInfo</mat-checkbox>
+  </div>
   @if (!native) { <p role="status">Open the Axismundi desktop app to connect.</p> }
   @if (error()) { <p class="error" role="alert">{{ error() }}</p> }
 

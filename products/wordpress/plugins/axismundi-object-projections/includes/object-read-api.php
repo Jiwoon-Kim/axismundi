@@ -17,6 +17,11 @@ function axismundi_op_load_registered_remote_source( array $object, array $ident
 
 /** Reuse the owning local projection and its existing public disclosure gate. */
 function axismundi_op_read_local_jsonld_source( $source, array $object, array $identity ) {
+	if ( $source instanceof Axismundi_OP_Local_Source ) {
+		return ! empty( $source->row['publicly_readable'] )
+			? array( 'document' => $source->row['document'] )
+			: new WP_Error( 'ax_op_object_read_not_found', 'The Object is not publicly readable.', array( 'status' => 404 ) );
+	}
 	$document = axismundi_op_transform_object( $source );
 	if ( is_wp_error( $document ) && in_array( $document->get_error_code(), array( 'ax_op_not_public', 'ax_op_no_transformer' ), true ) ) {
 		return new WP_Error( 'ax_op_object_read_not_found', 'The Object is not publicly readable.', array( 'status' => 404 ) );
@@ -24,133 +29,31 @@ function axismundi_op_read_local_jsonld_source( $source, array $object, array $i
 	return is_array( $document ) ? array( 'document' => $document ) : $document;
 }
 
-/** Machine-readable storage backlog. Only named members may enter structured fallback. */
-function axismundi_op_object_payload_fallbacks() : array {
-	return array(
-		'oneOf' => array( 'types' => array( 'Question' ), 'reason' => 'Question option rows are not structured in the remote cache.' ),
-		'anyOf' => array( 'types' => array( 'Question' ), 'reason' => 'Question option rows are not structured in the remote cache.' ),
-		'closed' => array( 'types' => array( 'Question' ), 'reason' => 'The remote cache has no Question closure column.' ),
-		'votersCount' => array( 'types' => array( 'Question' ), 'reason' => 'The remote cache has no observed voter-count column.' ),
-		'name' => array( 'types' => array(), 'reason' => 'The selected name column does not preserve authored scalar versus map presence.' ),
-		'summary' => array( 'types' => array(), 'reason' => 'The selected summary column does not preserve authored scalar versus map presence.' ),
-		'content' => array( 'types' => array(), 'reason' => 'The selected content column does not preserve authored scalar versus map presence.' ),
-		'nameMap' => array( 'types' => array(), 'reason' => 'The remote cache structures a selected name, not its language map.' ),
-		'summaryMap' => array( 'types' => array(), 'reason' => 'The remote cache structures a selected summary, not its language map.' ),
-		'contentMap' => array( 'types' => array(), 'reason' => 'The remote cache structures one content language, not the complete language map.' ),
-		'attachment' => array( 'types' => array(), 'reason' => 'Remote attachment descriptors have no structured source table.' ),
-		'image' => array( 'types' => array(), 'reason' => 'Remote representative images have no structured source table.' ),
-		'icon' => array( 'types' => array(), 'reason' => 'Remote icon descriptors have no structured source table.' ),
-		'to' => array( 'types' => array(), 'reason' => 'Observed addressing remains in the preserved payload.' ),
-		'cc' => array( 'types' => array(), 'reason' => 'Observed addressing remains in the preserved payload.' ),
-		'audience' => array( 'types' => array(), 'reason' => 'Observed addressing remains in the preserved payload.' ),
-	);
-}
 
-/** Normalize known fallback descriptor fields without interpreting unknown extensions. */
-function axismundi_op_clean_object_read_value( $value, int $depth = 0, bool $show_top_level_blind = false ) {
-	if ( $depth > 16 ) {
-		return null;
-	}
-	if ( ! is_array( $value ) ) {
-		return $value;
-	}
-	$out = array();
-	foreach ( $value as $key => $member ) {
-		if ( '@context' === $key || ( in_array( $key, array( 'bto', 'bcc' ), true ) && ! ( $show_top_level_blind && 0 === $depth ) ) ) {
-			continue;
-		}
-		if ( in_array( $key, array( 'content', 'summary' ), true ) && is_string( $member ) ) {
-			$out[ $key ] = axismundi_op_clean_html( $member );
-		} elseif ( 'name' === $key && is_string( $member ) ) {
-			$out[ $key ] = sanitize_text_field( wp_strip_all_tags( $member ) );
-		} elseif ( in_array( $key, array( 'id', 'href', 'url' ), true ) && is_string( $member ) ) {
-			$out[ $key ] = esc_url_raw( $member, array( 'http', 'https' ) );
-		} else {
-			$out[ $key ] = axismundi_op_clean_object_read_value( $member, $depth + 1 );
-		}
-	}
-	return $out;
-}
 
-/** Reassemble a remote observation from columns, relations, named fallbacks and opaque data. */
+/** Return the stored remote document, not a reconstruction from indexing columns. */
 function axismundi_op_read_remote_jsonld_source( Axismundi_Op_Remote_Source $source, array $object, array $identity ) : array {
 	$row = $source->get_row();
-	$payload = (array) ( $row['payload'] ?? array() );
-	$uri = (string) $row['object_uri'];
-	$document = array( 'id' => $uri, 'type' => (string) $row['object_type'] );
-	$columns = array( 'attributedTo' => 'attributed_to_uri', 'inReplyTo' => 'in_reply_to_uri', 'url' => 'human_url', 'mediaType' => 'media_type' );
-	foreach ( $columns as $term => $column ) {
-		if ( null !== ( $row[ $column ] ?? null ) && '' !== $row[ $column ] ) {
-			$document[ $term ] = $row[ $column ];
-		}
-	}
-	foreach ( array( 'published' => 'published_at', 'updated' => 'remote_updated_at' ) as $term => $column ) {
-		if ( ! empty( $row[ $column ] ) ) {
-			$document[ $term ] = gmdate( 'c', strtotime( $row[ $column ] . ' UTC' ) );
-		}
-	}
-	if ( null !== ( $row['is_sensitive'] ?? null ) ) {
-		$document['sensitive'] = (bool) $row['is_sensitive'];
-	}
-	$parents = axismundi_op_read_reply_parent_uris( $uri );
-	if ( $parents ) {
-		$first = $document['inReplyTo'] ?? null;
-		$parents = array_values( array_unique( array_merge( null === $first ? array() : array( $first ), $parents ) ) );
-		$document['inReplyTo'] = count( $parents ) === 1 ? $parents[0] : $parents;
-	}
-	$tags = array();
-	foreach ( axismundi_op_mentions_for_object( $uri ) as $mention ) {
-		$tag = array( 'type' => 'Mention', 'href' => $mention['uri'] );
-		if ( '' !== $mention['handle'] ) {
-			$tag['name'] = $mention['handle'];
-		}
-		$tags[] = $tag;
-	}
-	$opaque_tag_evidence = array();
-	foreach ( axismundi_op_tag_references( $uri ) as $reference ) {
-		$descriptor = json_decode( $reference['descriptor_json'], true );
-		if ( axismundi_op_is_hashtag_descriptor( $descriptor ) ) {
-			// A local discovery link never replaces the peer's identity evidence.
-			$known = array_fill_keys( array( 'id', 'name', 'href', 'type' ), true );
-			$tags[] = axismundi_op_clean_object_read_value( array_intersect_key( $descriptor, $known ) );
-			if ( array_diff_key( $descriptor, $known ) ) {
-				$opaque_tag_evidence[] = $descriptor;
-			}
-		}
-	}
-	if ( $tags ) {
-		$document['tag'] = $tags;
-	}
-	$quote = axismundi_op_quote_target_for_source( $uri );
-	if ( '' !== $quote ) {
-		$document['quote'] = $quote;
-	}
-	$used = array();
-	foreach ( axismundi_op_object_payload_fallbacks() as $term => $entry ) {
-		if ( ! array_key_exists( $term, $document ) && array_key_exists( $term, $payload ) && ( ! $entry['types'] || in_array( $document['type'], $entry['types'], true ) ) ) {
-			$document[ $term ] = axismundi_op_clean_object_read_value( $payload[ $term ] );
-			$used[ $term ] = $entry['reason'];
-		}
-	}
-	// A modeled member with no current value is not revived from an old payload.
-	$handled = array_merge( array_keys( $columns ), array_keys( $document ), array_keys( $used ), array( '@context', 'id', 'type', 'published', 'updated', 'sensitive', 'contentMap', 'inReplyTo', 'quote', 'quoteUrl', 'quoteUri', '_misskey_quote', 'bto', 'bcc' ) );
-	$extensions = array_diff_key( $payload, array_fill_keys( $handled, true ) );
-	// Unknown tag kinds remain data, alongside the side-table-derived structured tags.
-	$payload_tags = (array) ( $payload['tag'] ?? array() );
-	$payload_tags = array_is_list( $payload_tags ) ? $payload_tags : array( $payload_tags );
-	$unknown_tags = array_filter( $payload_tags, static fn( $tag ) : bool => ! axismundi_op_is_hashtag_descriptor( $tag ) && ( ! is_array( $tag ) || 'Mention' !== ( $tag['type'] ?? '' ) ) );
-	$unknown_tags = array_merge( $unknown_tags, $opaque_tag_evidence );
-	if ( $unknown_tags ) {
-		$extensions['tag'] = array_values( $unknown_tags );
-	}
-	$observation = array( 'kind' => 'remote-observation', 'source_uri' => $uri );
-	foreach ( array( 'fetched_at', 'last_success_at', 'remote_updated_at', 'payload_hash', 'etag', 'last_modified' ) as $key ) {
-		$observation[ $key ] = $row[ $key ] ?? null;
-	}
+	$payload = json_decode( (string) ( $row['payload_json'] ?? '' ) );
+	$document = $payload instanceof stdClass ? get_object_vars( $payload ) : null;
 	if ( 'tombstone' === ( $row['object_status'] ?? '' ) ) {
-		return array( 'document' => array( 'id' => $uri, 'type' => 'Tombstone' ), 'observation' => $observation );
+		$document = array( 'id' => $row['object_uri'], 'type' => 'Tombstone' );
 	}
-	return array( 'document' => $document, 'observation' => $observation, 'fallbacks' => $used, 'uninterpreted' => array( 'trusted' => false, 'context' => $payload['@context'] ?? null, 'members' => $extensions ) );
+	return array( 'document' => $document );
+}
+
+/** Disclosure filtering is independent of HTML rendering; preserve contexts and extensions. */
+function axismundi_op_read_document_addresses( array $document, bool $show_top_level_blind = false, int $depth = 0 ) : array {
+	foreach ( $document as $key => $value ) {
+		if ( in_array( $key, array( 'bto', 'bcc' ), true ) && ! ( 0 === $depth && $show_top_level_blind ) ) {
+			unset( $document[ $key ] );
+		} elseif ( '@context' !== $key && is_array( $value ) ) {
+			$document[ $key ] = axismundi_op_read_document_addresses( $value, false, $depth + 1 );
+		} elseif ( '@context' !== $key && $value instanceof stdClass ) {
+			$document[ $key ] = (object) axismundi_op_read_document_addresses( get_object_vars( $value ), false, $depth + 1 );
+		}
+	}
+	return $document;
 }
 
 /** Default JSON-LD type assembly; canonical context and HTML normalization are shared. */
@@ -225,31 +128,7 @@ function axismundi_op_read_object_jsonld( $id, string $requester = 'public', boo
 		if ( ! is_array( $document ) || ( $document['id'] ?? '' ) !== $identity['canonical_uri'] || ( $document['type'] ?? '' ) !== $object['as2_type'] ) {
 			return new WP_Error( 'ax_op_object_read_mismatch', 'The source contradicts its registry identity or type.', array( 'status' => 409 ) );
 		}
-		$assembly = axismundi_op_resolve_object_assembly( $object['as2_type'], 'jsonld' );
-		if ( is_wp_error( $assembly ) ) {
-			return $assembly;
-		}
-		$document = call_user_func( $assembly['jsonld'] ?? 'axismundi_op_assemble_read_jsonld', $document );
-		if ( is_wp_error( $document ) ) {
-			return $document;
-		}
-		if ( ! is_array( $document ) || ( $document['id'] ?? '' ) !== $identity['canonical_uri'] || ( $document['type'] ?? '' ) !== $object['as2_type'] ) {
-			return new WP_Error( 'ax_op_object_read_mismatch', 'The assembly changed the registered identity or type.', array( 'status' => 409 ) );
-		}
-		unset( $document['@context'], $document['bto'], $document['bcc'], $document['axObservation'], $document['axUninterpreted'], $document['axPayloadFallback'] );
-		$context = axismundi_op_jsonld_context( $document );
-		$context = is_array( $context ) ? $context : array( $context );
-		$context[] = array(
-			'axObservation' => array( '@id' => 'https://github.com/Jiwoon-Kim/axismundi/ns#observation', '@type' => '@json' ),
-			'axUninterpreted' => array( '@id' => 'https://github.com/Jiwoon-Kim/axismundi/ns#uninterpreted', '@type' => '@json' ),
-			'axPayloadFallback' => array( '@id' => 'https://github.com/Jiwoon-Kim/axismundi/ns#payloadFallback', '@type' => '@json' ),
-		);
-		foreach ( array( 'observation' => 'axObservation', 'uninterpreted' => 'axUninterpreted', 'fallbacks' => 'axPayloadFallback' ) as $field => $term ) {
-			if ( isset( $facts[ $field ] ) ) {
-				$document[ $term ] = $facts[ $field ];
-			}
-		}
-		return axismundi_op_order_object_members( array_merge( array( '@context' => $context ), $document ) );
+		return axismundi_op_read_document_addresses( $document );
 	} catch ( Throwable $error ) {
 		return new WP_Error( 'ax_op_object_read_failed', 'The Object reader failed.', array( 'status' => 500 ) );
 	}

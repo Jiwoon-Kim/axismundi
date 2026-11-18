@@ -1,5 +1,27 @@
 # Application Single Object Read
 
+## Current JSON contract, 2026-11-18
+
+The numeric ID is only the React/PWA routing index across Core posts/attachments,
+local objects and cached remote objects. Canonical URIs and HTML view routes do
+not move. The response remains one AS2 document, not an envelope or collection.
+
+Remote JSON is read from preserved `payload_json`, not reconstructed from index
+columns. Local object JSON uses its stored document; Core posts and attachments
+still use their source-owned AS2 projection. The reader does not sanitize HTML,
+replace the authored context, reorder remote members, or wrap extensions in
+`axUninterpreted`. It no longer emits synthetic `axObservation`,
+`axPayloadFallback`, or their context declarations.
+
+This JSON is untrusted input for clients. React/Angular text interpolation is not
+HTML rendering; a client that renders rich text must sanitize at that boundary.
+Server-rendered HTML retains its existing sanitizer. Existing visibility and
+blind-address disclosure checks remain; returning raw content does not grant
+permission to read it. Tombstones still withhold old bodies.
+
+The historical notes below describe the earlier reconstructed reader and are
+superseded where they conflict with this contract.
+
 ## Scope, 2026-10-30
 
 `/social/objects/{id}`는 기존 primary pane에서 단일 객체를 JSON 텍스트로 표시한다.

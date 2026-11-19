@@ -13,7 +13,7 @@ html {
       primary: mat.$azure-palette,
       tertiary: mat.$blue-palette,
     ),
-    typography: system-ui,
+    typography: 'Roboto Flex',
     density: 0,
   ));
 }

@@ -1,0 +1,34 @@
+Source: https://github.com/google/fonts/tree/main/ofl/robotoflex
+Original file: RobotoFlex-VariableFont_GRAD,XOPQ,XTRA,YOPQ,YTAS,YTDE,YTFI,YTLC,YTUC,opsz,slnt,wdth,wght.ttf
+Processing: pyftsubset → WOFF2 (format conversion only, no glyph subset)
+All variable axes preserved.
+Conversion date: 2026-05-13
+License: SIL Open Font License 1.1
+
+Registration in theme.json:
+One variable binary is registered as normal and oblique faces. The shared
+source is fetched once; normal preserves upright matching, while the oblique
+descriptor maps CSS oblique requests to slnt.
+
+The descriptor reads `oblique 0deg 10deg`, not `-10deg 0deg`: the fvar slnt
+axis runs -10 to 0, and `font-style: oblique <angle>` takes the angle with the
+sign flipped. Declared the other way round, every oblique request clamps back
+to upright and the font never slants through `font-style`.
+
+Neither face declares slnt in fontVariationSettings: that axis is what the
+fontStyle descriptor drives, and pinning it there would fix what a style
+request is meant to move. The custom axes stay, with the same values on both
+faces, so choosing a style does not also change the grade or the x-height. They
+hold the face's starting instance; an element or a block still overrides any of
+them, which is how a future axis control would edit them.
+
+Registering the oblique face takes nothing away. Measured with synthesis off:
+an element's own `font-variation-settings: "slnt"` still reaches the axis, and
+still wins over `font-style: oblique <angle>` when both are set on the same
+element. Without the oblique face that low-level path is the only one that
+works, since `font-style: oblique` then finds no face to match and leaves the
+text upright.
+
+Note that Safari does not support the font-variation-settings descriptor, so
+these are a starting point rather than a guarantee. They currently repeat the
+fvar defaults, which is why removing them changed nothing when it was tried.

@@ -14,6 +14,8 @@ cli/    a terminal front end over it, built as `axismundi`
 
 ## JMAP Mail Drafts
 
+GUI language support direction (not implemented): [i18n design](docs/DESIGN-I18N.md).
+
 Initial read-only CLI commands: `mailboxes`, `mail-inbox`, and `mail-read --id ID`,
 using the same Session/credential flags as `session`. `mail-inbox` returns a bounded
 window (at most 50 messages); `query.ids` defines the display order, not the order

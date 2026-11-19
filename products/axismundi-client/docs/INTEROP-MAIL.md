@@ -1,5 +1,35 @@
 # Mail Interoperability
 
+## 2026-11-19 두 계정의 로컬 Submission
+
+별도 User 역할의 `alice@example.org`를 기존 로컬 도메인에 추가했다.
+관리 계정 `admin@example.org`와 서로 다른 JMAP account에서 다음을 검증했다.
+
+- Identity/get으로 발신 identity를 얻고 Draft Email을 생성.
+- EmailSubmission/set으로 해당 로컬 상대에게 제출.
+- 상대 Inbox를 조회해 고유한 fixture 제목과 본문이 실제 도착했는지 확인.
+- 두 방향 모두 deliveryStatus의 delivered=yes 및 250 응답 확인.
+- 발신 Email은 Sent 역할 메일함으로 이동하고 $draft를 제거.
+
+서버 내부 계정 간 배달이므로 인터넷 MX·외부 SMTP 포트 공개가 필요하지 않았다.
+이 결과는 Stalwart의 로컬 배달·표준 JMAP Submission 왕복 검증이며,
+제품의 Mail 작성 UI·오프라인 발송 큐·범용 Submission 구현 완료를 뜻하지 않는다.
+
+명시적으로 실행하는 테스트:
+
+```powershell
+# Supply AXJ_SESSION_URL, AXJ_USER, AXJ_SECRET,
+# AXJ_ALICE_USER and AXJ_ALICE_SECRET in the current process.
+cargo test -p axismundi-jmap-core --test mail_submission_stalwart -- --ignored --nocapture
+```
+
+테스트는 loopback 및 동일 오리진 API를 요구하고 admin@example.org와 alice@example.org
+사이만 수신자로 지정한다. 기본 성공 경로에서는 생성한 Submission과 양쪽 Email ID만
+삭제한다. 실패·강제 종료 시 fixture가 남을 수 있으므로 무조건 재제출하지 않는다.
+`AXJ_KEEP_MAIL_FIXTURES=1`은 GUI 확인을 위해 성공한 fixture를 보존하는 명시적 옵션이다.
+최초 검증에서는 양방향 각 1건을 보존했다. 이는 제품의 자동 재시도 정책이 아니다.
+비밀번호·토큰은 문서나 코드에 저장하지 않는다.
+
 ## 2026-11-19 실서버 검증
 
 Stalwart `axismundi-jmap-interop`와 Caddy `axismundi-stalwart-https`를 실행하고,
@@ -22,8 +52,8 @@ $env:AXJ_SESSION_URL = 'https://localhost:18881/.well-known/jmap'
 # Supply AXJ_USER and AXJ_SECRET securely in the current process.
 cargo test -p axismundi-jmap-core --test mail_stalwart -- --ignored --nocapture
 cargo test -p axismundi-jmap-core --test contacts_stalwart -- --ignored --nocapture
-cargo run -p axj -- mailboxes --session-url $env:AXJ_SESSION_URL
-cargo run -p axj -- mail-inbox --session-url $env:AXJ_SESSION_URL
+cargo run -p axismundi -- mailboxes --session-url $env:AXJ_SESSION_URL
+cargo run -p axismundi -- mail-inbox --session-url $env:AXJ_SESSION_URL
 ```
 
 `mail_stalwart`는 명시적 opt-in 테스트이며 loopback Session과 동일 오리진 apiUrl만

@@ -41,6 +41,10 @@ properties and refresh the selected window; query removal is not Email destructi
 See [cache implementation](docs/IMPLEMENTATION-MAIL-CACHE.md) and the
 [full RFC 8621 method matrix](docs/MATRIX-JMAP-MAIL.md) for implemented/deferred scope.
 
+For future GUI E2E, [persistent Mail probes](docs/FIXTURE-MAIL-PROBE.md) provide a
+real four-message admin/Alice thread, an independent message, server Drafts and
+multiple-mailbox membership. This is not a completed Mail GUI or Thread view.
+
 Target contracts and remaining work: [spec](docs/SPEC-JMAP-CLIENT.md),
 [design and review questions](docs/DESIGN-JMAP-CLIENT.md), and
 [CLI / persistence / GUI plan](docs/PLAN-JMAP-MAIL.md).

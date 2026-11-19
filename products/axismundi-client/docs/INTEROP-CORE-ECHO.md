@@ -1,5 +1,8 @@
 # JMAP Core/echo interoperability
 
+2026-11-19: 현재 CLI 이름은 `axismundi`다. 아래 `axj`는 당시 검증한 실행 파일의
+역사적 이름이며, 현재 재실행할 때는 `axismundi`를 사용한다.
+
 On 2026-11-15, the Rust `axj` binary authenticated to Stalwart Server v1.1.0
 using the container's temporary bootstrap administrator and HTTP Basic.
 The server ran in a local Docker container with only port

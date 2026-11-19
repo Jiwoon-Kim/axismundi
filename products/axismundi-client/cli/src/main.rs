@@ -27,20 +27,20 @@ struct Options {
 
 fn usage() -> String {
     [
-        "axj - a JMAP probe that learns everything from the Session resource",
+        "axismundi - a JMAP probe that learns everything from the Session resource",
         "",
         "usage:",
-        "  axj discover  HOST_OR_URL [--jmap] [--wordpress] [--activitypub]  (anonymous)",
-        "  axj session   --session-url URL [--user NAME] [--secret SECRET]",
-        "  axj echo      --session-url URL [--user NAME] [--secret SECRET]",
-        "  axj mailboxes ... [--account ID] (read-only Mailbox/get)",
-        "  axj mail-inbox ... [--account ID] (first 50 or fewer messages)",
-        "  axj mail-read ... [--account ID] --id EMAIL_ID (body values on demand)",
-        "  axj todo      --session-url URL [--user NAME] [--secret SECRET] [--account ID]",
-        "  axj changes   ... [--account ID] [--since STATE]",
-        "  axj todo-set  ... [--account ID]  (loopback development server only)",
-        "  axj contacts  ... --db PATH --profile ID [--account ID] (sync and list)",
-        "  axj contacts-offline --db PATH --profile ID --account ID (no credentials/network)",
+        "  axismundi discover  HOST_OR_URL [--jmap] [--wordpress] [--activitypub]  (anonymous)",
+        "  axismundi session   --session-url URL [--user NAME] [--secret SECRET]",
+        "  axismundi echo      --session-url URL [--user NAME] [--secret SECRET]",
+        "  axismundi mailboxes ... [--account ID] (read-only Mailbox/get)",
+        "  axismundi mail-inbox ... [--account ID] (first 50 or fewer messages)",
+        "  axismundi mail-read ... [--account ID] --id EMAIL_ID (body values on demand)",
+        "  axismundi todo      --session-url URL [--user NAME] [--secret SECRET] [--account ID]",
+        "  axismundi changes   ... [--account ID] [--since STATE]",
+        "  axismundi todo-set  ... [--account ID]  (loopback development server only)",
+        "  axismundi contacts  ... --db PATH --profile ID [--account ID] (sync and list)",
+        "  axismundi contacts-offline --db PATH --profile ID --account ID (no credentials/network)",
         "",
         "Credentials may come from AXJ_USER and AXJ_SECRET instead of the flags, which",
         "keeps the secret out of the shell history and the process list.",
@@ -206,7 +206,7 @@ fn run() -> Result<bool, String> {
     let argv: Vec<String> = std::env::args().skip(1).collect();
     let (command, rest) = argv.split_first().ok_or_else(usage)?;
     if command == "discover" {
-        let (input, flags) = rest.split_first().ok_or("usage: axj discover HOST_OR_URL [--jmap] [--wordpress] [--activitypub]")?;
+        let (input, flags) = rest.split_first().ok_or("usage: axismundi discover HOST_OR_URL [--jmap] [--wordpress] [--activitypub]")?;
         if flags.iter().any(|f| !matches!(f.as_str(),"--jmap"|"--wordpress"|"--activitypub")) { return Err("unknown discovery option".into()); }
         let options=if flags.is_empty() {DiscoveryOptions::default()} else {DiscoveryOptions {
             wordpress:flags.iter().any(|f|f=="--wordpress"), jmap:flags.iter().any(|f|f=="--jmap"), activitypub:flags.iter().any(|f|f=="--activitypub") }};

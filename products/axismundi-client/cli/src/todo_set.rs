@@ -46,7 +46,7 @@ pub(crate) fn run(client: &Client, session: &Session, account: &str) -> Result<(
         client,
         session,
         account,
-        marker: format!("axj-probe-{}-{nonce}", std::process::id()),
+        marker: format!("axismundi-probe-{}-{nonce}", std::process::id()),
         list: None,
         todo: None,
     };

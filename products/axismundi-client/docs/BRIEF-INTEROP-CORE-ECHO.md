@@ -1,7 +1,7 @@
 # Brief — 독립 JMAP 서버에서 인증된 `Core/echo`
 
 목표는 한 문장이다. **"Axismundi 가 아닌 서버에서도 Session 발견과 JMAP Core 메서드 호출이
-동작한다"** 를 같은 `axj` 바이너리로 보인다.
+동작한다"** 를 같은 `axismundi` 바이너리로 보인다.
 
 이것이 증명하는 것과 증명하지 않는 것을 먼저 고정한다. 섞으면 주장이 무너진다.
 
@@ -29,7 +29,7 @@
 
 ## 작업
 
-### ① `axj echo` — 계정을 요구하지 않는다
+### ① `axismundi echo` — 계정을 요구하지 않는다
 
 `Core/echo` 는 `accountId` 를 받지 않는다. 지금 코드는 `todo`·`changes` 가 capability 로
 계정을 고르는데, **echo 는 그 경로를 타면 안 된다** — 계정이 없거나 Todo 를 광고하지 않는

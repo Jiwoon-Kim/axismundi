@@ -3,9 +3,13 @@
 A Rust client core with CLI and Tauri front ends for JMAP and ActivityPub,
 with optional WordPress integration. JMAP Contacts does not depend on WordPress.
 
+The CLI package and executable are named `axismundi` (formerly `axj`). Build/run
+with `cargo run -p axismundi -- ...`. Existing `AXJ_*` environment variables remain
+unchanged for compatibility with local credentials and interop scripts.
+
 ```txt
 core/   the protocol.  Session, the method batch, the error model
-cli/    a terminal front end over it, built as `axj`
+cli/    a terminal front end over it, built as `axismundi`
 ```
 
 ## JMAP Mail Drafts
@@ -39,15 +43,15 @@ because it would only ever work against the server it was written for.
 ## Running it
 
 ```bash
-axj discover http://localhost:8884
-axj discover https://localhost:18881 --jmap
-axj session --session-url http://localhost:8884/wp-json/axismundi/v1/users/me/session
-axj echo    --session-url http://localhost:8884/wp-json/axismundi/v1/users/me/session
-axj todo    --session-url http://localhost:8884/wp-json/axismundi/v1/users/me/session
-axj changes --session-url http://localhost:8884/wp-json/axismundi/v1/users/me/session [--since STATE]
-axj todo-set --session-url http://localhost:8884/wp-json/axismundi/v1/users/me/session [--account ID]
-axj contacts --session-url http://127.0.0.1:18880/jmap/session --db contacts.sqlite --profile local-stalwart
-axj contacts-offline --db contacts.sqlite --profile local-stalwart --account ACCOUNT_ID
+axismundi discover http://localhost:8884
+axismundi discover https://localhost:18881 --jmap
+axismundi session --session-url http://localhost:8884/wp-json/axismundi/v1/users/me/session
+axismundi echo    --session-url http://localhost:8884/wp-json/axismundi/v1/users/me/session
+axismundi todo    --session-url http://localhost:8884/wp-json/axismundi/v1/users/me/session
+axismundi changes --session-url http://localhost:8884/wp-json/axismundi/v1/users/me/session [--since STATE]
+axismundi todo-set --session-url http://localhost:8884/wp-json/axismundi/v1/users/me/session [--account ID]
+axismundi contacts --session-url http://127.0.0.1:18880/jmap/session --db contacts.sqlite --profile local-stalwart
+axismundi contacts-offline --db contacts.sqlite --profile local-stalwart --account ACCOUNT_ID
 ```
 
 `discover` sends no credentials. It checks WordPress REST, JMAP Session
@@ -72,7 +76,7 @@ server's authentication setting rather than an assumption of this client.
 
 ## What a run does and does not prove
 
-`axj echo` needs no account selection. It verifies exactly one response with
+`axismundi echo` needs no account selection. It verifies exactly one response with
 the same method name, call ID, and JSON arguments. See the
 [Stalwart Core smoke test](docs/INTEROP-CORE-ECHO.md) for the measured result.
 
@@ -145,7 +149,7 @@ CARGO_HOME        D:\rust\cargo
 CARGO_TARGET_DIR  D:\rust\target      ← so `target/` is NOT under this directory
 ```
 
-The binary is therefore at `D:\rust\target\debug\axj.exe`, not `./target/debug/`.
+The binary is therefore at `D:\rust\target\debug\axismundi.exe`, not `./target/debug/`.
 `CARGO_TARGET_DIR` is set in the user environment, so it applies to every Rust
 build on this machine, and a Tauri shell's dependency tree will land there too
 rather than filling the system drive.

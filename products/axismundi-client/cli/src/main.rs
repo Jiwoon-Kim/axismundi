@@ -23,6 +23,7 @@ struct Options {
     db: Option<String>,
     profile: Option<String>,
     id: Option<String>,
+    mailbox: Option<String>,
 }
 
 fn usage() -> String {
@@ -36,6 +37,8 @@ fn usage() -> String {
         "  axismundi mailboxes ... [--account ID] (read-only Mailbox/get)",
         "  axismundi mail-inbox ... [--account ID] (first 50 or fewer messages)",
         "  axismundi mail-read ... [--account ID] --id EMAIL_ID (body values on demand)",
+        "  axismundi mail-sync ... --db PATH --profile ID [--account ID] [--mailbox ID]",
+        "  axismundi mail-offline --db PATH --profile ID --account ID [--mailbox ID | --id EMAIL_ID]",
         "  axismundi todo      --session-url URL [--user NAME] [--secret SECRET] [--account ID]",
         "  axismundi changes   ... [--account ID] [--since STATE]",
         "  axismundi todo-set  ... [--account ID]  (loopback development server only)",
@@ -59,6 +62,7 @@ fn options(args: &[String]) -> Result<Options, String> {
     let mut db = None;
     let mut profile = None;
     let mut id = None;
+    let mut mailbox = None;
     let mut rest = args.iter();
     while let Some(flag) = rest.next() {
         let value = || {
@@ -76,6 +80,7 @@ fn options(args: &[String]) -> Result<Options, String> {
             "--db" => db = Some(value()?),
             "--profile" => profile = Some(value()?),
             "--id" => id = Some(value()?),
+            "--mailbox" => mailbox = Some(value()?),
             other => return Err(format!("unknown argument: {other}")),
         }
         if flag.starts_with("--") {
@@ -97,6 +102,7 @@ fn options(args: &[String]) -> Result<Options, String> {
         db,
         profile,
         id,
+        mailbox,
     })
 }
 
@@ -236,13 +242,15 @@ fn run() -> Result<bool, String> {
         });
         return Ok(true);
     }
-    if command == "contacts-offline" {
+    if matches!(command.as_str(), "contacts-offline" | "mail-offline") {
         let mut flags = std::collections::BTreeMap::new();
         if rest.len() % 2 != 0 {
             return Err("expected --db PATH --profile ID --account ID".into());
         }
         for pair in rest.chunks(2) {
-            if !matches!(pair[0].as_str(), "--db" | "--profile" | "--account")
+            if !(matches!(pair[0].as_str(), "--db" | "--profile" | "--account")
+                || (command == "mail-offline"
+                    && matches!(pair[0].as_str(), "--mailbox" | "--id")))
                 || flags.insert(pair[0].as_str(), pair[1].as_str()).is_some()
             {
                 return Err("invalid offline argument".into());
@@ -257,6 +265,21 @@ fn run() -> Result<bool, String> {
         let path = get("--db")?;
         if !std::path::Path::new(path).is_file() {
             return Err("offline cache does not exist".into());
+        }
+        if command == "mail-offline" {
+            if flags.contains_key("--id") && flags.contains_key("--mailbox") {
+                return Err("choose --id or --mailbox, not both".into());
+            }
+            let store = axismundi_jmap_core::mail::cache::Store::open(path, get("--profile")?)
+                .map_err(|e| e.to_string())?;
+            let account = get("--account")?;
+            let result = if let Some(id) = flags.get("--id") {
+                store.email(account, id)
+            } else {
+                store.view(account, flags.get("--mailbox").copied())
+            }.map_err(|e| e.to_string())?;
+            println!("{}", serde_json::to_string_pretty(&result).map_err(|e| e.to_string())?);
+            return Ok(true);
         }
         let store = axismundi_jmap_core::contacts::Store::open(path, get("--profile")?)
             .map_err(|e| e.to_string())?;
@@ -289,6 +312,21 @@ fn run() -> Result<bool, String> {
     let (session, session_document) = client
         .session_document(&options.session_url)
         .map_err(explain)?;
+    if command == "mail-sync" || (command == "mail-read" && options.db.is_some()) {
+        use axismundi_jmap_core::mail::{self, cache};
+        let account = mail::choose_account(&session, options.account.as_deref()).map_err(explain)?;
+        let path = options.db.as_deref().ok_or("--db is required")?;
+        let profile = options.profile.as_deref().ok_or("--profile is required")?;
+        let mut store = cache::Store::open(path, profile).map_err(|e| e.to_string())?;
+        let result = if command == "mail-sync" {
+            cache::sync(&client, &session, &mut store, &account, options.mailbox.as_deref())
+        } else {
+            cache::read(&client, &session, &mut store, &account,
+                options.id.as_deref().ok_or("--id is required")?)
+        }.map_err(|e| e.to_string())?;
+        println!("{}", serde_json::to_string_pretty(&result).map_err(|e| e.to_string())?);
+        return Ok(true);
+    }
     if matches!(command.as_str(), "mailboxes" | "mail-inbox" | "mail-read") {
         use axismundi_jmap_core::mail;
         let account = mail::choose_account(&session, options.account.as_deref()).map_err(explain)?;

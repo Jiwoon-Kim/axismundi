@@ -1,6 +1,39 @@
-//! Read-only Mail operations. No persistence or submission side effects.
+//! Read-only Mail operations and a partial local cache. Never submits messages.
 use crate::{Batch, CORE_CAPABILITY, Client, Error, Session};
 use serde_json::{Value, json};
+
+pub mod cache;
+
+const LIST_PROPERTIES: &[&str] = &[
+    "id",
+    "threadId",
+    "mailboxIds",
+    "keywords",
+    "size",
+    "receivedAt",
+    "from",
+    "subject",
+    "preview",
+    "hasAttachment",
+];
+const DETAIL_PROPERTIES: &[&str] = &[
+    "id",
+    "blobId",
+    "threadId",
+    "mailboxIds",
+    "keywords",
+    "subject",
+    "from",
+    "to",
+    "cc",
+    "receivedAt",
+    "sentAt",
+    "bodyStructure",
+    "textBody",
+    "htmlBody",
+    "attachments",
+    "bodyValues",
+];
 
 pub const CAPABILITY: &str = "urn:ietf:params:jmap:mail";
 
@@ -64,7 +97,11 @@ fn call(client: &Client, session: &Session, name: &str, args: Value) -> Result<B
 }
 
 fn arguments(batch: &Batch, name: &str, account: &str) -> Result<Value, Error> {
-    let value = &batch.response("mail", name)?.arguments;
+    arguments_for(batch, name, account, "mail")
+}
+
+fn arguments_for(batch: &Batch, name: &str, account: &str, call_id: &str) -> Result<Value, Error> {
+    let value = &batch.response(call_id, name)?.arguments;
     if value.get("accountId").and_then(Value::as_str) != Some(account) {
         return Err(Error::Shape("Mail response accountId mismatch".into()));
     }
@@ -93,9 +130,125 @@ pub fn read(client: &Client, session: &Session, account: &str, id: &str) -> Resu
         client,
         session,
         "Email/get",
-        json!({"accountId":account,"ids":[id],"properties":["id","blobId","threadId","mailboxIds","keywords","subject","from","to","cc","receivedAt","sentAt","bodyStructure","textBody","htmlBody","attachments","bodyValues"],"fetchTextBodyValues":true,"fetchHTMLBodyValues":true,"maxBodyValueBytes":65536}),
+        json!({"accountId":account,"ids":[id],"properties":DETAIL_PROPERTIES,"fetchTextBodyValues":true,"fetchHTMLBodyValues":true,"maxBodyValueBytes":65536}),
     )?;
-    arguments(&batch, "Email/get", account)
+    let result = arguments(&batch, "Email/get", account)?;
+    validate_get(&result, &[id.to_owned()])?;
+    Ok(result)
+}
+
+fn validate_get(result: &Value, ids: &[String]) -> Result<(), Error> {
+    use std::collections::BTreeSet;
+    let rows = result
+        .get("list")
+        .and_then(Value::as_array)
+        .ok_or_else(|| Error::Shape("Email/get has no list".into()))?;
+    let missing = result
+        .get("notFound")
+        .and_then(Value::as_array)
+        .ok_or_else(|| Error::Shape("Email/get has no notFound".into()))?;
+    let expected: BTreeSet<_> = ids.iter().map(String::as_str).collect();
+    let mut actual = BTreeSet::new();
+    for id in rows
+        .iter()
+        .map(|row| row.get("id"))
+        .chain(missing.iter().map(Some))
+    {
+        let id = id
+            .and_then(Value::as_str)
+            .ok_or_else(|| Error::Shape("invalid Email/get id".into()))?;
+        if !expected.contains(id) || !actual.insert(id) {
+            return Err(Error::Shape("unexpected or duplicate Email/get id".into()));
+        }
+    }
+    if actual != expected {
+        return Err(Error::Shape("incomplete Email/get response".into()));
+    }
+    Ok(())
+}
+
+fn query_args(account: &str, mailbox: &str, count: usize) -> Value {
+    json!({"accountId":account,"filter":{"inMailbox":mailbox},"sort":[{"property":"receivedAt","isAscending":false}],"collapseThreads":false,"position":0,"limit":count})
+}
+
+fn query_ids(query: &Value, count: usize) -> Result<Vec<String>, Error> {
+    let ids = query
+        .get("ids")
+        .and_then(Value::as_array)
+        .ok_or_else(|| Error::Shape("Email/query has no ids".into()))?;
+    let mut seen = std::collections::BTreeSet::new();
+    let result: Vec<String> = ids
+        .iter()
+        .map(|id| {
+            let id = id
+                .as_str()
+                .ok_or_else(|| Error::Shape("invalid query id".into()))?;
+            if !seen.insert(id) {
+                return Err(Error::Shape("duplicate query id".into()));
+            }
+            Ok(id.to_owned())
+        })
+        .collect::<Result<_, _>>()?;
+    if result.len() > count {
+        return Err(Error::Shape("query exceeds requested limit".into()));
+    }
+    Ok(result)
+}
+
+struct Window {
+    args: Value,
+    query: Value,
+    gets: Vec<Value>,
+}
+
+fn window(
+    client: &Client,
+    session: &Session,
+    account: &str,
+    mailbox: &str,
+) -> Result<Window, Error> {
+    let count = limit(session, "maxObjectsInGet")?.min(50);
+    let args = query_args(account, mailbox, count);
+    let referenced = json!({"accountId":account,"#ids":{"resultOf":"query","name":"Email/query","path":"/ids"},"properties":LIST_PROPERTIES});
+    let payload = json!({"using":[CORE_CAPABILITY,CAPABILITY],"methodCalls":[["Email/query",args,"query"],["Email/get",referenced,"get"]]});
+    if limit(session, "maxCallsInRequest")? >= 2
+        && payload.to_string().len() <= limit(session, "maxSizeRequest")?
+    {
+        let batch = client.request(
+            session,
+            &[CORE_CAPABILITY, CAPABILITY],
+            vec![
+                ("Email/query", args.clone(), "query"),
+                ("Email/get", referenced, "get"),
+            ],
+        )?;
+        let query = arguments_for(&batch, "Email/query", account, "query")?;
+        let ids = query_ids(&query, count)?;
+        let get = arguments_for(&batch, "Email/get", account, "get")?;
+        validate_get(&get, &ids)?;
+        return Ok(Window {
+            args,
+            query,
+            gets: vec![get],
+        });
+    }
+    // Splitting is safe here: collapseThreads=false bounds query IDs by maxObjectsInGet.
+    let batch = call(client, session, "Email/query", args.clone())?;
+    let query = arguments(&batch, "Email/query", account)?;
+    let ids = query_ids(&query, count)?;
+    let mut gets = Vec::new();
+    for chunk in ids.chunks(limit(session, "maxObjectsInGet")?) {
+        let batch = call(
+            client,
+            session,
+            "Email/get",
+            json!({"accountId":account,"ids":chunk,"properties":LIST_PROPERTIES}),
+        )?;
+        let get = arguments(&batch, "Email/get", account)?;
+        validate_get(&get, chunk)?;
+        gets.push(get);
+    }
+    Ok(Window { args, query, gets })
 }
 
 pub fn inbox(client: &Client, session: &Session, account: &str) -> Result<Value, Error> {
@@ -110,34 +263,11 @@ pub fn inbox(client: &Client, session: &Session, account: &str) -> Result<Value,
     let [mailbox] = ids.as_slice() else {
         return Err(Error::Shape("no unambiguous role=inbox mailbox".into()));
     };
-    let count = limit(session, "maxObjectsInGet")?.min(50);
-    let batch = call(
-        client,
-        session,
-        "Email/query",
-        json!({"accountId":account,"filter":{"inMailbox":mailbox},"sort":[{"property":"receivedAt","isAscending":false}],"collapseThreads":false,"position":0,"limit":count}),
-    )?;
-    let query = arguments(&batch, "Email/query", account)?;
-    let ids = query
-        .get("ids")
-        .and_then(Value::as_array)
-        .ok_or_else(|| Error::Shape("Email/query has no ids".into()))?;
-    if ids.len() > count || ids.iter().any(|id| !id.is_string()) {
-        return Err(Error::Shape(
-            "Email/query returned invalid or excessive ids".into(),
-        ));
-    }
+    let Window { query, gets, .. } = window(client, session, account, mailbox)?;
     let mut emails = Vec::new();
     let mut not_found = Vec::new();
     let mut get_states = Vec::new();
-    for chunk in ids.chunks(limit(session, "maxObjectsInGet")?) {
-        let batch = call(
-            client,
-            session,
-            "Email/get",
-            json!({"accountId":account,"ids":chunk,"properties":["id","threadId","mailboxIds","keywords","size","receivedAt","from","subject","preview","hasAttachment"]}),
-        )?;
-        let result = arguments(&batch, "Email/get", account)?;
+    for result in gets {
         get_states.push(result.get("state").cloned().unwrap_or(Value::Null));
         let rows = result
             .get("list")
@@ -194,6 +324,94 @@ mod tests {
         assert_eq!(choose_account(&session, None).unwrap(), "b");
         assert_eq!(limit(&session, "maxObjectsInGet").unwrap(), 2);
         assert!(limit(&session, "maxSizeRequest").is_err());
+    }
+
+    #[test]
+    fn incomplete_duplicate_and_unrequested_get_ids_are_rejected() {
+        let ids = vec!["1".to_owned(), "2".to_owned()];
+        assert!(validate_get(&json!({"list":[{"id":"1"}],"notFound":[]}), &ids).is_err());
+        assert!(
+            validate_get(
+                &json!({"list":[{"id":"1"},{"id":"1"}],"notFound":["2"]}),
+                &ids
+            )
+            .is_err()
+        );
+        assert!(validate_get(&json!({"list":[{"id":"3"}],"notFound":["2"]}), &ids).is_err());
+        assert!(validate_get(&json!({"list":[{"id":"1"}],"notFound":["2"]}), &ids).is_ok());
+        assert!(query_ids(&json!({"ids":["1","1"]}), 2).is_err());
+    }
+
+    #[test]
+    fn invalid_call_and_byte_limits_fail_before_network() {
+        let mut session: Session = serde_json::from_value(json!({"apiUrl":"http://127.0.0.1:1/never-contact","capabilities":{CORE_CAPABILITY:{"maxCallsInRequest":1,"maxSizeRequest":1}}})).unwrap();
+        let client = Client::new(crate::Credentials {
+            user: "u".into(),
+            secret: "test-only".into(),
+        });
+        assert!(matches!(
+            call(&client, &session, "Mailbox/get", json!({"accountId":"a"})),
+            Err(Error::Shape(_))
+        ));
+        session.capabilities.get_mut(CORE_CAPABILITY).unwrap()["maxCallsInRequest"] = json!(0);
+        assert!(matches!(
+            call(&client, &session, "Mailbox/get", json!({"accountId":"a"})),
+            Err(Error::Shape(_))
+        ));
+    }
+
+    #[test]
+    fn bounded_result_reference_matches_call_ids_not_response_positions() {
+        use std::{
+            io::{BufRead, BufReader, Read, Write},
+            net::TcpListener,
+            thread,
+            time::Duration,
+        };
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let api = format!("http://{}", listener.local_addr().unwrap());
+        let server = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            stream
+                .set_read_timeout(Some(Duration::from_secs(5)))
+                .unwrap();
+            let mut reader = BufReader::new(&mut stream);
+            let mut length = 0;
+            loop {
+                let mut line = String::new();
+                reader.read_line(&mut line).unwrap();
+                assert!(!line.is_empty());
+                if line == "\r\n" {
+                    break;
+                }
+                if let Some(v) = line.to_ascii_lowercase().strip_prefix("content-length:") {
+                    length = v.trim().parse().unwrap();
+                }
+            }
+            let mut bytes = vec![0; length];
+            reader.read_exact(&mut bytes).unwrap();
+            let request: Value = serde_json::from_slice(&bytes).unwrap();
+            assert_eq!(request["methodCalls"].as_array().unwrap().len(), 2);
+            assert_eq!(request["methodCalls"][0][1]["limit"], 2);
+            assert_eq!(
+                request["methodCalls"][1][1]["#ids"],
+                json!({"resultOf":"query","name":"Email/query","path":"/ids"})
+            );
+            let body=json!({"methodResponses":[
+                ["Email/get",{"accountId":"a","state":"g","list":[{"id":"1"},{"id":"2"}],"notFound":[]},"get"],
+                ["Email/query",{"accountId":"a","queryState":"q","position":0,"ids":["2","1"]},"query"]
+            ]}).to_string();
+            write!(stream,"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",body.len(),body).unwrap();
+        });
+        let session:Session=serde_json::from_value(json!({"apiUrl":api,"capabilities":{CORE_CAPABILITY:{"maxCallsInRequest":2,"maxObjectsInGet":2,"maxSizeRequest":10000}}})).unwrap();
+        let client = Client::new(crate::Credentials {
+            user: "u".into(),
+            secret: "test-only".into(),
+        });
+        let Window { query, gets, .. } = window(&client, &session, "a", "in").unwrap();
+        assert_eq!(query["ids"], json!(["2", "1"]));
+        assert_eq!(gets.len(), 1);
+        server.join().unwrap();
     }
 
     #[test]

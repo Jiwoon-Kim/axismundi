@@ -13,6 +13,11 @@ DB 설계도 CLI 전에 검토한다. 프로토콜이 같다는 이유로 저장
 뜻인지는 아직 확정하지 않았다. 전역 파일을 선택한다면 모든 데이터·관계·쿼리·체크포인트·
 작업 키와 복합 외래 키에 profile 범위가 필요하다. 이 결정 전 물리 마이그레이션은 하지 않는다.
 
+2026-11-19 구현: 기존 프로필당 파일에 Mail 테이블만 가산하는 방식으로 시작했다.
+전역 파일로 이관하거나 Contacts 데이터를 옮기지 않는다. 세 도메인 테이블과 별도 query/
+checkpoint 보조 구조의 실제 계약은 [캐시 구현 기록](IMPLEMENTATION-MAIL-CACHE.md),
+Thread·Identity·Submission·Draft를 포함한 전체 범위는 [대응표](MATRIX-JMAP-MAIL.md)에 있다.
+
 ## 2. 식별과 접근
 
 현재 Contacts는 profile ID를 API URL·로그인명에 바인딩한다. 오사용 방지이지 범용 영구 사용자

@@ -78,11 +78,15 @@ RFC 5321은 SMTP 전송 규약이지 원문 형식이 아니다.
 
 현재 Core에 Session/batch/오류/SetOutcome·네트워크 검사가 있고 Contacts에 별도 SQLite·
 Stalwart E2E가 있다. Mail 읽기 CLI는 메일함·제한된 받은편지함·요청 시 본문을 조회한다.
-`Batch::response`는 call ID와 응답명으로 대응한다. 제품 Mail DB·delta·작성·발송 UI는 아직 없다.
-result reference는 JSON으로 전송할 수 있지만 Mail의 해당 워크플로는 아직 검증하지 않았다.
+`Batch::response`는 call ID와 응답명으로 대응한다. Mail 전용 부분 캐시·오프라인 조회·
+Email changes와 query 창 재조회가 구현됐다. 제한된 query/get result reference도 검증한다.
+Mailbox delta·queryChanges·Thread·제품 작성/발송·GUI는 아직 후속이다.
 별도 실서버 테스트에서는 두 로컬 계정의 EmailSubmission 송수신도 검증했다. 이는 제품
 발송 기능의 구현이 아니다. 근거: [Mail](INTEROP-MAIL.md),
 [Contacts](INTEROP-CONTACTS.md), [Core](INTEROP-CORE-ECHO.md).
+
+전체 메서드별 책임과 남은 범위는 [대응표](MATRIX-JMAP-MAIL.md),
+Mail DB의 실제 저장·실패 계약은 [캐시 구현 기록](IMPLEMENTATION-MAIL-CACHE.md)을 따른다.
 
 첫 범위에서 제외: SMTP/IMAP 클라이언트, WordPress Mail, 실제 외부 발송, OAuth 공급자 통합,
 Calendar 반복 전개, 범용 persons 원장, AP 델타 규약, push, 전체 offline replica, 발송 UI,

@@ -21,7 +21,25 @@ using the same Session/credential flags as `session`. `mail-inbox` returns a bou
 window (at most 50 messages); `query.ids` defines the display order, not the order
 of the `emails` array. `mail-read` fetches body values on demand with a 64 KiB
 per-value limit; inspect truncation flags before treating a body as complete.
-These commands do not modify server data or create a Mail database.
+These read commands do not modify server data. Without `--db`, they do not create
+a Mail database.
+
+Mail persistence commands use a profile-isolated SQLite file (which can also hold
+Contacts tables):
+
+```bash
+axismundi mail-sync --session-url SESSION_URL --db profile.sqlite --profile PROFILE_ID
+axismundi mail-read --session-url SESSION_URL --db profile.sqlite --profile PROFILE_ID --id EMAIL_ID
+axismundi mail-offline --db profile.sqlite --profile PROFILE_ID --account ACCOUNT_ID
+axismundi mail-offline --db profile.sqlite --profile PROFILE_ID --account ACCOUNT_ID --id EMAIL_ID
+```
+
+Use `--mailbox ID` with sync/offline for another mailbox. This is a bounded partial
+cache, not a complete offline replica. Read `coverage`, `staleProperties` and
+`queryStale`; retained body values can be stale. Server changes invalidate cached
+properties and refresh the selected window; query removal is not Email destruction.
+See [cache implementation](docs/IMPLEMENTATION-MAIL-CACHE.md) and the
+[full RFC 8621 method matrix](docs/MATRIX-JMAP-MAIL.md) for implemented/deferred scope.
 
 Target contracts and remaining work: [spec](docs/SPEC-JMAP-CLIENT.md),
 [design and review questions](docs/DESIGN-JMAP-CLIENT.md), and

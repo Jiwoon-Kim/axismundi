@@ -16,28 +16,25 @@ Angular Material을 이용한 본격적인 탐색·계정 전환·작성 화면 
 
 ## 2026-11-19 착수 기록
 
-후속 [Mail 실서버 검증](INTEROP-MAIL.md)에서 Stalwart를 기동해 비어 있지 않은 목록·
-본문·notFound·fixture 삭제와 Contacts 회귀까지 통과했다. 아래 중지 상태 기록은
-첫 착수 시점의 관찰이다. result reference 등 M1의 남은 검증까지 완료한 것은 아니다.
-
 사용자가 별도 Opus 검토 없이 진행을 승인했다. 아래 검토 질문은 미결 판단 기록으로
 유지하되 구현 착수를 막는 외부 승인 조건으로 취급하지 않는다.
 
-첫 읽기 CLI `mailboxes` · `mail-inbox` · `mail-read --id ID`를 추가했다.
-Core에 callId+응답명 대응 검증을 추가했고, Mail은 capability/account 선택,
-광고된 요청 크기·호출 수·get 개수 상한을 확인한다. 목록은 최대 50개이며
-Thread collapse와 result reference는 아직 사용하지 않는다. query 순서는 `query.ids`,
-각 get의 state는 `getStates`로 별도 보존한다. 본문은 요청 시에만 제한 크기로 조회한다.
+| 단계 | 현재 결과 | 남은 범위 |
+|---|---|---|
+| M0 | 프로필 격리 유지·Mail 가산 스키마·coverage/dirty 표현 기록 | 전역 파일·출하 암호화는 미결 |
+| M1 | 제한된 읽기·result reference/분할·응답 대응·실서버 왕복 | Thread 전개는 후속 |
+| M2 | Mail 전용 테이블·오프라인·부분 병합·Contacts 보존 검증 | 임의 필터·희소 다중 페이지·Blob 캐시 확장 |
+| M3 | Email changes·dirty/checkpoint·창 재조회·만료 복구 | Mailbox delta·queryChanges·큰 backlog 우선순위 |
+| M4 | 아직 미구현 | 본격 UI는 Mail/Contacts/AP 대표 흐름 이후 |
+| M5 | Submission의 양방향 로컬 테스트만 존재 | 제품 작성·Draft·Identity·Blob·발송 등 |
 
-`cargo test --workspace`: Core 26개·CLI 1개 통과, 기존 Contacts 실서버 테스트 1개 ignored.
-이 중 Mail 테스트는 3개이며 계정 선택·응답 대응·낮은 상한의 HTTP 왕복을 다룬다.
-현재 Stalwart 컨테이너는 중지 상태라 Mail 실서버 상호운용성은 미검증이다.
-따라서 M1 완료를 선언하지 않는다. result reference·추가 실패 경로·비어 있지 않은
-Stalwart fixture 검증은 남아 있다. Contacts DB·Mail DB·GUI·쓰기 경로는 변경하지 않았다.
+명령은 `mailboxes`, `mail-inbox`, `mail-read`, `mail-sync`, `mail-offline`이다.
+근거는 [Mail 왕복](INTEROP-MAIL.md)·[캐시 구현](IMPLEMENTATION-MAIL-CACHE.md)이며,
+RFC 8621 전체 메서드의 소유 영역·지원 상태는 [대응표](MATRIX-JMAP-MAIL.md)를 따른다.
+이하 단계별 항목은 전체 완료 기준이다. 위 첫 구현 결과로 모든 항목의 완료를 주장하지 않는다.
 
-2026-11-19. **계획만 기록한다. 아래 Mail 명령·테스트는 아직 없다.**
 [Spec](SPEC-JMAP-CLIENT.md) → [설계·검토 질문](DESIGN-JMAP-CLIENT.md)을 먼저 읽는다.
-목표는 검토 한 번으로 시작 경계와 완료 기준을 정하는 것이지 또 다른 광범위한 인계가 아니다.
+Opus 없이도 아래 구현 순서와 검증을 이어간다. 검토를 기다리며 진행 승인을 다시 묻지 않는다.
 
 ## 현재 근거와 범위
 
@@ -61,8 +58,8 @@ WordPress Session 조립 점검은 별도 제한된 감사이며 Stalwart 클라
 
 ## M1. CLI 프로토콜 증명 — Mail DB 없이
 
-얇은 CLI 동작 후보는 Mailbox 목록, 제한된 Mailbox/query 창, Email 하나 읽기다.
-실제 명령 이름은 구현 때 정한다. HTTP·프로토콜·동기화 로직은 Rust Core/Mail에 둔다.
+첫 CLI 동작은 Mailbox 목록, 제한된 Email/query 창, Email 하나 읽기다.
+HTTP·프로토콜·동기화 로직은 Rust Core/Mail에 둔다.
 
 | 단계 | 양성 검사 | 실패·경계 검사 |
 |---|---|---|
@@ -76,8 +73,8 @@ WordPress Session 조립 점검은 별도 제한된 감사이며 Stalwart 클라
 추가한다. 선택한 조건·정렬·projection·call ID를 관찰 가능하게 하되 비밀·개인 본문을 로그에 남기지 않는다.
 
 완료: **비어 있지 않은 결정적 메시지**로 Stalwart 읽기 왕복을 증명한다. 빈 Inbox 성공만으로
-닫지 않는다. 테스트용 upload + Email/import로 합성 MIME을 넣는 안을 먼저 RFC·서버에서
-검증한다. 실제 SMTP 수신·외부 계정·공개 메일 도메인은 필요 없으며 외부 발송은 하지 않는다.
+닫지 않는다. 현재 합성 fixture는 Email/set으로 넣고, 별도 두 계정 테스트에서 로컬 Submission을
+검증했다. upload + Email/import 원문 경로는 후속이다. 실제 외부 SMTP 배달은 하지 않는다.
 
 ## M2. SQLite Mail 영속화
 

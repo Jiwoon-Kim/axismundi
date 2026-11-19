@@ -1,5 +1,9 @@
 # Design — 연결과 기능 발견
 
+2026-11-19 정정. 이 문서는 현재 연결 계약이며, 2026-11-17 실측은 역사로 구분한다.
+구체적 동작·검증 명령은 [네트워크 구현](IMPLEMENTATION-NETWORK-TRUST.md),
+저장 소유 경계는 [JMAP 설계](DESIGN-JMAP-CLIENT.md)를 함께 따른다.
+
 클라이언트가 **어느 서버에, 어떻게 붙고, 무엇이 켜지는지**를 정하는 한 장. 화면 설계가
 아니라 그 앞의 경계다.
 
@@ -12,7 +16,7 @@
 ## 세 레인
 
 ```txt
-A 연결    (host, credential).  그 호스트에게 인증한다
+A 연결    (인증 프로필, 승인된 서비스 endpoint, credential).  승인된 오리진에 인증한다
          WordPress REST · JMAP · (나중에) OGC API
 B 위임    (actor, home server).  **임의의 호스트를 향해** "내가 그 Actor다" 를 증명한다
          AP signed fetch.  **개인키는 홈 서버에 남는다.  클라이언트가 들지 않는다**
@@ -23,9 +27,9 @@ A 와 B 가 다른 종류인 이유: JMAP 자격증명은 *그 호스트에게* 
 *상대가 누구든* 같은 주장을 한다. 그래서 "Mastodon 의 팔로워 전용 글" 은 세 번째 자격증명이
 아니라 **A(우리 사이트 연결) + 위임 파라미터(어느 Actor로)** 의 조합이다.
 
-## 연결은 프로토콜당이 아니라 **호스트당**이다
+## 연결 경계는 인증 프로필이며 호스트는 발견 입력이다
 
-실측(2026-11-17, Application Password 하나):
+과거 실측(2026-11-17, Application Password 하나; 아래 경로는 당시 기록):
 
 ```txt
 GET /wp-json/wp/v2/users/me                              200
@@ -34,12 +38,15 @@ GET /wp-json/axismundi/activitystreams/local-objects/types  200
 GET /.well-known/jmap                                    302 → 위 Session URL
 ```
 
-그러니 로그인은 프로토콜마다 하나가 아니라 **호스트마다 하나**이고, 그 호스트에서 쓸 수 있는
-프로토콜은 **발견의 결과**다.
+하나의 인증 프로필이 여러 서비스에 접근할 수 있다는 증거이지 호스트당 사용자나 캐시가
+하나라는 뜻은 아니다. 같은 도메인의 복수 로그인·다른 인증 주체는 별도 프로필로 격리한다.
+서비스 endpoint, 인증 주체, JMAP Account, AP Actor, WP User를 동일시하지 않는다.
 
 ```txt
-Connection = (host, credential, scheme)
-             그 위에서 가능한 것은 접속 뒤에 발견한다
+발견 입력        호스트 또는 URL
+인증 프로필      지속적인 로컬 격리 경계. Session 스냅샷이나 원격 account ID가 아님
+서비스 연결      승인된 endpoint·인증 방식과 접근 정보
+Session/Account  서버에서 관측한 정보. 프로필별 캐시와 접근 범위로 취급
 ```
 
 **단, 같은 호스트라면 비밀을 공유해도 된다는 규칙이 아니다.** Axismundi 가 하나의 Application
@@ -62,9 +69,9 @@ Password 를 여러 API 에서 받는 것은 **그 서버가 지원하는 연결
              로그인 사용자명으로 둘을 추정하지 않는다
 ```
 
-### ②가 ③보다 앞서는 것은 **기계적 강제**다
+### 익명 발견과 인증된 Session 읽기는 다른 경로다
 
-선호가 아니다. 측정(2026-11-17):
+과거 측정(2026-11-17, 당시 기본 에이전트; 현재 정책의 금지 근거로 사용하지 않음):
 
 ```txt
 ureq 기본값   RedirectAuthHeaders::Never
@@ -73,17 +80,16 @@ ureq 기본값   RedirectAuthHeaders::Never
 해석된 Session URL 에서 시작          → **200**
 ```
 
-`.well-known/jmap` **에** 인증할 수가 없다. 먼저 인증 없이 해석하고, **해석된 URL 에**
-인증한다. 그리고 이 기본값은 **지켜야 할 자산**이다 — 발견이 다른 오리진으로 튀어도
-자격증명이 따라가지 않는다. 바꾸지 않는다.
-
-우리 서버가 미인증 발견에 302 를 주고 그 뒤 403 이 나오는 것은 정상이다. 결함이 아니다.
+현재는 인증된 well-known URL에서도 시작할 수 있다. 자동 리다이렉트는 끄고 GET의
+각 Location을 직접 확인해 같은 오리진일 때만 인증을 유지한다. 다른 호스트·포트·스킴,
+다운그레이드·URL 내 자격증명 등은 거부한다. POST 리다이렉트는 따라가지 않는다.
+SameHost 옵션은 동일 오리진 검사 대신 사용할 수 없다. 플랫폼 인증서 검증을 유지한다.
 
 #### 구현 세부
 
-리다이렉트를 자동으로 따라가면 중간의 `Location` 을 잃는다. 발견 단계에서는
-**`max_redirects(0)` 로 두고 `Location` 을 직접 읽거나** `save_redirect_history` 를 켠다.
-그래야 "사용자가 승인할 최종 오리진" 을 ③에서 보여줄 수 있다.
+익명 발견에서도 자동 추적 대신 Location을 직접 검사하며 비밀은 보내지 않는다.
+GUI는 발견한 주소를 사용자에게 보여 주고 승인된 plan과 실제 API 오리진을 검증한다.
+인증 GET 추적과 익명 발견의 세부 차이는 네트워크 구현 기록에 있다.
 
 ```txt
 입력이 기억할 것 둘
@@ -95,15 +101,17 @@ ureq 기본값   RedirectAuthHeaders::Never
 ## 탐침 셋 — 다른 질문, 다른 층
 
 "이 도메인이 WordPress 인가 · AP 를 하는가 · JMAP 을 하는가" 는 **서로 다른 세 질문**이고
-표준도 셋이다. 우리 서버에서 실측(2026-11-17):
+표준도 셋이다. 현재는 선택한 서비스만 탐색한다. CLI 옵션이 없으면 기존 전체 탐침을
+유지하고 GUI 기본 선택은 JMAP이다. 아래는 현재 발견 방식이며 응답의 존재를 보장하지 않는다.
 
 ```txt
-① WordPress?    GET /wp-json/
-                → 200.  name="Axismundi Workspace", namespaces 16개
+① WordPress?    홈페이지의 https://api.w.org/ REST 링크를 따라간다
+                → 광고된 REST 인덱스의 name·namespaces
+                링크가 없으면 /wp-json/을 추측해 요청하지 않는다
                 답하는 것: 어떤 **표면**이 있는가
 
 ② JMAP?         GET /.well-known/jmap          (RFC 8620 §2.2)
-                → 302 → /wp-json/axismundi/jmap/session
+                → 리다이렉트를 검사해 광고된 Session 주소를 해석
                 답하는 것: JMAP 이 있는가 + **Session 이 어디인가**
                 그 뒤 Session 의 accountCapabilities 가 **이 계정**이 무엇을 쓸 수 있는지 답한다
 
@@ -134,22 +142,23 @@ JMAP Session      **계정 단위** accountCapabilities
 NodeInfo          **서버 단위** protocols
 ```
 
-세 탐침 중 **둘은 "이 사용자가 무엇을 할 수 있는가" 에 닿고, NodeInfo 는 서버까지만** 닿는다.
-"내가 이 Actor 로 outbox 에 제출할 수 있는가" 를 답하는 것이 **없다**.
+NodeInfo와 REST 인덱스만으로 사용자의 Actor 권한을 알 수는 없다. 현재 Axismundi의
+인증된 AP Session이 행위 가능한 Actor id 목록을 공급한다. 이것은 일반 AP 서버가
+동일 endpoint를 제공한다는 뜻은 아니다.
 
 ```txt
 AP 에 있는 것     NodeInfo (서버 수준, 그나마 W3C 가 아니라 fediverse 관행)
                  WebFinger (Actor 해석)
-AP 에 없는 것     accountCapabilities 에 해당하는 것
+우리 AP Session   자격증명으로 행위할 수 있는 Actor id 참조. 문서 상세와 분리
 ```
 
-그래서 Session Pre-FEP 의 근거가 "있으면 좋겠다" 가 아니라 **"탐침 셋 중 둘은 답하는데 하나만
-못 답한다"** 가 된다. 돌아가는 클라이언트가 못 하는 일이다.
+AP Session의 참조 id를 익명 AS2 GET하고, outbox는 그 Actor 문서에서 얻는다.
+name·type·outboxSubmitUrl 사본을 Session 필수 항목으로 복원하지 않는다.
 
 ## 라우트 존재는 권한이 아니다
 
-위 탐침표가 "무엇이 있는가" 를 답한다. **"내가 그것을 쓸 수 있는가" 는 다른 질문이고**, AP
-에서만 답이 없다.
+위 탐침표가 "무엇이 있는가" 를 답한다. **"내가 그것을 쓸 수 있는가" 는 다른 질문**이다.
+우리 AP Session과 계정별 권한 응답을 확인한다. NodeInfo만으로 권한을 추론하지 않는다.
 
 Actor 의 `outbox` 가 보인다고 해서 (a) 거기에 무슨 자격증명으로 POST 할 수 있는지, (b)
 로그인한 사용자가 그 Actor 로 행위할 수 있는지를 알 수 없다. outbox 는 **컬렉션 주소**다
@@ -165,12 +174,11 @@ Actor 의 `outbox` 가 보인다고 해서 (a) 거기에 무슨 자격증명으�
 OGC API 는 나중에 더해질 때 **OpenAPI 문서가 security scheme 을 선언**하므로 그쪽은 자동
 발견이 된다. 레인 A 라 이 모델을 바꾸지 않는다.
 
-### 발견 결과는 **세 상태**다 — 둘로 뭉개지 않는다
+### 발견 결과와 인증 후 접근 정보를 구분한다
 
 ```txt
-JMAP 미지원            그 호스트에 JMAP 이 없다
-로그인 필요             JMAP 은 있는데 미인증이다
-**인증됨, Account 없음**  인증은 성공했고 **정체성이 아직 없다**
+발견             found / login_required / not_found / unexpected / failed / not_requested
+인증 후 빈 계정    정상 접근 범위일 수 있음. 빈 목록만으로 인증 실패/성공을 증명하지 않음
 ```
 
 셋째가 실재한다. 실측(2026-11-17): Actor 가 없는 WordPress 사용자는 Session 을 받되
@@ -184,9 +192,9 @@ accounts: 0        primaryAccounts: {}        오류가 아니다
 사용자는 비밀번호를 다시 친다.
 
 ```txt
-안내   "Actor 를 만들어야 JMAP·AP 기능이 켜집니다" + **어디서 만드는지**(관리 화면)
-금지   클라이언트가 대신 Actor 를 만드는 것.  정체성 발급은 Actors 의 결정이고
-      클라이언트가 끌어낼 일이 아니다 — 공유 기능에 건 것과 같은 선이다
+안내   서버 응답의 사실과 인증 여부의 불확실성을 구분한다
+       Actor가 없는 Axismundi 사용자라는 사실을 확인한 경우에만 해당 활성화 안내를 한다
+금지   빈 Stalwart 계정에도 Actor 생성을 요구하거나 클라이언트가 임의로 정체성을 발급함
 ```
 
 그래서 WordPress 인증까지는 Actor 없이 끝나고(`wp/v2` 는 바로 열린다), 나머지는 "기능이
@@ -211,11 +219,11 @@ Axismundi         wp/v2 · JMAP · AS2 가 켜진다 (자격증명 하나로, �
 ## 비밀의 위치와 IPC 표면
 
 ```txt
-보관        OS 키체인.  웹뷰에도, 평문 설정 파일에도 두지 않는다
-GUI 가 보는 것  **연결 id 와 라벨뿐.**  비밀은 Rust 밖으로 나가지 않는다
-            (코어의 Credentials 가 Debug 에서 비밀을 가리고, 그 테스트가 있다)
-scheme      Basic · Bearer · cookie+nonce · API key 를 **열거형**으로.
-            "전역 인증 모드" 하나로 두지 않는다
+입력·전달   GUI에서 입력한 비밀번호를 이름 붙은 connect IPC로 Rust에 전달하고 입력란을 비움
+세션 보관   현재 Rust managed Connection의 메모리. 응답으로 비밀을 웹뷰에 돌려주지 않음
+영구 보관   현재 미구현. OS 키체인·재연결 정책은 후속 설계이며 GUI 착수 조건이 아님
+로그        Credentials Debug 비밀 가림 테스트가 있음. 평문 파일·DB에 비밀을 저장하지 않음
+인증 방식   현재 Basic. Bearer·cookie+nonce·API key 확장은 미구현이며 전역 모드로 추론하지 않음
 ```
 
 ```txt
@@ -226,15 +234,24 @@ invoke 에 열지 않는 것  URL·헤더를 받는 **범용 요청**.  자격�
                      인증 연결의 쿠키나 헤더를 재사용하지 않는다
 ```
 
-코어에 이미 있는 가드(`apiUrl` 에 박힌 자격증명 거부, HTTPS→HTTP 다운그레이드 거부)는
-**IPC 에서 우회되면 무의미하다.** IPC 가 URL 을 받지 않는 것이 그 가드를 지키는 방법이다.
+URI를 받는 이름 붙은 익명 Actor/Object 읽기와 URL·헤더를 받아 인증하는 범용 프록시는
+다르다. API 오리진 승인과 익명/인증 읽기 구분을 IPC에서도 유지한다.
 
 ## 다음
 
 ```txt
-먼저   Todo/set — 항목 수준 오류와 ifInState.  코어의 마지막 구조적 공백
-그다음  이 문서를 화면으로 — 서버 연결 → 발견 결과 → 계정·Actor
+현재   발견·연결 GUI, 공개 Actor/Object GET, Contacts 캐시와 실서버 검증, Mail 읽기 CLI
+다음   Mail 계획의 남은 읽기 검증·DB·동기화. 모든 Core 기능이 완성됐다는 뜻은 아님
 나중   레인 B 의 선행 작업: "이 Actor 의 키로 이 URI 를 서명 GET" 하는 **우리 쪽 엔드포인트**.
       Mastodon 이 그 요청을 존중한다는 것은 소스로 확인했고, 우리 엔드포인트는 **없다**
 보류   OGC API.  레인 A 라 나중에 더해도 이 모델이 바뀌지 않는다.  제품 역할이 미정이다
 ```
+
+### 미결: 범용 AP 승인과 작업공간 진입
+
+현재 GUI는 문서에서 읽은 outbox도 우리 REST actors/{uuid}/outbox 형태만 승인하고,
+첫 페이지는 page=1로 요청한다. 범용 AP endpoint 승인과 Collection first/next 처리는
+별도 설계가 필요하다. 기존 자격증명 보호 검사를 임의로 없애지 않는다.
+현재 연결은 WP/JMAP/AP 중 하나라도 결과가 있으면 유지한다. AP 중심이라는 과거 설명과
+Stalwart 독립 지원을 연결 성공·서비스 준비·작업공간 선택으로 어떻게 구분할지는 미결이다.
+이 문서는 AP Session 필수나 모든 outbox 허용 중 어느 쪽도 새로 결정하지 않는다.

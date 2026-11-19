@@ -1,8 +1,9 @@
 # Spec Draft: JMAP Client
 
-2026-11-19. **Opus 1회 검토용 초안. 구현 완료 문서가 아니다.**
-이 문서의 요구사항은 제안된 완료 기준이며, 테스트가 이미 강제한다는 뜻이 아니다.
-문서 작성만 승인된 상태다. 검토 전에 Mail 구현·DB 마이그레이션을 시작하지 않는다.
+2026-11-19. **제품 계약과 단계별 완료 기준. 전체 구현 완료 문서는 아니다.**
+사용자가 Opus 사전 검토 없이 구현 진행을 승인했다. Opus 검토는 후속 검토이며
+착수의 선행 조건이 아니다. 미구현 요구사항은 완료 기준이지 현재 테스트가 이미
+강제한다는 뜻이 아니다. DB의 미결 선택까지 확정된 것으로 보지는 않는다.
 
 ## 1. 제품 범위
 
@@ -76,14 +77,17 @@ RFC 5321은 SMTP 전송 규약이지 원문 형식이 아니다.
 ## 6. 현재 상태와 제외 범위
 
 현재 Core에 Session/batch/오류/SetOutcome·네트워크 검사가 있고 Contacts에 별도 SQLite·
-Stalwart E2E가 있다. JSON 인자로 result reference를 실을 수는 있으나 Mail 워크플로·DB는 없다.
-`Batch::first_named`만으로 여러 동일 메서드 응답을 안전하게 대응시킬 수 없다.
-근거: [Contacts](INTEROP-CONTACTS.md), [Core](INTEROP-CORE-ECHO.md).
+Stalwart E2E가 있다. Mail 읽기 CLI는 메일함·제한된 받은편지함·요청 시 본문을 조회한다.
+`Batch::response`는 call ID와 응답명으로 대응한다. 제품 Mail DB·delta·작성·발송 UI는 아직 없다.
+result reference는 JSON으로 전송할 수 있지만 Mail의 해당 워크플로는 아직 검증하지 않았다.
+별도 실서버 테스트에서는 두 로컬 계정의 EmailSubmission 송수신도 검증했다. 이는 제품
+발송 기능의 구현이 아니다. 근거: [Mail](INTEROP-MAIL.md),
+[Contacts](INTEROP-CONTACTS.md), [Core](INTEROP-CORE-ECHO.md).
 
 첫 범위에서 제외: SMTP/IMAP 클라이언트, WordPress Mail, 실제 외부 발송, OAuth 공급자 통합,
 Calendar 반복 전개, 범용 persons 원장, AP 델타 규약, push, 전체 offline replica, 발송 UI,
 24개 테이블 일괄 생성. Core/Mail 전체 RFC 적합성을 이미 충족한다고 표현하지 않는다.
 
-완료 검사는 [계획](PLAN-JMAP-MAIL.md)에 정의한다. 기존 테스트는 회귀 기준이지 Mail 증거가
-아니다. 새 명령·테스트는 아직 없다. 과거 [연결 설계](DESIGN-CONNECTION-DISCOVERY.md)의
-호스트 단위 표현·경로·리다이렉트 제약을 최신 네트워크 구현 위에 되살리지 않는다.
+완료 검사는 [계획](PLAN-JMAP-MAIL.md)에 정의한다. Contacts/Core 회귀 테스트와
+Mail 전용 검증을 구분한다. 연결의 현재 계약은 [연결 설계](DESIGN-CONNECTION-DISCOVERY.md),
+구체적 네트워크 동작과 검증은 [구현 기록](IMPLEMENTATION-NETWORK-TRUST.md)을 따른다.

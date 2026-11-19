@@ -8,6 +8,21 @@ core/   the protocol.  Session, the method batch, the error model
 cli/    a terminal front end over it, built as `axj`
 ```
 
+## JMAP Mail Drafts
+
+Initial read-only CLI commands: `mailboxes`, `mail-inbox`, and `mail-read --id ID`,
+using the same Session/credential flags as `session`. `mail-inbox` returns a bounded
+window (at most 50 messages); `query.ids` defines the display order, not the order
+of the `emails` array. `mail-read` fetches body values on demand with a 64 KiB
+per-value limit; inspect truncation flags before treating a body as complete.
+These commands do not modify server data or create a Mail database.
+
+Target contracts and remaining work: [spec](docs/SPEC-JMAP-CLIENT.md),
+[design and review questions](docs/DESIGN-JMAP-CLIENT.md), and
+[CLI / persistence / GUI plan](docs/PLAN-JMAP-MAIL.md).
+Core and Mail are the proposed product baseline; Contacts/Calendar storage remains
+separate. The current Contacts tables are not a generic Mail store.
+
 The split exists so a desktop front end can reuse `core` instead of writing the
 exchange a second time behind a window. Nothing in `core` prints, and nothing in
 `cli` speaks HTTP.

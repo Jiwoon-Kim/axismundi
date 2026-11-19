@@ -15,6 +15,7 @@ use serde_json::{Value, json};
 
 pub mod discovery;
 pub mod contacts;
+pub mod mail;
 
 pub const CORE_CAPABILITY: &str = "urn:ietf:params:jmap:core";
 
@@ -186,6 +187,19 @@ pub struct Batch {
 }
 
 impl Batch {
+    /// Match a response by both request identity and expected method.
+    pub fn response(&self, call_id: &str, name: &str) -> Result<&Invocation, Error> {
+        let mut matches = self.method_responses.iter().filter(|i| i.call_id == call_id && (i.name == name || i.is_error()));
+        let result = matches.next().ok_or_else(|| Error::Shape(format!("missing response for {call_id}: {name}")))?;
+        if matches.next().is_some() {
+            return Err(Error::Shape(format!("ambiguous response for {call_id}: {name}")));
+        }
+        if result.is_error() {
+            return Err(Error::Shape(format!("{call_id}: {}", result.arguments)));
+        }
+        Ok(result)
+    }
+
     pub fn first_named(&self, name: &str) -> Option<&Invocation> {
         self.method_responses.iter().find(|i| i.name == name)
     }

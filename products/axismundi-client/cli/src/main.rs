@@ -22,6 +22,7 @@ struct Options {
     since: Option<String>,
     db: Option<String>,
     profile: Option<String>,
+    id: Option<String>,
 }
 
 fn usage() -> String {
@@ -32,6 +33,9 @@ fn usage() -> String {
         "  axj discover  HOST_OR_URL [--jmap] [--wordpress] [--activitypub]  (anonymous)",
         "  axj session   --session-url URL [--user NAME] [--secret SECRET]",
         "  axj echo      --session-url URL [--user NAME] [--secret SECRET]",
+        "  axj mailboxes ... [--account ID] (read-only Mailbox/get)",
+        "  axj mail-inbox ... [--account ID] (first 50 or fewer messages)",
+        "  axj mail-read ... [--account ID] --id EMAIL_ID (body values on demand)",
         "  axj todo      --session-url URL [--user NAME] [--secret SECRET] [--account ID]",
         "  axj changes   ... [--account ID] [--since STATE]",
         "  axj todo-set  ... [--account ID]  (loopback development server only)",
@@ -54,6 +58,7 @@ fn options(args: &[String]) -> Result<Options, String> {
     let mut since = None;
     let mut db = None;
     let mut profile = None;
+    let mut id = None;
     let mut rest = args.iter();
     while let Some(flag) = rest.next() {
         let value = || {
@@ -70,6 +75,7 @@ fn options(args: &[String]) -> Result<Options, String> {
             "--since" => since = Some(value()?),
             "--db" => db = Some(value()?),
             "--profile" => profile = Some(value()?),
+            "--id" => id = Some(value()?),
             other => return Err(format!("unknown argument: {other}")),
         }
         if flag.starts_with("--") {
@@ -90,6 +96,7 @@ fn options(args: &[String]) -> Result<Options, String> {
         since,
         db,
         profile,
+        id,
     })
 }
 
@@ -282,6 +289,17 @@ fn run() -> Result<bool, String> {
     let (session, session_document) = client
         .session_document(&options.session_url)
         .map_err(explain)?;
+    if matches!(command.as_str(), "mailboxes" | "mail-inbox" | "mail-read") {
+        use axismundi_jmap_core::mail;
+        let account = mail::choose_account(&session, options.account.as_deref()).map_err(explain)?;
+        let result = match command.as_str() {
+            "mailboxes" => mail::mailboxes(&client, &session, &account),
+            "mail-inbox" => mail::inbox(&client, &session, &account),
+            _ => mail::read(&client, &session, &account, options.id.as_deref().ok_or("--id is required")?),
+        }.map_err(explain)?;
+        println!("{}", serde_json::to_string_pretty(&result).map_err(|e| e.to_string())?);
+        return Ok(true);
+    }
     if command == "contacts" {
         let db = options.db.as_deref().ok_or("--db is required")?;
         let profile = options.profile.as_deref().ok_or("--profile is required")?;

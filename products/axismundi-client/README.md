@@ -12,6 +12,9 @@ core/   the protocol.  Session, the method batch, the error model
 cli/    a terminal front end over it, built as `axismundi`
 ```
 
+Platform packaging scripts and the local Windows Development installer experiment:
+[build guide](build/README.md). Generated installers stay out of Git.
+
 ## JMAP Mail Drafts
 
 GUI language support direction (not implemented): [i18n design](docs/DESIGN-I18N.md).

@@ -24,6 +24,10 @@ using the same Session/credential flags as `session`. `mail-inbox` returns a bou
 window (at most 50 messages); `query.ids` defines the display order, not the order
 of the `emails` array. `mail-read` fetches body values on demand with a 64 KiB
 per-value limit; inspect truncation flags before treating a body as complete.
+Blob commands: `blob-upload --file PATH` and `blob-download --id BLOB --out PATH` use the
+Session's upload and download endpoints (RFC 8620 §6); `blob-get`, `blob-compose` and
+`blob-lookup` use the RFC 9404 Blob methods. All of them refuse endpoints that are not on
+the apiUrl origin. With `--offset`/`--length`, `blob-get` digests cover only that range.
 `mail-watch --db PATH --profile ID` syncs one listing, then syncs it again each time the
 server pushes an Email or Mailbox change over the Session's JMAP WebSocket (RFC 8887). The
 socket must be on the apiUrl origin; dropped connections are retried with backoff and

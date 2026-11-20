@@ -241,6 +241,43 @@ idle     읽기 타임아웃 30초마다 Idle 이벤트 — 연결은 유지, �
 남은 것: pushState 재개가 실제로 끊긴 동안의 변경을 다시 보내는지는 Stalwart 로 확인하지 않았다(재연결
 전 sync 가 있어 변경 유실은 막는다). WebSocket 위의 JMAP 요청, 앱 종료 시 상태 저장.
 
+## Blob: RFC 8620 업로드·다운로드 + RFC 9404 (2026-11-20)
+
+`blob` 모듈과 CLI `blob-upload`·`blob-download`·`blob-get`·`blob-compose`·`blob-lookup`. Mail 첨부가
+첫 용도지만 모듈은 Mail 에 묶지 않았다 — Contacts 사진(ContactCard)도 같은 경로를 쓴다.
+
+```txt
+엔드포인트   uploadUrl·downloadUrl 은 Session 템플릿에서만. RFC 6570 level 1 로 확장해 '/' 까지 인코딩
+            (type "text/plain" 이 경로 조각을 늘리지 않게). 필수 변수 누락·모르는 변수·짝 안 맞는 괄호는 거부
+인증 범위   로그인이 실리므로 apiUrl 과 같은 origin 에만. 다운로드 리다이렉트도 같은 origin 만 따라감
+업로드      maxSizeUpload 를 보내기 전에 검사. 응답의 accountId·size 가 보낸 것과 달라야 오류
+다운로드    max_bytes 로 메모리 상한. 넘으면 오류이지 잘라서 주지 않음
+Blob/upload maxDataSources·maxSizeBlobSet(인라인 분량) 사전 검사. 생성 id 마다 created 또는 notCreated
+            중 정확히 하나여야 함. 한 blob 실패가 나머지를 실패시키지 않음
+Blob/get    모든 id 가 list·notFound 에 한 번씩. isEncodingProblem·isTruncated 는 그대로 전달
+Blob/lookup supportedTypeNames 밖의 타입은 보내지 않음. 타입마다 그 capability 를 using 에 추가.
+            묻지 않은 타입의 답·id 중복·누락은 거부
+```
+
+Stalwart 실측:
+
+- 바이너리 311,200B(비 UTF-8 포함) 업로드 → 다운로드 바이트 동일. 이름에 공백·한글(`probe 한.bin`).
+- **범위를 주면 digest 도 그 범위의 digest 다.** `--length 300` 의 `digest:sha-256` 이 로컬 전체 해시와
+  달라 보였는데, 앞 300바이트의 해시와 정확히 같았다. 범위 없이는 sha-256·sha-1 모두 로컬과 일치.
+  RFC 9404 의 규정이지만 오해하기 쉬워 doc comment 에 적었다.
+- 범위 읽기 `offset 1000 length 10` = 로컬 같은 구간. 바이너리를 asText 로 읽으면 `isEncodingProblem: true`.
+- 조합: `"PREFIX-"` + 텍스트 blob 의 [7..16) → `"PREFIX-axismundi"` 16B. 없는 blobId 를 소스로 주면 그
+  항목만 `notCreated(invalidProperties)`, 요청은 성공.
+- lookup: inbox 메일의 blobId → `Email [cmaaaaat]`, `Thread [t]`. 아무도 참조 안 하는 업로드 blob →
+  `Email []`(notFound 가 아니라 빈 목록). `Mailbox` 는 미지원 타입이라 클라이언트가 보내기 전에 거부.
+
+mock 7개, 변이 6종 전부 실패. 그중 "다운로드가 아무 리다이렉트나 따라감"은 처음에 살아남았다 — 테스트의
+리다이렉트 대상이 해석 안 되는 호스트라 규칙이 없어도 실패했기 때문이다. 대상을 실제로 응답하는 다른
+포트의 서버로 바꿔 규칙 때문에 실패하게 했다.
+
+남은 것: 업로드한 blob 을 Email 첨부로 붙이는 작성 흐름(M5 쓰기 슬라이스), 디스크 blob 캐시(DESIGN §7),
+Contacts 사진 연결.
+
 ## M4. 같은 코어 위의 GUI
 
 Mailbox·query 창·선택 Email·refresh를 이름 붙은 IPC로 제공한다. SQL·범용 인증 fetch를

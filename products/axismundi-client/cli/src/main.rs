@@ -26,6 +26,15 @@ struct Options {
     mailbox: Option<String>,
     rows: Option<String>,
     events: Option<String>,
+    file: Option<String>,
+    out: Option<String>,
+    media_type: Option<String>,
+    name: Option<String>,
+    properties: Option<String>,
+    offset: Option<String>,
+    length: Option<String>,
+    types: Option<String>,
+    text: Option<String>,
 }
 
 /// `--rows` takes a value rather than being a bare switch, because the offline parser reads its
@@ -52,6 +61,11 @@ fn usage() -> String {
         "  axismundi mail-read ... [--account ID] --id EMAIL_ID (body values on demand)",
         "  axismundi mail-watch ... --db PATH --profile ID [--account ID] [--mailbox ID] [--rows messages|threads] [--events N]",
         "                    (sync, then sync again on every WebSocket push; N syncs then exit)",
+        "  axismundi blob-upload ... --file PATH [--type MEDIA_TYPE] [--account ID]",
+        "  axismundi blob-download ... --id BLOB --out PATH [--type MEDIA_TYPE] [--name NAME]",
+        "  axismundi blob-get ... --id BLOB [--properties data:asText,size,digest:sha-256] [--offset N] [--length N]",
+        "  axismundi blob-compose ... --text PREFIX --id BLOB [--offset N] [--length N] [--type MEDIA_TYPE]",
+        "  axismundi blob-lookup ... --id BLOB --types Email,Thread",
         "  axismundi mail-thread ... [--account ID] --id THREAD_ID [--db PATH --profile ID] (every message, no bodies)",
         "  axismundi mail-sync ... --db PATH --profile ID [--account ID] [--mailbox ID] [--rows messages|threads]",
         "  axismundi mail-offline --db PATH --profile ID --account ID [--mailbox ID [--rows messages|threads] | --id EMAIL_ID]",
@@ -81,6 +95,15 @@ fn options(args: &[String]) -> Result<Options, String> {
     let mut mailbox = None;
     let mut rows = None;
     let mut events = None;
+    let mut file = None;
+    let mut out = None;
+    let mut media_type = None;
+    let mut name = None;
+    let mut properties = None;
+    let mut offset = None;
+    let mut length = None;
+    let mut types = None;
+    let mut text = None;
     let mut rest = args.iter();
     while let Some(flag) = rest.next() {
         let value = || {
@@ -101,6 +124,15 @@ fn options(args: &[String]) -> Result<Options, String> {
             "--mailbox" => mailbox = Some(value()?),
             "--rows" => rows = Some(value()?),
             "--events" => events = Some(value()?),
+            "--file" => file = Some(value()?),
+            "--out" => out = Some(value()?),
+            "--type" => media_type = Some(value()?),
+            "--name" => name = Some(value()?),
+            "--properties" => properties = Some(value()?),
+            "--offset" => offset = Some(value()?),
+            "--length" => length = Some(value()?),
+            "--types" => types = Some(value()?),
+            "--text" => text = Some(value()?),
             other => return Err(format!("unknown argument: {other}")),
         }
         if flag.starts_with("--") {
@@ -125,6 +157,15 @@ fn options(args: &[String]) -> Result<Options, String> {
         mailbox,
         rows,
         events,
+        file,
+        out,
+        media_type,
+        name,
+        properties,
+        offset,
+        length,
+        types,
+        text,
     })
 }
 
@@ -336,6 +377,22 @@ fn run() -> Result<bool, String> {
     let (session, session_document) = client
         .session_document(&options.session_url)
         .map_err(explain)?;
+    if command.starts_with("blob-") {
+        return blob_command(&client, &session, command, BlobFlags {
+            account: options.account.as_deref(),
+            id: options.id.as_deref(),
+            file: options.file.as_deref(),
+            out: options.out.as_deref(),
+            media_type: options.media_type.as_deref(),
+            name: options.name.as_deref(),
+            properties: options.properties.as_deref(),
+            offset: options.offset.as_deref(),
+            length: options.length.as_deref(),
+            types: options.types.as_deref(),
+            text: options.text.as_deref(),
+        })
+        .map(|()| true);
+    }
     if command == "mail-watch" {
         return watch(&client, &session, Watch {
             account: options.account.as_deref(),
@@ -623,4 +680,78 @@ fn watch(client: &Client, session: &Session, options: Watch<'_>) -> Result<(), S
             }
         }
     }
+}
+
+/// The flags the blob commands read.
+struct BlobFlags<'a> {
+    account: Option<&'a str>,
+    id: Option<&'a str>,
+    file: Option<&'a str>,
+    out: Option<&'a str>,
+    media_type: Option<&'a str>,
+    name: Option<&'a str>,
+    properties: Option<&'a str>,
+    offset: Option<&'a str>,
+    length: Option<&'a str>,
+    types: Option<&'a str>,
+    text: Option<&'a str>,
+}
+
+fn number(value: Option<&str>, flag: &str) -> Result<Option<u64>, String> {
+    value
+        .map(|v| v.parse().map_err(|_| format!("{flag} takes a number")))
+        .transpose()
+}
+
+/// The blob commands. The account is the Session's Mail account unless one is named, since mail
+/// attachments are what these exist for first.
+fn blob_command(client: &Client, session: &Session, command: &str, flags: BlobFlags<'_>) -> Result<(), String> {
+    use axismundi_jmap_core::{blob::Source, mail};
+    let account = mail::choose_account(session, flags.account).map_err(explain)?;
+    let id = || flags.id.ok_or("--id is required");
+    let media_type = flags.media_type.unwrap_or("application/octet-stream");
+    let result = match command {
+        "blob-upload" => {
+            let bytes = std::fs::read(flags.file.ok_or("--file is required")?).map_err(|e| e.to_string())?;
+            let up = client.upload(session, &account, media_type, &bytes).map_err(explain)?;
+            json!({"accountId":account,"blobId":up.blob_id,"type":up.media_type,"size":up.size})
+        }
+        "blob-download" => {
+            let out = flags.out.ok_or("--out is required")?;
+            let bytes = client
+                .download(session, &account, id()?, media_type, flags.name.unwrap_or("blob"), 64 * 1024 * 1024)
+                .map_err(explain)?;
+            std::fs::write(out, &bytes).map_err(|e| e.to_string())?;
+            json!({"accountId":account,"blobId":id()?,"written":out,"size":bytes.len()})
+        }
+        "blob-get" => {
+            let properties: Vec<&str> = flags
+                .properties
+                .unwrap_or("data:asText,size,digest:sha-256")
+                .split(',')
+                .collect();
+            client
+                .blob_get(session, &account, &[id()?], &properties,
+                    number(flags.offset, "--offset")?, number(flags.length, "--length")?)
+                .map_err(explain)?
+        }
+        "blob-compose" => {
+            let sources = vec![
+                Source::Text(flags.text.ok_or("--text is required")?),
+                Source::Blob { id: id()?, offset: number(flags.offset, "--offset")?, length: number(flags.length, "--length")? },
+            ];
+            let (created, failed) = client
+                .blob_upload(session, &account, &[("c1", flags.media_type, sources)])
+                .map_err(explain)?;
+            json!({"accountId":account,"created":created,"notCreated":failed})
+        }
+        "blob-lookup" => {
+            let types: Vec<&str> = flags.types.ok_or("--types is required")?.split(',').collect();
+            let found = client.blob_lookup(session, &account, &types, &[id()?]).map_err(explain)?;
+            json!({"accountId":account,"matched":found})
+        }
+        other => return Err(format!("unknown command: {other}")),
+    };
+    println!("{}", serde_json::to_string_pretty(&result).map_err(|e| e.to_string())?);
+    Ok(())
 }

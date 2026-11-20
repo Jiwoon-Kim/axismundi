@@ -15,6 +15,7 @@ use serde_json::{Value, json};
 
 pub mod discovery;
 pub mod contacts;
+pub mod blob;
 pub mod mail;
 pub mod websocket;
 

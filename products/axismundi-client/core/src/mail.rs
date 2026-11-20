@@ -157,7 +157,7 @@ pub fn read(client: &Client, session: &Session, account: &str, id: &str) -> Resu
 
 /// Checks a Foo/get answer of any type: every id asked for comes back exactly once, in `list` or
 /// `notFound`, and nothing else does.
-fn validate_get(result: &Value, ids: &[String]) -> Result<(), Error> {
+pub(crate) fn validate_get(result: &Value, ids: &[String]) -> Result<(), Error> {
     use std::collections::BTreeSet;
     let rows = result
         .get("list")

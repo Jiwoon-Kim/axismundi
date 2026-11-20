@@ -3,6 +3,62 @@
 현재 상태: `0.1.1-dev` 코어 런타임·Account 정책 및 Todo 공유 PoC 구현.
 완성된 공개 JMAP 서버는 아직 아니다.
 
+## 설치 전 확인: HTTPS와 서비스 자동발견
+
+플러그인은 기존 WordPress 웹 서버의 HTTPS를 사용한다. 직접 TCP 443 포트를
+열거나 TLS 인증서를 발급하지 않는다. 호스팅의 플러그인 설치 허용 여부와 HTTPS,
+`https://example.com/.well-known/jmap`의 Session 연결을 먼저 확인한다.
+DNS 레코드만 추가해도 JMAP 서버가 설치되거나 Session이 동작하는 것은 아니다.
+
+RFC 8620 §2.2는 서비스 도메인에 `_jmap._tcp` SRV 레코드를 게시하도록 권고한다
+(SHOULD). SRV는 자동발견을 돕는 광고이며 모든 클라이언트가 이를 조회한다고
+가정하지 않는다. 서버 URL을 직접 입력하는 well-known 발견 경로와는 별개다.
+
+DNS는 **도메인 등록업체가 아니라 현재 권한 있는 네임서버 제공업체**에서 수정한다.
+예를 들어 Hosting.kr에서 등록했어도 네임서버를 WordPress.com으로 지정했다면
+WordPress.com의 해당 도메인 DNS 화면에서 추가한다. 기존 A·MX·TXT 레코드를
+교체하거나 네임서버를 다시 변경할 필요는 없다.
+
+사이트 자체가 JMAP Session을 제공하는 경우의 예:
+
+```dns
+_jmap._tcp.example.com. 3600 IN SRV 0 1 443 example.com.
+```
+
+WordPress.com처럼 서비스와 프로토콜 입력칸이 분리된 폼에서는 다음처럼 입력한다.
+
+| 항목 | 값 |
+|---|---|
+| 이름 / 서브도메인 | 비워 둠 (서비스 도메인이 `example.com`인 경우) |
+| 서비스 | `_jmap` |
+| 프로토콜 | `_tcp` |
+| 우선순위 | `0` |
+| 무게 / 가중치 | `1` |
+| 대상 호스트 | `example.com` |
+| 대상 포트 | `443` |
+| TTL | `3600` 또는 제공업체 기본값 |
+
+서비스·프로토콜 칸이 없는 폼은 이름에 `_jmap._tcp`를 입력한다. 도메인 접미사를
+자동으로 붙이는지 확인해 중복 입력하지 않는다. 대상은 호스트명이며 `https://`,
+포트, `/wp-json/` 등의 경로를 넣지 않는다. 클라이언트는 SRV의 대상·포트로
+`https://example.com/.well-known/jmap`을 요청하고 리다이렉트를 따른다.
+
+관리 화면에서 이름과 대상이 붙어 보이더라도 실제 DNS 값을 확인한다. Windows 예:
+
+```powershell
+Resolve-DnsName -Name _jmap._tcp.example.com -Type SRV
+```
+
+결과의 `Name`, `NameTarget`, `Port`, `Priority`, `Weight`를 각각 확인하고,
+well-known URL의 HTTP 동작도 별도로 검증한다. 인증이 필요한 Session은 인증 없이
+조회했을 때의 응답만으로 장애라고 판정하지 않는다. DNS 전파와 캐시 때문에
+관리 화면 저장 직후 모든 리졸버가 같은 값을 반환하지 않을 수 있다.
+
+- [RFC 8620 §2.2: Service Autodiscovery](https://jmap.io/spec/rfc8620/#section-2.2)
+- [WordPress.com DNS 관리 안내](https://wordpress.com/support/domains/custom-dns/)
+
+## 현재 구현 범위
+
 이번 목표는 RFC 8620 코어 백엔드다. Contacts/AddressBook 프로토콜 구현은 후속 작업이며,
 Todo PoC가 Principal·공유·동기화 계약의 첫 소비자다. Calendar와 프로필 카드의
 저장 위치도 이번 범위에서 변경하지 않는다.

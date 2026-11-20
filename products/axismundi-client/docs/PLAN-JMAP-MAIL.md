@@ -44,7 +44,7 @@ GUI 착수 전에 필요한 것: 8621 의 남은 읽기 델타(Mailbox/changes �
 | M0 | 프로필 격리 유지·Mail 가산 스키마·coverage/dirty 표현 기록 | 전역 파일·출하 암호화는 미결 |
 | M1 | 제한된 읽기·result reference/분할·응답 대응·실서버 왕복·Thread 전개 | 스레드 소속 오프라인 보관(Thread/changes) |
 | M2 | Mail 전용 테이블·오프라인·부분 병합·Contacts 보존 검증 | 임의 필터·희소 다중 페이지·Blob 캐시 확장 |
-| M3 | Email changes·dirty/checkpoint·창 재조회·만료 복구·Mailbox delta | queryChanges·큰 backlog 우선순위 |
+| M3 | Email changes·dirty/checkpoint·창 재조회·만료 복구·Mailbox delta·Email queryChanges | 큰 backlog 우선순위·페이지 창 |
 | M4 | 아직 미구현 | 본격 UI는 Mail/Contacts/AP 대표 흐름 이후 |
 | M5 | Submission의 양방향 로컬 테스트만 존재 | 제품 작성·Draft·Identity·Blob·발송 등 |
 
@@ -171,6 +171,30 @@ accept 된 소켓이 리스너의 non-blocking 을 물려받아 요청 바이트
 
 남은 것: 메일함 수가 maxObjectsInGet 를 넘으면 `ids:null` 스냅샷이 거부될 수 있다(RFC 8620 §5.1).
 그때는 Mailbox/query + 청크 get 이 필요하다. 미구현.
+
+**Email/queryChanges 구현 기록 (2026-11-20).** 목록의 소속·순서는 쿼리 델타가, 메시지 내용은 앞서 돈
+Email/changes 가 맡는다(DESIGN §6). 그래서 델타 뒤에는 목록 속성 커버리지가 없는 멤버만 get 한다.
+
+```txt
+조건   캐시된 창이 있고, 저장된 인자 == 지금 인자, canCalculateChanges=true
+적용   removed 와 added 의 id 를 빼고 → added 를 index 오름차순으로 삽입 → 창 크기로 자름
+경계   보유한 길이를 넘는 index 는 빈틈 뒤라 그것과 그 뒤를 버린다. 위가 지워져 아래에서 올라온 행은
+      델타가 말하지 않으므로 창이 줄면 position=len 으로 그 구간만 다시 묻는다 — 그 응답의 queryState 가
+      델타의 newQueryState 와 다르면 창 전체 재조회
+폴백   cannotCalculateChanges · tooManyChanges · 인자 변경 · 보충 불일치 → 기존 창 재조회
+```
+
+증거: mock 2개 — 시나리오(새 메일 → 그 하나만 get, 위 삭제 → 보충 query 만·get 없음, 보충 state 불일치
+→ 재조회, 계산 불가 → 재조회)와 순수 적용 함수(빈틈·이동·중복). 변이 8종 전부 실패(그중 "added 를 먼저
+빼지 않음"은 처음에 살아남아 테스트를 추가했다 — 규격을 지키는 서버는 보내지 않는 경우라 비어 있었다).
+테스트 데이터도 바로잡았다: mock 이 id·subject 만 돌려주면 커버리지가 그 둘뿐이라 모든 멤버를 다시 받는다.
+실서버는 요청한 속성을 전부(없으면 null) 돌려준다.
+
+Stalwart: Email/query 가 `canCalculateChanges: true`. 외부에서 inbox 에 메일 생성 → sync → 캐시 =
+새 query(5개, 같은 queryState), 서버 델타 `added:[{id,index:0}]`. 삭제 → sync → 캐시 = 새 query(4개),
+델타 `removed:[id]`. 이때 창이 줄어 보충 경로를 탔다 — 같은 요청(position 4)에 Stalwart 는
+`position 4 · 같은 queryState · ids []` 로 답해 폴백 없이 맞물린다. 관찰: position 이 total 을 넘으면
+Stalwart 는 `position: 0` 을 돌려준다. 보유 prefix 는 total 을 넘을 수 없어 이 경로엔 영향 없음.
 
 완료: 외부 테스트 클라이언트의 변경 반영. 실패 시 이전 체크포인트 또는 durable dirty 작업
 보존. 부분 데이터로 서버 전체 count를 영구 재계산하지 않는다. full replica 완료는 주장하지 않는다.

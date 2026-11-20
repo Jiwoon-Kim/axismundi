@@ -1,5 +1,26 @@
 # Mail Interoperability
 
+## 2026-11-20 계정별 메일함과 관리자의 계정 횡단 읽기
+
+웹 UI 의 Mailbox 화면(`/account/Account/Mailbox`)은 로그인한 계정의 메일함이다. 시스템 메일함은
+계정마다 따로 있다. 두 계정에서 각자 Mailbox/get:
+
+```txt
+            account  Inbox  Sent   probe 메일함
+admin       b        4/4    3/1    k (1/0)
+alice       c        3/3    4/1    h (1/1)
+```
+
+id `a`~`e` 가 두 계정에서 같지만 카운트가 다르다 — id 는 계정 범위라 같은 문자열의 별개 객체다.
+캐시 키가 `(account, id)` 인 이유(DESIGN §2). `shareWith` 는 모두 `{}`. role 이 같은 이름으로 반복되는
+건 서버가 계정마다 기본 세트를 만들기 때문이다(RFC 8621 role 은 계정 안에서만 유일).
+
+**관리자는 Session 에 없는 계정을 읽을 수 있다.** admin 의 Session 은 `b` 만 광고하지만
+`accountId:"c"` 로 Mailbox/get·Email/query 를 보내면 alice 의 데이터가 성공으로 온다. alice 가
+`b` 를 요청하면 `accountNotFound`. Stalwart 관리자 권한의 성질이며 공유가 아니다. 클라이언트는
+`choose_account` 가 Session 광고 계정만 허용하므로 이 경로를 쓰지 않는다. 관리자 자격증명으로
+클라이언트를 테스트할 때 "읽혔다"를 "광고됐다"로 해석하지 않는다.
+
 ## 2026-11-19 두 계정의 로컬 Submission
 
 별도 User 역할의 `alice@example.org`를 기존 로컬 도메인에 추가했다.

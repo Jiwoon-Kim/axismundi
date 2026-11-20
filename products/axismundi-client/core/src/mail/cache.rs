@@ -1,7 +1,8 @@
 //! Partial Mail cache. Network exchanges are staged outside SQLite transactions.
 use super::{
-    MAILBOX_PROPERTIES, MAX_BODY_VALUE_BYTES, Rows, Window, arguments, call, choose_account, limit,
-    mailboxes, query_ids, query_key, validate_get, window,
+    LIST_PROPERTIES, MAILBOX_PROPERTIES, MAX_BODY_VALUE_BYTES, Rows, Window, apply_query_delta,
+    arguments, call, choose_account, limit, mailboxes, query_args, query_changes, query_ids,
+    query_key, validate_get, window, window_size,
 };
 
 /// v2 keys a listing by its query, not its mailbox.
@@ -662,6 +663,118 @@ fn mailbox_changes(client: &Client, session: &Session, store: &mut Store, accoun
     Err("Mailbox/changes backlog checkpointed; rerun to continue".into())
 }
 
+/// Whether the cache already holds every listing property of a message. Email/changes clears the
+/// coverage of a message it reports updated, so this is also "nothing changed since we fetched it".
+fn listed(store: &Store, account: &str, id: &str) -> Result<bool> {
+    let coverage: Option<String> = store
+        .db
+        .query_row(
+            "SELECT coverage FROM mail_emails WHERE account=?1 AND id=?2",
+            params![account, id],
+            |r| r.get(0),
+        )
+        .optional()?;
+    let Some(coverage) = coverage else {
+        return Ok(false);
+    };
+    let coverage: Value = serde_json::from_str(&coverage)?;
+    Ok(LIST_PROPERTIES.iter().all(|key| coverage.get(*key).is_some()))
+}
+
+/// Brings a cached listing forward with Email/queryChanges instead of reading the window again.
+///
+/// Membership and order come from the query delta; message contents come from Email/changes, which
+/// already ran. So only members whose listing properties the cache does not hold are fetched — a new
+/// arrival, or a message Email/changes marked as changed.
+///
+/// `None` sends the caller back to reading the whole window: no cached listing, different arguments
+/// (the server's maxObjectsInGet moved, say), a query the server said it cannot track, a delta it
+/// cannot compute, or a top-up page that does not line up with the delta's state. Each of those is
+/// an ordinary reason to start over, not an error.
+fn advance(
+    client: &Client,
+    session: &Session,
+    store: &Store,
+    account: &str,
+    mailbox: &str,
+    listing: Rows,
+) -> Result<Option<Window>> {
+    let size = window_size(session)?;
+    let key = query_key(mailbox, listing);
+    let args = query_args(account, mailbox, size, listing);
+    let cached: Option<(String, String)> = store
+        .db
+        .query_row(
+            "SELECT arguments,document FROM mail_queries WHERE account=?1 AND query_key=?2",
+            params![account, key],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .optional()?;
+    let Some((old_args, document)) = cached else {
+        return Ok(None);
+    };
+    let document: Value = serde_json::from_str(&document)?;
+    if serde_json::from_str::<Value>(&old_args)? != args || document["canCalculateChanges"] != true {
+        return Ok(None);
+    }
+    let Some(since) = document["queryState"].as_str() else {
+        return Ok(None);
+    };
+    let held: Vec<String> = store
+        .db
+        .prepare("SELECT email_id FROM mail_query_items WHERE account=?1 AND query_key=?2 ORDER BY position")?
+        .query_map(params![account, key], |r| r.get(0))?
+        .collect::<std::result::Result<_, _>>()?;
+    let Some(delta) = query_changes(client, session, &args, since)? else {
+        return Ok(None);
+    };
+    let mut rows = apply_query_delta(&held, &delta, size);
+    if rows.len() < size {
+        // Rows above the end were removed, so rows from past the old window slid up into it. The delta
+        // does not name them; ask for exactly that stretch, at the delta's own state.
+        let mut page = args.clone();
+        page["position"] = json!(rows.len());
+        page["limit"] = json!(size - rows.len());
+        let batch = call(client, session, "Email/query", page)?;
+        let page = arguments(&batch, "Email/query", account)?;
+        if page["queryState"].as_str() != Some(delta.new_state.as_str())
+            || page["position"].as_u64() != Some(rows.len() as u64)
+        {
+            return Ok(None);
+        }
+        let more = query_ids(&page, size - rows.len())?;
+        if more.iter().any(|id| rows.contains(id)) {
+            return Ok(None);
+        }
+        rows.extend(more);
+    }
+    let mut need = Vec::new();
+    for id in &rows {
+        if !listed(store, account, id)? {
+            need.push(id.clone());
+        }
+    }
+    let mut gets = Vec::new();
+    for chunk in need.chunks(limit(session, "maxObjectsInGet")?) {
+        let batch = call(
+            client,
+            session,
+            "Email/get",
+            json!({"accountId":account,"ids":chunk,"properties":LIST_PROPERTIES}),
+        )?;
+        let get = arguments(&batch, "Email/get", account)?;
+        validate_get(&get, chunk)?;
+        gets.push(get);
+    }
+    let query = json!({"accountId":account,"queryState":delta.new_state,"position":0,"ids":rows,"canCalculateChanges":true});
+    Ok(Some(Window {
+        key,
+        args,
+        query,
+        gets,
+    }))
+}
+
 pub fn sync(
     client: &Client,
     session: &Session,
@@ -687,7 +800,10 @@ pub fn sync(
         args,
         query,
         gets,
-    } = window(client, session, account, &mailbox, listing)?;
+    } = match advance(client, session, store, account, &mailbox, listing)? {
+        Some(advanced) => advanced,
+        None => window(client, session, account, &mailbox, listing)?,
+    };
     string(&query, "queryState")?;
     if query["position"].as_u64() != Some(0) {
         return Err("unexpected query position".into());
@@ -946,7 +1062,8 @@ mod tests {
                     .unwrap()
                     .push(request["methodCalls"][0][1].clone());
                 assert_eq!(request["methodCalls"][0][0], method);
-                if method == "Email/query" {
+                // A window asks for the whole window; a top-up page asks for the stretch it lacks.
+                if method == "Email/query" && request["methodCalls"][0][1]["position"] == 0 {
                     assert_eq!(request["methodCalls"][0][1]["limit"], 2);
                 }
                 if method == "Email/get" {
@@ -1256,6 +1373,119 @@ mod tests {
             .collect();
         assert_eq!(gets[0], json!(MAILBOX_PROPERTIES));
         assert_eq!(gets[1], json!(["id", "totalEmails", "unreadEmails"]));
+    }
+
+    #[test]
+    fn query_changes_moves_a_listing_and_fetches_only_what_it_lacks() {
+        // A server answers every property asked for, null when unset; the cache's coverage relies on it.
+        let row = |id: &str, subject: &str| {
+            let mut doc = json!({});
+            for key in LIST_PROPERTIES {
+                doc[*key] = Value::Null;
+            }
+            doc["id"] = json!(id);
+            doc["subject"] = json!(subject);
+            doc["mailboxIds"] = json!({"in":true});
+            doc["keywords"] = json!({});
+            doc
+        };
+        let tracked = |ids: Value, state: &str| {
+            json!({"accountId":"a","position":0,"queryState":state,"canCalculateChanges":true,"ids":ids})
+        };
+        let email_changes = |old: &str, new: &str, created: Value, destroyed: Value| {
+            json!({"accountId":"a","oldState":old,"newState":new,"hasMoreChanges":false,"created":created,"updated":[],"destroyed":destroyed})
+        };
+        let query_delta = |old: &str, new: &str, removed: Value, added: Value| {
+            json!({"accountId":"a","oldQueryState":old,"newQueryState":new,"removed":removed,"added":added})
+        };
+        let (session, server, sent) = mock_recorded(vec![
+            // 1: a window of two, tracked by the server.
+            ("Email/get", get(json!([]), "seed")),
+            ("Mailbox/get", boxes()),
+            ("Email/query", tracked(json!(["2", "1"]), "q1")),
+            ("Email/get", get(Value::Array(vec![row("2","two"),row("1","one")]), "s")),
+            // 2: a new arrival on top. Only it is fetched; "1" slides out of the window.
+            ("Email/changes", email_changes("seed", "s1", json!(["3"]), json!([]))),
+            ("Mailbox/changes", unchanged()),
+            ("Email/queryChanges", query_delta("q1", "q2", json!([]), json!([{"id":"3","index":0}]))),
+            ("Email/get", get(Value::Array(vec![row("3","three")]), "s")),
+            // 3: the top row goes; the row below the window slides up and is asked for by position.
+            ("Email/changes", email_changes("s1", "s2", json!([]), json!(["3"]))),
+            ("Mailbox/changes", unchanged()),
+            ("Email/queryChanges", query_delta("q2", "q3", json!(["3"]), json!([]))),
+            ("Email/query", json!({"accountId":"a","position":1,"queryState":"q3","ids":["1"]})),
+            // 4: the top-up page answers at another state, so the window is read again whole.
+            ("Email/changes", email_changes("s2", "s2", json!([]), json!([]))),
+            ("Mailbox/changes", unchanged()),
+            ("Email/queryChanges", query_delta("q3", "q4", json!(["2"]), json!([]))),
+            ("Email/query", json!({"accountId":"a","position":1,"queryState":"q5","ids":["4"]})),
+            ("Email/query", tracked(json!(["1", "4"]), "q5")),
+            ("Email/get", get(Value::Array(vec![row("1","one"),row("4","four")]), "s")),
+            // 5: the server cannot compute the delta; the window is read again whole.
+            ("Email/changes", email_changes("s2", "s2", json!([]), json!([]))),
+            ("Mailbox/changes", unchanged()),
+            ("Email/queryChanges", json!({"type":"cannotCalculateChanges"})),
+            ("Email/query", tracked(json!(["4"]), "q6")),
+            ("Email/get", get(Value::Array(vec![row("4","four")]), "s")),
+        ]);
+        let c = client();
+        let mut store = Store::open(":memory:", "p").unwrap();
+        let ids = |view: &Value| -> Vec<String> {
+            view["emails"].as_array().unwrap().iter().map(|e| e["id"].as_str().unwrap().to_owned()).collect()
+        };
+        sync(&c, &session, &mut store, "a", None, Rows::Messages).unwrap();
+        let second = sync(&c, &session, &mut store, "a", None, Rows::Messages).unwrap();
+        assert_eq!(ids(&second), ["3", "2"]);
+        assert_eq!(second["query"]["queryState"], "q2");
+        let third = sync(&c, &session, &mut store, "a", None, Rows::Messages).unwrap();
+        assert_eq!(ids(&third), ["2", "1"]);
+        assert_eq!(third["query"]["queryState"], "q3");
+        assert_eq!(third["emails"][1]["document"]["subject"], "one", "kept from the first sync");
+        let fourth = sync(&c, &session, &mut store, "a", None, Rows::Messages).unwrap();
+        assert_eq!(ids(&fourth), ["1", "4"]);
+        assert_eq!(fourth["query"]["queryState"], "q5");
+        let fifth = sync(&c, &session, &mut store, "a", None, Rows::Messages).unwrap();
+        assert_eq!(ids(&fifth), ["4"]);
+        assert_eq!(fifth["queryStale"], false);
+        server.join().unwrap();
+
+        // The delta was asked for with the cached query's own arguments.
+        let sent = sent.lock().unwrap();
+        let delta = sent.iter().find(|args| args.get("sinceQueryState").is_some()).unwrap();
+        assert_eq!(delta["sinceQueryState"], "q1");
+        assert_eq!(delta["filter"], json!({"inMailbox":"in"}));
+        assert_eq!(delta["collapseThreads"], false);
+        assert!(delta.get("position").is_none() && delta.get("limit").is_none());
+        // Sync 2 fetched only the arrival; sync 3 fetched nothing.
+        let fetched: Vec<&Value> = sent
+            .iter()
+            .filter(|args| args.get("properties").is_some() && args["ids"].as_array().is_some_and(|ids| !ids.is_empty()))
+            .map(|args| &args["ids"])
+            .collect();
+        assert_eq!(fetched, [&json!(["2", "1"]), &json!(["3"]), &json!(["1", "4"]), &json!(["4"])]);
+    }
+
+    #[test]
+    fn a_query_delta_proves_only_the_prefix_it_reaches() {
+        use crate::mail::QueryDelta;
+        let held: Vec<String> = ["a", "b", "c", "d"].map(String::from).to_vec();
+        let delta = |removed: &[&str], added: &[(&str, usize)]| QueryDelta {
+            new_state: "n".into(),
+            removed: removed.iter().map(|s| s.to_string()).collect(),
+            added: added.iter().map(|(id, i)| (id.to_string(), *i)).collect(),
+        };
+        // Inserted at its new index, pushed past the window's end.
+        assert_eq!(apply_query_delta(&held, &delta(&[], &[("x", 1)]), 4), ["a", "x", "b", "c"]);
+        // A row that moved is listed in both and lands once, at its new place.
+        assert_eq!(apply_query_delta(&held, &delta(&["d"], &[("d", 0)]), 4), ["d", "a", "b", "c"]);
+        // An added id already held but not listed as removed (a server outside RFC 8620 §5.6) still
+        // appears once.
+        assert_eq!(apply_query_delta(&held, &delta(&[], &[("b", 0)]), 4), ["b", "a", "c", "d"]);
+        // Two removed above the end: what slid up from beyond is unknown, so the prefix is shorter.
+        assert_eq!(apply_query_delta(&held, &delta(&["a", "b"], &[]), 4), ["c", "d"]);
+        // An index past what is held is after a gap; it and everything after it are dropped.
+        assert_eq!(apply_query_delta(&held, &delta(&["d"], &[("x", 3), ("y", 9)]), 4), ["a", "b", "c", "x"]);
+        assert_eq!(apply_query_delta(&held, &delta(&["c", "d"], &[("x", 3)]), 4), ["a", "b"]);
     }
 
     /// v1 listings are a cache of what a query returned and hold no user intent, so they are dropped

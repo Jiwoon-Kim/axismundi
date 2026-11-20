@@ -250,6 +250,132 @@ fn query_ids(query: &Value, count: usize) -> Result<Vec<String>, Error> {
     Ok(result)
 }
 
+/// How many rows a listing window holds: never more than one Email/get may carry.
+pub(crate) fn window_size(session: &Session) -> Result<usize, Error> {
+    Ok(limit(session, "maxObjectsInGet")?.min(50))
+}
+
+/// What Email/queryChanges said happened to a query since a queryState.
+#[derive(Debug, PartialEq)]
+pub(crate) struct QueryDelta {
+    pub new_state: String,
+    pub removed: Vec<String>,
+    /// (id, index in the new results), in ascending index order.
+    pub added: Vec<(String, usize)>,
+}
+
+/// Asks what changed in a cached query. `None` means the server cannot say (cannotCalculateChanges
+/// or tooManyChanges) and the window has to be read again from the top; that is an ordinary answer,
+/// not a failure.
+pub(crate) fn query_changes(
+    client: &Client,
+    session: &Session,
+    args: &Value,
+    since: &str,
+) -> Result<Option<QueryDelta>, Error> {
+    let account = args["accountId"]
+        .as_str()
+        .ok_or_else(|| Error::Shape("query arguments have no accountId".into()))?;
+    let mut request = json!({"accountId":account,"sinceQueryState":since,"maxChanges":256});
+    for key in ["filter", "sort", "collapseThreads"] {
+        if let Some(value) = args.get(key) {
+            request[key] = value.clone();
+        }
+    }
+    let batch = call(client, session, "Email/queryChanges", request)?;
+    if let [only] = batch.method_responses.as_slice() {
+        if only.call_id == "mail"
+            && matches!(only.error_type(), Some("cannotCalculateChanges" | "tooManyChanges"))
+        {
+            return Ok(None);
+        }
+    }
+    let result = arguments(&batch, "Email/queryChanges", account)?;
+    let text = |key: &str| {
+        result
+            .get(key)
+            .and_then(Value::as_str)
+            .ok_or_else(|| Error::Shape(format!("Email/queryChanges has no {key}")))
+    };
+    if text("oldQueryState")? != since {
+        return Err(Error::Shape("Email/queryChanges oldQueryState mismatch".into()));
+    }
+    let new_state = text("newQueryState")?.to_owned();
+    let mut removed = Vec::new();
+    let mut seen = std::collections::BTreeSet::new();
+    for id in result
+        .get("removed")
+        .and_then(Value::as_array)
+        .ok_or_else(|| Error::Shape("Email/queryChanges has no removed".into()))?
+    {
+        let id = id
+            .as_str()
+            .ok_or_else(|| Error::Shape("invalid removed id".into()))?;
+        if !seen.insert(id) {
+            return Err(Error::Shape("duplicate removed id".into()));
+        }
+        removed.push(id.to_owned());
+    }
+    let mut added: Vec<(String, usize)> = Vec::new();
+    let mut ids = std::collections::BTreeSet::new();
+    for item in result
+        .get("added")
+        .and_then(Value::as_array)
+        .ok_or_else(|| Error::Shape("Email/queryChanges has no added".into()))?
+    {
+        let id = item.get("id").and_then(Value::as_str);
+        let index = item
+            .get("index")
+            .and_then(Value::as_u64)
+            .and_then(|i| usize::try_from(i).ok());
+        let (Some(id), Some(index)) = (id, index) else {
+            return Err(Error::Shape("invalid added item".into()));
+        };
+        if !ids.insert(id) || added.last().is_some_and(|(_, last)| *last >= index) {
+            return Err(Error::Shape("added items must be unique and in index order".into()));
+        }
+        added.push((id.to_owned(), index));
+    }
+    Ok(Some(QueryDelta {
+        new_state,
+        removed,
+        added,
+    }))
+}
+
+/// Applies a query delta to the first rows of a query (RFC 8620 §5.6): drop every removed id, then
+/// insert every added id at its index, lowest index first.
+///
+/// A window holds only the start of the results, and the delta does not mention rows that merely
+/// slid up from beyond it when rows above were removed. So the result is the prefix this delta
+/// proves, nothing more: an added index past the end of what we hold is a row after a gap we cannot
+/// fill, and so is everything after it. The caller tops the window up from the server when the
+/// prefix comes back shorter than the window.
+///
+/// An added id is removed first wherever it is. For a row that moved (a mutable sort or filter) the
+/// server lists it in removed as well; for any other row this keeps one id from appearing twice.
+pub(crate) fn apply_query_delta(cached: &[String], delta: &QueryDelta, size: usize) -> Vec<String> {
+    let gone: std::collections::BTreeSet<&str> = delta
+        .removed
+        .iter()
+        .chain(delta.added.iter().map(|(id, _)| id))
+        .map(String::as_str)
+        .collect();
+    let mut rows: Vec<String> = cached
+        .iter()
+        .filter(|id| !gone.contains(id.as_str()))
+        .cloned()
+        .collect();
+    for (id, index) in &delta.added {
+        if *index > rows.len() {
+            break;
+        }
+        rows.insert(*index, id.clone());
+    }
+    rows.truncate(size);
+    rows
+}
+
 struct Window {
     key: String,
     args: Value,
@@ -264,7 +390,7 @@ fn window(
     mailbox: &str,
     rows: Rows,
 ) -> Result<Window, Error> {
-    let count = limit(session, "maxObjectsInGet")?.min(50);
+    let count = window_size(session)?;
     let key = query_key(mailbox, rows);
     let args = query_args(account, mailbox, count, rows);
     let referenced = json!({"accountId":account,"#ids":{"resultOf":"query","name":"Email/query","path":"/ids"},"properties":LIST_PROPERTIES});

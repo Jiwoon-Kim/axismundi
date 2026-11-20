@@ -1,5 +1,8 @@
 //! Partial Mail cache. Network exchanges are staged outside SQLite transactions.
-use super::{Window, arguments, call, choose_account, mailboxes, query_ids, validate_get, window};
+use super::{
+    MAX_BODY_VALUE_BYTES, Window, arguments, call, choose_account, mailboxes, query_ids,
+    validate_get, window,
+};
 use crate::{Client, Session};
 use rusqlite::{Connection, OptionalExtension, Transaction, TransactionBehavior, params};
 use serde_json::{Value, json};
@@ -237,7 +240,7 @@ fn merge_email(tx: &Transaction<'_>, account: &str, incoming: &Value, detail: bo
             for (part, body) in value.as_object().ok_or("bodyValues must be an object")? {
                 parts.insert(part.clone(),json!({"isTruncated":body.get("isTruncated"),"isEncodingProblem":body.get("isEncodingProblem"),"cachedBytes":body["value"].as_str().map(str::len)}));
             }
-            json!({"fetchTextBodyValues":detail,"fetchHTMLBodyValues":detail,"maxBodyValueBytes":65536,"parts":parts})
+            json!({"fetchTextBodyValues":detail,"fetchHTMLBodyValues":detail,"maxBodyValueBytes":MAX_BODY_VALUE_BYTES,"parts":parts})
         } else {
             json!(true)
         };

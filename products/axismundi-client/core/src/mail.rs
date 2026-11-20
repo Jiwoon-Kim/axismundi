@@ -37,6 +37,11 @@ const DETAIL_PROPERTIES: &[&str] = &[
 
 pub const CAPABILITY: &str = "urn:ietf:params:jmap:mail";
 
+/// The body size a detail read asks for. The cache records this same value as the coverage of the
+/// bodyValues it stored, so the two must never be written as separate literals: if the request
+/// changed and the record did not, the cache would claim bytes it never fetched.
+pub(crate) const MAX_BODY_VALUE_BYTES: u64 = 65536;
+
 pub fn choose_account(session: &Session, requested: Option<&str>) -> Result<String, Error> {
     if !session.capabilities.contains_key(CORE_CAPABILITY)
         || !session.capabilities.contains_key(CAPABILITY)
@@ -130,7 +135,7 @@ pub fn read(client: &Client, session: &Session, account: &str, id: &str) -> Resu
         client,
         session,
         "Email/get",
-        json!({"accountId":account,"ids":[id],"properties":DETAIL_PROPERTIES,"fetchTextBodyValues":true,"fetchHTMLBodyValues":true,"maxBodyValueBytes":65536}),
+        json!({"accountId":account,"ids":[id],"properties":DETAIL_PROPERTIES,"fetchTextBodyValues":true,"fetchHTMLBodyValues":true,"maxBodyValueBytes":MAX_BODY_VALUE_BYTES}),
     )?;
     let result = arguments(&batch, "Email/get", account)?;
     validate_get(&result, &[id.to_owned()])?;

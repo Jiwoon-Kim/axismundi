@@ -25,6 +25,7 @@ struct Options {
     id: Option<String>,
     mailbox: Option<String>,
     rows: Option<String>,
+    events: Option<String>,
 }
 
 /// `--rows` takes a value rather than being a bare switch, because the offline parser reads its
@@ -49,6 +50,8 @@ fn usage() -> String {
         "  axismundi mailboxes ... [--account ID] (read-only Mailbox/get)",
         "  axismundi mail-inbox ... [--account ID] (first 50 or fewer messages)",
         "  axismundi mail-read ... [--account ID] --id EMAIL_ID (body values on demand)",
+        "  axismundi mail-watch ... --db PATH --profile ID [--account ID] [--mailbox ID] [--rows messages|threads] [--events N]",
+        "                    (sync, then sync again on every WebSocket push; N syncs then exit)",
         "  axismundi mail-thread ... [--account ID] --id THREAD_ID [--db PATH --profile ID] (every message, no bodies)",
         "  axismundi mail-sync ... --db PATH --profile ID [--account ID] [--mailbox ID] [--rows messages|threads]",
         "  axismundi mail-offline --db PATH --profile ID --account ID [--mailbox ID [--rows messages|threads] | --id EMAIL_ID]",
@@ -77,6 +80,7 @@ fn options(args: &[String]) -> Result<Options, String> {
     let mut id = None;
     let mut mailbox = None;
     let mut rows = None;
+    let mut events = None;
     let mut rest = args.iter();
     while let Some(flag) = rest.next() {
         let value = || {
@@ -96,6 +100,7 @@ fn options(args: &[String]) -> Result<Options, String> {
             "--id" => id = Some(value()?),
             "--mailbox" => mailbox = Some(value()?),
             "--rows" => rows = Some(value()?),
+            "--events" => events = Some(value()?),
             other => return Err(format!("unknown argument: {other}")),
         }
         if flag.starts_with("--") {
@@ -119,6 +124,7 @@ fn options(args: &[String]) -> Result<Options, String> {
         id,
         mailbox,
         rows,
+        events,
     })
 }
 
@@ -330,6 +336,17 @@ fn run() -> Result<bool, String> {
     let (session, session_document) = client
         .session_document(&options.session_url)
         .map_err(explain)?;
+    if command == "mail-watch" {
+        return watch(&client, &session, Watch {
+            account: options.account.as_deref(),
+            db: options.db.as_deref(),
+            profile: options.profile.as_deref(),
+            mailbox: options.mailbox.as_deref(),
+            rows: options.rows.as_deref(),
+            events: options.events.as_deref(),
+        })
+        .map(|()| true);
+    }
     if command == "mail-sync" || (matches!(command.as_str(), "mail-read" | "mail-thread") && options.db.is_some()) {
         use axismundi_jmap_core::mail::{self, cache};
         let account = mail::choose_account(&session, options.account.as_deref()).map_err(explain)?;
@@ -499,6 +516,111 @@ fn main() -> ExitCode {
         Err(message) => {
             eprintln!("{message}");
             ExitCode::FAILURE
+        }
+    }
+}
+
+/// One line per sync, so a person watching sees each push land without reading JSON.
+fn summary(view: &serde_json::Value) -> String {
+    format!(
+        "mailbox={} rows={} queryState={} stale={}",
+        view["mailboxId"].as_str().unwrap_or("?"),
+        view["emails"].as_array().map_or(0, Vec::len),
+        view["query"]["queryState"].as_str().unwrap_or("-"),
+        view["queryStale"]
+    )
+}
+
+/// Keeps one mailbox listing current: sync, then sync again whenever the server pushes a change to
+/// Email or Mailbox in this account.
+///
+/// The push only wakes the sync; what changed is still learned from /changes and /queryChanges. A
+/// dropped connection is reopened with the last pushState, after a sync of its own, so a change that
+/// arrived while it was down is not missed. Only network failures are retried. A server that refuses
+/// the upgrade, the subprotocol or the push request will refuse it again, and that ends the command.
+/// The flags `mail-watch` reads. The credentials are already in the Client by then.
+struct Watch<'a> {
+    account: Option<&'a str>,
+    db: Option<&'a str>,
+    profile: Option<&'a str>,
+    mailbox: Option<&'a str>,
+    rows: Option<&'a str>,
+    events: Option<&'a str>,
+}
+
+fn watch(client: &Client, session: &Session, options: Watch<'_>) -> Result<(), String> {
+    use axismundi_jmap_core::{mail::{self, cache}, websocket::Event};
+    use std::time::Duration;
+    let account = mail::choose_account(session, options.account).map_err(explain)?;
+    let path = options.db.ok_or("--db is required")?;
+    let profile = options.profile.ok_or("--profile is required")?;
+    let limit: Option<usize> = options
+        .events
+        .map(|n| n.parse().map_err(|_| "--events takes a number".to_string()))
+        .transpose()?;
+    let listing = rows(options.rows)?;
+    let mut store = cache::Store::open(path, profile).map_err(|e| e.to_string())?;
+    let sync = |store: &mut cache::Store, why: &str| -> Result<(), String> {
+        let view = cache::sync(client, session, store, &account, options.mailbox, listing)
+            .map_err(|e| e.to_string())?;
+        println!("{why}: {}", summary(&view));
+        Ok(())
+    };
+    sync(&mut store, "initial")?;
+    let mut push_state: Option<String> = None;
+    let mut synced = 0usize;
+    let mut backoff = Duration::from_secs(1);
+    loop {
+        if limit.is_some_and(|n| synced >= n) {
+            return Ok(());
+        }
+        let mut channel = match client.push_channel(
+            session,
+            Some(&["Email", "Mailbox"]),
+            push_state.as_deref(),
+            Duration::from_secs(30),
+        ) {
+            Ok(channel) => channel,
+            Err(Error::Transport(e)) => {
+                eprintln!("push connect failed ({e}); retrying in {}s", backoff.as_secs());
+                std::thread::sleep(backoff);
+                backoff = (backoff * 2).min(Duration::from_secs(60));
+                continue;
+            }
+            Err(e) => return Err(explain(e)),
+        };
+        eprintln!("push connected");
+        backoff = Duration::from_secs(1);
+        loop {
+            match channel.next() {
+                Ok(Event::Idle) => continue,
+                Ok(Event::StateChange { changed, push_state: state }) => {
+                    if state.is_some() {
+                        push_state = state;
+                    }
+                    let Some(types) = changed.get(&account) else { continue };
+                    let named: Vec<&str> = types
+                        .keys()
+                        .map(String::as_str)
+                        .filter(|t| matches!(*t, "Email" | "Mailbox"))
+                        .collect();
+                    if named.is_empty() {
+                        continue;
+                    }
+                    sync(&mut store, &format!("push {}", named.join("+")))?;
+                    synced += 1;
+                    if limit.is_some_and(|n| synced >= n) {
+                        channel.close();
+                        return Ok(());
+                    }
+                }
+                Err(Error::Transport(e)) => {
+                    eprintln!("push dropped ({e}); reconnecting");
+                    sync(&mut store, "resync")?;
+                    break;
+                }
+                Err(e) => return Err(explain(e)),
+            }
         }
     }
 }

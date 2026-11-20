@@ -31,8 +31,18 @@ GUI 에 그대로 도움이 되고, 클라이언트 blob 업로드가 성공하�
                                          JMAP core 플러그인의 후속 확장 후보. 데스크톱 실시간은 8887
 ```
 
-GUI 착수 전에 필요한 것: 8621 의 남은 읽기 델타(Mailbox/changes 완료 → queryChanges → 페이지 창),
-8887 실시간, 9404 첨부. 9425 는 표시만이라 작다. 9661·9670 은 GUI 설정 화면과 함께 넣는다.
+GUI 착수 전에 필요한 것: 8621 의 남은 읽기 델타(Mailbox/changes·queryChanges 완료 → 페이지 창),
+8887 실시간(푸시 완료), 9404 첨부. 9425 는 표시만이라 작다. 9661·9670 은 GUI 설정 화면과 함께 넣는다.
+
+**9749 에 붙은 외부 근거 (2026-11-20).** Stalwart Labs 가 2026-11-18 Mastodon 에 "Push notifications
+over JMAP are coming to an Apple Mail client" 라고 알렸고, Apple 개발자들이 Stalwart 개발 서버로 테스트
+했다고 한다. Apple Mail 이 JMAP 자체를 지원하느냐는 질문에는 "Not yet ... It's just JMAP push for now".
+인용된 X 글(미검증)은 iOS 27.3 beta 2, OAuth·IMAP JMAPACCESS·JMAP EmailPush·VAPID 를 요구한다고 적는다.
+Stalwart 는 자체 호스팅에서 APNS 인증서 없이 iOS 푸시가 된다고 답했다. 로컬 Stalwart 가 광고하는
+`urn:ietf:params:jmap:emailpush`·`webpush-vapid` 가 바로 그것이다. 그래서 9749 는 우리 PWA 만의 일이 아니라
+**WordPress JMAP 플러그인이 iOS Mail 푸시를 받게 하는 경로**이기도 하다. 클라이언트 범위 밖이라는 결정은
+그대로이고(데스크톱은 8887), 플러그인 후속 확장의 근거로 기록한다.
+출처: https://mastodon.social/@stalwartlabs/117636625047483146
 
 ## 2026-11-19 착수 기록
 
@@ -198,6 +208,38 @@ Stalwart 는 `position: 0` 을 돌려준다. 보유 prefix 는 total 을 넘을 
 
 완료: 외부 테스트 클라이언트의 변경 반영. 실패 시 이전 체크포인트 또는 durable dirty 작업
 보존. 부분 데이터로 서버 전체 count를 영구 재계산하지 않는다. full replica 완료는 주장하지 않는다.
+
+## RFC 8887 푸시 (2026-11-20)
+
+`websocket` 모듈과 CLI `mail-watch`. 소켓은 "무엇이 바뀌었나"만 알리고 내용은 나르지 않는다.
+StateChange 를 받으면 기존 `/changes`·`/queryChanges` 흐름(sync)을 돌린다 — 푸시는 그 흐름을 일찍 깨울 뿐
+대체하지 않는다(M5 의 원칙). 이번 범위는 푸시만이고 **요청은 계속 HTTP** 로 보낸다. WebSocket 위의 요청은
+후속.
+
+```txt
+URL      Session 의 websocket capability 에서만. supportsPush=true 여야 함
+인증     Authorization 은 업그레이드 요청에 실린다 → apiUrl 과 같은 origin(https↔wss, http↔ws)에만.
+         다르면 거부 — 다른 origin 으로의 인증 리다이렉트를 거부하는 것과 같은 규칙
+TLS      HTTP 와 같은 신뢰: rustls + ring + rustls-platform-verifier(ureq 와 같은 버전 공유), 검증 끄지 않음
+서브프로토콜  "jmap" 요청, 서버가 수락하지 않으면 Shape 오류(재시도 대상 아님)
+재연결   Transport 오류만 1→60초 백오프로 재시도. 재연결 전 sync 한 번, 마지막 pushState 로 재개 요청.
+         업그레이드 거부(401 등)·서브프로토콜 불일치·RequestError 는 같은 답이 반복되므로 종료
+idle     읽기 타임아웃 30초마다 Idle 이벤트 — 연결은 유지, 호출자가 멈출지 판단
+```
+
+증거:
+
+- mock 5개: origin 규칙(호스트·포트·평문·자격증명·비 소켓 스킴), 업그레이드 요청의 Authorization·
+  서브프로토콜, push enable 본문(dataTypes·pushState), ping 과 모르는 `@type` 은 건너뛰고 StateChange 만
+  통과, idle, close, 서브프로토콜 미수락, 401 업그레이드 거부, RequestError. 변이 4종 전부 실패.
+- Stalwart: `mail-watch --events 2` 를 띄우고 외부에서 inbox 에 메일 생성·삭제 → push 두 번, 목록 4→5→4.
+  Caddy 를 재시작해 연결을 끊으면 `closed: 1001` → resync → 재연결 → 다음 push 수신.
+- **실측으로 찾은 결함:** 처음엔 해석된 주소 중 첫 번째만 시도했다. `localhost` 는 `::1` 이 먼저 나오고
+  Docker 는 포트를 IPv4 에만 열어 연결이 거부됐다(HTTP 는 ureq 가 모든 주소를 시도해 정상). 모든 주소를
+  순서대로 시도하도록 고쳤다.
+
+남은 것: pushState 재개가 실제로 끊긴 동안의 변경을 다시 보내는지는 Stalwart 로 확인하지 않았다(재연결
+전 sync 가 있어 변경 유실은 막는다). WebSocket 위의 JMAP 요청, 앱 종료 시 상태 저장.
 
 ## M4. 같은 코어 위의 GUI
 

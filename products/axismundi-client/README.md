@@ -24,6 +24,10 @@ using the same Session/credential flags as `session`. `mail-inbox` returns a bou
 window (at most 50 messages); `query.ids` defines the display order, not the order
 of the `emails` array. `mail-read` fetches body values on demand with a 64 KiB
 per-value limit; inspect truncation flags before treating a body as complete.
+`mail-watch --db PATH --profile ID` syncs one listing, then syncs it again each time the
+server pushes an Email or Mailbox change over the Session's JMAP WebSocket (RFC 8887). The
+socket must be on the apiUrl origin; dropped connections are retried with backoff and
+resynced. `--events N` exits after N pushed syncs.
 `mail-thread --id THREAD_ID` returns every message in a thread, across mailboxes, in
 the thread's order and without bodies. A thread has no size limit, so its messages
 are fetched in as many `maxObjectsInGet`-sized requests as it takes, never cut off.

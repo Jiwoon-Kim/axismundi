@@ -16,6 +16,7 @@ use serde_json::{Value, json};
 pub mod discovery;
 pub mod contacts;
 pub mod mail;
+pub mod websocket;
 
 pub const CORE_CAPABILITY: &str = "urn:ietf:params:jmap:core";
 

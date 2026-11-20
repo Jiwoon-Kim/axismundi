@@ -7,6 +7,15 @@ const SESSION_NAMESPACE = 'axismundi/v1';
 const SESSION_ROUTE = '/users/me/session';
 
 function permission( \WP_REST_Request $request ) {
+	// A request with no authenticated principal is told to authenticate (401), not that it is
+	// refused (403): a client that followed SRV and /.well-known/jmap here must read this as a
+	// prompt to sign in, and a 403 says credentials would not help.
+	// NON-STANDARD: RFC 9110 requires WWW-Authenticate on a 401. WordPress core sends none on any
+	// REST route, and a Basic challenge would make a browser raise its own login dialog for the
+	// site's same-origin requests, so this follows core and leaves the header out.
+	if ( ! is_user_logged_in() ) {
+		return new \WP_Error( 'ax_jmap_unauthenticated', 'Authentication required.', array( 'status' => 401 ) );
+	}
 	$nonce = sanitize_text_field( (string) $request->get_header( 'X-WP-Nonce' ) );
 	$query = $request->get_query_params();
 	// Core accepts a query nonce for ordinary authenticated browser download links.
@@ -15,7 +24,8 @@ function permission( \WP_REST_Request $request ) {
 	}
 	if ( ! current_user_can( 'read' ) || ( ! rest_get_authenticated_app_password()
 		&& ! wp_verify_nonce( $nonce, 'wp_rest' ) ) ) {
-		return new \WP_Error( 'ax_jmap_forbidden', 'Authentication required.', array( 'status' => 403 ) );
+		// Authenticated, but by a cookie without a REST nonce or without the read capability.
+		return new \WP_Error( 'ax_jmap_forbidden', 'This request is not permitted.', array( 'status' => 403 ) );
 	}
 	return true;
 }

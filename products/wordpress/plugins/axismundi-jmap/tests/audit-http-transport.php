@@ -51,7 +51,12 @@ try {
 		$assert( 'private, no-store' === ( $response->get_headers()['Cache-Control'] ?? null ), 'Permission errors are not cacheable' );
 	}
 	wp_set_current_user( 0 );
-	$assert( 403 === $dispatch( $body, $nonce )->get_status(), 'Anonymous access denied even with another User nonce' );
+	// No principal is a prompt to authenticate, not a refusal: a client that discovered this
+	// endpoint must be able to tell "sign in" (401) from "credentials would not help" (403).
+	$anonymous = $dispatch( $body, $nonce );
+	$assert( 401 === $anonymous->get_status(), 'Anonymous access asks for authentication even with another User nonce' );
+	$assert( 'ax_jmap_unauthenticated' === ( $anonymous->get_data()['code'] ?? null ), 'Anonymous denial names the missing authentication' );
+	$assert( 'private, no-store' === ( $anonymous->get_headers()['Cache-Control'] ?? null ), 'Authentication errors are not cacheable' );
 	echo 'PASS: ' . $checks . " HTTP transport checks\n";
 } finally {
 	wp_set_current_user( $initial_user );

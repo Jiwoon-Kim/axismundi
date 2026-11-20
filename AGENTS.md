@@ -12,6 +12,7 @@ changing; this file holds only what is true everywhere.
 |---|---|
 | `products/wordpress/` | `products/wordpress/AGENTS.md` |
 | `products/styleguide/` | `products/styleguide/AGENTS.md` |
+| `products/axismundi-client/gui/` | `products/axismundi-client/gui/AGENTS.md` |
 | `products/reference-implementations/axismundi-lab/` | that directory's `AGENTS.md` |
 | `tools/` | `tools/AGENTS.md` |
 | `core/` | `core/AGENTS.md` |

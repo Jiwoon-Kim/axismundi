@@ -815,6 +815,24 @@ fn advance(
     }))
 }
 
+/// Whether the Email/get answers for a listing contradict the query that listed them: a message the
+/// query named is gone, or is no longer in the listing's mailbox. Query and get are two steps, and a
+/// message can be deleted or moved between them; the listing then holds a row it cannot show and
+/// must be marked stale rather than presented as current. Every path that writes listing rows uses
+/// this one test.
+fn contradicted(gets: &[Value], mailbox: &str) -> bool {
+    gets.iter().any(|result| {
+        result["notFound"].as_array().is_some_and(|v| !v.is_empty())
+            || result["list"].as_array().is_some_and(|rows| {
+                rows.iter().any(|doc| {
+                    doc["mailboxIds"]
+                        .as_object()
+                        .is_some_and(|ids| ids.get(mailbox) != Some(&Value::Bool(true)))
+                })
+            })
+    })
+}
+
 /// Loads the next page of a cached listing and appends it.
 ///
 /// The page is asked for by position at the listing's own queryState. If the server answers at
@@ -875,6 +893,7 @@ pub fn more(
             return Err("next page repeats a message already listed".into());
         }
         let gets = fetch_lacking(client, session, store, account, &ids)?;
+        let stale = contradicted(&gets, &mailbox);
         let mut all = held.clone();
         all.extend(ids.iter().cloned());
         document["ids"] = json!(all);
@@ -891,9 +910,10 @@ pub fn more(
                 params![account, key, (held.len() + offset) as i64, id],
             )?;
         }
+        // Stale stays set once set: a page that is consistent does not make earlier rows current.
         tx.execute(
-            "UPDATE mail_queries SET document=?3 WHERE account=?1 AND query_key=?2",
-            params![account, key, document.to_string()],
+            "UPDATE mail_queries SET document=?3, stale=MAX(stale,?4) WHERE account=?1 AND query_key=?2",
+            params![account, key, document.to_string(), stale],
         )?;
         tx.commit()?;
         return store.view(account, Some(&mailbox), listing);
@@ -936,16 +956,7 @@ pub fn sync(
     }
     // Already bounded where it was read: a window by its limit, an advanced listing by its length.
     let ids = query_ids(&query, usize::MAX)?;
-    let missing = gets.iter().any(|result| {
-        result["notFound"].as_array().is_some_and(|v| !v.is_empty())
-            || result["list"].as_array().is_some_and(|rows| {
-                rows.iter().any(|doc| {
-                    doc["mailboxIds"]
-                        .as_object()
-                        .is_some_and(|ids| ids.get(&mailbox) != Some(&Value::Bool(true)))
-                })
-            })
-    });
+    let missing = contradicted(&gets, &mailbox);
     let tx = store.write(account, revision)?;
     for result in gets {
         save_get(&tx, account, &result, false)?;
@@ -1663,6 +1674,44 @@ mod tests {
             if args["position"] != 0 && args["position"] != 3 {
                 assert_eq!(args["limit"], 2, "{args}");
             }
+        }
+    }
+
+    /// A page is read in two steps, Email/query then Email/get. A message that is deleted, or moved
+    /// out of the mailbox, between them is listed by the query and contradicted by the get; the
+    /// listing must then say it is stale, as a full sync does.
+    #[test]
+    fn a_page_that_lost_a_message_between_query_and_get_marks_the_listing_stale() {
+        let row = |id: &str, mailbox: &str| {
+            let mut doc = json!({});
+            for key in LIST_PROPERTIES {
+                doc[*key] = Value::Null;
+            }
+            doc["id"] = json!(id);
+            doc["mailboxIds"] = json!({mailbox: true});
+            doc["keywords"] = json!({});
+            doc
+        };
+        let first = |state: &str| json!({"accountId":"a","position":0,"queryState":state,"canCalculateChanges":true,"ids":["2","1"],"total":3});
+        for (case, got) in [
+            ("deleted", json!({"accountId":"a","state":"s","list":[],"notFound":["x"]})),
+            ("moved", json!({"accountId":"a","state":"s","list":[row("x", "elsewhere")],"notFound":[]})),
+        ] {
+            let (session, server) = mock(vec![
+                ("Email/get", get(json!([]), "seed")),
+                ("Mailbox/get", boxes()),
+                ("Email/query", first("q1")),
+                ("Email/get", get(Value::Array(vec![row("2", "in"), row("1", "in")]), "s")),
+                ("Email/query", json!({"accountId":"a","position":2,"queryState":"q1","ids":["x"],"total":3})),
+                ("Email/get", got),
+            ]);
+            let c = client();
+            let mut store = Store::open(":memory:", "p").unwrap();
+            let synced = sync(&c, &session, &mut store, "a", None, Rows::Messages).unwrap();
+            assert_eq!(synced["queryStale"], false, "{case}: fresh before paging");
+            let paged = more(&c, &session, &mut store, "a", None, Rows::Messages).unwrap();
+            server.join().unwrap();
+            assert_eq!(paged["queryStale"], true, "{case}");
         }
     }
 

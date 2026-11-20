@@ -328,6 +328,35 @@ pub fn read(
     store.email(account, id)
 }
 
+/// Expands a thread and keeps what it learned about each message.
+///
+/// The messages merge into the cache as listing-coverage rows, exactly as a listing's would, so a
+/// later offline read of any of them works. The thread's own membership is not stored: nothing here
+/// tracks Thread/changes yet, and a remembered member list would silently go stale when a reply
+/// arrives. Until that exists, a thread view is network-only.
+pub fn thread(
+    client: &Client,
+    session: &Session,
+    store: &mut Store,
+    account: &str,
+    id: &str,
+) -> Result<Value> {
+    store.bind(client, session)?;
+    let revision = store.revision(account)?;
+    let result = super::thread(client, session, account, id)?;
+    if result["found"] == true {
+        let tx = store.write(account, revision)?;
+        save_get(
+            &tx,
+            account,
+            &json!({"list":result["emails"],"notFound":result["notFound"]}),
+            false,
+        )?;
+        tx.commit()?;
+    }
+    Ok(result)
+}
+
 fn checkpoint(client: &Client, session: &Session, account: &str) -> Result<String> {
     let batch = call(
         client,

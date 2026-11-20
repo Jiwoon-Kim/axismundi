@@ -37,7 +37,7 @@ Contacts/Calendar 모델·원본 MIME·로컬 편집·서버 Email을 한 record
 | Mailbox/query | 조건·정렬·계층별 ID 창. Email query와 별개 | 후속 |
 | Mailbox/queryChanges | 해당 queryState의 소속/순서 변경, 불가 시 창 재조회 | 후속 |
 | Mailbox/set | 생성·이름/부모 변경·삭제, 권한·항목별 실패·파괴 옵션 | 후속 |
-| Thread/get | 서버 threadId와 emailIds 순서, 전개 수가 get 상한을 넘으면 분할 | probe fixture에서 왕복. 접힌 목록은 Thread/get 없이 동작, **전개는 후속** |
+| Thread/get | 서버 threadId와 emailIds 순서, 전개 수가 get 상한을 넘으면 분할 | 접힌 목록은 Thread/get 없이 동작. **전개 구현**(2026-11-20, `mail-thread`): Thread/get 단독 → emailIds를 maxObjectsInGet 청크로 Email/get, 절단 없음, 사이에 사라진 메시지는 notFound. 메시지는 목록 coverage로 캐시, **스레드 소속은 저장 안 함**(Thread/changes 후속) |
 | Thread/changes | Thread 전용 checkpoint와 캐시 무효화 | 후속 |
 | Email/get | projection·null/누락·unknown·body part/truncation, notFound | 읽기 CLI·부분 캐시·오프라인 |
 | Email/changes | Email 전용 state, hasMoreChanges, 파괴/dirty, 만료 복구 | 부분 캐시 구현·mock/실서버 검증 |

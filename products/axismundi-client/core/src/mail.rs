@@ -334,6 +334,98 @@ pub fn inbox(client: &Client, session: &Session, account: &str) -> Result<Value,
     )
 }
 
+/// The ids a Thread/get returned for the one thread asked for, in the server's order.
+///
+/// A thread nobody can see is answered with `notFound`, and that is an ordinary outcome rather than
+/// a malformed response, so it comes back as `None`.
+fn thread_email_ids(result: &Value, thread: &str) -> Result<Option<Vec<String>>, Error> {
+    let list = result
+        .get("list")
+        .and_then(Value::as_array)
+        .ok_or_else(|| Error::Shape("Thread/get has no list".into()))?;
+    let missing = result
+        .get("notFound")
+        .and_then(Value::as_array)
+        .ok_or_else(|| Error::Shape("Thread/get has no notFound".into()))?;
+    let row = match (list.as_slice(), missing.as_slice()) {
+        ([row], []) if row.get("id").and_then(Value::as_str) == Some(thread) => row,
+        ([], [id]) if id.as_str() == Some(thread) => return Ok(None),
+        _ => return Err(Error::Shape("Thread/get did not answer for the thread asked".into())),
+    };
+    let ids = row
+        .get("emailIds")
+        .and_then(Value::as_array)
+        .ok_or_else(|| Error::Shape("Thread has no emailIds".into()))?;
+    let mut seen = std::collections::BTreeSet::new();
+    ids.iter()
+        .map(|id| {
+            let id = id
+                .as_str()
+                .ok_or_else(|| Error::Shape("invalid Thread emailId".into()))?;
+            if !seen.insert(id) {
+                return Err(Error::Shape("duplicate Thread emailId".into()));
+            }
+            Ok(id.to_owned())
+        })
+        .collect::<Result<_, _>>()
+        .map(Some)
+}
+
+/// Expands one thread into every message in it.
+///
+/// A thread has no upper size: one conversation can hold thousands of messages, and nothing about
+/// maxObjectsInGet bounds it. So the ids come first, from Thread/get on its own, and the messages
+/// follow in Email/get requests of at most maxObjectsInGet ids each — as many requests as it takes.
+/// Nothing is cut off to make it fit. Chaining Thread/get into Email/get by result reference would
+/// save a round trip only for threads small enough not to need it, and fail with requestTooLarge for
+/// exactly the ones that matter, so it is not attempted.
+///
+/// The messages are fetched with the listing's properties, not bodies; opening one is `read`.
+/// A message deleted between the two steps lands in `notFound`, not in an error: the thread was real
+/// when it was asked for, and the caller sees which of its messages are gone.
+pub fn thread(client: &Client, session: &Session, account: &str, id: &str) -> Result<Value, Error> {
+    choose_account(session, Some(account))?;
+    let size = limit(session, "maxObjectsInGet")?;
+    let batch = call(
+        client,
+        session,
+        "Thread/get",
+        json!({"accountId":account,"ids":[id]}),
+    )?;
+    let result = arguments(&batch, "Thread/get", account)?;
+    let state = result.get("state").cloned().unwrap_or(Value::Null);
+    let Some(email_ids) = thread_email_ids(&result, id)? else {
+        return Ok(json!({"accountId":account,"threadId":id,"state":state,"found":false}));
+    };
+    let mut emails = Vec::new();
+    let mut not_found = Vec::new();
+    let mut get_states = Vec::new();
+    for chunk in email_ids.chunks(size) {
+        let batch = call(
+            client,
+            session,
+            "Email/get",
+            json!({"accountId":account,"ids":chunk,"properties":LIST_PROPERTIES}),
+        )?;
+        let get = arguments(&batch, "Email/get", account)?;
+        validate_get(&get, chunk)?;
+        get_states.push(get.get("state").cloned().unwrap_or(Value::Null));
+        emails.extend(get["list"].as_array().into_iter().flatten().cloned());
+        not_found.extend(get["notFound"].as_array().into_iter().flatten().cloned());
+    }
+    // Email/get answers in whatever order it likes; the thread's order is the one Thread/get gave.
+    let position: std::collections::HashMap<&str, usize> = email_ids
+        .iter()
+        .enumerate()
+        .map(|(i, id)| (id.as_str(), i))
+        .collect();
+    emails.sort_by_key(|email| position.get(email["id"].as_str().unwrap_or_default()).copied());
+    Ok(json!({
+        "accountId":account,"threadId":id,"state":state,"found":true,
+        "emailIds":email_ids,"emails":emails,"notFound":not_found,"getStates":get_states
+    }))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -538,5 +630,125 @@ mod tests {
         assert_eq!(result["query"]["ids"], json!(["2", "1"]));
         assert_eq!(result["emails"].as_array().unwrap().len(), 2);
         server.join().unwrap();
+    }
+
+    #[test]
+    fn thread_get_answers_are_checked_against_the_thread_asked() {
+        let ok = json!({"list":[{"id":"t","emailIds":["1","2"]}],"notFound":[]});
+        assert_eq!(thread_email_ids(&ok, "t").unwrap(), Some(vec!["1".into(), "2".into()]));
+        assert_eq!(thread_email_ids(&json!({"list":[],"notFound":["t"]}), "t").unwrap(), None);
+        for bad in [
+            json!({"list":[{"id":"other","emailIds":[]}],"notFound":[]}),
+            json!({"list":[],"notFound":["other"]}),
+            json!({"list":[{"id":"t","emailIds":["1"]}],"notFound":["t"]}),
+            json!({"list":[{"id":"t","emailIds":["1","1"]}],"notFound":[]}),
+            json!({"list":[{"id":"t"}],"notFound":[]}),
+            json!({"list":[]}),
+        ] {
+            assert!(thread_email_ids(&bad, "t").is_err(), "{bad}");
+        }
+    }
+
+    /// Serves one canned answer per request, handing each request body to `answer`.
+    ///
+    /// Waits a bounded time for each request. A client that stops early — truncating a thread, say —
+    /// must fail the test, not hang it on a request that never comes.
+    fn serve(
+        requests: usize,
+        answer: impl Fn(usize, &Value) -> Value + Send + 'static,
+    ) -> (String, std::thread::JoinHandle<Vec<Value>>) {
+        use std::{
+            io::{BufRead, BufReader, Read, Write},
+            net::TcpListener,
+            time::Duration,
+        };
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let api = format!("http://{}", listener.local_addr().unwrap());
+        listener.set_nonblocking(true).unwrap();
+        let server = std::thread::spawn(move || {
+            let mut seen = Vec::new();
+            for step in 0..requests {
+                let deadline = std::time::Instant::now() + Duration::from_secs(5);
+                let mut stream = loop {
+                    match listener.accept() {
+                        Ok((stream, _)) => break stream,
+                        Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                            assert!(
+                                std::time::Instant::now() < deadline,
+                                "request {step} of {requests} never came"
+                            );
+                            std::thread::sleep(Duration::from_millis(10));
+                        }
+                        Err(e) => panic!("{e}"),
+                    }
+                };
+                stream.set_nonblocking(false).unwrap();
+                stream.set_read_timeout(Some(Duration::from_secs(5))).unwrap();
+                let mut reader = BufReader::new(&mut stream);
+                let mut length = 0;
+                loop {
+                    let mut line = String::new();
+                    reader.read_line(&mut line).unwrap();
+                    assert!(!line.is_empty());
+                    if line == "\r\n" {
+                        break;
+                    }
+                    if let Some(v) = line.to_ascii_lowercase().strip_prefix("content-length:") {
+                        length = v.trim().parse().unwrap();
+                    }
+                }
+                let mut bytes = vec![0; length];
+                reader.read_exact(&mut bytes).unwrap();
+                let request: Value = serde_json::from_slice(&bytes).unwrap();
+                let call = request["methodCalls"][0].clone();
+                let body = json!({"methodResponses":[[call[0],answer(step,&call),"mail"]],"sessionState":"s"}).to_string();
+                write!(stream,"HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",body.len(),body).unwrap();
+                seen.push(call);
+            }
+            seen
+        });
+        (api, server)
+    }
+
+    #[test]
+    fn a_thread_larger_than_one_get_is_fetched_whole_in_bounded_chunks() {
+        // Five messages, two per Email/get: three gets, none cut off. The server answers out of
+        // order and has lost message 4 since Thread/get named it.
+        let (api, server) = serve(4, |step, call| match step {
+            0 => {
+                assert_eq!(call[0], "Thread/get");
+                assert_eq!(call[1]["ids"], json!(["t"]));
+                json!({"accountId":"a","state":"ts","list":[{"id":"t","emailIds":["1","2","3","4","5"]}],"notFound":[]})
+            }
+            _ => {
+                assert_eq!(call[0], "Email/get");
+                assert!(call[1].get("fetchTextBodyValues").is_none());
+                let ids: Vec<&str> = call[1]["ids"].as_array().unwrap().iter().map(|v| v.as_str().unwrap()).collect();
+                assert!(ids.len() <= 2);
+                let list: Vec<Value> = ids.iter().rev().filter(|id| **id != "4").map(|id| json!({"id":id})).collect();
+                let missing: Vec<&str> = ids.iter().copied().filter(|id| *id == "4").collect();
+                json!({"accountId":"a","state":"es","list":list,"notFound":missing})
+            }
+        });
+        let session: Session = serde_json::from_value(json!({"apiUrl":api,"capabilities":{CORE_CAPABILITY:{"maxObjectsInGet":2,"maxCallsInRequest":1,"maxSizeRequest":10000},CAPABILITY:{}},"accounts":{"a":{"accountCapabilities":{CAPABILITY:{}}}}})).unwrap();
+        let client = Client::new(crate::Credentials { user: "u".into(), secret: "test-only".into() });
+        let result = thread(&client, &session, "a", "t").unwrap();
+        let calls = server.join().unwrap();
+        let chunks: Vec<&Value> = calls[1..].iter().map(|c| &c[1]["ids"]).collect();
+        assert_eq!(chunks, [&json!(["1", "2"]), &json!(["3", "4"]), &json!(["5"])]);
+        let order: Vec<&str> = result["emails"].as_array().unwrap().iter().map(|e| e["id"].as_str().unwrap()).collect();
+        assert_eq!(order, ["1", "2", "3", "5"]);
+        assert_eq!(result["notFound"], json!(["4"]));
+        assert_eq!(result["emailIds"].as_array().unwrap().len(), 5);
+    }
+
+    #[test]
+    fn a_thread_nobody_can_see_is_not_found_and_fetches_nothing() {
+        let (api, server) = serve(1, |_, _| json!({"accountId":"a","state":"ts","list":[],"notFound":["t"]}));
+        let session: Session = serde_json::from_value(json!({"apiUrl":api,"capabilities":{CORE_CAPABILITY:{"maxObjectsInGet":2,"maxCallsInRequest":1,"maxSizeRequest":10000},CAPABILITY:{}},"accounts":{"a":{"accountCapabilities":{CAPABILITY:{}}}}})).unwrap();
+        let client = Client::new(crate::Credentials { user: "u".into(), secret: "test-only".into() });
+        let result = thread(&client, &session, "a", "t").unwrap();
+        assert_eq!(server.join().unwrap().len(), 1);
+        assert_eq!(result["found"], false);
     }
 }

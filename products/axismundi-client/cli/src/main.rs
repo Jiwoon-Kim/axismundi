@@ -49,6 +49,7 @@ fn usage() -> String {
         "  axismundi mailboxes ... [--account ID] (read-only Mailbox/get)",
         "  axismundi mail-inbox ... [--account ID] (first 50 or fewer messages)",
         "  axismundi mail-read ... [--account ID] --id EMAIL_ID (body values on demand)",
+        "  axismundi mail-thread ... [--account ID] --id THREAD_ID [--db PATH --profile ID] (every message, no bodies)",
         "  axismundi mail-sync ... --db PATH --profile ID [--account ID] [--mailbox ID] [--rows messages|threads]",
         "  axismundi mail-offline --db PATH --profile ID --account ID [--mailbox ID [--rows messages|threads] | --id EMAIL_ID]",
         "  axismundi todo      --session-url URL [--user NAME] [--secret SECRET] [--account ID]",
@@ -329,7 +330,7 @@ fn run() -> Result<bool, String> {
     let (session, session_document) = client
         .session_document(&options.session_url)
         .map_err(explain)?;
-    if command == "mail-sync" || (command == "mail-read" && options.db.is_some()) {
+    if command == "mail-sync" || (matches!(command.as_str(), "mail-read" | "mail-thread") && options.db.is_some()) {
         use axismundi_jmap_core::mail::{self, cache};
         let account = mail::choose_account(&session, options.account.as_deref()).map_err(explain)?;
         let path = options.db.as_deref().ok_or("--db is required")?;
@@ -338,6 +339,9 @@ fn run() -> Result<bool, String> {
         let result = if command == "mail-sync" {
             cache::sync(&client, &session, &mut store, &account, options.mailbox.as_deref(),
                 rows(options.rows.as_deref())?)
+        } else if command == "mail-thread" {
+            cache::thread(&client, &session, &mut store, &account,
+                options.id.as_deref().ok_or("--id is required")?)
         } else {
             cache::read(&client, &session, &mut store, &account,
                 options.id.as_deref().ok_or("--id is required")?)
@@ -345,12 +349,13 @@ fn run() -> Result<bool, String> {
         println!("{}", serde_json::to_string_pretty(&result).map_err(|e| e.to_string())?);
         return Ok(true);
     }
-    if matches!(command.as_str(), "mailboxes" | "mail-inbox" | "mail-read") {
+    if matches!(command.as_str(), "mailboxes" | "mail-inbox" | "mail-read" | "mail-thread") {
         use axismundi_jmap_core::mail;
         let account = mail::choose_account(&session, options.account.as_deref()).map_err(explain)?;
         let result = match command.as_str() {
             "mailboxes" => mail::mailboxes(&client, &session, &account),
             "mail-inbox" => mail::inbox(&client, &session, &account),
+            "mail-thread" => mail::thread(&client, &session, &account, options.id.as_deref().ok_or("--id is required")?),
             _ => mail::read(&client, &session, &account, options.id.as_deref().ok_or("--id is required")?),
         }.map_err(explain)?;
         println!("{}", serde_json::to_string_pretty(&result).map_err(|e| e.to_string())?);

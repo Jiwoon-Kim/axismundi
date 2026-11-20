@@ -22,13 +22,13 @@ Angular Material을 이용한 본격적인 탐색·계정 전환·작성 화면 
 | 단계 | 현재 결과 | 남은 범위 |
 |---|---|---|
 | M0 | 프로필 격리 유지·Mail 가산 스키마·coverage/dirty 표현 기록 | 전역 파일·출하 암호화는 미결 |
-| M1 | 제한된 읽기·result reference/분할·응답 대응·실서버 왕복 | Thread 전개는 후속 |
+| M1 | 제한된 읽기·result reference/분할·응답 대응·실서버 왕복·Thread 전개 | 스레드 소속 오프라인 보관(Thread/changes) |
 | M2 | Mail 전용 테이블·오프라인·부분 병합·Contacts 보존 검증 | 임의 필터·희소 다중 페이지·Blob 캐시 확장 |
 | M3 | Email changes·dirty/checkpoint·창 재조회·만료 복구 | Mailbox delta·queryChanges·큰 backlog 우선순위 |
 | M4 | 아직 미구현 | 본격 UI는 Mail/Contacts/AP 대표 흐름 이후 |
 | M5 | Submission의 양방향 로컬 테스트만 존재 | 제품 작성·Draft·Identity·Blob·발송 등 |
 
-명령은 `mailboxes`, `mail-inbox`, `mail-read`, `mail-sync`, `mail-offline`이다.
+명령은 `mailboxes`, `mail-inbox`, `mail-read`, `mail-thread`, `mail-sync`, `mail-offline`이다.
 근거는 [Mail 왕복](INTEROP-MAIL.md)·[캐시 구현](IMPLEMENTATION-MAIL-CACHE.md)이며,
 RFC 8621 전체 메서드의 소유 영역·지원 상태는 [대응표](MATRIX-JMAP-MAIL.md)를 따른다.
 이하 단계별 항목은 전체 완료 기준이다. 위 첫 구현 결과로 모든 항목의 완료를 주장하지 않는다.
@@ -81,8 +81,23 @@ HTTP·프로토콜·동기화 로직은 Rust Core/Mail에 둔다.
           (--rows threads).  목록 키가 collapseThreads 를 포함해 메시지 목록과 공존한다
 전개       Thread/get → 그 스레드의 emailIds 전부 → Email/get.  스레드 하나가 메일 수천 개일
           수 있어 상한이 없다.  ID 를 먼저 받고 dedupe·maxObjectsInGet 청크로 나눈다.
-          **조용히 절단하지 않는다.**  미구현 — 이 단계가 상한 검사와 함께 들어간다
+          **조용히 절단하지 않는다.**  구현됨 (mail-thread, 2026-11-20)
 ```
+
+전개 구현 기록: Thread/get 은 단독 호출이다. Thread/get→Email/get 참조 사슬은 상한보다 작은
+스레드에서만 왕복 하나를 아끼고, 정작 큰 스레드에선 requestTooLarge 로 실패하므로 쓰지 않는다.
+emailIds 중복은 서버 응답 결함으로 거부한다(한 스레드 안이라 dedupe 할 대상이 아님). 결과 순서는
+Email/get 응답 순서가 아니라 Thread/get 의 순서다. 증거:
+
+- mock(maxObjectsInGet=2, 5통): Email/get 3회 `[1,2] [3,4] [5]`, 순서 복원, 중간 삭제분 notFound.
+  변이 셋(청크 무시·순서 정렬 제거·첫 청크만)이 모두 실패한다. 마지막 변이는 처음에 실패가 아니라
+  **멈춤**이었다 — mock 이 오지 않는 요청을 무한 대기. accept 기한을 넣어 "request 2 of 4 never
+  came" 실패로 바꿨다.
+- Stalwart: inbox 목록에서 2통인 스레드가 전개하면 4통(나머지는 다른 메일함). 전개는 메일함
+  경계를 넘는다. 4통 모두 같은 파일에서 오프라인으로 읽힘. 없는 스레드는 `found:false`, Email/get 없음.
+
+남은 것: 스레드 소속의 오프라인 보관은 Thread/changes 와 함께. 실서버 maxObjectsInGet 이 커서
+청크 분할 자체는 mock 으로만 증명됐다.
 
 여러 스레드의 emailIds 를 result reference 로 한 번에 Email/get 에 잇는 사슬은 쓰지 않는다.
 상한을 넘길 수 있는 유일한 경로이고, 스레드 하나씩 전개하면 필요하지 않다.

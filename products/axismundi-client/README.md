@@ -48,10 +48,13 @@ axismundi mail-offline --db profile.sqlite --profile PROFILE_ID --account ACCOUN
 axismundi mail-offline --db profile.sqlite --profile PROFILE_ID --account ACCOUNT_ID --id EMAIL_ID
 ```
 
-Use `--mailbox ID` with sync/offline for another mailbox. This is a bounded partial
-cache, not a complete offline replica. Read `coverage`, `staleProperties` and
-`queryStale`; retained body values can be stale. Server changes invalidate cached
-properties and refresh the selected window; query removal is not Email destruction.
+Use `--mailbox ID` with sync/offline for another mailbox. `mail-more` appends the next
+page to a synced listing; later syncs keep every loaded page, and the view reports the
+server's `total` and `hasMore` (null when the server did not calculate a total). This is
+a bounded partial cache, not a complete offline replica. Read `coverage`,
+`staleProperties` and `queryStale`; body values can be truncated. An Email can only change
+its `keywords` and `mailboxIds` (RFC 8621 §4), so a server change invalidates just those
+two and refetches only them; query removal is not Email destruction.
 See [cache implementation](docs/IMPLEMENTATION-MAIL-CACHE.md) and the
 [full RFC 8621 method matrix](docs/MATRIX-JMAP-MAIL.md) for implemented/deferred scope.
 

@@ -1,6 +1,6 @@
 //! Partial Mail cache. Network exchanges are staged outside SQLite transactions.
 use super::{
-    LIST_PROPERTIES, MAILBOX_PROPERTIES, MAX_BODY_VALUE_BYTES, Rows, Window, apply_query_delta,
+    LIST_PROPERTIES, MAILBOX_PROPERTIES, MUTABLE_PROPERTIES, MAX_BODY_VALUE_BYTES, Rows, Window, apply_query_delta,
     arguments, call, choose_account, limit, mailboxes, query_args, query_changes, query_ids,
     query_key, validate_get, window, window_size,
 };
@@ -234,8 +234,11 @@ impl Store {
             Some((raw, stale)) => (serde_json::from_str::<Value>(&raw)?, stale != 0),
             None => (Value::Null, true),
         };
+        // Unknown when the server did not calculate a total; never guessed from the rows held.
+        let total = query.get("total").and_then(Value::as_u64);
+        let more = total.map(|total| (ids.len() as u64) < total);
         Ok(
-            json!({"accountId":account,"mailboxId":mailbox,"mailboxes":boxes,"query":query,"queryStale":stale,"emails":emails,"emailChangesState":self.state(account,"Email")?,"partialCache":true}),
+            json!({"accountId":account,"mailboxId":mailbox,"mailboxes":boxes,"query":query,"queryStale":stale,"total":total,"hasMore":more,"emails":emails,"emailChangesState":self.state(account,"Email")?,"partialCache":true}),
         )
     }
 }
@@ -389,8 +392,10 @@ fn set_state(tx: &Transaction<'_>, account: &str, kind: &str, state: &str) -> Re
 
 fn invalidate(store: &mut Store, account: &str, revision: i64, state: &str) -> Result<()> {
     let tx = store.write(account, revision)?;
+    // The server cannot say what changed since our state. What can have changed is still only
+    // what can change at all; subjects, bodies and headers fetched before remain true.
     tx.execute(
-        "UPDATE mail_emails SET coverage='{}' WHERE account=?1",
+        "UPDATE mail_emails SET coverage=json_remove(coverage,'$.keywords','$.mailboxIds') WHERE account=?1",
         [account],
     )?;
     tx.execute(
@@ -452,7 +457,7 @@ fn changes(client: &Client, session: &Session, store: &mut Store, account: &str)
         let tx = store.write(account, revision)?;
         for id in changed {
             tx.execute(
-                "UPDATE mail_emails SET coverage='{}' WHERE account=?1 AND id=?2",
+                "UPDATE mail_emails SET coverage=json_remove(coverage,'$.keywords','$.mailboxIds') WHERE account=?1 AND id=?2",
                 params![account, id],
             )?;
         }
@@ -663,9 +668,10 @@ fn mailbox_changes(client: &Client, session: &Session, store: &mut Store, accoun
     Err("Mailbox/changes backlog checkpointed; rerun to continue".into())
 }
 
-/// Whether the cache already holds every listing property of a message. Email/changes clears the
-/// coverage of a message it reports updated, so this is also "nothing changed since we fetched it".
-fn listed(store: &Store, account: &str, id: &str) -> Result<bool> {
+/// Which listing properties of a message the cache does not hold — every one of them for a message
+/// it has never seen. Email/changes clears only the mutable ones of a message it reports updated, so
+/// for a message that was merely read or flagged this is just keywords and mailboxIds.
+fn lacking(store: &Store, account: &str, id: &str) -> Result<Vec<&'static str>> {
     let coverage: Option<String> = store
         .db
         .query_row(
@@ -675,10 +681,58 @@ fn listed(store: &Store, account: &str, id: &str) -> Result<bool> {
         )
         .optional()?;
     let Some(coverage) = coverage else {
-        return Ok(false);
+        return Ok(LIST_PROPERTIES.to_vec());
     };
     let coverage: Value = serde_json::from_str(&coverage)?;
-    Ok(LIST_PROPERTIES.iter().all(|key| coverage.get(*key).is_some()))
+    Ok(LIST_PROPERTIES
+        .iter()
+        .copied()
+        .filter(|key| coverage.get(*key).is_none())
+        .collect())
+}
+
+/// Fetches what the cache lacks for these messages, and no more.
+///
+/// A message lacking only its mutable properties — one that was read, flagged or moved — is asked for
+/// those alone; anything else is fetched with every listing property. The two kinds go in separate
+/// Email/get calls, each chunked by maxObjectsInGet.
+fn fetch_lacking(
+    client: &Client,
+    session: &Session,
+    store: &Store,
+    account: &str,
+    ids: &[String],
+) -> Result<Vec<Value>> {
+    let mut whole = Vec::new();
+    let mut flags = Vec::new();
+    for id in ids {
+        let gaps = lacking(store, account, id)?;
+        if gaps.is_empty() {
+            continue;
+        }
+        if gaps.iter().all(|key| MUTABLE_PROPERTIES.contains(key)) {
+            flags.push(id.clone());
+        } else {
+            whole.push(id.clone());
+        }
+    }
+    let mut mutable = vec!["id"];
+    mutable.extend_from_slice(MUTABLE_PROPERTIES);
+    let mut gets = Vec::new();
+    for (ids, properties) in [(&whole, LIST_PROPERTIES), (&flags, mutable.as_slice())] {
+        for chunk in ids.chunks(limit(session, "maxObjectsInGet")?) {
+            let batch = call(
+                client,
+                session,
+                "Email/get",
+                json!({"accountId":account,"ids":chunk,"properties":properties}),
+            )?;
+            let get = arguments(&batch, "Email/get", account)?;
+            validate_get(&get, chunk)?;
+            gets.push(get);
+        }
+    }
+    Ok(gets)
 }
 
 /// Brings a cached listing forward with Email/queryChanges instead of reading the window again.
@@ -728,13 +782,16 @@ fn advance(
     let Some(delta) = query_changes(client, session, &args, since)? else {
         return Ok(None);
     };
-    let mut rows = apply_query_delta(&held, &delta, size);
-    if rows.len() < size {
+    // A listing scrolled past its first window keeps the length it has: the next delta must not cut
+    // the pages a reader already loaded back to one window.
+    let length = size.max(held.len());
+    let mut rows = apply_query_delta(&held, &delta, length);
+    if rows.len() < length {
         // Rows above the end were removed, so rows from past the old window slid up into it. The delta
         // does not name them; ask for exactly that stretch, at the delta's own state.
         let mut page = args.clone();
         page["position"] = json!(rows.len());
-        page["limit"] = json!(size - rows.len());
+        page["limit"] = json!(length - rows.len());
         let batch = call(client, session, "Email/query", page)?;
         let page = arguments(&batch, "Email/query", account)?;
         if page["queryState"].as_str() != Some(delta.new_state.as_str())
@@ -742,37 +799,106 @@ fn advance(
         {
             return Ok(None);
         }
-        let more = query_ids(&page, size - rows.len())?;
+        let more = query_ids(&page, length - rows.len())?;
         if more.iter().any(|id| rows.contains(id)) {
             return Ok(None);
         }
         rows.extend(more);
     }
-    let mut need = Vec::new();
-    for id in &rows {
-        if !listed(store, account, id)? {
-            need.push(id.clone());
-        }
-    }
-    let mut gets = Vec::new();
-    for chunk in need.chunks(limit(session, "maxObjectsInGet")?) {
-        let batch = call(
-            client,
-            session,
-            "Email/get",
-            json!({"accountId":account,"ids":chunk,"properties":LIST_PROPERTIES}),
-        )?;
-        let get = arguments(&batch, "Email/get", account)?;
-        validate_get(&get, chunk)?;
-        gets.push(get);
-    }
-    let query = json!({"accountId":account,"queryState":delta.new_state,"position":0,"ids":rows,"canCalculateChanges":true});
+    let gets = fetch_lacking(client, session, store, account, &rows)?;
+    let query = json!({"accountId":account,"queryState":delta.new_state,"position":0,"ids":rows,"canCalculateChanges":true,"total":delta.total});
     Ok(Some(Window {
         key,
         args,
         query,
         gets,
     }))
+}
+
+/// Loads the next page of a cached listing and appends it.
+///
+/// The page is asked for by position at the listing's own queryState. If the server answers at
+/// another state, the listing changed since it was read; the delta sync runs first and the page is
+/// asked for again, once. A second mismatch is reported rather than chased, since appending rows from
+/// one state to rows from another would put a message in the wrong place or show it twice.
+pub fn more(
+    client: &Client,
+    session: &Session,
+    store: &mut Store,
+    account: &str,
+    requested: Option<&str>,
+    listing: Rows,
+) -> Result<Value> {
+    choose_account(session, Some(account))?;
+    store.bind(client, session)?;
+    let mailbox = store.mailbox_id(account, requested)?;
+    let key = query_key(&mailbox, listing);
+    let size = window_size(session)?;
+    for attempt in 0..2 {
+        let revision = store.revision(account)?;
+        let cached: Option<(String, String)> = store
+            .db
+            .query_row(
+                "SELECT arguments,document FROM mail_queries WHERE account=?1 AND query_key=?2",
+                params![account, key],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
+            .optional()?;
+        let Some((args, document)) = cached else {
+            return Err("no cached listing to extend; sync it first".into());
+        };
+        let (mut page, mut document): (Value, Value) =
+            (serde_json::from_str(&args)?, serde_json::from_str(&document)?);
+        let state = string(&document, "queryState")?.to_owned();
+        let held: Vec<String> = store
+            .db
+            .prepare("SELECT email_id FROM mail_query_items WHERE account=?1 AND query_key=?2 ORDER BY position")?
+            .query_map(params![account, key], |r| r.get(0))?
+            .collect::<std::result::Result<_, _>>()?;
+        page["position"] = json!(held.len());
+        page["limit"] = json!(size);
+        page["calculateTotal"] = json!(true);
+        let batch = call(client, session, "Email/query", page)?;
+        let answer = arguments(&batch, "Email/query", account)?;
+        if answer["queryState"].as_str() != Some(state.as_str()) {
+            if attempt == 0 {
+                sync(client, session, store, account, Some(&mailbox), listing)?;
+                continue;
+            }
+            return Err("listing keeps changing while paging; sync and try again".into());
+        }
+        if answer["position"].as_u64() != Some(held.len() as u64) {
+            return Err("Email/query answered a different position than asked".into());
+        }
+        let ids = query_ids(&answer, size)?;
+        if ids.iter().any(|id| held.contains(id)) {
+            return Err("next page repeats a message already listed".into());
+        }
+        let gets = fetch_lacking(client, session, store, account, &ids)?;
+        let mut all = held.clone();
+        all.extend(ids.iter().cloned());
+        document["ids"] = json!(all);
+        if let Some(total) = answer.get("total").and_then(Value::as_u64) {
+            document["total"] = json!(total);
+        }
+        let tx = store.write(account, revision)?;
+        for result in gets {
+            save_get(&tx, account, &result, false)?;
+        }
+        for (offset, id) in ids.iter().enumerate() {
+            tx.execute(
+                "INSERT INTO mail_query_items VALUES(?1,?2,?3,?4)",
+                params![account, key, (held.len() + offset) as i64, id],
+            )?;
+        }
+        tx.execute(
+            "UPDATE mail_queries SET document=?3 WHERE account=?1 AND query_key=?2",
+            params![account, key, document.to_string()],
+        )?;
+        tx.commit()?;
+        return store.view(account, Some(&mailbox), listing);
+    }
+    unreachable!()
 }
 
 pub fn sync(
@@ -808,7 +934,8 @@ pub fn sync(
     if query["position"].as_u64() != Some(0) {
         return Err("unexpected query position".into());
     }
-    let ids = query_ids(&query, 50)?;
+    // Already bounded where it was read: a window by its limit, an advanced listing by its length.
+    let ids = query_ids(&query, usize::MAX)?;
     let missing = gets.iter().any(|result| {
         result["notFound"].as_array().is_some_and(|v| !v.is_empty())
             || result["list"].as_array().is_some_and(|rows| {
@@ -961,13 +1088,10 @@ mod tests {
         let revision = store.revision("a").unwrap();
         invalidate(&mut store, "a", revision, "s1").unwrap();
         let got = store.email("a", "e").unwrap();
-        assert!(
-            got["staleProperties"]
-                .as_array()
-                .unwrap()
-                .contains(&json!("bodyValues"))
-        );
-        assert_eq!(got["coverage"], json!({}));
+        // Only what an Email can change goes stale; the subject and body fetched before stay true.
+        assert_eq!(got["staleProperties"], json!(["mailboxIds"]));
+        assert!(got["coverage"].get("bodyValues").is_some());
+        assert!(got["coverage"].get("subject").is_some());
     }
 
     #[test]
@@ -1162,8 +1286,10 @@ mod tests {
         assert_eq!(second["emails"][0]["id"], "3");
         assert_eq!(store.state("a", "Email").unwrap().as_deref(), Some("s2"));
         assert_eq!(store.email("a", "1").unwrap()["reason"], "destroyed");
+        // Message 2 was updated, and an Email update can only touch keywords and mailboxIds: the body
+        // read before it is still the body.
         assert!(
-            store.email("a", "2").unwrap()["staleProperties"]
+            !store.email("a", "2").unwrap()["staleProperties"]
                 .as_array()
                 .unwrap()
                 .contains(&json!("bodyValues"))
@@ -1214,7 +1340,9 @@ mod tests {
         assert_eq!(view["query"]["queryState"], "q1");
         assert_eq!(view["queryStale"], true);
         assert_eq!(view["emails"][0]["document"]["subject"], "original");
-        assert_eq!(view["emails"][0]["coverage"], json!({}));
+        // The refetch failed, so nothing from it was kept: the coverage is what the first sync had,
+        // which here never included the mutable properties.
+        assert_eq!(view["emails"][0]["coverage"], json!({"id":true,"subject":true}));
         server.join().unwrap();
     }
 
@@ -1466,11 +1594,131 @@ mod tests {
     }
 
     #[test]
+    fn pages_append_survive_a_delta_and_resync_when_the_listing_moved() {
+        let row = |id: &str| {
+            let mut doc = json!({});
+            for key in LIST_PROPERTIES {
+                doc[*key] = Value::Null;
+            }
+            doc["id"] = json!(id);
+            doc["mailboxIds"] = json!({"in":true});
+            doc["keywords"] = json!({});
+            doc
+        };
+        let rows = |ids: &[&str]| Value::Array(ids.iter().map(|id| row(id)).collect());
+        let page = |position: u64, state: &str, ids: Value, total: u64| {
+            json!({"accountId":"a","position":position,"queryState":state,"canCalculateChanges":true,"ids":ids,"total":total})
+        };
+        let quiet = |state: &str| json!({"accountId":"a","oldState":state,"newState":state,"hasMoreChanges":false,"created":[],"updated":[],"destroyed":[]});
+        let delta = |old: &str, new: &str, removed: Value, added: Value, total: u64| {
+            json!({"accountId":"a","oldQueryState":old,"newQueryState":new,"removed":removed,"added":added,"total":total})
+        };
+        let (session, server, sent) = mock_recorded(vec![
+            // sync: the first window.
+            ("Email/get", get(json!([]), "seed")),
+            ("Mailbox/get", boxes()),
+            ("Email/query", page(0, "q1", json!(["5", "4"]), 5)),
+            ("Email/get", get(rows(&["5", "4"]), "s")),
+            // more: the next window, at the same state.
+            ("Email/query", page(2, "q1", json!(["3", "2"]), 5)),
+            ("Email/get", get(rows(&["3", "2"]), "s")),
+            // sync: one arrival on top. Four rows stay four.
+            ("Email/changes", quiet("seed")),
+            ("Mailbox/changes", unchanged()),
+            ("Email/queryChanges", delta("q1", "q2", json!([]), json!([{"id":"6","index":0}]), 6)),
+            ("Email/get", get(rows(&["6"]), "s")),
+            // more: answered at another state, so the listing is brought forward first.
+            ("Email/query", page(4, "q3", json!(["2"]), 5)),
+            ("Email/changes", quiet("seed")),
+            ("Mailbox/changes", unchanged()),
+            ("Email/queryChanges", delta("q2", "q3", json!(["6"]), json!([]), 5)),
+            ("Email/query", page(3, "q3", json!(["2"]), 5)),
+            ("Email/query", page(4, "q3", json!(["1"]), 5)),
+            ("Email/get", get(rows(&["1"]), "s")),
+            // more: past the end.
+            ("Email/query", page(5, "q3", json!([]), 5)),
+        ]);
+        let c = client();
+        let mut store = Store::open(":memory:", "p").unwrap();
+        let ids = |view: &Value| -> Vec<String> {
+            view["emails"].as_array().unwrap().iter().map(|e| e["id"].as_str().unwrap().to_owned()).collect()
+        };
+        let first = sync(&c, &session, &mut store, "a", None, Rows::Messages).unwrap();
+        assert_eq!((ids(&first), &first["total"], &first["hasMore"]), (vec!["5".into(), "4".into()], &json!(5), &json!(true)));
+        let paged = more(&c, &session, &mut store, "a", None, Rows::Messages).unwrap();
+        assert_eq!(ids(&paged), ["5", "4", "3", "2"]);
+        let moved = sync(&c, &session, &mut store, "a", None, Rows::Messages).unwrap();
+        assert_eq!(ids(&moved), ["6", "5", "4", "3"], "a delta keeps the pages already loaded");
+        assert_eq!(moved["total"], 6);
+        let last = more(&c, &session, &mut store, "a", None, Rows::Messages).unwrap();
+        assert_eq!(ids(&last), ["5", "4", "3", "2", "1"]);
+        assert_eq!((&last["total"], &last["hasMore"]), (&json!(5), &json!(false)));
+        let end = more(&c, &session, &mut store, "a", None, Rows::Messages).unwrap();
+        assert_eq!(ids(&end).len(), 5);
+        server.join().unwrap();
+        // Every query asked for a total, and every page asked for one window.
+        let sent = sent.lock().unwrap();
+        for args in sent.iter().filter(|a| a.get("filter").is_some() && a.get("sinceQueryState").is_none()) {
+            assert_eq!(args["calculateTotal"], true);
+            if args["position"] != 0 && args["position"] != 3 {
+                assert_eq!(args["limit"], 2, "{args}");
+            }
+        }
+    }
+
+    #[test]
+    fn a_flag_change_refetches_only_what_an_email_can_change() {
+        let row = |id: &str, seen: bool| {
+            let mut doc = json!({});
+            for key in LIST_PROPERTIES {
+                doc[*key] = Value::Null;
+            }
+            doc["id"] = json!(id);
+            doc["subject"] = json!(format!("subject {id}"));
+            doc["mailboxIds"] = json!({"in":true});
+            doc["keywords"] = if seen { json!({"$seen":true}) } else { json!({}) };
+            doc
+        };
+        let tracked = json!({"accountId":"a","position":0,"queryState":"q1","canCalculateChanges":true,"ids":["2","1"]});
+        let (session, server, sent) = mock_recorded(vec![
+            ("Email/get", get(json!([]), "seed")),
+            ("Mailbox/get", boxes()),
+            ("Email/query", tracked),
+            ("Email/get", get(Value::Array(vec![row("2", false), row("1", false)]), "s")),
+            // Message 2 was read; a new message 3 arrived on top.
+            ("Email/changes", json!({"accountId":"a","oldState":"seed","newState":"s1","hasMoreChanges":false,"created":["3"],"updated":["2"],"destroyed":[]})),
+            ("Mailbox/changes", unchanged()),
+            ("Email/queryChanges", json!({"accountId":"a","oldQueryState":"q1","newQueryState":"q2","removed":[],"added":[{"id":"3","index":0}]})),
+            ("Email/get", get(Value::Array(vec![row("3", false)]), "s")),
+            ("Email/get", get(json!([{"id":"2","keywords":{"$seen":true},"mailboxIds":{"in":true}}]), "s")),
+        ]);
+        let c = client();
+        let mut store = Store::open(":memory:", "p").unwrap();
+        sync(&c, &session, &mut store, "a", None, Rows::Messages).unwrap();
+        let view = sync(&c, &session, &mut store, "a", None, Rows::Messages).unwrap();
+        server.join().unwrap();
+        let sent = sent.lock().unwrap();
+        let gets: Vec<(&Value, &Value)> = sent
+            .iter()
+            .filter(|args| args["ids"].as_array().is_some_and(|ids| !ids.is_empty()) && args.get("properties").is_some())
+            .map(|args| (&args["ids"], &args["properties"]))
+            .collect();
+        // The new arrival whole, the read message for its two mutable properties only.
+        assert_eq!(gets[1], (&json!(["3"]), &json!(LIST_PROPERTIES)));
+        assert_eq!(gets[2], (&json!(["2"]), &json!(["id", "keywords", "mailboxIds"])));
+        let two = &view["emails"][1];
+        assert_eq!(two["document"]["keywords"], json!({"$seen":true}));
+        assert_eq!(two["document"]["subject"], "subject 2", "kept from the first fetch");
+        assert_eq!(two["staleProperties"], json!([]));
+    }
+
+    #[test]
     fn a_query_delta_proves_only_the_prefix_it_reaches() {
         use crate::mail::QueryDelta;
         let held: Vec<String> = ["a", "b", "c", "d"].map(String::from).to_vec();
         let delta = |removed: &[&str], added: &[(&str, usize)]| QueryDelta {
             new_state: "n".into(),
+            total: None,
             removed: removed.iter().map(|s| s.to_string()).collect(),
             added: added.iter().map(|(id, i)| (id.to_string(), *i)).collect(),
         };

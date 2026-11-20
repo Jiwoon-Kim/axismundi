@@ -106,12 +106,17 @@ fn mail_cache_external_delta_offline_and_destruction() {
         );
         let view = cache::sync(&client, &session, &mut store, &account, Some(&mailbox), Rows::Messages).unwrap();
         assert_eq!(view["emails"][0]["document"]["keywords"]["$seen"], true);
+        // Marking a message read changes its keywords and nothing else an Email can carry (RFC 8621
+        // §4), so the body read before stays good offline.
+        let after = store.email(&account, &id).unwrap();
         assert!(
-            store.email(&account, &id).unwrap()["staleProperties"]
+            !after["staleProperties"]
                 .as_array()
                 .unwrap()
-                .contains(&json!("bodyValues"))
+                .contains(&json!("bodyValues")),
+            "{after}"
         );
+        assert!(after["coverage"].get("bodyValues").is_some());
         let inbox = mail::mailboxes(&client, &session, &account).unwrap()["list"]
             .as_array()
             .unwrap()

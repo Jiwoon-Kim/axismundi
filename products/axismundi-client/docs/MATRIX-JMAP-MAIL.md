@@ -40,8 +40,8 @@ Contacts/Calendar 모델·원본 MIME·로컬 편집·서버 Email을 한 record
 | Thread/get | 서버 threadId와 emailIds 순서, 전개 수가 get 상한을 넘으면 분할 | 접힌 목록은 Thread/get 없이 동작. **전개 구현**(2026-11-20, `mail-thread`): Thread/get 단독 → emailIds를 maxObjectsInGet 청크로 Email/get, 절단 없음, 사이에 사라진 메시지는 notFound. 메시지는 목록 coverage로 캐시, **스레드 소속은 저장 안 함**(Thread/changes 후속) |
 | Thread/changes | Thread 전용 checkpoint와 캐시 무효화 | 후속 |
 | Email/get | projection·null/누락·unknown·body part/truncation, notFound | 읽기 CLI·부분 캐시·오프라인 |
-| Email/changes | Email 전용 state, hasMoreChanges, 파괴/dirty, 만료 복구 | 부분 캐시 구현·mock/실서버 검증 |
-| Email/query | account/filter/sort/collapseThreads 및 queryState, 서버 순서 | 고정 조건의 첫 창·result reference·캐시. 메시지·접힌 스레드 목록이 **쿼리별 키**로 공존(스키마 v2) |
+| Email/changes | Email 전용 state, hasMoreChanges, 파괴/dirty, 만료 복구 | 부분 캐시 구현·mock/실서버 검증. updated 는 가변 속성(keywords·mailboxIds)만 무효화하고 그 둘만 재요청(2026-11-21) |
+| Email/query | account/filter/sort/collapseThreads 및 queryState, 서버 순서 | 고정 조건의 첫 창·result reference·캐시. 메시지·접힌 스레드 목록이 **쿼리별 키**로 공존(스키마 v2). 페이지 이어 받기(`mail-more`, 같은 queryState 필수)·calculateTotal·hasMore(2026-11-21) |
 | Email/queryChanges | 객체 changes와 분리, same-query 적용, 계산 불가 시 창 재조회 | **구현**(2026-11-20): 캐시된 창이 canCalculateChanges=true·같은 인자면 델타 적용, 창이 줄면 그 구간만 position 으로 보충(같은 queryState 여야 함), 커버리지 없는 멤버만 get. 계산 불가·tooManyChanges·불일치는 창 재조회. Stalwart 외부 생성·삭제 후 캐시 = 새 query |
 | Email/set | 서버 Draft 생성·keywords/mailboxIds 변경·파괴. 로컬 의도 별도 보존 | fixture에서만 사용, 제품 후속 |
 | Email/copy | source/target account 구별, 부분 성공·후속 원본 파괴 결과 분리 | 후속 |

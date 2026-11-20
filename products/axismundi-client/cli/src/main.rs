@@ -59,6 +59,8 @@ fn usage() -> String {
         "  axismundi mailboxes ... [--account ID] (read-only Mailbox/get)",
         "  axismundi mail-inbox ... [--account ID] (first 50 or fewer messages)",
         "  axismundi mail-read ... [--account ID] --id EMAIL_ID (body values on demand)",
+        "  axismundi mail-more ... --db PATH --profile ID [--account ID] [--mailbox ID] [--rows messages|threads]",
+        "                    (append the next page to a synced listing)",
         "  axismundi mail-watch ... --db PATH --profile ID [--account ID] [--mailbox ID] [--rows messages|threads] [--events N]",
         "                    (sync, then sync again on every WebSocket push; N syncs then exit)",
         "  axismundi blob-upload ... --file PATH [--type MEDIA_TYPE] [--account ID]",
@@ -404,7 +406,7 @@ fn run() -> Result<bool, String> {
         })
         .map(|()| true);
     }
-    if command == "mail-sync" || (matches!(command.as_str(), "mail-read" | "mail-thread") && options.db.is_some()) {
+    if command == "mail-sync" || command == "mail-more" || (matches!(command.as_str(), "mail-read" | "mail-thread") && options.db.is_some()) {
         use axismundi_jmap_core::mail::{self, cache};
         let account = mail::choose_account(&session, options.account.as_deref()).map_err(explain)?;
         let path = options.db.as_deref().ok_or("--db is required")?;
@@ -412,6 +414,9 @@ fn run() -> Result<bool, String> {
         let mut store = cache::Store::open(path, profile).map_err(|e| e.to_string())?;
         let result = if command == "mail-sync" {
             cache::sync(&client, &session, &mut store, &account, options.mailbox.as_deref(),
+                rows(options.rows.as_deref())?)
+        } else if command == "mail-more" {
+            cache::more(&client, &session, &mut store, &account, options.mailbox.as_deref(),
                 rows(options.rows.as_deref())?)
         } else if command == "mail-thread" {
             cache::thread(&client, &session, &mut store, &account,

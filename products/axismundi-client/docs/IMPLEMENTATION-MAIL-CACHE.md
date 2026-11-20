@@ -55,10 +55,13 @@ Thread·Identity·Submission·로컬 Draft 테이블은 각 소유 기능의 구
 hasMoreChanges를 따라가며 각 페이지의 oldState를 확인한다. 최대 32페이지 후에도 남으면
 진도를 보존한 채 재실행을 요구한다. state 문자열을 정렬하거나 queryState와 비교하지 않는다.
 
-변경된 캐시 객체는 coverage를 비워 dirty를 영속화한다. 미캐시 생성 객체를 전부 내려받지는
+변경된 캐시 객체는 `keywords`·`mailboxIds` 의 coverage 만 지워 dirty를 영속화한다(2026-11-21 변경,
+이전엔 coverage 전체). RFC 8621 §4 상 Email 은 이 둘 말고는 불변이고, Email/changes 는 무엇이 바뀌었는지
+말하지 않으므로 바뀌었을 수 있는 건 이 둘뿐이다. 그래서 읽음·플래그·이동 뒤에도 제목·본문은 유효하고,
+다시 받을 때도 `id, keywords, mailboxIds` 만 요청한다. 미캐시 생성 객체를 전부 내려받지는
 않고, 쿼리는 별도로 새로 읽는다. 파괴는 객체와 파생 소속을 제거하고 이유를 기록한다.
 쿼리 이탈만으로 Email을 삭제하지 않는다. cannotCalculateChanges는 새 state를 얻고 기존
-객체·쿼리를 stale로 만든 뒤 필요한 창만 다시 읽는다. 캐시 전체를 먼저 지우지 않는다.
+객체의 가변 속성·쿼리를 stale로 만든 뒤 필요한 창만 다시 읽는다. 캐시 전체를 먼저 지우지 않는다.
 
 데이터·query 순서·queryState의 확정과 dirty/checkpoint의 확정은 각각 SQLite 트랜잭션이다.
 네트워크는 쓰기 트랜잭션 밖에서 수행하고 account revision을 재검사한다. get 실패 시에는

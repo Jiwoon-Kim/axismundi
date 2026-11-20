@@ -278,6 +278,34 @@ mock 7개, 변이 6종 전부 실패. 그중 "다운로드가 아무 리다이�
 남은 것: 업로드한 blob 을 Email 첨부로 붙이는 작성 흐름(M5 쓰기 슬라이스), 디스크 blob 캐시(DESIGN §7),
 Contacts 사진 연결.
 
+## GUI 직전 두 가지 (2026-11-21)
+
+**1. 플래그 변경은 플래그만.** Email/changes 의 updated 는 무엇이 바뀌었는지 말하지 않는다(Mailbox/changes
+와 달리 updatedProperties 가 없다). 대신 RFC 8621 §4 가 Email 은 `keywords`·`mailboxIds` 말고는 불변이라고
+정한다. 그래서 updated 와 cannotCalculateChanges 는 그 둘의 coverage 만 지우고, 델타 경로는 그 둘만 빠진
+메시지를 `["id","keywords","mailboxIds"]` 로, 그 밖은 목록 속성 전체로 따로 받는다. 이전엔 읽음 표시 하나에
+목록 속성 전체를 다시 받고 이미 읽은 본문까지 stale 로 표시했다. 그 옛 동작을 고정하던 테스트 3개
+(mock 2·Stalwart 1)를 새 규칙으로 바꿨다 — 의도된 동작 변경이다.
+
+**2. 페이지 이어 받기.** `cache::more` / `mail-more`.
+
+```txt
+요청     캐시된 목록의 인자 + position=보유 길이, limit=창 크기, calculateTotal
+state    응답 queryState 가 목록의 것과 다르면 그 사이 목록이 바뀐 것 → 델타 sync 한 번 후 재시도.
+         또 다르면 오류(다른 state 의 행을 이어 붙이면 순서가 틀리거나 중복이 생긴다)
+델타     advance 가 창 크기가 아니라 max(창 크기, 보유 길이) 를 유지 — 스크롤한 페이지를 잘라내지 않음
+total    query·queryChanges 모두 calculateTotal. view 에 total·hasMore, 서버가 안 주면 null(추측 안 함)
+상한     sync 의 하드코딩 50 제거(창은 limit 로, 델타는 길이로 이미 제한됨)
+```
+
+창 전체 재조회 폴백(계산 불가 등)은 첫 창만 다시 읽는다 — 그때는 스크롤한 페이지가 사라지고 다시
+이어 받아야 한다. 의도된 단순화.
+
+증거: mock 2개(플래그만 재요청·신규는 전체 / 페이지·델타 유지·state 불일치 재동기화·끝), 변이 6종 전부
+실패. Stalwart 실측: probe 메일함에 메일 55통을 만들어(기존 1통 포함 56) 창 50 → `mail-more` 로 56,
+`hasMore=false`, 캐시 순서 = 새 Email/query. 둘째 페이지(52번째)를 외부에서 `$seen` → sync 후 56행 유지,
+그 메일만 keywords 갱신·제목 유지·stale 없음. 3통 삭제 → 53행, 새 query 와 일치. fixture 55통 전부 삭제.
+
 ## M4. 같은 코어 위의 GUI
 
 Mailbox·query 창·선택 Email·refresh를 이름 붙은 IPC로 제공한다. SQL·범용 인증 fetch를

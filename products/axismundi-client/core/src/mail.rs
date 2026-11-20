@@ -50,6 +50,12 @@ pub(crate) const MAILBOX_PROPERTIES: &[&str] = &[
 
 pub const CAPABILITY: &str = "urn:ietf:params:jmap:mail";
 
+/// The only Email properties that can change (RFC 8621 §4: an Email is immutable except for its
+/// mailboxIds and keywords). Email/changes says only that a message was updated, never what — unlike
+/// Mailbox/changes it has no updatedProperties — so these two are what an update can have touched,
+/// and everything else the cache holds about the message stays true.
+pub(crate) const MUTABLE_PROPERTIES: &[&str] = &["keywords", "mailboxIds"];
+
 /// The body size a detail read asks for. The cache records this same value as the coverage of the
 /// bodyValues it stored, so the two must never be written as separate literals: if the request
 /// changed and the record did not, the cache would claim bytes it never fetched.
@@ -205,7 +211,7 @@ impl Rows {
 const SORT_PROPERTY: &str = "receivedAt";
 
 fn query_args(account: &str, mailbox: &str, count: usize, rows: Rows) -> Value {
-    json!({"accountId":account,"filter":{"inMailbox":mailbox},"sort":[{"property":SORT_PROPERTY,"isAscending":false}],"collapseThreads":rows.collapse_threads(),"position":0,"limit":count})
+    json!({"accountId":account,"filter":{"inMailbox":mailbox},"sort":[{"property":SORT_PROPERTY,"isAscending":false}],"collapseThreads":rows.collapse_threads(),"position":0,"limit":count,"calculateTotal":true})
 }
 
 /// Identity of a query: every argument that changes which ids come back or their order, and
@@ -259,6 +265,8 @@ pub(crate) fn window_size(session: &Session) -> Result<usize, Error> {
 #[derive(Debug, PartialEq)]
 pub(crate) struct QueryDelta {
     pub new_state: String,
+    /// The result count now, when the server calculated it.
+    pub total: Option<u64>,
     pub removed: Vec<String>,
     /// (id, index in the new results), in ascending index order.
     pub added: Vec<(String, usize)>,
@@ -276,7 +284,7 @@ pub(crate) fn query_changes(
     let account = args["accountId"]
         .as_str()
         .ok_or_else(|| Error::Shape("query arguments have no accountId".into()))?;
-    let mut request = json!({"accountId":account,"sinceQueryState":since,"maxChanges":256});
+    let mut request = json!({"accountId":account,"sinceQueryState":since,"maxChanges":256,"calculateTotal":true});
     for key in ["filter", "sort", "collapseThreads"] {
         if let Some(value) = args.get(key) {
             request[key] = value.clone();
@@ -338,6 +346,7 @@ pub(crate) fn query_changes(
     }
     Ok(Some(QueryDelta {
         new_state,
+        total: result.get("total").and_then(Value::as_u64),
         removed,
         added,
     }))

@@ -1,7 +1,7 @@
 //! Partial Mail cache. Network exchanges are staged outside SQLite transactions.
 use super::{
-    MAX_BODY_VALUE_BYTES, Rows, Window, arguments, call, choose_account, mailboxes, query_ids,
-    query_key, validate_get, window,
+    MAILBOX_PROPERTIES, MAX_BODY_VALUE_BYTES, Rows, Window, arguments, call, choose_account, limit,
+    mailboxes, query_ids, query_key, validate_get, window,
 };
 
 /// v2 keys a listing by its query, not its mailbox.
@@ -186,6 +186,18 @@ impl Store {
             [id] => Ok(id.clone()),
             _ => Err("no unambiguous cached Inbox; supply --mailbox".into()),
         }
+    }
+
+    fn mailbox(&self, account: &str, id: &str) -> Result<Option<Value>> {
+        let raw: Option<String> = self
+            .db
+            .query_row(
+                "SELECT document FROM mail_mailboxes WHERE account=?1 AND id=?2",
+                params![account, id],
+                |r| r.get(0),
+            )
+            .optional()?;
+        Ok(raw.map(|raw| serde_json::from_str(&raw)).transpose()?)
     }
 
     pub fn view(&self, account: &str, mailbox: Option<&str>, rows: Rows) -> Result<Value> {
@@ -463,6 +475,193 @@ fn changes(client: &Client, session: &Session, store: &mut Store, account: &str)
     Err("changes backlog checkpointed; rerun to continue".into())
 }
 
+fn put_mailbox(tx: &Transaction<'_>, account: &str, doc: &Value) -> Result<()> {
+    tx.execute(
+        "INSERT INTO mail_mailboxes VALUES(?1,?2,?3,?4) ON CONFLICT(account,id) DO UPDATE SET document=excluded.document,role=excluded.role",
+        params![account, string(doc, "id")?, doc.to_string(), doc["role"].as_str()],
+    )?;
+    Ok(())
+}
+
+/// A mailbox that is gone takes its listings with it. The messages stay: whether they were moved,
+/// deleted with it, or never in it is Email/changes' to say, not this.
+fn drop_mailbox(tx: &Transaction<'_>, account: &str, id: &str) -> Result<()> {
+    tx.execute(
+        "DELETE FROM mail_mailboxes WHERE account=?1 AND id=?2",
+        params![account, id],
+    )?;
+    tx.execute(
+        "DELETE FROM mail_queries WHERE account=?1 AND mailbox_id=?2",
+        params![account, id],
+    )?;
+    Ok(())
+}
+
+/// Replaces every cached mailbox with what the server has now. Used for the first sync and whenever
+/// the server cannot say what changed since our state.
+fn mailbox_snapshot(client: &Client, session: &Session, store: &mut Store, account: &str) -> Result<()> {
+    let revision = store.revision(account)?;
+    let boxes = mailboxes(client, session, account)?;
+    let rows = boxes["list"].as_array().ok_or("Mailbox/get has no list")?;
+    if !boxes["notFound"].as_array().is_some_and(Vec::is_empty) {
+        return Err("incomplete Mailbox snapshot".into());
+    }
+    let mut seen = BTreeSet::new();
+    for doc in rows {
+        if !seen.insert(string(doc, "id")?) {
+            return Err("duplicate Mailbox id".into());
+        }
+    }
+    let tx = store.write(account, revision)?;
+    let cached: Vec<String> = tx
+        .prepare("SELECT id FROM mail_mailboxes WHERE account=?1")?
+        .query_map([account], |r| r.get(0))?
+        .collect::<std::result::Result<_, _>>()?;
+    for id in cached.iter().filter(|id| !seen.contains(id.as_str())) {
+        drop_mailbox(&tx, account, id)?;
+    }
+    for doc in rows {
+        put_mailbox(&tx, account, doc)?;
+    }
+    set_state(&tx, account, "Mailbox", string(&boxes, "state")?)?;
+    tx.commit()?;
+    Ok(())
+}
+
+fn change_ids(result: &Value, key: &str) -> Result<Vec<String>> {
+    result[key]
+        .as_array()
+        .ok_or_else(|| format!("Mailbox/changes has no {key}"))?
+        .iter()
+        .map(|id| Ok(id.as_str().ok_or("invalid Mailbox/changes id")?.to_owned()))
+        .collect()
+}
+
+/// Brings the cached mailboxes up to the server's Mailbox state.
+///
+/// Mailbox/changes names what was created, updated and destroyed; only those are fetched. When a
+/// message arrives or is read, the only thing that changes on its mailbox is a count, and the server
+/// may say so with updatedProperties (RFC 8621 §2.2). Then only those properties are asked for and
+/// merged into the cached document — but only for mailboxes already cached; one we have never seen
+/// is fetched whole, since there is nothing to merge into.
+///
+/// Each page commits on its own with its newState, so a long backlog advances in steps and a failure
+/// leaves the last committed state, never a state ahead of the rows. A mailbox that disappears
+/// between Mailbox/changes and Mailbox/get is treated as destroyed.
+fn mailbox_changes(client: &Client, session: &Session, store: &mut Store, account: &str) -> Result<()> {
+    if store.state(account, "Mailbox")?.is_none() {
+        return mailbox_snapshot(client, session, store, account);
+    }
+    let size = limit(session, "maxObjectsInGet")?;
+    for _ in 0..32 {
+        let revision = store.revision(account)?;
+        let since = store.state(account, "Mailbox")?.ok_or("missing Mailbox checkpoint")?;
+        let batch = call(
+            client,
+            session,
+            "Mailbox/changes",
+            json!({"accountId":account,"sinceState":since,"maxChanges":256}),
+        )?;
+        if batch.method_responses.len() == 1
+            && batch.method_responses[0].call_id == "mail"
+            && batch.method_responses[0].error_type() == Some("cannotCalculateChanges")
+        {
+            return mailbox_snapshot(client, session, store, account);
+        }
+        let result = arguments(&batch, "Mailbox/changes", account)?;
+        if string(&result, "oldState")? != since {
+            return Err("Mailbox/changes oldState mismatch".into());
+        }
+        let state = string(&result, "newState")?.to_owned();
+        let more = result["hasMoreChanges"]
+            .as_bool()
+            .ok_or("Mailbox/changes has no hasMoreChanges")?;
+        if more && state == since {
+            return Err("Mailbox/changes made no progress".into());
+        }
+        let only: Option<Vec<String>> = match result.get("updatedProperties") {
+            None | Some(Value::Null) => None,
+            Some(Value::Array(names)) => Some(
+                names
+                    .iter()
+                    .map(|n| Ok(n.as_str().ok_or("invalid updatedProperties")?.to_owned()))
+                    .collect::<Result<_>>()?,
+            ),
+            Some(_) => return Err("invalid updatedProperties".into()),
+        };
+        let mut whole = change_ids(&result, "created")?;
+        let mut partial = Vec::new();
+        for id in change_ids(&result, "updated")? {
+            if only.is_some() && store.mailbox(account, &id)?.is_some() {
+                partial.push(id);
+            } else {
+                whole.push(id);
+            }
+        }
+        let mut gone: BTreeSet<String> = change_ids(&result, "destroyed")?.into_iter().collect();
+        let mut fetch = |ids: &[String], properties: Vec<&str>| -> Result<Vec<Value>> {
+            let mut docs = Vec::new();
+            for chunk in ids.chunks(size) {
+                let batch = call(
+                    client,
+                    session,
+                    "Mailbox/get",
+                    json!({"accountId":account,"ids":chunk,"properties":properties}),
+                )?;
+                let got = arguments(&batch, "Mailbox/get", account)?;
+                validate_get(&got, chunk)?;
+                docs.extend(got["list"].as_array().into_iter().flatten().cloned());
+                for id in got["notFound"].as_array().into_iter().flatten() {
+                    gone.insert(id.as_str().ok_or("invalid notFound")?.to_owned());
+                }
+            }
+            Ok(docs)
+        };
+        let full = fetch(&whole, MAILBOX_PROPERTIES.to_vec())?;
+        // Only what the cache keeps. Stalwart names totalThreads and unreadThreads here too; merging
+        // those would leave a delta-updated mailbox shaped differently from a snapshot one. When
+        // nothing the cache keeps changed, there is nothing to fetch.
+        let mut properties = vec!["id"];
+        properties.extend(
+            only.iter()
+                .flatten()
+                .map(String::as_str)
+                .filter(|name| *name != "id" && MAILBOX_PROPERTIES.contains(name)),
+        );
+        let counts = if properties.len() > 1 {
+            fetch(&partial, properties)?
+        } else {
+            Vec::new()
+        };
+        let tx = store.write(account, revision)?;
+        for doc in &full {
+            put_mailbox(&tx, account, doc)?;
+        }
+        for update in &counts {
+            let id = string(update, "id")?;
+            let raw: String = tx.query_row(
+                "SELECT document FROM mail_mailboxes WHERE account=?1 AND id=?2",
+                params![account, id],
+                |r| r.get(0),
+            )?;
+            let mut doc: Value = serde_json::from_str(&raw)?;
+            for (key, value) in update.as_object().ok_or("invalid Mailbox")? {
+                doc[key] = value.clone();
+            }
+            put_mailbox(&tx, account, &doc)?;
+        }
+        for id in &gone {
+            drop_mailbox(&tx, account, id)?;
+        }
+        set_state(&tx, account, "Mailbox", &state)?;
+        tx.commit()?;
+        if !more {
+            return Ok(());
+        }
+    }
+    Err("Mailbox/changes backlog checkpointed; rerun to continue".into())
+}
+
 pub fn sync(
     client: &Client,
     session: &Session,
@@ -474,28 +673,11 @@ pub fn sync(
     choose_account(session, Some(account))?;
     store.bind(client, session)?;
     changes(client, session, store, account)?;
+    mailbox_changes(client, session, store, account)?;
     let revision = store.revision(account)?;
-    let boxes = mailboxes(client, session, account)?;
-    let rows = boxes["list"].as_array().ok_or("Mailbox/get has no list")?;
-    if !boxes["notFound"].as_array().is_some_and(Vec::is_empty) {
-        return Err("incomplete Mailbox snapshot".into());
-    }
-    let mailbox = if let Some(id) = requested {
-        id.to_owned()
-    } else {
-        let ids: Vec<_> = rows
-            .iter()
-            .filter(|v| v["role"] == "inbox")
-            .map(|v| string(v, "id"))
-            .collect::<Result<_>>()?;
-        match ids.as_slice() {
-            [id] => id.to_string(),
-            _ => return Err("no unambiguous Inbox; supply --mailbox".into()),
-        }
-    };
-    let selected = rows
-        .iter()
-        .find(|v| v["id"] == mailbox)
+    let mailbox = store.mailbox_id(account, requested)?;
+    let selected = store
+        .mailbox(account, &mailbox)?
         .ok_or("mailbox is not accessible")?;
     if selected.pointer("/myRights/mayReadItems") == Some(&Value::Bool(false)) {
         return Err("mailbox does not permit reading".into());
@@ -522,18 +704,6 @@ pub fn sync(
             })
     });
     let tx = store.write(account, revision)?;
-    tx.execute("DELETE FROM mail_mailboxes WHERE account=?1", [account])?;
-    let mut seen = BTreeSet::new();
-    for doc in rows {
-        let id = string(doc, "id")?;
-        if !seen.insert(id) {
-            return Err("duplicate Mailbox id".into());
-        }
-        tx.execute(
-            "INSERT INTO mail_mailboxes VALUES(?1,?2,?3,?4)",
-            params![account, id, doc.to_string(), doc["role"].as_str()],
-        )?;
-    }
     for result in gets {
         save_get(&tx, account, &result, false)?;
     }
@@ -552,7 +722,6 @@ pub fn sync(
             params![account, key, position as i64, id],
         )?;
     }
-    set_state(&tx, account, "Mailbox", string(&boxes, "state")?)?;
     tx.commit()?;
     store.view(account, Some(&mailbox), listing)
 }
@@ -751,6 +920,9 @@ mod tests {
                         Err(e) => panic!("{e}"),
                     }
                 };
+                // On Windows an accepted socket inherits the listener's non-blocking mode, and a read
+                // that runs ahead of the request's bytes then fails with WouldBlock instead of waiting.
+                stream.set_nonblocking(false).unwrap();
                 stream
                     .set_read_timeout(Some(Duration::from_secs(5)))
                     .unwrap();
@@ -801,6 +973,9 @@ mod tests {
     fn boxes() -> Value {
         json!({"accountId":"a","state":"boxes","list":[{"id":"in","name":"Localized Inbox","role":"inbox","myRights":{"mayReadItems":true}}],"notFound":[]})
     }
+    fn unchanged() -> Value {
+        json!({"accountId":"a","oldState":"boxes","newState":"boxes","hasMoreChanges":false,"created":[],"updated":[],"destroyed":[]})
+    }
     fn query(ids: Value, state: &str) -> Value {
         json!({"accountId":"a","position":0,"queryState":state,"ids":ids})
     }
@@ -836,7 +1011,7 @@ mod tests {
                 "Email/changes",
                 json!({"accountId":"a","oldState":"s1","newState":"s2","hasMoreChanges":false,"created":["3"],"updated":[],"destroyed":[]}),
             ),
-            ("Mailbox/get", boxes()),
+            ("Mailbox/changes", unchanged()),
             ("Email/query", query(json!(["3", "2"]), "q2")),
             (
                 "Email/get",
@@ -849,11 +1024,11 @@ mod tests {
                 "Email/changes",
                 json!({"accountId":"a","oldState":"s2","newState":"s3","hasMoreChanges":false,"created":[],"updated":["2","3"],"destroyed":[]}),
             ),
-            ("Mailbox/get", boxes()),
+            ("Mailbox/changes", unchanged()),
             ("Email/query", query(json!([]), "q3")),
             ("Email/changes", json!({"type":"cannotCalculateChanges"})),
             ("Email/get", get(json!([]), "reset")),
-            ("Mailbox/get", boxes()),
+            ("Mailbox/changes", unchanged()),
             ("Email/query", query(json!(["2"]), "q4")),
             (
                 "Email/get",
@@ -906,7 +1081,7 @@ mod tests {
                 "Email/changes",
                 json!({"accountId":"a","oldState":"seed","newState":"s2","hasMoreChanges":false,"created":[],"updated":["1"],"destroyed":[]}),
             ),
-            ("Mailbox/get", boxes()),
+            ("Mailbox/changes", unchanged()),
             ("Email/query", query(json!(["1", "2"]), "q2")),
             (
                 "Email/get",
@@ -946,7 +1121,7 @@ mod tests {
                 "Email/changes",
                 json!({"accountId":"a","oldState":"seed","newState":"seed","hasMoreChanges":false,"created":[],"updated":[],"destroyed":[]}),
             ),
-            ("Mailbox/get", boxes()),
+            ("Mailbox/changes", unchanged()),
             ("Email/query", query(json!(["m2"]), "q-threads")),
             (
                 "Email/get",
@@ -983,6 +1158,104 @@ mod tests {
             .map(|args| args["collapseThreads"].clone())
             .collect();
         assert_eq!(collapse, [json!(false), json!(true)]);
+    }
+
+    #[test]
+    fn mailbox_delta_merges_counts_drops_the_destroyed_and_falls_back_to_a_snapshot() {
+        let mailbox = |id: &str, name: &str, role: Value| {
+            json!({"id":id,"name":name,"role":role,"myRights":{"mayReadItems":true},"totalEmails":1,"unreadEmails":1})
+        };
+        let quiet = json!({"accountId":"a","oldState":"seed","newState":"seed","hasMoreChanges":false,"created":[],"updated":[],"destroyed":[]});
+        let (session, server, sent) = mock_recorded(vec![
+            // 1: snapshot, listing of "old".
+            ("Email/get", get(json!([]), "seed")),
+            (
+                "Mailbox/get",
+                json!({"accountId":"a","state":"b0","list":[mailbox("in","Localized Inbox",json!("inbox")),mailbox("arch","Archive",json!("archive")),mailbox("old","Old",Value::Null)],"notFound":[]}),
+            ),
+            ("Email/query", query(json!(["1"]), "q-old")),
+            ("Email/get", get(json!([{"id":"1","subject":"kept"}]), "s")),
+            // 2: two pages of Mailbox changes.
+            ("Email/changes", quiet.clone()),
+            (
+                "Mailbox/changes",
+                json!({"accountId":"a","oldState":"b0","newState":"b1","hasMoreChanges":true,"created":["new"],"updated":["in"],"destroyed":["old"],"updatedProperties":["totalEmails","unreadEmails","totalThreads","unreadThreads"]}),
+            ),
+            (
+                "Mailbox/get",
+                json!({"accountId":"a","state":"b1","list":[mailbox("new","New",Value::Null)],"notFound":[]}),
+            ),
+            (
+                "Mailbox/get",
+                json!({"accountId":"a","state":"b1","list":[{"id":"in","totalEmails":5,"unreadEmails":2}],"notFound":[]}),
+            ),
+            (
+                "Mailbox/changes",
+                json!({"accountId":"a","oldState":"b1","newState":"b2","hasMoreChanges":false,"created":[],"updated":["arch"],"destroyed":[],"updatedProperties":null}),
+            ),
+            // Gone between Mailbox/changes and Mailbox/get.
+            (
+                "Mailbox/get",
+                json!({"accountId":"a","state":"b2","list":[],"notFound":["arch"]}),
+            ),
+            ("Email/query", query(json!([]), "q-in")),
+            // 3: the server cannot calculate the delta; a snapshot replaces everything.
+            ("Email/changes", quiet.clone()),
+            ("Mailbox/changes", json!({"type":"cannotCalculateChanges"})),
+            (
+                "Mailbox/get",
+                json!({"accountId":"a","state":"b9","list":[mailbox("in","Renamed Inbox",json!("inbox"))],"notFound":[]}),
+            ),
+            ("Email/query", query(json!([]), "q-in2")),
+            // 4: a fetch fails mid-page; nothing of that page is kept.
+            ("Email/changes", quiet),
+            (
+                "Mailbox/changes",
+                json!({"accountId":"a","oldState":"b9","newState":"b10","hasMoreChanges":false,"created":[],"updated":["in"],"destroyed":[]}),
+            ),
+            (
+                "Mailbox/get",
+                json!({"accountId":"other","state":"b10","list":[mailbox("in","Wrong",json!("inbox"))],"notFound":[]}),
+            ),
+        ]);
+        let c = client();
+        let mut store = Store::open(":memory:", "p").unwrap();
+        sync(&c, &session, &mut store, "a", Some("old"), Rows::Messages).unwrap();
+        assert_eq!(store.view("a", Some("old"), Rows::Messages).unwrap()["query"]["queryState"], "q-old");
+
+        sync(&c, &session, &mut store, "a", None, Rows::Messages).unwrap();
+        assert_eq!(store.state("a", "Mailbox").unwrap().as_deref(), Some("b2"));
+        let inbox = store.mailbox("a", "in").unwrap().unwrap();
+        assert_eq!(inbox["totalEmails"], 5);
+        assert_eq!(inbox["unreadEmails"], 2);
+        assert_eq!(inbox["name"], "Localized Inbox", "a count-only update keeps the rest");
+        assert_eq!(store.mailbox("a", "new").unwrap().unwrap()["name"], "New");
+        assert!(store.mailbox("a", "old").unwrap().is_none());
+        assert!(store.mailbox("a", "arch").unwrap().is_none(), "vanished before get");
+        assert_eq!(store.view("a", Some("old"), Rows::Messages).unwrap()["query"], Value::Null);
+        assert_eq!(store.email("a", "1").unwrap()["available"], true, "messages outlive their mailbox");
+
+        sync(&c, &session, &mut store, "a", None, Rows::Messages).unwrap();
+        assert_eq!(store.state("a", "Mailbox").unwrap().as_deref(), Some("b9"));
+        assert!(store.mailbox("a", "new").unwrap().is_none());
+        assert_eq!(store.mailbox("a", "in").unwrap().unwrap()["name"], "Renamed Inbox");
+
+        assert!(sync(&c, &session, &mut store, "a", None, Rows::Messages).is_err());
+        assert_eq!(store.state("a", "Mailbox").unwrap().as_deref(), Some("b9"));
+        assert_eq!(store.mailbox("a", "in").unwrap().unwrap()["name"], "Renamed Inbox");
+        server.join().unwrap();
+
+        // Created mailboxes are fetched whole; count-only updates ask for the counts the cache keeps,
+        // not every count the server named (Stalwart names the thread counts too).
+        let gets: Vec<Value> = sent
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|args| args.get("ids").is_some_and(|ids| ids.as_array().is_some_and(|ids| ids.iter().any(|id| id == "new" || id == "in"))))
+            .map(|args| args["properties"].clone())
+            .collect();
+        assert_eq!(gets[0], json!(MAILBOX_PROPERTIES));
+        assert_eq!(gets[1], json!(["id", "totalEmails", "unreadEmails"]));
     }
 
     /// v1 listings are a cache of what a query returned and hold no user intent, so they are dropped

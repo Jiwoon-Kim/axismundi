@@ -35,6 +35,19 @@ const DETAIL_PROPERTIES: &[&str] = &[
     "bodyValues",
 ];
 
+/// The Mailbox properties the cache keeps. A snapshot and a delta fetch must ask for the same set,
+/// or a mailbox refreshed by a delta would silently lose a property the snapshot had.
+pub(crate) const MAILBOX_PROPERTIES: &[&str] = &[
+    "id",
+    "name",
+    "parentId",
+    "role",
+    "sortOrder",
+    "myRights",
+    "totalEmails",
+    "unreadEmails",
+];
+
 pub const CAPABILITY: &str = "urn:ietf:params:jmap:mail";
 
 /// The body size a detail read asks for. The cache records this same value as the coverage of the
@@ -119,7 +132,7 @@ pub fn mailboxes(client: &Client, session: &Session, account: &str) -> Result<Va
         client,
         session,
         "Mailbox/get",
-        json!({"accountId":account,"properties":["id","name","parentId","role","sortOrder","myRights","totalEmails","unreadEmails"]}),
+        json!({"accountId":account,"properties":MAILBOX_PROPERTIES}),
     )?;
     let result = arguments(&batch, "Mailbox/get", account)?;
     if !result.get("list").is_some_and(Value::is_array) {
@@ -142,16 +155,18 @@ pub fn read(client: &Client, session: &Session, account: &str, id: &str) -> Resu
     Ok(result)
 }
 
+/// Checks a Foo/get answer of any type: every id asked for comes back exactly once, in `list` or
+/// `notFound`, and nothing else does.
 fn validate_get(result: &Value, ids: &[String]) -> Result<(), Error> {
     use std::collections::BTreeSet;
     let rows = result
         .get("list")
         .and_then(Value::as_array)
-        .ok_or_else(|| Error::Shape("Email/get has no list".into()))?;
+        .ok_or_else(|| Error::Shape("/get has no list".into()))?;
     let missing = result
         .get("notFound")
         .and_then(Value::as_array)
-        .ok_or_else(|| Error::Shape("Email/get has no notFound".into()))?;
+        .ok_or_else(|| Error::Shape("/get has no notFound".into()))?;
     let expected: BTreeSet<_> = ids.iter().map(String::as_str).collect();
     let mut actual = BTreeSet::new();
     for id in rows
@@ -161,13 +176,13 @@ fn validate_get(result: &Value, ids: &[String]) -> Result<(), Error> {
     {
         let id = id
             .and_then(Value::as_str)
-            .ok_or_else(|| Error::Shape("invalid Email/get id".into()))?;
+            .ok_or_else(|| Error::Shape("invalid /get id".into()))?;
         if !expected.contains(id) || !actual.insert(id) {
-            return Err(Error::Shape("unexpected or duplicate Email/get id".into()));
+            return Err(Error::Shape("unexpected or duplicate /get id".into()));
         }
     }
     if actual != expected {
-        return Err(Error::Shape("incomplete Email/get response".into()));
+        return Err(Error::Shape("incomplete /get response".into()));
     }
     Ok(())
 }

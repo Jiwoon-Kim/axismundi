@@ -33,7 +33,7 @@ Contacts/Calendar 모델·원본 MIME·로컬 편집·서버 Email을 한 record
 | 메서드 | 처리·저장·실패 계약 | 현재 상태 |
 |---|---|---|
 | Mailbox/get | role/rights/count와 계층 보존, 불완전 snapshot 거부 | 읽기 CLI·전체 snapshot 캐시 |
-| Mailbox/changes | Mailbox 전용 state, count만 바뀌는 경우의 updatedProperties 처리 | 후속, 현재는 메일함 전체 get |
+| Mailbox/changes | Mailbox 전용 state, count만 바뀌는 경우의 updatedProperties 처리 | **구현**(2026-11-20): 첫 sync·계산 불가 시 스냅샷, 이후 델타. updatedProperties 는 보관 속성과의 교집합만 병합(Stalwart 는 thread 카운트도 보냄). 파괴 시 그 목록 삭제. Stalwart 델타 후 캐시 = 새 스냅샷 |
 | Mailbox/query | 조건·정렬·계층별 ID 창. Email query와 별개 | 후속 |
 | Mailbox/queryChanges | 해당 queryState의 소속/순서 변경, 불가 시 창 재조회 | 후속 |
 | Mailbox/set | 생성·이름/부모 변경·삭제, 권한·항목별 실패·파괴 옵션 | 후속 |

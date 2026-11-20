@@ -14,6 +14,26 @@ Angular Material을 이용한 본격적인 탐색·계정 전환·작성 화면 
 실제 동작을 근거로 진행한다. Stalwart의 기본 WebUI는 서버·계정 관리 화면이며
 메일·주소록 사용자 클라이언트의 비교 대상으로 가정하지 않는다.
 
+**2026-11-20 결정 — Mail GUI 를 먼저 붙인다.** 위 기준을 바꾼다. Rust 코어에 JMAP 을 구현하고
+CLI 로 검증한 뒤 Mail 부터 GUI 를 붙인다. 근거(소유자): Mail 화면은 나중에 ActivityPub inbox/outbox
+GUI 에 그대로 도움이 되고, 클라이언트 blob 업로드가 성공하면 Contacts 쪽 할 일이 준다. 원래 기준이
+막으려던 위험 — 앱 전체 틀(탐색·계정 전환)이 메일 하나에 맞춰 굳는 것 — 은 **Mail 을 앱 셸이 아닌
+도메인 화면 하나로** 만들어서 피한다.
+
+클라이언트가 구현할 RFC 범위. Mail 호환 기준은 Stalwart 이고, 2026-11-20 Session 에서 광고를 측정했다:
+
+```txt
+범위 안    8620 core · 8621 mail/submission/vacation · 8887 websocket · 9404 blob
+          9425 quota · 9661 sieve · 9670 principals
+제외       9007 MDN · 9219 S/MIME 검증    Stalwart 미광고 → 실서버로 검증할 수 없음
+범위 밖    9749 webpush-vapid             데스크톱 앱에는 Web Push 를 받을 푸시 서비스가 없다.
+                                         axismundi 플러그인 프런트앱의 PWA·알림 때 보고,
+                                         JMAP core 플러그인의 후속 확장 후보. 데스크톱 실시간은 8887
+```
+
+GUI 착수 전에 필요한 것: 8621 의 남은 읽기 델타(Mailbox/changes 완료 → queryChanges → 페이지 창),
+8887 실시간, 9404 첨부. 9425 는 표시만이라 작다. 9661·9670 은 GUI 설정 화면과 함께 넣는다.
+
 ## 2026-11-19 착수 기록
 
 사용자가 별도 Opus 검토 없이 진행을 승인했다. 아래 검토 질문은 미결 판단 기록으로
@@ -24,7 +44,7 @@ Angular Material을 이용한 본격적인 탐색·계정 전환·작성 화면 
 | M0 | 프로필 격리 유지·Mail 가산 스키마·coverage/dirty 표현 기록 | 전역 파일·출하 암호화는 미결 |
 | M1 | 제한된 읽기·result reference/분할·응답 대응·실서버 왕복·Thread 전개 | 스레드 소속 오프라인 보관(Thread/changes) |
 | M2 | Mail 전용 테이블·오프라인·부분 병합·Contacts 보존 검증 | 임의 필터·희소 다중 페이지·Blob 캐시 확장 |
-| M3 | Email changes·dirty/checkpoint·창 재조회·만료 복구 | Mailbox delta·queryChanges·큰 backlog 우선순위 |
+| M3 | Email changes·dirty/checkpoint·창 재조회·만료 복구·Mailbox delta | queryChanges·큰 backlog 우선순위 |
 | M4 | 아직 미구현 | 본격 UI는 Mail/Contacts/AP 대표 흐름 이후 |
 | M5 | Submission의 양방향 로컬 테스트만 존재 | 제품 작성·Draft·Identity·Blob·발송 등 |
 
@@ -131,6 +151,26 @@ Contacts 전체 캐시 가정이나 모든 토큰의 일치 조건을 그대로 
 fixture: 새 메일, `$seen`/keyword 변경, 메일함 이동·복수 소속, 객체 파괴 없는 query 이탈,
 실제 파괴, 순서 변경, 만료 state, canCalculateChanges=false, 중간 객체 state, 누락 get,
 동시 변경·crash/reopen. 큰 backlog가 화면의 최신 창 확보를 막지 않게 한다.
+
+**Mailbox delta 구현 기록 (2026-11-20).** 첫 sync 와 cannotCalculateChanges 는 전체 스냅샷, 이후는
+Mailbox/changes → 생성·변경분만 Mailbox/get. `updatedProperties` 가 오면(카운트만 바뀜, RFC 8621 §2.2)
+이미 캐시된 메일함은 **캐시가 보관하는 속성과의 교집합만** 받아 병합한다. 측정: Stalwart 는 메일
+하나의 `$seen` 변경에 `updatedProperties: [totalEmails, unreadEmails, totalThreads, unreadThreads]` 를
+보낸다 — thread 카운트까지 병합하면 델타로 갱신된 메일함이 스냅샷본과 모양이 달라진다. 파괴된 메일함은
+그 목록(mail_queries)을 함께 지우고 메시지는 남긴다(이동·삭제 여부는 Email/changes 몫).
+changes 와 get 사이에 사라진 메일함은 파괴로 본다. 페이지마다 따로 커밋해 실패 시 마지막 커밋 state 가
+남는다.
+
+증거: mock 테스트 하나(2페이지·카운트 병합·생성·파괴+목록 정리·사이 소멸·스냅샷 폴백·중간 실패 보존),
+변이 7종 전부 실패. Stalwart: 스냅샷 sync → 외부에서 `$seen` 복원·메일함 삭제 → 델타 sync 후 캐시된
+메일함 6개가 같은 속성의 새 Mailbox/get 과 **완전히 일치**, state 는 Stalwart 가 그 구간에 대해
+돌려주는 newState 와 같다. fixture(메일함·`$seen`)는 원상복구했다.
+
+이 과정에서 기존 mock 이 Windows 에서 간헐 실패하던 원인을 찾았다(커밋된 코드에서 10회 중 2회):
+accept 된 소켓이 리스너의 non-blocking 을 물려받아 요청 바이트보다 먼저 읽으면 WouldBlock. 수정 후 20회 0실패.
+
+남은 것: 메일함 수가 maxObjectsInGet 를 넘으면 `ids:null` 스냅샷이 거부될 수 있다(RFC 8620 §5.1).
+그때는 Mailbox/query + 청크 get 이 필요하다. 미구현.
 
 완료: 외부 테스트 클라이언트의 변경 반영. 실패 시 이전 체크포인트 또는 durable dirty 작업
 보존. 부분 데이터로 서버 전체 count를 영구 재계산하지 않는다. full replica 완료는 주장하지 않는다.

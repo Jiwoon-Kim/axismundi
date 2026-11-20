@@ -172,8 +172,43 @@ fn validate_get(result: &Value, ids: &[String]) -> Result<(), Error> {
     Ok(())
 }
 
-fn query_args(account: &str, mailbox: &str, count: usize) -> Value {
-    json!({"accountId":account,"filter":{"inMailbox":mailbox},"sort":[{"property":"receivedAt","isAscending":false}],"collapseThreads":false,"position":0,"limit":count})
+/// What one row of a mailbox listing is: a message, or a thread shown by one of its messages.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Rows {
+    Messages,
+    Threads,
+}
+
+impl Rows {
+    fn collapse_threads(self) -> bool {
+        matches!(self, Rows::Threads)
+    }
+}
+
+/// The receivedAt-descending order every listing uses today. When sort becomes a caller's choice it
+/// has to join both the arguments and the key below.
+const SORT_PROPERTY: &str = "receivedAt";
+
+fn query_args(account: &str, mailbox: &str, count: usize, rows: Rows) -> Value {
+    json!({"accountId":account,"filter":{"inMailbox":mailbox},"sort":[{"property":SORT_PROPERTY,"isAscending":false}],"collapseThreads":rows.collapse_threads(),"position":0,"limit":count})
+}
+
+/// Identity of a query: every argument that changes which ids come back or their order, and
+/// nothing else. position and limit are the window onto the query, not the query, and the account is
+/// already the row's own key. Two listings of one mailbox that differ only in collapseThreads are two
+/// queries, so a message listing and a thread listing are cached side by side rather than one
+/// overwriting the other.
+///
+/// Assembled from primitives in a fixed order rather than by serialising a map. The CLI and the GUI
+/// open the same profile file, and the GUI build unifies serde_json features with Tauri's graph: if
+/// anything there ever enabled preserve_order, a serialised map would key differently in the two
+/// builds and each would miss the other's rows. JMAP ids are base64url characters, so `|` cannot occur
+/// inside a mailbox id.
+pub(crate) fn query_key(mailbox: &str, rows: Rows) -> String {
+    format!(
+        "v1|inMailbox={mailbox}|sort={SORT_PROPERTY}:desc|collapseThreads={}",
+        rows.collapse_threads()
+    )
 }
 
 fn query_ids(query: &Value, count: usize) -> Result<Vec<String>, Error> {
@@ -201,6 +236,7 @@ fn query_ids(query: &Value, count: usize) -> Result<Vec<String>, Error> {
 }
 
 struct Window {
+    key: String,
     args: Value,
     query: Value,
     gets: Vec<Value>,
@@ -211,9 +247,11 @@ fn window(
     session: &Session,
     account: &str,
     mailbox: &str,
+    rows: Rows,
 ) -> Result<Window, Error> {
     let count = limit(session, "maxObjectsInGet")?.min(50);
-    let args = query_args(account, mailbox, count);
+    let key = query_key(mailbox, rows);
+    let args = query_args(account, mailbox, count, rows);
     let referenced = json!({"accountId":account,"#ids":{"resultOf":"query","name":"Email/query","path":"/ids"},"properties":LIST_PROPERTIES});
     let payload = json!({"using":[CORE_CAPABILITY,CAPABILITY],"methodCalls":[["Email/query",args,"query"],["Email/get",referenced,"get"]]});
     if limit(session, "maxCallsInRequest")? >= 2
@@ -232,12 +270,15 @@ fn window(
         let get = arguments_for(&batch, "Email/get", account, "get")?;
         validate_get(&get, &ids)?;
         return Ok(Window {
+            key,
             args,
             query,
             gets: vec![get],
         });
     }
-    // Splitting is safe here: collapseThreads=false bounds query IDs by maxObjectsInGet.
+    // Splitting is safe here whichever Rows was asked for: the query returns at most `count` ids,
+    // one per thread when collapsed, and `count` never exceeds maxObjectsInGet. What fans out past
+    // that bound is expanding a thread into all of its messages, which this listing never does.
     let batch = call(client, session, "Email/query", args.clone())?;
     let query = arguments(&batch, "Email/query", account)?;
     let ids = query_ids(&query, count)?;
@@ -253,7 +294,12 @@ fn window(
         validate_get(&get, chunk)?;
         gets.push(get);
     }
-    Ok(Window { args, query, gets })
+    Ok(Window {
+        key,
+        args,
+        query,
+        gets,
+    })
 }
 
 pub fn inbox(client: &Client, session: &Session, account: &str) -> Result<Value, Error> {
@@ -268,7 +314,7 @@ pub fn inbox(client: &Client, session: &Session, account: &str) -> Result<Value,
     let [mailbox] = ids.as_slice() else {
         return Err(Error::Shape("no unambiguous role=inbox mailbox".into()));
     };
-    let Window { query, gets, .. } = window(client, session, account, mailbox)?;
+    let Window { query, gets, .. } = window(client, session, account, mailbox, Rows::Messages)?;
     let mut emails = Vec::new();
     let mut not_found = Vec::new();
     let mut get_states = Vec::new();
@@ -413,7 +459,8 @@ mod tests {
             user: "u".into(),
             secret: "test-only".into(),
         });
-        let Window { query, gets, .. } = window(&client, &session, "a", "in").unwrap();
+        let Window { query, gets, .. } =
+            window(&client, &session, "a", "in", Rows::Messages).unwrap();
         assert_eq!(query["ids"], json!(["2", "1"]));
         assert_eq!(gets.len(), 1);
         server.join().unwrap();

@@ -24,6 +24,18 @@ struct Options {
     profile: Option<String>,
     id: Option<String>,
     mailbox: Option<String>,
+    rows: Option<String>,
+}
+
+/// `--rows` takes a value rather than being a bare switch, because the offline parser reads its
+/// arguments strictly in pairs.
+fn rows(value: Option<&str>) -> Result<axismundi_jmap_core::mail::Rows, String> {
+    use axismundi_jmap_core::mail::Rows;
+    match value {
+        None | Some("messages") => Ok(Rows::Messages),
+        Some("threads") => Ok(Rows::Threads),
+        Some(other) => Err(format!("--rows takes messages or threads, not {other}")),
+    }
 }
 
 fn usage() -> String {
@@ -37,8 +49,8 @@ fn usage() -> String {
         "  axismundi mailboxes ... [--account ID] (read-only Mailbox/get)",
         "  axismundi mail-inbox ... [--account ID] (first 50 or fewer messages)",
         "  axismundi mail-read ... [--account ID] --id EMAIL_ID (body values on demand)",
-        "  axismundi mail-sync ... --db PATH --profile ID [--account ID] [--mailbox ID]",
-        "  axismundi mail-offline --db PATH --profile ID --account ID [--mailbox ID | --id EMAIL_ID]",
+        "  axismundi mail-sync ... --db PATH --profile ID [--account ID] [--mailbox ID] [--rows messages|threads]",
+        "  axismundi mail-offline --db PATH --profile ID --account ID [--mailbox ID [--rows messages|threads] | --id EMAIL_ID]",
         "  axismundi todo      --session-url URL [--user NAME] [--secret SECRET] [--account ID]",
         "  axismundi changes   ... [--account ID] [--since STATE]",
         "  axismundi todo-set  ... [--account ID]  (loopback development server only)",
@@ -63,6 +75,7 @@ fn options(args: &[String]) -> Result<Options, String> {
     let mut profile = None;
     let mut id = None;
     let mut mailbox = None;
+    let mut rows = None;
     let mut rest = args.iter();
     while let Some(flag) = rest.next() {
         let value = || {
@@ -81,6 +94,7 @@ fn options(args: &[String]) -> Result<Options, String> {
             "--profile" => profile = Some(value()?),
             "--id" => id = Some(value()?),
             "--mailbox" => mailbox = Some(value()?),
+            "--rows" => rows = Some(value()?),
             other => return Err(format!("unknown argument: {other}")),
         }
         if flag.starts_with("--") {
@@ -103,6 +117,7 @@ fn options(args: &[String]) -> Result<Options, String> {
         profile,
         id,
         mailbox,
+        rows,
     })
 }
 
@@ -250,7 +265,7 @@ fn run() -> Result<bool, String> {
         for pair in rest.chunks(2) {
             if !(matches!(pair[0].as_str(), "--db" | "--profile" | "--account")
                 || (command == "mail-offline"
-                    && matches!(pair[0].as_str(), "--mailbox" | "--id")))
+                    && matches!(pair[0].as_str(), "--mailbox" | "--id" | "--rows")))
                 || flags.insert(pair[0].as_str(), pair[1].as_str()).is_some()
             {
                 return Err("invalid offline argument".into());
@@ -267,8 +282,10 @@ fn run() -> Result<bool, String> {
             return Err("offline cache does not exist".into());
         }
         if command == "mail-offline" {
-            if flags.contains_key("--id") && flags.contains_key("--mailbox") {
-                return Err("choose --id or --mailbox, not both".into());
+            if flags.contains_key("--id")
+                && (flags.contains_key("--mailbox") || flags.contains_key("--rows"))
+            {
+                return Err("--id reads one message; it takes no --mailbox or --rows".into());
             }
             let store = axismundi_jmap_core::mail::cache::Store::open(path, get("--profile")?)
                 .map_err(|e| e.to_string())?;
@@ -276,7 +293,7 @@ fn run() -> Result<bool, String> {
             let result = if let Some(id) = flags.get("--id") {
                 store.email(account, id)
             } else {
-                store.view(account, flags.get("--mailbox").copied())
+                store.view(account, flags.get("--mailbox").copied(), rows(flags.get("--rows").copied())?)
             }.map_err(|e| e.to_string())?;
             println!("{}", serde_json::to_string_pretty(&result).map_err(|e| e.to_string())?);
             return Ok(true);
@@ -319,7 +336,8 @@ fn run() -> Result<bool, String> {
         let profile = options.profile.as_deref().ok_or("--profile is required")?;
         let mut store = cache::Store::open(path, profile).map_err(|e| e.to_string())?;
         let result = if command == "mail-sync" {
-            cache::sync(&client, &session, &mut store, &account, options.mailbox.as_deref())
+            cache::sync(&client, &session, &mut store, &account, options.mailbox.as_deref(),
+                rows(options.rows.as_deref())?)
         } else {
             cache::read(&client, &session, &mut store, &account,
                 options.id.as_deref().ok_or("--id is required")?)

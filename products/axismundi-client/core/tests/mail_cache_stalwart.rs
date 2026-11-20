@@ -1,7 +1,7 @@
 //! Profile-local Mail cache and external delta interop. Only destroys its own fixtures.
 use axismundi_jmap_core::{
     CORE_CAPABILITY, Client, Credentials, Session,
-    mail::{self, cache},
+    mail::{self, Rows, cache},
 };
 use serde_json::{Value, json};
 
@@ -78,11 +78,12 @@ fn mail_cache_external_delta_offline_and_destruction() {
                 &session,
                 &mut store,
                 &account,
-                Some("no-such-mailbox")
+                Some("no-such-mailbox"),
+                Rows::Messages
             )
             .is_err()
         );
-        let view = cache::sync(&client, &session, &mut store, &account, Some(&mailbox)).unwrap();
+        let view = cache::sync(&client, &session, &mut store, &account, Some(&mailbox), Rows::Messages).unwrap();
         assert_eq!(view["emails"][0]["id"], id);
         assert_eq!(view["partialCache"], true);
         cache::read(&client, &session, &mut store, &account, &id).unwrap();
@@ -90,7 +91,7 @@ fn mail_cache_external_delta_offline_and_destruction() {
         let mut store = cache::Store::open(&path, "e2e-profile").unwrap();
         assert!(store.email(&account, &id).unwrap()["document"]["bodyValues"].is_object());
         assert_eq!(
-            store.view(&account, Some(&mailbox)).unwrap()["emails"]
+            store.view(&account, Some(&mailbox), Rows::Messages).unwrap()["emails"]
                 .as_array()
                 .unwrap()
                 .len(),
@@ -103,7 +104,7 @@ fn mail_cache_external_delta_offline_and_destruction() {
             "Email/set",
             json!({"accountId":account,"update":{&id:{"keywords/$seen":true}}}),
         );
-        let view = cache::sync(&client, &session, &mut store, &account, Some(&mailbox)).unwrap();
+        let view = cache::sync(&client, &session, &mut store, &account, Some(&mailbox), Rows::Messages).unwrap();
         assert_eq!(view["emails"][0]["document"]["keywords"]["$seen"], true);
         assert!(
             store.email(&account, &id).unwrap()["staleProperties"]
@@ -126,7 +127,7 @@ fn mail_cache_external_delta_offline_and_destruction() {
             "Email/set",
             json!({"accountId":account,"update":{&id:{"mailboxIds":{inbox:true}}}}),
         );
-        let view = cache::sync(&client, &session, &mut store, &account, Some(&mailbox)).unwrap();
+        let view = cache::sync(&client, &session, &mut store, &account, Some(&mailbox), Rows::Messages).unwrap();
         assert!(view["emails"].as_array().unwrap().is_empty());
         assert_eq!(store.email(&account, &id).unwrap()["available"], true);
         call(
@@ -136,7 +137,7 @@ fn mail_cache_external_delta_offline_and_destruction() {
             json!({"accountId":account,"destroy":[id]}),
         );
         created_email = None;
-        cache::sync(&client, &session, &mut store, &account, Some(&mailbox)).unwrap();
+        cache::sync(&client, &session, &mut store, &account, Some(&mailbox), Rows::Messages).unwrap();
         assert_eq!(store.email(&account, &id).unwrap()["reason"], "destroyed");
         drop(store);
     }));

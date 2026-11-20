@@ -69,8 +69,23 @@ HTTP·프로토콜·동기화 로직은 Rust Core/Mail에 둔다.
 | 상세 | 열 때 추가 속성·본문 조회 | 누락·truncation을 완전한 본문으로 읽지 않음 |
 | 상한 | query/get 크기와 call 의존 관계 제한 | 작은 모의 상한·Thread fan-out에서 실제 분할, 절단 금지 |
 
-먼저 `collapseThreads=false` 메시지 행으로 시작한다. Thread 옵션은 전개 상한 검사와 함께
-추가한다. 선택한 조건·정렬·projection·call ID를 관찰 가능하게 하되 비밀·개인 본문을 로그에 남기지 않는다.
+먼저 `collapseThreads=false` 메시지 행으로 시작한다. 선택한 조건·정렬·projection·call ID를
+관찰 가능하게 하되 비밀·개인 본문을 로그에 남기지 않는다.
+
+**Thread 는 두 단계로 나뉜다 (2026-11-20 정정).** 원래 이 절은 "Thread 옵션은 전개 상한 검사와
+함께" 라고 적었다. 그 문장이 막으려던 위험은 팬아웃이고, 팬아웃은 **전개**에서만 생긴다.
+
+```txt
+접힌 목록   collapseThreads=true 의 Email/query.  스레드당 대표 id 하나라 결과는 limit 이하,
+          limit 은 maxObjectsInGet 이하 — 메시지 목록과 같은 상한 안에 든다.  구현됨
+          (--rows threads).  목록 키가 collapseThreads 를 포함해 메시지 목록과 공존한다
+전개       Thread/get → 그 스레드의 emailIds 전부 → Email/get.  스레드 하나가 메일 수천 개일
+          수 있어 상한이 없다.  ID 를 먼저 받고 dedupe·maxObjectsInGet 청크로 나눈다.
+          **조용히 절단하지 않는다.**  미구현 — 이 단계가 상한 검사와 함께 들어간다
+```
+
+여러 스레드의 emailIds 를 result reference 로 한 번에 Email/get 에 잇는 사슬은 쓰지 않는다.
+상한을 넘길 수 있는 유일한 경로이고, 스레드 하나씩 전개하면 필요하지 않다.
 
 완료: **비어 있지 않은 결정적 메시지**로 Stalwart 읽기 왕복을 증명한다. 빈 Inbox 성공만으로
 닫지 않는다. 현재 합성 fixture는 Email/set으로 넣고, 별도 두 계정 테스트에서 로컬 Submission을

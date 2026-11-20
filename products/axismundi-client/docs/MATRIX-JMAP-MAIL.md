@@ -37,11 +37,11 @@ Contacts/Calendar 모델·원본 MIME·로컬 편집·서버 Email을 한 record
 | Mailbox/query | 조건·정렬·계층별 ID 창. Email query와 별개 | 후속 |
 | Mailbox/queryChanges | 해당 queryState의 소속/순서 변경, 불가 시 창 재조회 | 후속 |
 | Mailbox/set | 생성·이름/부모 변경·삭제, 권한·항목별 실패·파괴 옵션 | 후속 |
-| Thread/get | 서버 threadId와 emailIds 순서, 전개 수가 get 상한을 넘으면 분할 | probe fixture에서 왕복, 제품 후속 |
+| Thread/get | 서버 threadId와 emailIds 순서, 전개 수가 get 상한을 넘으면 분할 | probe fixture에서 왕복. 접힌 목록은 Thread/get 없이 동작, **전개는 후속** |
 | Thread/changes | Thread 전용 checkpoint와 캐시 무효화 | 후속 |
 | Email/get | projection·null/누락·unknown·body part/truncation, notFound | 읽기 CLI·부분 캐시·오프라인 |
 | Email/changes | Email 전용 state, hasMoreChanges, 파괴/dirty, 만료 복구 | 부분 캐시 구현·mock/실서버 검증 |
-| Email/query | account/filter/sort/collapseThreads 및 queryState, 서버 순서 | 고정 조건의 첫 창·result reference·캐시 |
+| Email/query | account/filter/sort/collapseThreads 및 queryState, 서버 순서 | 고정 조건의 첫 창·result reference·캐시. 메시지·접힌 스레드 목록이 **쿼리별 키**로 공존(스키마 v2) |
 | Email/queryChanges | 객체 changes와 분리, same-query 적용, 계산 불가 시 창 재조회 | 후속, 현재는 창 재조회 |
 | Email/set | 서버 Draft 생성·keywords/mailboxIds 변경·파괴. 로컬 의도 별도 보존 | fixture에서만 사용, 제품 후속 |
 | Email/copy | source/target account 구별, 부분 성공·후속 원본 파괴 결과 분리 | 후속 |

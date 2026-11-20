@@ -1,8 +1,11 @@
 //! Partial Mail cache. Network exchanges are staged outside SQLite transactions.
 use super::{
-    MAX_BODY_VALUE_BYTES, Window, arguments, call, choose_account, mailboxes, query_ids,
-    validate_get, window,
+    MAX_BODY_VALUE_BYTES, Rows, Window, arguments, call, choose_account, mailboxes, query_ids,
+    query_key, validate_get, window,
 };
+
+/// v2 keys a listing by its query, not its mailbox.
+const SCHEMA_VERSION: &str = "2";
 use crate::{Client, Session};
 use rusqlite::{Connection, OptionalExtension, Transaction, TransactionBehavior, params};
 use serde_json::{Value, json};
@@ -52,8 +55,16 @@ impl Store {
                 |r| r.get(0),
             )
             .optional()?;
-        if version.as_deref().is_some_and(|v| v != "1") {
-            return Err("unsupported Mail cache schema version".into());
+        match version.as_deref() {
+            None | Some(SCHEMA_VERSION) => {}
+            // v1 keyed a listing by its mailbox alone, so a message listing and a thread listing of
+            // the same mailbox overwrote each other. The two tables hold only what a query returned,
+            // with no user intent in them, so they are dropped and refilled by the next sync rather
+            // than translated; CREATE ... IF NOT EXISTS below would otherwise keep the old shape.
+            Some("1") => tx.execute_batch(
+                "DROP TABLE IF EXISTS mail_query_items; DROP TABLE IF EXISTS mail_queries;",
+            )?,
+            Some(_) => return Err("unsupported Mail cache schema version".into()),
         }
         tx.execute_batch("CREATE TABLE IF NOT EXISTS mail_accounts(account TEXT PRIMARY KEY, revision INTEGER NOT NULL DEFAULT 0);
             CREATE TABLE IF NOT EXISTS mail_mailboxes(account TEXT NOT NULL,id TEXT NOT NULL,document TEXT NOT NULL,role TEXT,PRIMARY KEY(account,id));
@@ -61,12 +72,12 @@ impl Store {
             CREATE TABLE IF NOT EXISTS mail_email_mailboxes(account TEXT NOT NULL,email_id TEXT NOT NULL,mailbox_id TEXT NOT NULL,PRIMARY KEY(account,email_id,mailbox_id),FOREIGN KEY(account,email_id) REFERENCES mail_emails(account,id) ON DELETE CASCADE);
             CREATE INDEX IF NOT EXISTS mail_membership ON mail_email_mailboxes(account,mailbox_id,email_id);
             CREATE TABLE IF NOT EXISTS mail_sync_state(account TEXT NOT NULL,kind TEXT NOT NULL,state TEXT NOT NULL,PRIMARY KEY(account,kind));
-            CREATE TABLE IF NOT EXISTS mail_queries(account TEXT NOT NULL,mailbox_id TEXT NOT NULL,arguments TEXT NOT NULL,document TEXT NOT NULL,stale INTEGER NOT NULL DEFAULT 1,PRIMARY KEY(account,mailbox_id));
-            CREATE TABLE IF NOT EXISTS mail_query_items(account TEXT NOT NULL,mailbox_id TEXT NOT NULL,position INTEGER NOT NULL,email_id TEXT NOT NULL,PRIMARY KEY(account,mailbox_id,position),UNIQUE(account,mailbox_id,email_id),FOREIGN KEY(account,mailbox_id) REFERENCES mail_queries(account,mailbox_id) ON DELETE CASCADE);
+            CREATE TABLE IF NOT EXISTS mail_queries(account TEXT NOT NULL,query_key TEXT NOT NULL,mailbox_id TEXT NOT NULL,arguments TEXT NOT NULL,document TEXT NOT NULL,stale INTEGER NOT NULL DEFAULT 1,PRIMARY KEY(account,query_key));
+            CREATE TABLE IF NOT EXISTS mail_query_items(account TEXT NOT NULL,query_key TEXT NOT NULL,position INTEGER NOT NULL,email_id TEXT NOT NULL,PRIMARY KEY(account,query_key,position),UNIQUE(account,query_key,email_id),FOREIGN KEY(account,query_key) REFERENCES mail_queries(account,query_key) ON DELETE CASCADE);
             CREATE TABLE IF NOT EXISTS mail_unavailable(account TEXT NOT NULL,id TEXT NOT NULL,reason TEXT NOT NULL,PRIMARY KEY(account,id));")?;
         tx.execute(
-            "INSERT OR IGNORE INTO metadata VALUES('mail_schema_version','1')",
-            [],
+            "INSERT INTO metadata VALUES('mail_schema_version',?1) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+            [SCHEMA_VERSION],
         )?;
         tx.commit()?;
         Ok(Self { db })
@@ -177,8 +188,9 @@ impl Store {
         }
     }
 
-    pub fn view(&self, account: &str, mailbox: Option<&str>) -> Result<Value> {
+    pub fn view(&self, account: &str, mailbox: Option<&str>, rows: Rows) -> Result<Value> {
         let mailbox = self.mailbox_id(account, mailbox)?;
+        let key = query_key(&mailbox, rows);
         let mut stmt = self
             .db
             .prepare("SELECT document FROM mail_mailboxes WHERE account=?1 ORDER BY id")?;
@@ -192,14 +204,14 @@ impl Store {
         let query: Option<(String, i64)> = self
             .db
             .query_row(
-                "SELECT document,stale FROM mail_queries WHERE account=?1 AND mailbox_id=?2",
-                params![account, mailbox],
+                "SELECT document,stale FROM mail_queries WHERE account=?1 AND query_key=?2",
+                params![account, key],
                 |r| Ok((r.get(0)?, r.get(1)?)),
             )
             .optional()?;
-        let mut stmt = self.db.prepare("SELECT email_id FROM mail_query_items WHERE account=?1 AND mailbox_id=?2 ORDER BY position")?;
+        let mut stmt = self.db.prepare("SELECT email_id FROM mail_query_items WHERE account=?1 AND query_key=?2 ORDER BY position")?;
         let ids: Vec<String> = stmt
-            .query_map(params![account, mailbox], |r| r.get(0))?
+            .query_map(params![account, key], |r| r.get(0))?
             .collect::<std::result::Result<_, _>>()?;
         let emails: Vec<Value> = ids
             .iter()
@@ -428,6 +440,7 @@ pub fn sync(
     store: &mut Store,
     account: &str,
     requested: Option<&str>,
+    listing: Rows,
 ) -> Result<Value> {
     choose_account(session, Some(account))?;
     store.bind(client, session)?;
@@ -458,7 +471,12 @@ pub fn sync(
     if selected.pointer("/myRights/mayReadItems") == Some(&Value::Bool(false)) {
         return Err("mailbox does not permit reading".into());
     }
-    let Window { args, query, gets } = window(client, session, account, &mailbox)?;
+    let Window {
+        key,
+        args,
+        query,
+        gets,
+    } = window(client, session, account, &mailbox, listing)?;
     string(&query, "queryState")?;
     if query["position"].as_u64() != Some(0) {
         return Err("unexpected query position".into());
@@ -494,20 +512,20 @@ pub fn sync(
         "UPDATE mail_queries SET stale=1 WHERE account=?1",
         [account],
     )?;
-    tx.execute("INSERT INTO mail_queries VALUES(?1,?2,?3,?4,?5) ON CONFLICT(account,mailbox_id) DO UPDATE SET arguments=excluded.arguments,document=excluded.document,stale=excluded.stale",params![account,mailbox,args.to_string(),query.to_string(),missing])?;
+    tx.execute("INSERT INTO mail_queries VALUES(?1,?2,?3,?4,?5,?6) ON CONFLICT(account,query_key) DO UPDATE SET mailbox_id=excluded.mailbox_id,arguments=excluded.arguments,document=excluded.document,stale=excluded.stale",params![account,key,mailbox,args.to_string(),query.to_string(),missing])?;
     tx.execute(
-        "DELETE FROM mail_query_items WHERE account=?1 AND mailbox_id=?2",
-        params![account, mailbox],
+        "DELETE FROM mail_query_items WHERE account=?1 AND query_key=?2",
+        params![account, key],
     )?;
     for (position, id) in ids.iter().enumerate() {
         tx.execute(
             "INSERT INTO mail_query_items VALUES(?1,?2,?3,?4)",
-            params![account, mailbox, position as i64, id],
+            params![account, key, position as i64, id],
         )?;
     }
     set_state(&tx, account, "Mailbox", string(&boxes, "state")?)?;
     tx.commit()?;
-    store.view(account, Some(&mailbox))
+    store.view(account, Some(&mailbox), listing)
 }
 
 #[cfg(test)]
@@ -669,6 +687,17 @@ mod tests {
     }
 
     fn mock(responses: Vec<(&'static str, Value)>) -> (Session, std::thread::JoinHandle<()>) {
+        let (session, server, _) = mock_recorded(responses);
+        (session, server)
+    }
+
+    type Recorded = std::sync::Arc<std::sync::Mutex<Vec<Value>>>;
+
+    /// Like `mock`, and also keeps the arguments of every call it answered, so a test can check what
+    /// was sent and not only what came back.
+    fn mock_recorded(
+        responses: Vec<(&'static str, Value)>,
+    ) -> (Session, std::thread::JoinHandle<()>, Recorded) {
         use std::{
             io::{BufRead, BufReader, Read, Write},
             net::TcpListener,
@@ -678,6 +707,8 @@ mod tests {
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         listener.set_nonblocking(true).unwrap();
         let session = session(&format!("http://{}", listener.local_addr().unwrap()));
+        let recorded: Recorded = Default::default();
+        let sent = recorded.clone();
         let server = thread::spawn(move || {
             for (method, response) in responses {
                 let deadline = Instant::now() + Duration::from_secs(5);
@@ -710,6 +741,9 @@ mod tests {
                 let mut bytes = vec![0; len];
                 reader.read_exact(&mut bytes).unwrap();
                 let request: Value = serde_json::from_slice(&bytes).unwrap();
+                sent.lock()
+                    .unwrap()
+                    .push(request["methodCalls"][0][1].clone());
                 assert_eq!(request["methodCalls"][0][0], method);
                 if method == "Email/query" {
                     assert_eq!(request["methodCalls"][0][1]["limit"], 2);
@@ -732,7 +766,7 @@ mod tests {
                 write!(stream,"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",body.len(),body).unwrap();
             }
         });
-        (session, server)
+        (session, server, recorded)
     }
 
     fn boxes() -> Value {
@@ -800,10 +834,10 @@ mod tests {
         let path = temp();
         let mut store = Store::open(&path, "p").unwrap();
         let c = client();
-        let first = sync(&c, &session, &mut store, "a", None).unwrap();
+        let first = sync(&c, &session, &mut store, "a", None, Rows::Messages).unwrap();
         assert_eq!(first["emails"][0]["id"], "2");
         read(&c, &session, &mut store, "a", "2").unwrap();
-        let second = sync(&c, &session, &mut store, "a", None).unwrap();
+        let second = sync(&c, &session, &mut store, "a", None, Rows::Messages).unwrap();
         assert_eq!(second["emails"][0]["id"], "3");
         assert_eq!(store.state("a", "Email").unwrap().as_deref(), Some("s2"));
         assert_eq!(store.email("a", "1").unwrap()["reason"], "destroyed");
@@ -813,15 +847,15 @@ mod tests {
                 .unwrap()
                 .contains(&json!("bodyValues"))
         );
-        let third = sync(&c, &session, &mut store, "a", None).unwrap();
+        let third = sync(&c, &session, &mut store, "a", None, Rows::Messages).unwrap();
         assert!(third["emails"].as_array().unwrap().is_empty());
         assert_eq!(store.email("a", "2").unwrap()["available"], true);
-        sync(&c, &session, &mut store, "a", None).unwrap();
+        sync(&c, &session, &mut store, "a", None, Rows::Messages).unwrap();
         assert_eq!(store.state("a", "Email").unwrap().as_deref(), Some("reset"));
         drop(store);
         let store = Store::open(&path, "p").unwrap();
         assert_eq!(
-            store.view("a", None).unwrap()["emails"][0]["document"]["subject"],
+            store.view("a", None, Rows::Messages).unwrap()["emails"][0]["document"]["subject"],
             "refetched"
         );
         drop(store);
@@ -852,14 +886,117 @@ mod tests {
         ]);
         let c = client();
         let mut store = Store::open(":memory:", "p").unwrap();
-        sync(&c, &session, &mut store, "a", None).unwrap();
-        assert!(sync(&c, &session, &mut store, "a", None).is_err());
+        sync(&c, &session, &mut store, "a", None, Rows::Messages).unwrap();
+        assert!(sync(&c, &session, &mut store, "a", None, Rows::Messages).is_err());
         assert_eq!(store.state("a", "Email").unwrap().as_deref(), Some("s2"));
-        let view = store.view("a", None).unwrap();
+        let view = store.view("a", None, Rows::Messages).unwrap();
         assert_eq!(view["query"]["queryState"], "q1");
         assert_eq!(view["queryStale"], true);
         assert_eq!(view["emails"][0]["document"]["subject"], "original");
         assert_eq!(view["emails"][0]["coverage"], json!({}));
         server.join().unwrap();
+    }
+
+    /// A message listing and a thread listing of one mailbox are two queries. Under v1 they shared a
+    /// key, so the second sync replaced the first and the message listing came back with the thread
+    /// listing's rows in it.
+    #[test]
+    fn message_and_thread_listings_of_one_mailbox_are_kept_apart() {
+        let (session, server, sent) = mock_recorded(vec![
+            ("Email/get", get(json!([]), "seed")),
+            ("Mailbox/get", boxes()),
+            ("Email/query", query(json!(["m1", "m2"]), "q-messages")),
+            (
+                "Email/get",
+                get(
+                    json!([{"id":"m1","subject":"one","threadId":"t1"},{"id":"m2","subject":"two","threadId":"t1"}]),
+                    "s1",
+                ),
+            ),
+            (
+                "Email/changes",
+                json!({"accountId":"a","oldState":"seed","newState":"seed","hasMoreChanges":false,"created":[],"updated":[],"destroyed":[]}),
+            ),
+            ("Mailbox/get", boxes()),
+            ("Email/query", query(json!(["m2"]), "q-threads")),
+            (
+                "Email/get",
+                get(json!([{"id":"m2","subject":"two","threadId":"t1"}]), "s1"),
+            ),
+        ]);
+        let c = client();
+        let mut store = Store::open(":memory:", "p").unwrap();
+        sync(&c, &session, &mut store, "a", None, Rows::Messages).unwrap();
+        sync(&c, &session, &mut store, "a", None, Rows::Threads).unwrap();
+        server.join().unwrap();
+
+        let ids = |view: &Value| -> Vec<String> {
+            view["emails"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|e| e["id"].as_str().unwrap().to_owned())
+                .collect()
+        };
+        let messages = store.view("a", None, Rows::Messages).unwrap();
+        let threads = store.view("a", None, Rows::Threads).unwrap();
+        assert_eq!(ids(&messages), ["m1", "m2"]);
+        assert_eq!(ids(&threads), ["m2"]);
+        assert_eq!(messages["query"]["queryState"], "q-messages");
+        assert_eq!(threads["query"]["queryState"], "q-threads");
+
+        // The thread listing really asked the server to collapse; the message listing did not.
+        let collapse: Vec<Value> = sent
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|args| args.get("filter").is_some())
+            .map(|args| args["collapseThreads"].clone())
+            .collect();
+        assert_eq!(collapse, [json!(false), json!(true)]);
+    }
+
+    /// v1 listings are a cache of what a query returned and hold no user intent, so they are dropped
+    /// and refilled rather than translated. Messages already fetched are kept.
+    #[test]
+    fn v1_cache_drops_its_listings_and_keeps_its_messages() {
+        let path = temp();
+        {
+            let raw = Connection::open(&path).unwrap();
+            raw.execute_batch(
+                "CREATE TABLE metadata(key TEXT PRIMARY KEY,value TEXT NOT NULL);
+                 INSERT INTO metadata VALUES('profile','p'),('mail_schema_version','1');
+                 CREATE TABLE mail_emails(account TEXT NOT NULL,id TEXT NOT NULL,document TEXT NOT NULL,coverage TEXT NOT NULL,subject TEXT,received_at TEXT,PRIMARY KEY(account,id));
+                 INSERT INTO mail_emails VALUES('a','kept','{\"id\":\"kept\",\"subject\":\"kept\"}','{\"subject\":true}','kept',NULL);
+                 CREATE TABLE mail_queries(account TEXT NOT NULL,mailbox_id TEXT NOT NULL,arguments TEXT NOT NULL,document TEXT NOT NULL,stale INTEGER NOT NULL DEFAULT 1,PRIMARY KEY(account,mailbox_id));
+                 CREATE TABLE mail_query_items(account TEXT NOT NULL,mailbox_id TEXT NOT NULL,position INTEGER NOT NULL,email_id TEXT NOT NULL,PRIMARY KEY(account,mailbox_id,position));
+                 INSERT INTO mail_queries VALUES('a','in','{}','{\"queryState\":\"old\"}',0);
+                 INSERT INTO mail_query_items VALUES('a','in',0,'kept');
+                 CREATE TABLE mail_mailboxes(account TEXT NOT NULL,id TEXT NOT NULL,document TEXT NOT NULL,role TEXT,PRIMARY KEY(account,id));
+                 INSERT INTO mail_mailboxes VALUES('a','in','{\"id\":\"in\",\"role\":\"inbox\"}','inbox');",
+            )
+            .unwrap();
+        }
+        let store = Store::open(&path, "p").unwrap();
+        let version: String = store
+            .db
+            .query_row(
+                "SELECT value FROM metadata WHERE key='mail_schema_version'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(version, SCHEMA_VERSION);
+        assert_eq!(store.email("a", "kept").unwrap()["available"], true);
+        let view = store.view("a", None, Rows::Messages).unwrap();
+        assert_eq!(view["query"], Value::Null);
+        assert_eq!(view["queryStale"], true);
+        assert!(view["emails"].as_array().unwrap().is_empty());
+        drop(store);
+        // Opening again does not migrate twice or lose what the first open kept.
+        let store = Store::open(&path, "p").unwrap();
+        assert_eq!(store.email("a", "kept").unwrap()["available"], true);
+        drop(store);
+        remove(&path);
     }
 }

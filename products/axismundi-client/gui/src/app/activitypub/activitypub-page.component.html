@@ -1,0 +1,39 @@
+<h1>ActivityPub</h1>
+@if (!connection.actorId()) {
+  <p role="status">No Actor can submit with this login.</p>
+} @else {
+  <p class="actor">{{ connection.actorId() }}</p>
+  <div class="progress">
+    @if (actor.isLoading() || object.isLoading()) { <mat-progress-bar mode="indeterminate" aria-label="Loading ActivityPub documents" /> }
+  </div>
+  @if (actor.error(); as error) { <p class="error" role="alert">{{ error.cause ?? error.message }}</p> }
+  @if (actor.hasValue()) {
+    <mat-accordion multi>
+      <mat-expansion-panel>
+        <mat-expansion-panel-header><mat-panel-title>Actor document</mat-panel-title></mat-expansion-panel-header>
+        <pre>{{ actor.value().document | json }}</pre>
+      </mat-expansion-panel>
+      <mat-expansion-panel>
+        <mat-expansion-panel-header><mat-panel-title>Outbox · First page</mat-panel-title></mat-expansion-panel-header>
+        <pre>{{ actor.value().outbox | json }}</pre>
+      </mat-expansion-panel>
+    </mat-accordion>
+    @if (objectIds().length) {
+      <mat-form-field class="document-select" appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Outbox object</mat-label>
+        <mat-select [value]="objectId()" [disabled]="object.isLoading()" (selectionChange)="objectId.set($event.value)">
+          @for (id of objectIds(); track id) { <mat-option [value]="id">{{ id }}</mat-option> }
+        </mat-select>
+      </mat-form-field>
+    } @else {
+      <p>No Object links on this page.</p>
+    }
+    @if (object.error(); as error) { <p class="error" role="alert">{{ error.cause ?? error.message }}</p> }
+    @if (object.hasValue()) {
+      <mat-expansion-panel expanded>
+        <mat-expansion-panel-header><mat-panel-title>Object document</mat-panel-title></mat-expansion-panel-header>
+        <pre>{{ object.value() | json }}</pre>
+      </mat-expansion-panel>
+    }
+  }
+}

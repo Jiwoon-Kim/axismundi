@@ -39,3 +39,10 @@
   font-feature-settings: 'liga';
   -webkit-font-smoothing: antialiased;
 }
+
+/* Rendered in the overlay container, outside any component's styles. */
+.account-menu .menu-heading {
+  padding: 8px 16px 4px;
+  font: var(--mat-sys-label-medium);
+  color: var(--mat-sys-on-surface-variant);
+}

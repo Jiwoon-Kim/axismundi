@@ -1,0 +1,20 @@
+:host {
+  display: block;
+  max-inline-size: 760px;
+  margin-inline: auto;
+  padding: 20px 24px 40px;
+  overflow-wrap: anywhere;
+}
+
+h1 { font: var(--mat-sys-headline-small); margin: 0 0 12px; }
+.actor { color: var(--mat-sys-on-surface-variant); margin: 0 0 12px; }
+.progress { block-size: 4px; margin-block-end: 12px; }
+.error { color: var(--mat-sys-error); }
+.document-select { display: block; margin-block: 12px; }
+pre {
+  margin: 0;
+  max-block-size: 24rem;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

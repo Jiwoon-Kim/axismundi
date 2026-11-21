@@ -1,146 +1,53 @@
-<mat-toolbar>Axismundi</mat-toolbar>
+<mat-toolbar class="app-bar">
+  <span class="title">Axismundi</span>
+  <span class="spacer"></span>
+  @if (connection.connected()) {
+    <button matIconButton [matMenuTriggerFor]="accounts" aria-label="Accounts" matTooltip="Accounts">
+      <mat-icon>account_circle</mat-icon>
+    </button>
+  }
+</mat-toolbar>
 <div class="progress">
-  @if (loading()) { <mat-progress-bar mode="indeterminate" aria-label="Connection request in progress" /> }
+  @if (connection.busy()) { <mat-progress-bar mode="indeterminate" aria-label="Connection request in progress" /> }
 </div>
 
-<main>
-  <h1>Server connection</h1>
-  <form class="server-form" (submit)="discover($event, address.value)">
-    <mat-form-field appearance="outline" subscriptSizing="dynamic">
-      <mat-label>Server address</mat-label>
-      <input matInput #address required [disabled]="!!loading()" placeholder="example.org" autocapitalize="none" spellcheck="false">
-    </mat-form-field>
-    <button matButton="filled" type="submit" [disabled]="!!loading() || !native || (!probeWordpress() && !probeJmap() && !probeActivitypub())">Discover</button>
-  </form>
-  <div class="discovery-options">
-    <mat-checkbox [checked]="probeWordpress()" (change)="probeWordpress.set($event.checked)" [disabled]="!!loading()">WordPress / Axismundi</mat-checkbox>
-    <mat-checkbox [checked]="probeJmap()" (change)="probeJmap.set($event.checked)" [disabled]="!!loading()">JMAP</mat-checkbox>
-    <mat-checkbox [checked]="probeActivitypub()" (change)="probeActivitypub.set($event.checked)" [disabled]="!!loading()">NodeInfo</mat-checkbox>
-  </div>
-  @if (!native) { <p role="status">Open the Axismundi desktop app to connect.</p> }
-  @if (error()) { <p class="error" role="alert">{{ error() }}</p> }
-
-  @if (discovered(); as result) {
-    <section aria-labelledby="services">
-      <h2 id="services">Discovered services</h2>
-      <dl class="services">
-        <dt>WordPress</dt><dd>{{ describe(result.discovery.wordpress, wordpressLabel) }}</dd>
-        <dt>JMAP</dt><dd>{{ describe(result.discovery.jmap, jmapLabel) }}</dd>
-        <dt>ActivityPub via NodeInfo</dt><dd>{{ describe(result.discovery.activitypub, apLabel) }}</dd>
-        <dt>ActivityPub Session</dt><dd>{{ apSessionStatus(result.discovery.wordpress) }}</dd>
-      </dl>
-      @for (notice of result.notices; track notice) { <p role="status">{{ notice }}</p> }
-    </section>
-
-    @if (addresses().length && !connected()) {
-      <mat-divider />
-      <section aria-labelledby="sign-in">
-        <h2 id="sign-in">Sign in</h2>
-        <ul class="addresses" aria-label="Approved sign-in addresses">
-          @for (url of addresses(); track url) { <li>{{ url }}</li> }
-        </ul>
-        <form class="login-form" (submit)="connect($event, username.value, password)">
-          <mat-form-field appearance="outline" subscriptSizing="dynamic">
-            <mat-label>Username</mat-label>
-            <input matInput #username required autocomplete="username" [disabled]="!!loading()">
-          </mat-form-field>
-          <mat-form-field appearance="outline" subscriptSizing="dynamic">
-            <mat-label>{{ result.login.wordpress || result.login.activitypub ? "Application Password" : "Password" }}</mat-label>
-            <input matInput #password required type="password" autocomplete="off" [disabled]="!!loading()">
-          </mat-form-field>
-          <button matButton="filled" type="submit" [disabled]="!!loading()">Sign in</button>
-        </form>
-      </section>
+<mat-menu #accounts="matMenu" xPosition="before" class="account-menu">
+  <!-- Two sessions sharing one sign-in: each list keeps its own selection. -->
+  @if (connection.actors().length) {
+    <div class="menu-heading" role="presentation">ActivityPub</div>
+    @for (actor of connection.actors(); track actor.id) {
+      <button mat-menu-item role="menuitemradio" [attr.aria-checked]="actor.id === connection.actorId()"
+              (click)="connection.actorId.set(actor.id)">
+        <mat-icon>{{ actor.id === connection.actorId() ? "radio_button_checked" : "radio_button_unchecked" }}</mat-icon>
+        <span>{{ actor.id }}</span>
+      </button>
     }
   }
-
-  @if (connected(); as result) {
-    <mat-divider />
-    <section aria-labelledby="connection-result">
-      <h2 id="connection-result">Connected</h2>
-      @if (result.wordpress) { <p>WordPress · {{ result.wordpress }}</p> }
-      <mat-accordion multi>
-        @if (result.wordpress_document; as document) {
-          <mat-expansion-panel>
-            <mat-expansion-panel-header><mat-panel-title>WordPress users/me</mat-panel-title></mat-expansion-panel-header>
-            <pre>{{ document | json }}</pre>
-          </mat-expansion-panel>
-        }
-        @if (result.activitypub_document; as document) {
-          <mat-expansion-panel>
-            <mat-expansion-panel-header><mat-panel-title>ActivityPub Session</mat-panel-title></mat-expansion-panel-header>
-            <pre>{{ document | json }}</pre>
-          </mat-expansion-panel>
-        }
-        @if (result.jmap_document; as document) {
-          <mat-expansion-panel>
-            <mat-expansion-panel-header><mat-panel-title>JMAP Session</mat-panel-title></mat-expansion-panel-header>
-            <pre>{{ document | json }}</pre>
-          </mat-expansion-panel>
-        }
-      </mat-accordion>
-      @for (message of result.errors; track message) { <p class="error" role="status">{{ message }}</p> }
-      @if (result.jmap; as accounts) {
-        <h3>JMAP accounts</h3>
-        <mat-list aria-label="JMAP accounts">
-          @for (account of accounts; track account.id) {
-            <mat-list-item>
-              <div class="entry">
-                <strong>{{ account.name || account.id }}</strong>
-                <span>{{ account.id }}{{ account.isPersonal ? " · Personal" : "" }}{{ account.isReadOnly ? " · Read-only" : "" }}</span>
-              </div>
-            </mat-list-item>
-          } @empty {
-            <mat-list-item>No JMAP accounts are available to this login.</mat-list-item>
-          }
-        </mat-list>
-      }
-      @if (result.activitypub; as actors) {
-        <h3>ActivityPub actors</h3>
-        @if (actors.length) {
-          <mat-form-field class="document-select" appearance="outline" subscriptSizing="dynamic">
-            <mat-label>Actor</mat-label>
-            <mat-select [value]="actorId()" [disabled]="!!loading()" (selectionChange)="selectActor($event.value)">
-              @for (actor of actors; track actor.id) {
-                <mat-option [value]="actor.id">{{ actor.id }}</mat-option>
-              }
-            </mat-select>
-          </mat-form-field>
-        } @else {
-          <p>No actors can submit with this login.</p>
-        }
-      }
-      <mat-accordion multi>
-        @if (actorDocument(); as document) {
-          <mat-expansion-panel>
-            <mat-expansion-panel-header><mat-panel-title>Actor document</mat-panel-title></mat-expansion-panel-header>
-            <pre>{{ document | json }}</pre>
-          </mat-expansion-panel>
-        }
-        @if (outbox(); as document) {
-          <mat-expansion-panel>
-            <mat-expansion-panel-header><mat-panel-title>Outbox · First page</mat-panel-title></mat-expansion-panel-header>
-            <pre>{{ document | json }}</pre>
-          </mat-expansion-panel>
-        }
-      </mat-accordion>
-      @if (objectIds().length) {
-        <mat-form-field class="document-select" appearance="outline" subscriptSizing="dynamic">
-          <mat-label>Outbox object</mat-label>
-          <mat-select [value]="objectId()" [disabled]="!!loading()" (selectionChange)="selectObject($event.value)">
-            @for (id of objectIds(); track id) { <mat-option [value]="id">{{ id }}</mat-option> }
-          </mat-select>
-        </mat-form-field>
-      } @else if (outbox()) {
-        <p>No Object links on this page.</p>
-      }
-      @if (objectDocument(); as document) {
-        <mat-expansion-panel expanded>
-          <mat-expansion-panel-header><mat-panel-title>Object document</mat-panel-title></mat-expansion-panel-header>
-          <pre>{{ document | json }}</pre>
-        </mat-expansion-panel>
-      }
-      <button class="disconnect" matButton="outlined" type="button" [disabled]="!!loading()" (click)="disconnect()">Disconnect</button>
-    </section>
+  @if (connection.actors().length && connection.accounts().length) { <mat-divider /> }
+  @if (connection.accounts().length) {
+    <div class="menu-heading" role="presentation">JMAP</div>
+    @for (account of connection.accounts(); track account.id) {
+      <button mat-menu-item role="menuitemradio" [attr.aria-checked]="account.id === connection.accountId()"
+              (click)="connection.accountId.set(account.id)">
+        <mat-icon>{{ account.id === connection.accountId() ? "radio_button_checked" : "radio_button_unchecked" }}</mat-icon>
+        <span>{{ account.name || account.id }}</span>
+      </button>
+    }
   }
-</main>
+</mat-menu>
+
+<div class="body">
+  <nav class="rail" aria-label="Destinations">
+    @for (destination of destinations(); track destination.path) {
+      <a class="destination" [routerLink]="destination.path" routerLinkActive="active" ariaCurrentWhenActive="page">
+        <span class="indicator"><mat-icon>{{ destination.icon }}</mat-icon></span>
+        <span class="label">{{ destination.label }}</span>
+      </a>
+    }
+    <a class="destination settings" routerLink="/settings" routerLinkActive="active" ariaCurrentWhenActive="page">
+      <span class="indicator"><mat-icon>settings</mat-icon></span>
+      <span class="label">Settings</span>
+    </a>
+  </nav>
+  <main><router-outlet /></main>
+</div>

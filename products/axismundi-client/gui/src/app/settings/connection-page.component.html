@@ -1,0 +1,104 @@
+<h1>Server connection</h1>
+<form class="server-form" (submit)="discover($event, address.value)">
+  <mat-form-field appearance="outline" subscriptSizing="dynamic">
+    <mat-label>Server address</mat-label>
+    <input matInput #address required [disabled]="!!connection.busy()" placeholder="example.org" autocapitalize="none" spellcheck="false">
+  </mat-form-field>
+  <button matButton="filled" type="submit" [disabled]="!!connection.busy() || !connection.native || (!probeWordpress() && !probeJmap() && !probeActivitypub())">Discover</button>
+</form>
+<div class="discovery-options">
+  <mat-checkbox [checked]="probeWordpress()" (change)="probeWordpress.set($event.checked)" [disabled]="!!connection.busy()">WordPress / Axismundi</mat-checkbox>
+  <mat-checkbox [checked]="probeJmap()" (change)="probeJmap.set($event.checked)" [disabled]="!!connection.busy()">JMAP</mat-checkbox>
+  <mat-checkbox [checked]="probeActivitypub()" (change)="probeActivitypub.set($event.checked)" [disabled]="!!connection.busy()">NodeInfo</mat-checkbox>
+</div>
+@if (!connection.native) { <p role="status">Open the Axismundi desktop app to connect.</p> }
+@if (connection.error()) { <p class="error" role="alert">{{ connection.error() }}</p> }
+
+@if (connection.discovered(); as result) {
+  <section aria-labelledby="services">
+    <h2 id="services">Discovered services</h2>
+    <dl class="services">
+      <dt>WordPress</dt><dd>{{ describe(result.discovery.wordpress, wordpressLabel) }}</dd>
+      <dt>JMAP</dt><dd>{{ describe(result.discovery.jmap, jmapLabel) }}</dd>
+      <dt>ActivityPub via NodeInfo</dt><dd>{{ describe(result.discovery.activitypub, apLabel) }}</dd>
+      <dt>ActivityPub Session</dt><dd>{{ apSessionStatus(result.discovery.wordpress) }}</dd>
+    </dl>
+    @for (notice of result.notices; track notice) { <p role="status">{{ notice }}</p> }
+  </section>
+
+  @if (connection.addresses().length && !connection.connected()) {
+    <mat-divider />
+    <section aria-labelledby="sign-in">
+      <h2 id="sign-in">Sign in</h2>
+      <ul class="addresses" aria-label="Approved sign-in addresses">
+        @for (url of connection.addresses(); track url) { <li>{{ url }}</li> }
+      </ul>
+      <form class="login-form" (submit)="connect($event, username.value, password)">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Username</mat-label>
+          <input matInput #username required autocomplete="username" [disabled]="!!connection.busy()">
+        </mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>{{ result.login.wordpress || result.login.activitypub ? "Application Password" : "Password" }}</mat-label>
+          <input matInput #password required type="password" autocomplete="off" [disabled]="!!connection.busy()">
+        </mat-form-field>
+        <button matButton="filled" type="submit" [disabled]="!!connection.busy()">Sign in</button>
+      </form>
+    </section>
+  }
+}
+
+@if (connection.connected(); as result) {
+  <mat-divider />
+  <section aria-labelledby="connection-result">
+    <h2 id="connection-result">Connected</h2>
+    @if (result.wordpress) { <p>WordPress · {{ result.wordpress }}</p> }
+    <mat-accordion multi>
+      @if (result.wordpress_document; as document) {
+        <mat-expansion-panel>
+          <mat-expansion-panel-header><mat-panel-title>WordPress users/me</mat-panel-title></mat-expansion-panel-header>
+          <pre>{{ document | json }}</pre>
+        </mat-expansion-panel>
+      }
+      @if (result.activitypub_document; as document) {
+        <mat-expansion-panel>
+          <mat-expansion-panel-header><mat-panel-title>ActivityPub Session</mat-panel-title></mat-expansion-panel-header>
+          <pre>{{ document | json }}</pre>
+        </mat-expansion-panel>
+      }
+      @if (result.jmap_document; as document) {
+        <mat-expansion-panel>
+          <mat-expansion-panel-header><mat-panel-title>JMAP Session</mat-panel-title></mat-expansion-panel-header>
+          <pre>{{ document | json }}</pre>
+        </mat-expansion-panel>
+      }
+    </mat-accordion>
+    @for (message of result.errors; track message) { <p class="error" role="status">{{ message }}</p> }
+    @if (result.jmap; as accounts) {
+      <h3>JMAP accounts</h3>
+      <mat-list aria-label="JMAP accounts">
+        @for (account of accounts; track account.id) {
+          <mat-list-item>
+            <div class="entry">
+              <strong>{{ account.name || account.id }}</strong>
+              <span>{{ account.id }}{{ account.isPersonal ? " · Personal" : "" }}{{ account.isReadOnly ? " · Read-only" : "" }}</span>
+            </div>
+          </mat-list-item>
+        } @empty {
+          <mat-list-item>No JMAP accounts are available to this login.</mat-list-item>
+        }
+      </mat-list>
+    }
+    @if (result.activitypub; as actors) {
+      <h3>ActivityPub actors</h3>
+      <mat-list aria-label="ActivityPub actors">
+        @for (actor of actors; track actor.id) {
+          <mat-list-item><div class="entry"><strong>{{ actor.id }}</strong></div></mat-list-item>
+        } @empty {
+          <mat-list-item>No actors can submit with this login.</mat-list-item>
+        }
+      </mat-list>
+    }
+    <button class="disconnect" matButton="outlined" type="button" [disabled]="!!connection.busy()" (click)="connection.disconnect()">Disconnect</button>
+  </section>
+}

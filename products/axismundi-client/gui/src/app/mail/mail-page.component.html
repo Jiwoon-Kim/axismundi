@@ -36,7 +36,7 @@
       </ul>
     }
   </section>
-  <app-mail-detail [accountId]="account.id" [emailId]="email() ?? null" />
+  <app-mail-detail [accountId]="account.id" [emailId]="email() ?? null" [mailbox]="mailbox() ?? null" />
 } @else {
   <p role="status">Select a JMAP Account from the account menu.</p>
 }

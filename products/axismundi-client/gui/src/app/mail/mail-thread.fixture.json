@@ -1,0 +1,119 @@
+[
+  {
+    "kind": "thread",
+    "messages": [
+      {
+        "hasAttachment": false,
+        "id": "beaaaaaj",
+        "kind": "message",
+        "preview": "Probe conversation, message 1 of 4.\n\nThis is local test mail between admin and Alice.\nUse it to inspect Inbox/Sent threading and reply references.",
+        "receivedAt": "2026-11-19T10:42:17Z",
+        "senderEmail": "admin@example.org",
+        "senderName": null,
+        "subject": "[Axismundi probe v1] Conversation",
+        "threadId": "j",
+        "unread": true
+      },
+      {
+        "hasAttachment": false,
+        "id": "beaaaaak",
+        "kind": "message",
+        "preview": "Probe conversation, message 2 of 4.\n\nThis is local test mail between admin and Alice.\nUse it to inspect Inbox/Sent threading and reply references.",
+        "receivedAt": "2026-11-19T10:44:12Z",
+        "senderEmail": "alice@example.org",
+        "senderName": null,
+        "subject": "Re: [Axismundi probe v1] Conversation",
+        "threadId": "j",
+        "unread": false
+      },
+      {
+        "hasAttachment": false,
+        "id": "beaaaaal",
+        "kind": "message",
+        "preview": "Probe conversation, message 3 of 4.\n\nThis is local test mail between admin and Alice.\nUse it to inspect Inbox/Sent threading and reply references.",
+        "receivedAt": "2026-11-19T10:44:13Z",
+        "senderEmail": "admin@example.org",
+        "senderName": null,
+        "subject": "Re: [Axismundi probe v1] Conversation",
+        "threadId": "j",
+        "unread": true
+      },
+      {
+        "hasAttachment": false,
+        "id": "beaaaaam",
+        "kind": "message",
+        "preview": "Probe conversation, message 4 of 4.\n\nThis is local test mail between admin and Alice.\nUse it to inspect Inbox/Sent threading and reply references.",
+        "receivedAt": "2026-11-19T10:44:13Z",
+        "senderEmail": "alice@example.org",
+        "senderName": null,
+        "subject": "Re: [Axismundi probe v1] Conversation",
+        "threadId": "j",
+        "unread": false
+      }
+    ],
+    "threadId": "j"
+  },
+  {
+    "kind": "thread",
+    "messages": [
+      {
+        "hasAttachment": false,
+        "id": "beaaaaaj",
+        "kind": "message",
+        "preview": "Probe conversation, message 1 of 4.\n\nThis is local test mail between admin and Alice.\nUse it to inspect Inbox/Sent threading and reply references.",
+        "receivedAt": "2026-11-19T10:42:17Z",
+        "senderEmail": "admin@example.org",
+        "senderName": null,
+        "subject": "[Axismundi probe v1] Conversation",
+        "threadId": "j",
+        "unread": true
+      },
+      {
+        "hasAttachment": false,
+        "id": "beaaaaak",
+        "kind": "message",
+        "preview": "Probe conversation, message 2 of 4.\n\nThis is local test mail between admin and Alice.\nUse it to inspect Inbox/Sent threading and reply references.",
+        "receivedAt": "2026-11-19T10:44:12Z",
+        "senderEmail": "alice@example.org",
+        "senderName": null,
+        "subject": "Re: [Axismundi probe v1] Conversation",
+        "threadId": "j",
+        "unread": false
+      },
+      {
+        "hasAttachment": false,
+        "id": "beaaaaal",
+        "kind": "message",
+        "preview": "Probe conversation, message 3 of 4.\n\nThis is local test mail between admin and Alice.\nUse it to inspect Inbox/Sent threading and reply references.",
+        "receivedAt": "2026-11-19T10:44:13Z",
+        "senderEmail": "admin@example.org",
+        "senderName": null,
+        "subject": "Re: [Axismundi probe v1] Conversation",
+        "threadId": "j",
+        "unread": true
+      },
+      {
+        "hasAttachment": false,
+        "id": "beaaaaam",
+        "kind": "message",
+        "preview": "Probe conversation, message 4 of 4.\n\nThis is local test mail between admin and Alice.\nUse it to inspect Inbox/Sent threading and reply references.",
+        "receivedAt": "2026-11-19T10:44:13Z",
+        "senderEmail": "alice@example.org",
+        "senderName": null,
+        "subject": "Re: [Axismundi probe v1] Conversation",
+        "threadId": "j",
+        "unread": false
+      },
+      {
+        "id": "gone0000",
+        "kind": "unavailable",
+        "reason": "notFound"
+      }
+    ],
+    "threadId": "j"
+  },
+  {
+    "kind": "notFound",
+    "threadId": "nothread"
+  }
+]

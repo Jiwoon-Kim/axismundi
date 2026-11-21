@@ -60,7 +60,7 @@ pub struct ListView {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-struct MailboxRow {
+pub struct MailboxRow {
     id: String,
     name: String,
     role: Option<String>,
@@ -72,7 +72,7 @@ struct MailboxRow {
 
 #[derive(Debug, Serialize)]
 #[serde(tag = "kind", rename_all = "camelCase", rename_all_fields = "camelCase")]
-enum MailRow {
+pub enum MailRow {
     Message {
         id: String,
         thread_id: Option<String>,
@@ -270,6 +270,40 @@ fn detail_view(entry: &Value) -> Result<DetailView, String> {
     })
 }
 
+/// What mail_thread returns. Messages carry listing properties only; a body is a mail_read.
+#[derive(Debug, Serialize)]
+#[serde(tag = "kind", rename_all = "camelCase", rename_all_fields = "camelCase")]
+pub enum ThreadView {
+    Thread {
+        thread_id: String,
+        /// In the thread's own order (`Thread.emailIds`), not the order Email/get answered in.
+        messages: Vec<MailRow>,
+    },
+    NotFound { thread_id: String },
+}
+
+fn thread_view(result: &Value) -> Result<ThreadView, String> {
+    let thread_id = text(result, "/threadId").ok_or("Mail: the thread has no id")?;
+    if result["found"] != Value::Bool(true) {
+        return Ok(ThreadView::NotFound { thread_id });
+    }
+    let ids = result["emailIds"].as_array().ok_or("Mail: the thread has no emailIds")?;
+    let fetched = result["emails"].as_array().map(Vec::as_slice).unwrap_or_default();
+    let messages = ids
+        .iter()
+        .map(|id| {
+            let id = id.as_str().ok_or("Mail: a thread member id is not a string")?;
+            // Fresh from the server, so every listing property is current.
+            let entry = match fetched.iter().find(|email| email["id"] == id) {
+                Some(document) => json!({"id": id, "available": true, "document": document, "staleProperties": []}),
+                None => json!({"id": id, "available": false, "reason": "notFound"}),
+            };
+            mail_row(&entry)
+        })
+        .collect::<Result<_, _>>()?;
+    Ok(ThreadView::Thread { thread_id, messages })
+}
+
 fn rows(value: &str) -> Result<Rows, String> {
     match value {
         "messages" => Ok(Rows::Messages),
@@ -376,17 +410,18 @@ pub async fn mail_read(
     .await
 }
 
-/// The thread the message belongs to, as the server groups it.
+/// The thread a message belongs to, as the server groups it.
 #[tauri::command]
 pub async fn mail_thread(
     connection_id: u32,
     account_id: String,
-    email_id: String,
+    thread_id: String,
     state: tauri::State<'_, Connection>,
-) -> Result<Value, String> {
+) -> Result<ThreadView, String> {
     with_mail(&state, connection_id, move |active, mail, store| {
-        cache::thread(&active.client, &mail.session, store, &account_id, &email_id)
-            .map_err(explain)
+        let result = cache::thread(&active.client, &mail.session, store, &account_id, &thread_id)
+            .map_err(explain)?;
+        thread_view(&result)
     })
     .await
 }
@@ -459,6 +494,30 @@ mod tests {
         assert_eq!(actual[2]["body"]["truncated"], true);
         assert_eq!(actual[2]["attachments"][0]["name"], "probe.txt");
         assert_eq!(actual[3]["kind"], "unavailable");
+    }
+
+    /// A real `mail-thread` response for the four-message probe conversation (2026-11-21), the
+    /// same with one member gone and the get order reversed, and a thread that no longer exists.
+    #[test]
+    fn thread_serializes_to_the_shape_the_gui_reads() {
+        let results: Vec<Value> = serde_json::from_str(include_str!("../fixtures/mail-thread.core.json")).unwrap();
+        let actual = Value::Array(
+            results.iter().map(|result| serde_json::to_value(thread_view(result).unwrap()).unwrap()).collect(),
+        );
+        let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../src/app/mail/mail-thread.fixture.json");
+        if std::env::var_os("AXISMUNDI_UPDATE_FIXTURES").is_some() {
+            std::fs::write(&path, serde_json::to_string_pretty(&actual).unwrap() + "
+").unwrap();
+        }
+        let expected: Value = serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+        assert_eq!(actual, expected, "GUI fixture is stale; rerun with AXISMUNDI_UPDATE_FIXTURES=1");
+        let order = |thread: &Value| -> Vec<String> {
+            thread["messages"].as_array().unwrap().iter().map(|m| m["id"].as_str().unwrap().to_owned()).collect()
+        };
+        assert_eq!(order(&actual[0]), ["beaaaaaj", "beaaaaak", "beaaaaal", "beaaaaam"]);
+        assert_eq!(order(&actual[1])[..4], order(&actual[0])[..], "thread order, not get order");
+        assert_eq!(actual[1]["messages"][4]["kind"], "unavailable");
+        assert_eq!(actual[2], json!({"kind": "notFound", "threadId": "nothread"}));
     }
 
     #[test]

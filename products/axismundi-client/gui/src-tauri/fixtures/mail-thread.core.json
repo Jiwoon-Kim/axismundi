@@ -1,0 +1,221 @@
+[
+  {
+    "accountId": "c",
+    "emailIds": [
+      "beaaaaaj",
+      "beaaaaak",
+      "beaaaaal",
+      "beaaaaam"
+    ],
+    "emails": [
+      {
+        "from": [
+          {
+            "email": "admin@example.org",
+            "name": null
+          }
+        ],
+        "hasAttachment": false,
+        "id": "beaaaaaj",
+        "keywords": {
+          "$hasnoattachment": true
+        },
+        "mailboxIds": {
+          "a": true,
+          "h": true
+        },
+        "preview": "Probe conversation, message 1 of 4.\n\nThis is local test mail between admin and Alice.\nUse it to inspect Inbox/Sent threading and reply references.",
+        "receivedAt": "2026-11-19T10:42:17Z",
+        "size": 488,
+        "subject": "[Axismundi probe v1] Conversation",
+        "threadId": "j"
+      },
+      {
+        "from": [
+          {
+            "email": "alice@example.org",
+            "name": null
+          }
+        ],
+        "hasAttachment": false,
+        "id": "beaaaaak",
+        "keywords": {
+          "$hasnoattachment": true,
+          "$seen": true
+        },
+        "mailboxIds": {
+          "e": true
+        },
+        "preview": "Probe conversation, message 2 of 4.\n\nThis is local test mail between admin and Alice.\nUse it to inspect Inbox/Sent threading and reply references.",
+        "receivedAt": "2026-11-19T10:44:12Z",
+        "size": 551,
+        "subject": "Re: [Axismundi probe v1] Conversation",
+        "threadId": "j"
+      },
+      {
+        "from": [
+          {
+            "email": "admin@example.org",
+            "name": null
+          }
+        ],
+        "hasAttachment": false,
+        "id": "beaaaaal",
+        "keywords": {
+          "$hasnoattachment": true
+        },
+        "mailboxIds": {
+          "a": true
+        },
+        "preview": "Probe conversation, message 3 of 4.\n\nThis is local test mail between admin and Alice.\nUse it to inspect Inbox/Sent threading and reply references.",
+        "receivedAt": "2026-11-19T10:44:13Z",
+        "size": 647,
+        "subject": "Re: [Axismundi probe v1] Conversation",
+        "threadId": "j"
+      },
+      {
+        "from": [
+          {
+            "email": "alice@example.org",
+            "name": null
+          }
+        ],
+        "hasAttachment": false,
+        "id": "beaaaaam",
+        "keywords": {
+          "$hasnoattachment": true,
+          "$seen": true
+        },
+        "mailboxIds": {
+          "e": true
+        },
+        "preview": "Probe conversation, message 4 of 4.\n\nThis is local test mail between admin and Alice.\nUse it to inspect Inbox/Sent threading and reply references.",
+        "receivedAt": "2026-11-19T10:44:13Z",
+        "size": 639,
+        "subject": "Re: [Axismundi probe v1] Conversation",
+        "threadId": "j"
+      }
+    ],
+    "found": true,
+    "getStates": [
+      "sea"
+    ],
+    "notFound": [],
+    "state": "sd2",
+    "threadId": "j"
+  },
+  {
+    "accountId": "c",
+    "emailIds": [
+      "beaaaaaj",
+      "beaaaaak",
+      "beaaaaal",
+      "beaaaaam",
+      "gone0000"
+    ],
+    "emails": [
+      {
+        "from": [
+          {
+            "email": "alice@example.org",
+            "name": null
+          }
+        ],
+        "hasAttachment": false,
+        "id": "beaaaaam",
+        "keywords": {
+          "$hasnoattachment": true,
+          "$seen": true
+        },
+        "mailboxIds": {
+          "e": true
+        },
+        "preview": "Probe conversation, message 4 of 4.\n\nThis is local test mail between admin and Alice.\nUse it to inspect Inbox/Sent threading and reply references.",
+        "receivedAt": "2026-11-19T10:44:13Z",
+        "size": 639,
+        "subject": "Re: [Axismundi probe v1] Conversation",
+        "threadId": "j"
+      },
+      {
+        "from": [
+          {
+            "email": "admin@example.org",
+            "name": null
+          }
+        ],
+        "hasAttachment": false,
+        "id": "beaaaaal",
+        "keywords": {
+          "$hasnoattachment": true
+        },
+        "mailboxIds": {
+          "a": true
+        },
+        "preview": "Probe conversation, message 3 of 4.\n\nThis is local test mail between admin and Alice.\nUse it to inspect Inbox/Sent threading and reply references.",
+        "receivedAt": "2026-11-19T10:44:13Z",
+        "size": 647,
+        "subject": "Re: [Axismundi probe v1] Conversation",
+        "threadId": "j"
+      },
+      {
+        "from": [
+          {
+            "email": "alice@example.org",
+            "name": null
+          }
+        ],
+        "hasAttachment": false,
+        "id": "beaaaaak",
+        "keywords": {
+          "$hasnoattachment": true,
+          "$seen": true
+        },
+        "mailboxIds": {
+          "e": true
+        },
+        "preview": "Probe conversation, message 2 of 4.\n\nThis is local test mail between admin and Alice.\nUse it to inspect Inbox/Sent threading and reply references.",
+        "receivedAt": "2026-11-19T10:44:12Z",
+        "size": 551,
+        "subject": "Re: [Axismundi probe v1] Conversation",
+        "threadId": "j"
+      },
+      {
+        "from": [
+          {
+            "email": "admin@example.org",
+            "name": null
+          }
+        ],
+        "hasAttachment": false,
+        "id": "beaaaaaj",
+        "keywords": {
+          "$hasnoattachment": true
+        },
+        "mailboxIds": {
+          "a": true,
+          "h": true
+        },
+        "preview": "Probe conversation, message 1 of 4.\n\nThis is local test mail between admin and Alice.\nUse it to inspect Inbox/Sent threading and reply references.",
+        "receivedAt": "2026-11-19T10:42:17Z",
+        "size": 488,
+        "subject": "[Axismundi probe v1] Conversation",
+        "threadId": "j"
+      }
+    ],
+    "found": true,
+    "getStates": [
+      "sea"
+    ],
+    "notFound": [
+      "gone0000"
+    ],
+    "state": "sd2",
+    "threadId": "j"
+  },
+  {
+    "accountId": "c",
+    "found": false,
+    "state": "sd2",
+    "threadId": "nothread"
+  }
+]

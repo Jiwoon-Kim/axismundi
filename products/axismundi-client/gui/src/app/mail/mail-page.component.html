@@ -1,0 +1,39 @@
+@if (!connection.account()) {
+  <p role="status">Select a JMAP Account from the account menu.</p>
+} @else {
+  <nav class="mailboxes" aria-label="Mailboxes">
+    @for (mailbox of mailboxes(); track mailbox.id) {
+      <button type="button" [class.active]="mailbox.id === selectedMailbox()"
+              [attr.aria-current]="mailbox.id === selectedMailbox() ? 'true' : null"
+              (click)="mailboxId.set(mailbox.id)">
+        <span>{{ mailbox.name }}</span>
+        @if (mailbox.unreadEmails) { <span class="count">{{ mailbox.unreadEmails }}</span> }
+      </button>
+    }
+  </nav>
+  <section class="list" aria-label="Messages">
+    @if (view.isLoading()) { <p role="status">Loading…</p> }
+    @if (view.error(); as error) { <p class="error" role="alert">{{ error.cause ?? error.message }}</p> }
+    @if (view.hasValue()) {
+      <p class="summary">
+        {{ view.value().rows.length }}{{ view.value().total !== null ? " of " + view.value().total : "" }} messages
+        @if (view.value().queryStale) { · may be out of date }
+      </p>
+      <ul>
+        @for (row of rows(); track row.id) {
+          @if (row.kind === "message") {
+            <li [class.unread]="row.unread">
+              <span class="from">{{ row.sender }}</span>
+              <span class="subject">{{ row.subject }}@if (row.unread) {<span class="visually-hidden"> (unread)</span>}</span>
+              @if (row.preview) { <span class="preview">{{ row.preview }}</span> }
+            </li>
+          } @else {
+            <li class="unavailable">Message not in the cache ({{ row.reason }})</li>
+          }
+        } @empty {
+          <li>No messages in this mailbox.</li>
+        }
+      </ul>
+    }
+  </section>
+}

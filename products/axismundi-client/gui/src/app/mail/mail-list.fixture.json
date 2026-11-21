@@ -1,0 +1,119 @@
+{
+  "accountId": "c",
+  "hasMore": false,
+  "mailboxId": "a",
+  "mailboxes": [
+    {
+      "id": "a",
+      "name": "Inbox",
+      "parentId": null,
+      "role": "inbox",
+      "sortOrder": 0,
+      "totalEmails": 3,
+      "unreadEmails": 3
+    },
+    {
+      "id": "b",
+      "name": "Deleted Items",
+      "parentId": null,
+      "role": "trash",
+      "sortOrder": 0,
+      "totalEmails": 0,
+      "unreadEmails": 0
+    },
+    {
+      "id": "c",
+      "name": "Junk Mail",
+      "parentId": null,
+      "role": "junk",
+      "sortOrder": 0,
+      "totalEmails": 0,
+      "unreadEmails": 0
+    },
+    {
+      "id": "d",
+      "name": "Drafts",
+      "parentId": null,
+      "role": "drafts",
+      "sortOrder": 0,
+      "totalEmails": 1,
+      "unreadEmails": 0
+    },
+    {
+      "id": "e",
+      "name": "Sent Items",
+      "parentId": null,
+      "role": "sent",
+      "sortOrder": 0,
+      "totalEmails": 5,
+      "unreadEmails": 1
+    },
+    {
+      "id": "h",
+      "name": "Axismundi Probe",
+      "parentId": null,
+      "role": null,
+      "sortOrder": 0,
+      "totalEmails": 1,
+      "unreadEmails": 1
+    }
+  ],
+  "partialCache": true,
+  "queryStale": false,
+  "rows": [
+    {
+      "hasAttachment": false,
+      "id": "beaaaaal",
+      "kind": "message",
+      "preview": "Probe conversation, message 3 of 4.\n\nThis is local test mail between admin and Alice.\nUse it to inspect Inbox/Sent threading and reply references.",
+      "receivedAt": "2026-11-19T10:44:13Z",
+      "senderEmail": "admin@example.org",
+      "senderName": null,
+      "subject": "Re: [Axismundi probe v1] Conversation",
+      "threadId": "j",
+      "unread": true
+    },
+    {
+      "hasAttachment": false,
+      "id": "beaaaaaj",
+      "kind": "message",
+      "preview": "Probe conversation, message 1 of 4.\n\nThis is local test mail between admin and Alice.\nUse it to inspect Inbox/Sent threading and reply references.",
+      "receivedAt": "2026-11-19T10:42:17Z",
+      "senderEmail": "admin@example.org",
+      "senderName": null,
+      "subject": "[Axismundi probe v1] Conversation",
+      "threadId": "j",
+      "unread": false
+    },
+    {
+      "hasAttachment": false,
+      "id": "eaaaaab",
+      "kind": "message",
+      "preview": "Axismundi local Submission interop. No external recipients.",
+      "receivedAt": "2026-11-19T09:49:39Z",
+      "senderEmail": "admin@example.org",
+      "senderName": null,
+      "subject": "Axismundi admin to Alice 1795081779586916200",
+      "threadId": "b",
+      "unread": null
+    },
+    {
+      "id": "zzzzzzzz",
+      "kind": "unavailable",
+      "reason": "notFound"
+    },
+    {
+      "hasAttachment": false,
+      "id": "staleseen",
+      "kind": "message",
+      "preview": "Probe conversation, message 3 of 4.\n\nThis is local test mail between admin and Alice.\nUse it to inspect Inbox/Sent threading and reply references.",
+      "receivedAt": "2026-11-19T10:44:13Z",
+      "senderEmail": "admin@example.org",
+      "senderName": null,
+      "subject": "Re: [Axismundi probe v1] Conversation",
+      "threadId": "j",
+      "unread": null
+    }
+  ],
+  "total": 3
+}

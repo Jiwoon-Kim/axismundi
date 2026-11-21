@@ -19,6 +19,15 @@ struct ConnectionState {
 }
 
 impl Connection {
+    /// The live connection, if `connection_id` still names it.
+    pub(crate) fn current(&self, connection_id: u32) -> Result<Arc<Active>, String> {
+        let state = self.lock()?;
+        if state.revision != connection_id {
+            return Err("This connection has ended".into());
+        }
+        state.active.clone().ok_or_else(|| "Connect first".into())
+    }
+
     fn lock(&self) -> Result<std::sync::MutexGuard<'_, ConnectionState>, String> {
         self.0
             .lock()
@@ -26,8 +35,10 @@ impl Connection {
     }
 }
 
-struct Active {
-    client: Client,
+pub(crate) struct Active {
+    pub(crate) client: Client,
+    /// The JMAP Session and Mail cache, when the connection signed in to a Mail server.
+    pub(crate) mail: Option<crate::mail::Mail>,
     actors_url: Option<Url>,
     actor_ids: Vec<String>,
     outboxes: Mutex<std::collections::BTreeMap<String, String>>,
@@ -159,12 +170,15 @@ pub async fn discover_server(
 }
 
 #[tauri::command]
-pub async fn connect_server(
+pub async fn connect_server<R: tauri::Runtime>(
     approved: Vec<String>,
     username: String,
     password: String,
+    app: tauri::AppHandle<R>,
     state: tauri::State<'_, Connection>,
 ) -> Result<Connected, String> {
+    use tauri::Manager;
+    let data_dir = app.path().app_data_dir().ok();
     if username.trim().is_empty() || username.contains(':') || password.is_empty() {
         return Err("Enter a valid username and password".into());
     }
@@ -188,6 +202,7 @@ pub async fn connect_server(
                 user: username,
                 secret: password,
             },
+            data_dir,
         )
     })
     .await
@@ -395,8 +410,14 @@ fn same_origin(a: &str, b: &str) -> bool {
     matches!((credential_url(a), credential_url(b)), (Some(a), Some(b)) if a.origin() == b.origin())
 }
 
-fn connect(plan: LoginPlan, credentials: Credentials) -> Result<(Connected, Active), String> {
+fn connect(
+    plan: LoginPlan,
+    credentials: Credentials,
+    data_dir: Option<std::path::PathBuf>,
+) -> Result<(Connected, Active), String> {
+    let username = credentials.user.clone();
     let client = Client::new(credentials);
+    let mut mail = None;
     let mut connected = Connected::default();
     if let Some(address) = &plan.wordpress {
         match client.wordpress_user_document(address) {
@@ -433,16 +454,25 @@ fn connect(plan: LoginPlan, credentials: Credentials) -> Result<(Connected, Acti
                 connected.jmap = Some(
                     session
                         .accounts
-                        .into_iter()
+                        .iter()
                         .map(|(id, account)| AccountSummary {
-                            id,
-                            name: account.name,
+                            id: id.clone(),
+                            name: account.name.clone(),
                             is_personal: account.is_personal,
                             is_read_only: account.is_read_only,
-                            capabilities: account.account_capabilities.into_keys().collect(),
+                            capabilities: account.account_capabilities.keys().cloned().collect(),
                         })
                         .collect(),
-                )
+                );
+                if session.capabilities.contains_key(axismundi_jmap_core::mail::CAPABILITY) {
+                    match data_dir.as_deref() {
+                        Some(dir) => match crate::mail::Mail::open(dir, session, &username) {
+                            Ok(opened) => mail = Some(opened),
+                            Err(error) => connected.errors.push(error),
+                        },
+                        None => connected.errors.push("Mail cache: no app data folder.".into()),
+                    }
+                }
             }
             Err(error) => connected.errors.push(failure("JMAP", &error)),
         }
@@ -475,6 +505,7 @@ fn connect(plan: LoginPlan, credentials: Credentials) -> Result<(Connected, Acti
         connected,
         Active {
             client,
+            mail,
             actors_url,
             actor_ids,
             outboxes: Mutex::new(Default::default()),
@@ -482,7 +513,7 @@ fn connect(plan: LoginPlan, credentials: Credentials) -> Result<(Connected, Acti
     ))
 }
 
-fn failure(service: &str, error: &Error) -> String {
+pub(crate) fn failure(service: &str, error: &Error) -> String {
     // Never send arbitrary remote response bodies back to the webview.
     match error {
         Error::Problem { status, .. } | Error::Status { status, .. } => {
@@ -512,6 +543,7 @@ mod tests {
                 user: std::env::var("AX_GUI_TEST_USER").expect("test username"),
                 secret: std::env::var("AX_GUI_TEST_SECRET").expect("test Application Password"),
             },
+            None,
         )
         .expect("sign in to local server");
         assert!(result.errors.is_empty(), "{:?}", result.errors);
@@ -593,6 +625,7 @@ mod tests {
                 user: "user".into(),
                 secret: "secret".into(),
             }),
+            mail: None,
             actors_url: Some(root),
             actor_ids: vec![id.into()],
             outboxes: Mutex::new(Default::default()),

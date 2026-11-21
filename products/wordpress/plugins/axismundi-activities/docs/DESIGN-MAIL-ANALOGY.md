@@ -259,6 +259,70 @@ JMAP        Account 선택 + Identity 선택 = 두 단계
 혼동하기 쉬운 곳을 적어 둔다 — **발신 Actor 가 하나라는 것은 귀속이 하나라는 뜻이 아니다.**
 권위는 `Create.actor` 이고 귀속 집합은 `attributedTo`(배열)다. 복수 귀속은 다른 축이다.
 
+### 관측: 메일 서버의 Group 멤버십은 `Join` 이 아니다 (2026-11-21)
+
+로컬 Stalwart 에서 alice 를 Group `team` 에 넣고 alice 의 Session 을 실측했다
+(`products/axismundi-client/docs/FIXTURE-MAIL-PROBE.md` §다중 Account·다중 Identity).
+
+```txt
+가입 한 번으로 둘이 생긴다
+  ①  team 의 Account 가 alice Session 에 따로 보인다 — 자기 inbox·sent 를 가진 데이터 컨테이너
+  ②  alice **개인** Account 에도 From `team@example.org` Identity 가 자동으로 생긴다
+결과  team@ 으로 보내는 길이 둘 — 개인 Account 에서(Sent 사본은 alice 쪽) · team Account 에서
+     같은 주소가 서로 다른 두 Account 의 서로 다른 두 Identity 다 (RFC 8621 은 email 중복을 막지 않는다)
+```
+
+**②는 우리에게 표현 불가능하다.** `acct:team@host` 는 From 주소가 아니라 로컬 Actor 하나를 찾는
+핸들이고, 위 절대로 발신 주소 = Actor 자체다. 다른 Actor 의 핸들을 자기 별칭으로 들 자리가 없다.
+Team 이름으로 쓰려면 Team Actor 로 **전환해 Team 의 outbox 에 제출**한다. 로그인은 그대로이고
+행위 주체(acting Actor)만 바뀐다. 개인 outbox 가 Team 명의로 발행하는 길은 Sender = id 를 발급하고
+서명하는 outbox 라는 기존 결정이 막는다.
+
+**①은 현행 멤버십(수락된 Follow)의 결과가 아니다.** Stalwart 의 Group 멤버는 공유 메일함을
+**같이 운영하는 사람**이다. 지금 그 대응은 Actors 의 Account 운영 관계(owner/editor)다 — 그 관계가
+Group Account 를 Session 에 올리고 위의 전환을 가능하게 한다. 아래 미결 절이 이것을 `Join` 멤버십으로
+가져올지 다룬다.
+
+```txt
+운영자 (Actors 관리 관계)   Group Account 가 Session 에 보임 · Group 으로 전환해 발행     ← Stalwart 멤버
+가입자 (Follow 멤버십)      자기 Actor 로 쓰고 Group 을 수신자로 지정 · Group 이 Announce
+                          Group 의 Account·inbox 에 접근하지 않음 · Group 명의 발행 없음
+```
+
+가입자 쪽 와이어는 지금 **수락된 `Follow` = 멤버십**이다(Actors `DATA-MODEL.md`, Lemmy 에 Join 이
+없어서). AS2 `Join`("the actor has joined the object", https://www.w3.org/TR/activitystreams-vocabulary/#dfn-join)
+은 `TYPE-SUPPORT.md` 에서 미지원이다.
+
+### 미결: Follow 멤버십과 Join 멤버십을 가른다 (소유자 방향, 2026-11-21)
+
+```txt
+Follow 멤버십   Lemmy 에서 온 것.  가입자가 자기 Actor 로 Create(Note, audience=Group) →
+               Group 이 Announce(Create).  Group 명의 발행 없음.  현행
+Join 멤버십     Axismundi Group 은 Group Actor 자체로 발행할 수 있다.  Group Account 가 멤버의
+               Session 에 들어오고, 멤버는 그 Group outbox 에 직접 C2S 제출한다.  ← Stalwart ①
+```
+
+정하기 전에 답할 것:
+
+1. **원격 Join.** `Join` 은 연합 활동이라 원격 Actor 도 보낸다. 원격 Actor 는 우리 Session 이
+   없으니 Group outbox 에 C2S 할 수 없다. 원격 Join 수락이 주는 것은 무엇인가 — Follow 멤버십과
+   같은가, 멤버 목록 등재 같은 다른 것인가.
+2. **Actors 관리 관계(owner/editor)와의 관계.** 로컬 Join 멤버가 Group Account 를 받는다면
+   Join 은 관리 관계의 **연합 표현**인가, 관리보다 아래의 **별도 역할**(Group 명의 발행은 되고
+   Group 설정·모더레이션은 안 되는)인가.
+3. **Session 에 Account 가 있다 ≠ 모든 권한.** Session 은 provider 가 capability 별로 준 것만
+   광고한다(`IMPLEMENTATION-SESSION.md`). Stalwart 멤버는 Group inbox 도 읽지만, Join 멤버에게
+   outbox 제출만 주고 inbox 읽기는 주지 않는 조합이 가능하다. 어느 쪽인가.
+
+변하지 않는 것: Group 명의 발행은 **Group outbox 를 통해서만** 한다(Sender = id 를 발급하고
+서명하는 outbox). 개인 outbox 가 Group 핸들을 별칭으로 드는 길(Stalwart ②)은 어느 안에서도 없다.
+`Join` 을 받기 시작하면 Accept 가 권한 부여 지점이 되므로, 자동 Accept 정책을 그 권한 크기에 맞춘다.
+
+다음 할 일 — **Mobilizon 선례 조사.** Group 에 `Join` 과 역할(member·moderator·administrator)을
+쓰는 것으로 기억하지만 확인하지 않았다. 원문으로 확인할 것: Join/Accept 와이어, 역할의 표현과
+전달, Group 명의 게시물의 `actor`·`attributedTo`, 원격 멤버가 받는 것(위 질문 1). 그룹 액터 모델
+작업은 이 조사 뒤로 미룬다.
+
 ## Principal 은 user·account·identity 중 어느 것도 아니다 — Account **위**다
 
 RFC 9670 §2 에서 확인한 것.

@@ -918,9 +918,11 @@ authorization, not the current browser selection, JMAP Accounts, or a Principal
 ID. It does not advertise signed fetch or imply authorization for every payload.
 Outbox POST rechecks authority independently of discovery.
 
-Axismundi's JMAP Account extension `actorUri` refers to the same canonical
-Actor URI. Compare those URIs when linking entries; use the original JMAP
-Account ID for JMAP methods. Membership and authorization remain independent.
+ActivityPub and JMAP are separate sessions that share only authentication.
+Clients must not pair a JMAP Account with an ActivityPub Actor; the JMAP
+Account carries no link to the Actor (the former `NON-STANDARD` `actorUri`
+extension was removed on 2026-11-21). Membership and authorization remain
+independent.
 
 Future extension advertisement describes operations the selected Actor can
 actually use, not every term the vocabulary registry recognizes. A registered

@@ -88,9 +88,11 @@ try {
 		'Session advertises only the canonical Actor reference, not identity or endpoint copies' );
 	if ( function_exists( 'Axismundi\Jmap\server' ) ) {
 		$account = \Axismundi\Jmap\server()->accounts()->accounts->{ 'a' . $id } ?? null;
-		$assert( $uri === ( $account->actorUri ?? null )
+		// JMAP and AP are separate sessions that share only authentication: the
+		// Account exists for the same login but carries no link to the Actor.
+		$assert( null !== $account && ! property_exists( $account, 'actorUri' )
 			&& ! isset( $account->accountCapabilities->{'urn:com.example:jmap:todo'} ),
-			'AP and JMAP share the Actor URI without requiring a Todo entitlement' );
+			'JMAP Account for the same login exists without an Actor link or a Todo entitlement' );
 	}
 	$assert( 422 === $request( $path, $auth, array( 'type' => 'Unsupported' ) )[0], 'Advertised outbox accepts the caller up to payload validation' );
 	$assert( true === axismundi_actors_set_principal_role( $id, 'wp_user', $caller, null ), 'Acting access revoked' );

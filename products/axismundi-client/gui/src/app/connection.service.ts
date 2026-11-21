@@ -1,5 +1,6 @@
 import { Service, computed, linkedSignal, signal } from "@angular/core";
 import { invoke, isTauri } from "@tauri-apps/api/core";
+import { defaultAccount } from "./default-account";
 
 export type Probe<T> = {status: "found" | "login_required"; detail: T}
   | {status: "not_found" | "unconfirmed"; detail: string} | {status: "skipped"};
@@ -30,6 +31,8 @@ export interface Connected {
   wordpress: string | null;
   wordpress_document: object | null;
   jmap: Account[] | null;
+  /** Capability URI → the Account the server suggests for it. */
+  jmap_primary_accounts: Record<string, string> | null;
   jmap_document: object | null;
   activitypub: Actor[] | null;
   activitypub_document: object | null;
@@ -56,10 +59,12 @@ export class ConnectionService {
   readonly accounts = computed(() => this.connected()?.jmap ?? []);
   readonly actors = computed(() => this.connected()?.activitypub ?? []);
 
-  /** Resets when the connection changes; a personal Account is the first choice. */
+  /**
+   * Resets when the connection changes. The server's primary Mail Account comes first, then a
+   * personal one. Choosing another changes only this app's selection, never the server's Session.
+   */
   readonly accountId = linkedSignal(() => {
-    const accounts = this.accounts();
-    return (accounts.find(account => account.isPersonal) ?? accounts[0])?.id ?? null;
+    return defaultAccount(this.accounts(), this.connected()?.jmap_primary_accounts?.[MAIL]);
   });
   readonly actorId = linkedSignal(() => this.actors()[0]?.id ?? null);
 

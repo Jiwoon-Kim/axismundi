@@ -134,6 +134,8 @@ pub struct Connected {
     wordpress: Option<String>,
     wordpress_document: Option<Value>,
     jmap: Option<Vec<AccountSummary>>,
+    /// Session.primaryAccounts: capability URI → the Account the server suggests for it.
+    jmap_primary_accounts: Option<std::collections::BTreeMap<String, String>>,
     jmap_document: Option<Value>,
     activitypub: Option<Vec<ActingActor>>,
     activitypub_document: Option<Value>,
@@ -451,6 +453,7 @@ fn connect(
                     connected.errors.push(format!("JMAP: {reason}"));
                 }
                 connected.jmap_document = Some(document);
+                connected.jmap_primary_accounts = Some(session.primary_accounts.clone());
                 connected.jmap = Some(
                     session
                         .accounts

@@ -35,9 +35,9 @@ Where the upstream file is ambiguous, this project decides:
 - **Protocols live in Rust.** JMAP, ActivityPub, caching and sync are in `core/` and reached
   through named Tauri commands in `src-tauri/`. The GUI never builds a JMAP request, never runs
   SQL, and is never given a generic authenticated fetch.
-- **One route per domain.** Mail, Contacts and ActivityPub are separate lazy-loaded routes.
-  A domain screen is not the app shell: navigation and account switching are designed once all
-  three domains work (`docs/PLAN-JMAP-MAIL.md`, "제품 UI 착수 기준").
+- **Keep the route shell thin.** The shared rail links to available domain routes, with Settings
+  at the bottom. Domain screens own Account or Actor switching and their pane layout. Do not make
+  Mail's layout or selection state a requirement for other domains.
 - **Every state is visible.** Distinguish empty, loading, error, not cached and offline. A view
   built from the cache says so (`partialCache`, `queryStale`, `staleProperties`); never present a
   partial cache as the whole mailbox, or a truncated body as complete.

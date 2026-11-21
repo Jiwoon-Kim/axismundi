@@ -53,7 +53,7 @@ avatar 팝오버:  ActivityPub Actors (선택 1)  |  JMAP Accounts (선택 1)  �
   JMAP Account를 별도 그룹으로 보여 주고, 각 선택을 독립적으로 유지한다. Actor 선택은
   ActivityPub에만, JMAP Account 선택은 Mail·Contacts·Calendar에 적용한다.
   이름이나 이메일로 연결하거나 한쪽 선택으로 다른 쪽을 전환하지 않는다.
-  JMAP Session의 커스텀 `actorUri`는 제거 대상이며 GUI는 이 필드에 의존하지 않는다.
+  JMAP Session의 커스텀 `actorUri`는 제거했다(2026-11-21). GUI는 Account와 Actor를 따로 보여 준다.
   Mail Account가 바뀌면 메일함·목록·상세가 함께 바뀐다.
 - **From 은 작성 화면에만 있다.** 현재 Account 의 `Identity/get` 그대로. 값은 `identityId`, 표시는
   이름 + 주소. 주소로 중복 제거하지 않는다(RFC 8621 은 email 중복을 막지 않고, fixture 에서
@@ -119,10 +119,6 @@ compact <600     medium 과 같고 rail 도 drawer 안으로
 ## 미결
 
 - 계정 안 A(동시 트리)·통합 받은편지함 — 한 번에 하나(앱 바 팝오버)를 써 본 뒤.
-- `actorUri` 제거 — 소비자가 셋이다: WP `axismundi-jmap` Session 투영(`session.php`, 감사 2개,
-  `IMPLEMENTATION-SESSION.md`), 코어 `lib.rs` 역직렬화, 현재 GUI 의 Account↔Actor 짝짓기
-  (`app.component.ts`). 서버에서 떼기 전에 GUI 짝짓기부터 없앤다(역순이면 연결 확인 화면이 조용히 짝을 잃는다).
-  별도 작업으로 한다(소유자, 2026-11-21).
 
 ## 검증 서버
 

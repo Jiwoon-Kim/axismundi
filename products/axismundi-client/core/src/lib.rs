@@ -53,8 +53,6 @@ pub struct Account {
     pub is_read_only: bool,
     #[serde(rename = "accountCapabilities", default)]
     pub account_capabilities: BTreeMap<String, Value>,
-    #[serde(rename = "actorUri", default)]
-    pub actor_uri: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

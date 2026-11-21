@@ -88,7 +88,6 @@
               <div class="entry">
                 <strong>{{ account.name || account.id }}</strong>
                 <span>{{ account.id }}{{ account.isPersonal ? " · Personal" : "" }}{{ account.isReadOnly ? " · Read-only" : "" }}</span>
-                @if (actorFor(account, result.activitypub); as actor) { <span>Actor: {{ actor.id }}</span> }
               </div>
             </mat-list-item>
           } @empty {

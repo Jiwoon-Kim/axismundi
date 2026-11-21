@@ -112,7 +112,6 @@ pub struct DiscoveryResult {
 struct AccountSummary {
     id: String,
     name: String,
-    actor_uri: Option<String>,
     is_personal: bool,
     is_read_only: bool,
     capabilities: Vec<String>,
@@ -438,7 +437,6 @@ fn connect(plan: LoginPlan, credentials: Credentials) -> Result<(Connected, Acti
                         .map(|(id, account)| AccountSummary {
                             id,
                             name: account.name,
-                            actor_uri: account.actor_uri,
                             is_personal: account.is_personal,
                             is_read_only: account.is_read_only,
                             capabilities: account.account_capabilities.into_keys().collect(),
@@ -523,12 +521,10 @@ mod tests {
         assert_eq!(result.activitypub_document.unwrap()["type"], "c2s:Session");
         let accounts = result.jmap.expect("JMAP Accounts");
         let actors = result.activitypub.expect("ActivityPub Actors");
-        assert!(
-            accounts.iter().any(|account| actors
-                .iter()
-                .any(|actor| { account.actor_uri.as_deref() == Some(actor.id.as_str()) })),
-            "the fixture login needs an Actor present on both surfaces"
-        );
+        // JMAP Accounts and ActivityPub Actors are separate sessions sharing only
+        // authentication; the fixture needs both, never a pairing between them.
+        assert!(!accounts.is_empty(), "the fixture login needs a JMAP Account");
+        assert!(!actors.is_empty(), "the fixture login needs an ActivityPub Actor");
         let mut resolved = false;
         for actor in actors {
             let actor_url = active.actor_document_url(&actor.id).unwrap();

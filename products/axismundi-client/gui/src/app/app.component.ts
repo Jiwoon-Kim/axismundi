@@ -29,7 +29,6 @@ interface Discovery {
 interface Account {
   id: string;
   name: string;
-  actorUri: string | null;
   isPersonal: boolean;
   isReadOnly: boolean;
   capabilities: string[];
@@ -201,9 +200,5 @@ export class AppComponent {
     return typeof probe.detail !== "string" && probe.detail.ap_session_advertised
       ? "Advertised · sign-in required"
       : "Not advertised";
-  }
-
-  protected actorFor(account: Account, actors: Actor[] | null): Actor | undefined {
-    return actors?.find(actor => actor.id === account.actorUri);
   }
 }

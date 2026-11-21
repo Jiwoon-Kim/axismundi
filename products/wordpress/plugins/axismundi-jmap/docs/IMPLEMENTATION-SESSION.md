@@ -18,12 +18,33 @@
 |---|---|
 | Account | User가 접근 가능한 데이터 경계. 로컬 Actor와 1:1인 것은 Axismundi 정책 |
 | accountId | 기존 `a<identity_id>` 매핑 유지. Actor URI나 WP User ID로 교체하지 않음 |
-| name | Actor 표시 이름. 인증 username이나 핸들과 독립 |
+| name | Actor의 검증된 primary acct 주소(`alice@example.com`, `acct:` 없음), 없으면 Actor 표시 이름. 인증 username과 독립. 라벨일 뿐 식별자 아님 (2026-11-21 변경, 아래) |
+| actorUri | `NON-STANDARD` 확장. Actor 연결은 이 값으로만 |
 | isPersonal | 현재 User에게 개인 귀속된 Account인지. 운영 owner 역할만으로 true가 되지 않음 |
 | isReadOnly | 전체 Account가 읽기 전용인지. 이번 투영에서는 허용된 provider 중 하나라도 writable이면 false |
 | accountCapabilities | 등록된 Account-bound 메서드와 provider가 현재 User/Actor에 허용한 기능만 포함 |
 | primaryAccounts | capability별 기본 Account. Actors의 로컬 purpose별 명시적 기본값만 사용 |
 | state | Session의 다른 필드 변경을 감지하는 값. 현재 선택한 Actor 자체는 표준 Session 필드가 아님 |
+
+### 2026-11-21 — `name`을 표시 이름에서 핸들로
+
+원래 결정은 "name = 표시 이름, 핸들과 독립"이었다. 소유자 결정으로 바꿨다.
+
+- 근거: RFC 8620 §2의 Account.name 예시가 소유자의 이메일 주소다. 전체 핸들은 그 모양이고,
+  `actorUri`를 모르는 범용 클라이언트도 계정 선택기에서 표시 이름이 같은 두 Actor를 구분한다.
+- 값: `axismundi_actors_primary_acct_address()` — Actors 주소 원장의 primary acct. WebFinger가
+  공개 프로필에 대해 기록하는 바로 그 주소다. `preferredUsername`만 쓰지 않는다(서버 간 충돌).
+  기록된 주소가 없으면(핸들 없음·비공개라 기록된 적 없음) 표시 이름으로 떨어진다.
+- 헬퍼 `Axismundi\Jmap\account_label()` 하나를 Account.name과 Todo PoC Principal.name이 같이 쓴다.
+- 유일성: 로컬 핸들은 타입을 가리지 않고 하나다 — `axismundi_actors_register_handle_locked()`가
+  `local_handle_key`를 Actor 타입 조건 없이 검사한다. acct 주소 원장이 kind별로 잡힌 건 **원격**
+  (Lemmy처럼 Person과 Community가 같은 이름을 쓰는 서버) 때문이고, JMAP Account는 로컬 Actor만이라
+  한 서버 Session 안의 핸들 라벨은 겹치지 않는다. 핸들 없는 Account의 표시 이름은 겹칠 수 있다.
+- 지킬 것: **그래도 라벨이지 키가 아니다.** 클라이언트 키는 (인증 프로필, 서비스, accountId),
+  Actor 연결은 `actorUri`. Mail `Identity.email`과 같다고 가정하지 않는다.
+- 감사: `tests/audit-session.php` — 핸들 등록 시 `handle@authority`, 핸들 없는 Account는 표시 이름 유지,
+  라벨 변경이 Session state를 바꿈, 표시 이름 변경이 핸들 라벨을 대체하지 않음. 헬퍼를 표시 이름으로
+  되돌리는 변이에서 실패함을 확인했다.
 
 명시적 기본값이 없거나 접근·capability 검사를 통과하지 못하면 primary 항목을 생략한다.
 목록 첫 Account나 현재 선택한 Actor를 대신 사용하지 않는다. Core는 Account capability나

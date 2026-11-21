@@ -110,7 +110,9 @@ final class SessionProjector {
 			$writable = $writable || $grant->writable;
 		}
 		$account = (object) array(
-			'name' => $actor->get_display_name(),
+			'name' => account_label( $actor ),
+			// NON-STANDARD: RFC 8620 defines no Account property linking to an
+			// ActivityPub Actor. Clients that know it link through this URI.
 			'actorUri' => $actor->get_uri(),
 			'isPersonal' => axismundi_actors_account_is_personal( $actor, $user_id ),
 			'isReadOnly' => ! $writable,

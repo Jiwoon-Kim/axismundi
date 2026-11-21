@@ -119,7 +119,7 @@ function principal_objects( int $user ) : array {
 		}
 		$ids = array_keys( get_object_vars( $accounts ) );
 		$result[] = (object) array( 'id' => $row['id'], 'type' => 'other',
-			'name' => $actor->get_display_name(), 'description' => null, 'email' => null, 'timeZone' => null,
+			'name' => \Axismundi\Jmap\account_label( $actor ), 'description' => null, 'email' => null, 'timeZone' => null,
 			'capabilities' => (object) array( CAPABILITY => (object) array( 'accountId' => $ids[0] ?? null, 'mayShareWith' => true ) ),
 			'accounts' => $ids ? $accounts : null );
 	}

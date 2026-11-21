@@ -184,6 +184,14 @@ try {
 	$wpdb->update( axismundi_actors_actors_table(), array( 'display_name' => 'Renamed Account' ), array( 'identity_id' => $fixtures[0] ) );
 	$renamed = $projector->build( $users[0], $transport, $core );
 	$assert( 'Renamed Account' === $renamed->accounts->{$ids[0]}->name && $before->state !== $renamed->state, 'Display name changes Session state' );
+	$handle = 'jmapsess' . wp_rand( 100000, 999999 );
+	$assert( true === axismundi_actors_register_handle( $fixtures[1], $handle ), 'Fixture handle registers' );
+	$acct = axismundi_actors_primary_acct_address( axismundi_actors_get_by_identity( $fixtures[1] ) );
+	$labeled = $projector->build( $users[0], $transport, $core );
+	$assert( $handle . '@' . axismundi_actors_webfinger_authority() === $acct && $acct === $labeled->accounts->{$ids[1]}->name, 'Account with a verified acct address is labeled by the full handle, no acct: scheme' );
+	$assert( 'Renamed Account' === $labeled->accounts->{$ids[0]}->name && $renamed->state !== $labeled->state, 'Account without an acct address keeps its display name; the label change changes Session state' );
+	$wpdb->update( axismundi_actors_actors_table(), array( 'display_name' => 'Renamed Handle Account' ), array( 'identity_id' => $fixtures[1] ) );
+	$assert( $acct === $projector->build( $users[0], $transport, $core )->accounts->{$ids[1]}->name, 'Display name change does not replace the handle label' );
 	axismundi_actors_set_status( $fixtures[2], 'disabled' );
 	$assert( ! isset( $projector->build( $users[0], $transport, $core )->accounts->{$ids[2]} ), 'Disabled Account excluded' );
 	$engine = new Engine( $registry );
@@ -198,6 +206,7 @@ try {
 	foreach ( array_reverse( $fixtures ) as $id ) {
 		$wpdb->delete( axismundi_actors_managers_table(), array( 'identity_id' => $id ) );
 		$wpdb->delete( axismundi_actors_signing_keys_table(), array( 'identity_id' => $id ) );
+		$wpdb->delete( axismundi_actors_addresses_table(), array( 'identity_id' => $id ) );
 		$wpdb->delete( axismundi_actors_actors_table(), array( 'identity_id' => $id ) );
 		$wpdb->delete( axismundi_actors_identities_table(), array( 'id' => $id ) );
 	}

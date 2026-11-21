@@ -61,3 +61,41 @@ Email/get의 messageId 속성에서는 같은 값을 확인했다. 따라서 fix
 이 도구는 임의의 사용자 편집을 되돌리는 fixture 복구 엔진이 아니다.
 비밀번호는 저장소에 넣지 않는다. 계정·Email·Thread·Mailbox의 설치별 숫자/문자 ID도
 프로토콜 상수로 하드코딩하지 않고 실행 결과에서 읽는다.
+
+## 다중 Account·다중 Identity fixture (2026-11-21)
+
+계정 전환 UX를 검증하기 위해 로컬 Stalwart에 추가했다. 실측 결과다(설치별 ID는 아래 값을
+코드에 고정하지 말고 Session에서 읽는다).
+
+```txt
+alice 로그인 한 번 → Session.accounts
+  c  name=alice@example.org  isPersonal=true   primary(mail)
+     Identity  alice@example.org · alice.work@example.org · team@example.org
+  d  name=team@example.org   isPersonal=false  (Group, 로그인 불가)
+     Identity  team@example.org
+     메일함 role 세트(inbox/sent/drafts/junk/trash)를 따로 가짐
+```
+
+- Group은 Stalwart 관리 JMAP(`x:Account/set`, `@type: Group`)으로 만들고, 멤버십은 alice 쪽
+  `memberGroupIds/<groupId>`로 건다(그룹은 멤버 목록을 갖지 않음). 별칭은 `aliases/<n>`.
+- Stalwart가 Identity를 **자동 생성**한다. 별칭뿐 아니라 **소속 그룹 주소도 alice 개인 Account의
+  Identity로** 생긴다. 그래서 `team@` 으로 보내는 길이 두 개다 — 개인 Account(c)에서 보내면 Sent
+  사본이 alice 쪽에, 그룹 Account(d)에서 보내면 team 쪽에 남는다. GUI의 From 목록은 현재 Account의
+  `Identity/get` 그대로이고, 다른 Account의 Identity와 합치지 않는다.
+- Identity id는 Account 범위다. c와 d 모두에 `b`가 있지만 서로 다른 객체다.
+- Stalwart 문서는 "공유된 Account에는 submission이 없다"고 하지만 그건 ACL 공유 얘기다. Group
+  멤버십 Account(d)에는 submission이 광고되고 실제 발송도 된다.
+- 발송 검증: `[Axismundi probe v2]` 두 통 — c에서 `alice.work@`, d에서 `team@` — 을
+  `admin@example.org`(로컬)로 EmailSubmission/set 발송, 수신 측 From 일치 확인. 재실행은 재발송 없음.
+
+재현(클라이언트 루트, 자격증명은 프로세스 환경 또는 프롬프트):
+
+```powershell
+& .\scripts\stalwart-fixture-discover.ps1     # 읽기 전용: Domain/Account 구조
+& .\scripts\stalwart-fixture-accounts.ps1     # Group·멤버십·별칭 + alice Session 출력
+& .\scripts\stalwart-fixture-send.ps1         # 두 From 발송 + 수신 확인
+```
+
+PowerShell `Invoke-RestMethod`는 `/.well-known/jmap`의 307 리다이렉트에서 Authorization을 버린다.
+오류 없이 **비인증 Session(빈 username·accounts)** 이 돌아오므로 `-PreserveAuthorizationOnRedirect`와
+username 검사를 둔다.

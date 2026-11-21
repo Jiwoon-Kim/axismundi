@@ -1,42 +1,76 @@
 @if (connection.account(); as account) {
-  <nav class="mailboxes" aria-label="Mailboxes">
-    @for (box of mailboxes(); track box.id) {
-      <a routerLink="/mail" [queryParams]="{mailbox: box.id}" [class.active]="box.id === selectedMailbox()"
-         [attr.aria-current]="box.id === selectedMailbox() ? 'page' : null">
-        <span>{{ box.name }}</span>
-        @if (box.unreadEmails) { <span class="count" [attr.aria-label]="box.unreadEmails + ' unread'">{{ box.unreadEmails }}</span> }
-      </a>
-    }
-  </nav>
-  <section class="list" aria-label="Messages">
-    @if (view.isLoading()) { <p class="summary" role="status">Loading…</p> }
-    @if (view.error(); as error) { <p class="summary error" role="alert">{{ error.cause ?? error.message }}</p> }
-    @if (view.hasValue()) {
-      <p class="summary">
-        {{ view.value().rows.length }}{{ view.value().total !== null ? " of " + view.value().total : "" }} messages
-        @if (view.value().queryStale) { · may be out of date }
-      </p>
-      <ul>
-        @for (row of rows(); track row.id) {
-          @if (row.kind === "message") {
-            <li [class.unread]="row.unread">
-              <a routerLink="/mail" [queryParams]="{mailbox: mailbox() ?? null, email: row.id}"
-                 [class.active]="row.id === email()" [attr.aria-current]="row.id === email() ? 'true' : null">
-                <span class="from">{{ row.sender }}</span>
-                <span class="subject">{{ row.subject }}@if (row.unread) {<span class="visually-hidden"> (unread)</span>}</span>
-                @if (row.preview) { <span class="preview">{{ row.preview }}</span> }
-              </a>
-            </li>
-          } @else {
-            <li class="unavailable">Message not in the cache ({{ row.reason }})</li>
-          }
-        } @empty {
-          <li class="none">No messages in this mailbox.</li>
+  <mat-sidenav-container>
+    <mat-sidenav class="mailboxes" [mode]="large() ? 'side' : 'over'" [opened]="large() || drawerOpen()"
+                 (closedStart)="drawerOpen.set(false)" [disableClose]="large()">
+      <nav aria-label="Mailboxes">
+        @for (box of mailboxes(); track box.id) {
+          <a routerLink="/mail" [queryParams]="{mailbox: box.id}" [class.active]="box.id === selectedMailbox()"
+             [attr.aria-current]="box.id === selectedMailbox() ? 'page' : null" (click)="drawerOpen.set(false)">
+            <span>{{ box.name }}</span>
+            @if (box.unreadEmails) { <span class="count" [attr.aria-label]="box.unreadEmails + ' unread'">{{ box.unreadEmails }}</span> }
+          </a>
         }
-      </ul>
-    }
-  </section>
-  <app-mail-detail [accountId]="account.id" [emailId]="email() ?? null" [mailbox]="mailbox() ?? null" />
+      </nav>
+    </mat-sidenav>
+
+    <mat-sidenav-content>
+      <div class="panes" [class.single]="!twoPanes()">
+        @if (twoPanes() || !email()) {
+          <section class="list" aria-labelledby="mailbox-title">
+            <div class="list-head">
+              @if (!large()) {
+                <button matIconButton type="button" aria-label="Mailboxes" (click)="drawerOpen.set(true)"><mat-icon>menu</mat-icon></button>
+              }
+              <h1 id="mailbox-title">{{ mailboxName() }}</h1>
+              @if (view.hasValue()) {
+                <span class="summary">
+                  {{ view.value().rows.length }}{{ view.value().total !== null ? " of " + view.value().total : "" }}
+                  @if (view.value().queryStale) { · may be out of date }
+                </span>
+              }
+            </div>
+            @if (view.isLoading()) { <p class="status" role="status">Loading…</p> }
+            @if (view.error(); as error) { <p class="status error" role="alert">{{ error.cause ?? error.message }}</p> }
+            @if (view.hasValue()) {
+              <ul>
+                @for (row of rows(); track row.id) {
+                  @if (row.kind === "message") {
+                    <li [class.unread]="row.unread">
+                      <a routerLink="/mail" [queryParams]="{mailbox: mailbox() ?? null, email: row.id}"
+                         [class.active]="row.id === email()" [attr.aria-current]="row.id === email() ? 'true' : null">
+                        <span class="from">{{ row.sender }}</span>
+                        <span class="text">
+                          <span class="subject">{{ row.subject }}@if (row.unread) {<span class="visually-hidden"> (unread)</span>}</span>
+                          @if (row.preview) { <span class="preview">{{ row.preview }}</span> }
+                        </span>
+                        @if (row.receivedAt) { <time class="date" [attr.datetime]="row.receivedAt">{{ listDate(row.receivedAt) }}</time> }
+                      </a>
+                    </li>
+                  } @else {
+                    <li class="unavailable">Message not in the cache ({{ row.reason }})</li>
+                  }
+                } @empty {
+                  <li class="none">No messages in this mailbox.</li>
+                }
+              </ul>
+            }
+          </section>
+        }
+        @if (twoPanes() || email()) {
+          <div class="reader">
+            @if (!twoPanes()) {
+              <div class="back-bar">
+                <a class="back" matIconButton routerLink="/mail" [queryParams]="{mailbox: mailbox() ?? null}" aria-label="Back to the message list">
+                  <mat-icon>arrow_back</mat-icon>
+                </a>
+              </div>
+            } @else { <div></div> }
+            <app-mail-detail [accountId]="account.id" [emailId]="email() ?? null" [mailbox]="mailbox() ?? null" />
+          </div>
+        }
+      </div>
+    </mat-sidenav-content>
+  </mat-sidenav-container>
 } @else {
-  <p role="status">Select a JMAP Account from the account menu.</p>
+  <p class="status" role="status">Select a JMAP Account from the account menu.</p>
 }

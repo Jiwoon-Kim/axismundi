@@ -14,6 +14,7 @@ test("a message shows the sender and subject the command sent", () => {
     kind: "message", id: "beaaaaal", sender: "admin@example.org",
     subject: "Re: [Axismundi probe v1] Conversation", unread: true,
     preview: (view.rows[0] as {preview: string}).preview,
+    receivedAt: "2026-11-19T10:44:13Z",
   });
 });
 

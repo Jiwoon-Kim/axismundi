@@ -40,7 +40,7 @@ export interface ListView {
 }
 
 export type RowLabel =
-  | {kind: "message"; id: string; sender: string; subject: string; preview: string; unread: boolean}
+  | {kind: "message"; id: string; sender: string; subject: string; preview: string; unread: boolean; receivedAt: string | null}
   | {kind: "unavailable"; id: string; reason: string};
 
 /** Unknown read state is shown as read: only a fetched keyword set without `$seen` is unread. */
@@ -53,5 +53,6 @@ export function rowLabel(row: MailRow): RowLabel {
     subject: row.subject || "(no subject)",
     preview: row.preview ?? "",
     unread: row.unread === true,
+    receivedAt: row.receivedAt,
   };
 }

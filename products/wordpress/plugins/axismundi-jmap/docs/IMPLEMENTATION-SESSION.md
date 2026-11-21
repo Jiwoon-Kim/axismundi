@@ -19,7 +19,7 @@
 | Account | User가 접근 가능한 데이터 경계. 로컬 Actor와 1:1인 것은 Axismundi 정책 |
 | accountId | 기존 `a<identity_id>` 매핑 유지. Actor URI나 WP User ID로 교체하지 않음 |
 | name | Actor의 검증된 primary acct 주소(`alice@example.com`, `acct:` 없음), 없으면 Actor 표시 이름. 인증 username과 독립. 라벨일 뿐 식별자 아님 (2026-11-21 변경, 아래) |
-| actorUri | `NON-STANDARD` 확장. **제거 예정**(소유자 결정 2026-11-21: ActivityPub 과 JMAP 은 인증을 공유하는 별개 세션이고, 클라이언트는 둘을 잇지 않는다). 순서는 client `DESIGN-MAIL-GUI.md` §미결 |
+| actorUri | **제거됨**(2026-11-21). `NON-STANDARD` 확장이었다. 소유자 결정: ActivityPub 과 JMAP 은 인증을 공유하는 별개 세션이고, 클라이언트는 JMAP Account 를 ActivityPub Actor 와 잇지 않는다. Account 에는 Actor 링크가 없다(아래) |
 | isPersonal | 현재 User에게 개인 귀속된 Account인지. 운영 owner 역할만으로 true가 되지 않음 |
 | isReadOnly | 전체 Account가 읽기 전용인지. 이번 투영에서는 허용된 provider 중 하나라도 writable이면 false |
 | accountCapabilities | 등록된 Account-bound 메서드와 provider가 현재 User/Actor에 허용한 기능만 포함 |
@@ -45,6 +45,22 @@
 - 감사: `tests/audit-session.php` — 핸들 등록 시 `handle@authority`, 핸들 없는 Account는 표시 이름 유지,
   라벨 변경이 Session state를 바꿈, 표시 이름 변경이 핸들 라벨을 대체하지 않음. 헬퍼를 표시 이름으로
   되돌리는 변이에서 실패함을 확인했다.
+
+### 2026-11-21 — `actorUri` 제거
+
+Account 투영에서 `NON-STANDARD` `actorUri`를 뗐다. ActivityPub 세션과 JMAP 세션은 인증만
+공유하고 선택·식별은 따로다. 이 필드가 있으면 클라이언트가 Account↔Actor 를 짝짓게 되고, 그것이
+소유자가 막은 바로 그 결합이다. 대체 필드는 두지 않는다 — 짝지을 다른 길(`name`, 이메일)도 없다.
+
+- 순서: GUI 짝짓기(`app.component.ts`) → 코어 `lib.rs`·Tauri `connection.rs` 역직렬화 → 이 서버.
+  역순이면 연결 확인 화면이 경고 없이 짝을 잃는다.
+- `tests/audit-session.php`: Account 키가 RFC 8620 네 개(`name`·`isPersonal`·`isReadOnly`·
+  `accountCapabilities`)뿐이고 Accounts JSON 에 Actor URI 문자열이 없음을 확인한다.
+- `tests/audit-todo-poc.php`: 원래 단언이 증명하던 것은 "Todo 공유로 생긴 Account 가 B 에게
+  보여도 B 의 C2S 세션에는 그 Actor 가 나오지 않는다"(리소스 공유가 AP 제출권을 만들지 않음)였다.
+  `actorUri` 비교는 그 증명에 필요 없었다. Session 에 Account 가 있음 + AP 세션에 Actor 없음으로 바꿨다.
+- 남은 연결: `axismundi_jmap_account_projection` 필터로 다른 플러그인이 필드를 다시 붙일 수는
+  있다. 막지 않는다 — 다만 이 플러그인의 클라이언트는 그런 필드를 읽지 않는다.
 
 명시적 기본값이 없거나 접근·capability 검사를 통과하지 못하면 primary 항목을 생략한다.
 목록 첫 Account나 현재 선택한 Actor를 대신 사용하지 않는다. Core는 Account capability나

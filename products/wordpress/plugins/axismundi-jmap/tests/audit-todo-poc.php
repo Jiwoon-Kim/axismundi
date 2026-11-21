@@ -223,9 +223,9 @@ try {
 		wp_set_current_user( $b );
 		$ap_session = axismundi_act_c2s_session();
 		$assert( ! is_wp_error( $ap_session )
-			&& $shared_actor->get_uri() === $session->accounts->{$aa}->actorUri
+			&& isset( server()->accounts()->accounts->{$aa} )
 			&& ! in_array( $shared_actor->get_uri(), array_column( $ap_session['actors'], 'id' ), true ),
-			'Subscribed JMAP reader gets the Actor URI but cannot discover its AP submission endpoint' );
+			'Subscribed JMAP reader sees the shared Account but cannot discover its Actor in the AP submission session' );
 	}
 	$list_state = $call( 'TodoList/get', array( 'accountId' => $aa ) )->state;
 	wp_set_current_user( $a );

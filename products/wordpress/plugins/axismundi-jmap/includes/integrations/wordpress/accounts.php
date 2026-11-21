@@ -21,9 +21,10 @@ function account_actor( string $account_id ) : ?\Axismundi_Actor {
  * address (`alice@example.com`, no `acct:` scheme), else its display name.
  *
  * RFC 8620 §2 gives an email address as the example Account name, so a full handle
- * fits the field, and generic clients that ignore `actorUri` still see a label two
- * Actors with the same display name do not share. It stays a label: clients key on
- * accountId and link to the Actor through `actorUri`, never through this string.
+ * fits the field, and clients see a label two Actors with the same display name do
+ * not share. It stays a label: clients key on accountId and must not use it to pair
+ * a JMAP Account with an ActivityPub Actor. The two are separate sessions that share
+ * only authentication, so the Account exposes no link to the Actor at all.
  */
 function account_label( \Axismundi_Actor $actor ) : string {
 	$acct = function_exists( 'axismundi_actors_primary_acct_address' ) ? axismundi_actors_primary_acct_address( $actor ) : '';

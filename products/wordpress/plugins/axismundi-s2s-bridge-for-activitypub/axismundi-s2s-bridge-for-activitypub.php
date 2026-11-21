@@ -3,7 +3,7 @@
  * Plugin Name:       Axismundi S2S Bridge for ActivityPub
  * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi/tree/main/products/wordpress/plugins/axismundi-s2s-bridge-for-activitypub
  * Description:       Connects Axismundi's actors, objects, and activities to the ActivityPub plugin for server-to-server federation.
- * Version:           0.1.5
+ * Version:           0.1.6
  * Requires at least: 6.7
  * Requires PHP:      8.1
  * Requires Plugins:  activitypub, axismundi-actors, axismundi-object-projections, axismundi-activities
@@ -31,7 +31,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACTIVITYPUB_BRIDGE_VERSION = '0.1.5';
+const AXISMUNDI_ACTIVITYPUB_BRIDGE_VERSION = '0.1.6';
 const AXISMUNDI_ACTIVITYPUB_BRIDGE_REWRITE_VERSION = 1;
 const AXISMUNDI_ACTIVITYPUB_BRIDGE_INBOX_RETRY_AFTER = 60;
 

@@ -4,7 +4,7 @@ Requires at least: 6.7
 Tested up to: 7.1
 Requires PHP: 8.1
 Requires Plugins: activitypub, axismundi-actors, axismundi-object-projections, axismundi-activities
-Stable tag: 0.1.5
+Stable tag: 0.1.6
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, federation, compatibility, adapter
@@ -119,6 +119,10 @@ Receiving is described above: the official ActivityPub plugin owns the inbox and
 check, and this plugin only handles what that plugin has already verified.
 
 == Changelog ==
+
+= 0.1.6 =
+* Use the plugin prefix for every option, setting, custom table and nonce name.
+* Remove a migration that only read data from unreleased development builds.
 
 = 0.1.5 =
 * Rename the plugin and distribution slug to clarify that this is a third-party server-to-server integration.

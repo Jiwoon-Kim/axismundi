@@ -10,7 +10,7 @@
                  정말 없는 부품만 만든다.  그때만 플러그인 쪽 M3 측정값을 참고한다.
 토큰            mat.theme() 의 --mat-sys-* 그대로.  플러그인의 --md-ref/--md-sys 를 이식하거나
                  연결층을 두지 않는다
-도메인 전환      Outlook 처럼 왼쪽 레일에서 Mail · Calendar · Contacts 를 전환한다
+도메인 전환      왼쪽 레일: ActivityPub → Mail → Contacts → Calendar, 하단 Settings
 Mail 레이아웃    iCloud Mail 처럼 메일함 트리 · 메일 목록 · 메일 상세의 list-detail
 ```
 
@@ -28,27 +28,33 @@ Mail 레이아웃    iCloud Mail 처럼 메일함 트리 · 메일 목록 · 메
 ## 화면 구조
 
 ```txt
-┌rail┬ mailboxes ─────┬ list ───────────┬ detail ─────────────────┐
-│ M  │ [alice@… ▾]    │ Inbox · 44      │ toolbar  reply · move…  │
-│ C  │ Inbox      12  │ [search]        │ subject                 │
-│ Ct │ Drafts      1  │ ┌ sender  time ┐│ thread: message 1       │
-│    │ Sent           │ │ subject      ││         message 2 …     │
-│    │ …              │ │ preview      ││                         │
-│    │ Folders        │ └──────────────┘│                         │
-└────┴────────────────┴─────────────────┴─────────────────────────┘
+┌ app bar ───────────────────────────────────────────────── (avatar ▾) ┐
+├rail┬ mailboxes ─────┬ list ───────────┬ detail ─────────────────────┤
+│ AP │ Inbox      12  │ Inbox · 44      │ toolbar  reply · move…      │
+│ M  │ Drafts      1  │ [search]        │ subject                     │
+│ Ct │ Sent           │ ┌ sender  time ┐│ thread: message 1           │
+│ Ca │ …              │ │ subject      ││         message 2 …         │
+│    │ Folders        │ │ preview      ││                             │
+│ ⚙  │                │ └──────────────┘│                             │
+└────┴────────────────┴─────────────────┴─────────────────────────────┘
+avatar 팝오버:  ActivityPub Actors (선택 1)  |  JMAP Accounts (선택 1)  — 서로 독립
 ```
 
-- **레일은 얇은 셸이다.** 상단부터 ActivityPub Inbox, ActivityPub Outbox, Mail, Calendar,
-  Contacts 순서로 두고, Settings는 하단에 고정한다. 계정·Actor 전환과 내용 배치는 각 화면이 맡는다.
+- **셸은 상단 앱 바와 왼쪽 레일로 구성한다.** 레일은 ActivityPub, Mail, Contacts, Calendar
+  순서이고 Settings는 하단에 고정한다. Inbox와 Outbox는 ActivityPub 내부의 하위 경로다.
+  앱 바 오른쪽의 아바타 버튼은 Account 전환 팝오버를 연다. 내용 배치는 각 화면이 맡는다.
 - **항목 노출 제안:** JMAP은 Session의 서버 capability와 해당 capability를 제공하는 Account가
   모두 있고 앱에 해당 화면이 구현된 경우에만 항목을 연다. Mail에서 선택한 Account가 Calendar를
   지원하지 않아도 같은 인증 프로필의 다른 Account가 지원한다면 Calendar를 숨기지 않는다.
   ActivityPub Inbox와 Outbox는 JMAP과 독립적으로, AP Session의 Actor와 각 컬렉션의 접근 가능 여부를
   기준으로 판단한다. 로딩·오프라인·재인증을 미지원으로 간주하지 않는다. Settings와 연결 관리는
   세션이 없어도 열 수 있게 한다.
-- **계정은 한 번에 하나(안 B).** 메일함 칸 머리의 계정 버튼(`mat-menu`)으로 Session 의 Account 를
-  바꾼다. 바꾸면 메일함·목록·상세가 통째로 바뀐다. Outlook 처럼 모든 계정을 한 트리에 펼치는
-  안(A)은 통합 받은편지함과 같이 나중에 판단한다. 앞서 정한 "Account 단위 GUI + 프로필 전환"과 맞는 쪽이 B다.
+- **인증은 공유할 수 있지만 세션과 선택은 별개다.** 공통 팝오버에서 ActivityPub Actor와
+  JMAP Account를 별도 그룹으로 보여 주고, 각 선택을 독립적으로 유지한다. Actor 선택은
+  ActivityPub에만, JMAP Account 선택은 Mail·Contacts·Calendar에 적용한다.
+  이름이나 이메일로 연결하거나 한쪽 선택으로 다른 쪽을 전환하지 않는다.
+  JMAP Session의 커스텀 `actorUri`는 제거 대상이며 GUI는 이 필드에 의존하지 않는다.
+  Mail Account가 바뀌면 메일함·목록·상세가 함께 바뀐다.
 - **From 은 작성 화면에만 있다.** 현재 Account 의 `Identity/get` 그대로. 값은 `identityId`, 표시는
   이름 + 주소. 주소로 중복 제거하지 않는다(RFC 8621 은 email 중복을 막지 않고, fixture 에서
   `team@` 이 두 Account 에 다 있다). 다른 Account 의 Identity 와 합치지 않는다.
@@ -77,7 +83,7 @@ compact <600     medium 과 같고 rail 도 drawer 안으로
 | 레일 | `mat-icon-button` + `routerLinkActive` + `matTooltip` | 세로 배치뿐. Material 에 nav rail 이 없다. 모자라면 그때 플러그인 `navigation_rail` 측정값 |
 | 메일함 트리 | `mat-tree`(childrenAccessor) — `Mailbox.parentId` 로 구성, CDK tree 키보드 탐색 | role 순서(inbox·drafts·sent·junk·trash·archive 먼저)와 미읽음 수 |
 | 접힌 메일함 | `mat-sidenav` | — |
-| 계정 전환 | `mat-menu` | 버튼 라벨 = `Account.name` 그대로 |
+| 앱 바와 Account 전환 | `mat-toolbar` + 아바타 버튼 + `mat-menu` | 우측에 배치, 아바타 없으면 이니셜 또는 계정 아이콘 |
 | 목록 | `cdk-virtual-scroll-viewport` + 행 선택은 `cdk/listbox` 또는 `mat-selection-list` (가상 스크롤과 같이 되는지 먼저 확인) | 3줄 행 템플릿, 미읽음 굵기 |
 | 검색 | `mat-form-field` + `matInput` | — |
 | 상세 | `mat-toolbar` + `mat-menu` + 스레드는 `mat-expansion-panel` 후보 | 텍스트 본문 렌더(HTML 정책 전까지 plain text) |
@@ -87,11 +93,12 @@ compact <600     medium 과 같고 rail 도 drawer 안으로
 ## 라우트와 키
 
 ```txt
-/activitypub/inbox                         ActivityPub Inbox 진입
+/activitypub                               레일의 ActivityPub 진입
+/activitypub/inbox                          ActivityPub Inbox
 /activitypub/outbox                        ActivityPub Outbox 진입
 /mail                                     Mail 진입
-/calendar                                 Calendar 진입
 /contacts                                 Contacts 진입
+/calendar                                 Calendar 진입
 /settings                                 Settings 진입
 
 /mail/:profile/:account/:mailbox            목록
@@ -111,6 +118,15 @@ compact <600     medium 과 같고 rail 도 drawer 안으로
 
 ## 미결
 
-- 계정 안 A(동시 트리)·통합 받은편지함 — 안 B 를 써 본 뒤.
+- 계정 안 A(동시 트리)·통합 받은편지함 — 한 번에 하나(앱 바 팝오버)를 써 본 뒤.
+- `actorUri` 제거 — 소비자가 셋이다: WP `axismundi-jmap` Session 투영(`session.php`, 감사 2개,
+  `IMPLEMENTATION-SESSION.md`), 코어 `lib.rs` 역직렬화, 현재 GUI 의 Account↔Actor 짝짓기
+  (`app.component.ts`). 서버에서 떼기 전에 GUI 짝짓기부터 없앤다(역순이면 연결 확인 화면이 조용히 짝을 잃는다).
+  별도 작업으로 한다(소유자, 2026-11-21).
+
+## 검증 서버
+
+클라이언트 JMAP(Mail·Contacts·Calendar)은 **Stalwart 로 검증한다**. WordPress `axismundi-jmap` 은 이
+GUI 의 검증 대상이 아니다 — ActivityPub 클라이언트를 붙일 때 같이 본다(소유자, 2026-11-21).
 - 목록 선택 부품 — `cdk/listbox` 와 가상 스크롤의 조합을 실측해서 고른다.
 - 세션 확인 전·오프라인 상태에서 레일 항목을 유지할지와, 설명이 필요한 미지원 상태의 표시 방식.

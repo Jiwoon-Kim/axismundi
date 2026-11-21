@@ -36,8 +36,9 @@ Where the upstream file is ambiguous, this project decides:
   through named Tauri commands in `src-tauri/`. The GUI never builds a JMAP request, never runs
   SQL, and is never given a generic authenticated fetch.
 - **Keep the route shell thin.** The shared rail links to available domain routes, with Settings
-  at the bottom. Domain screens own Account or Actor switching and their pane layout. Do not make
-  Mail's layout or selection state a requirement for other domains.
+  at the bottom. The app bar's account popover keeps JMAP Account and ActivityPub Actor
+  selections independent, even when they share authentication. Domain screens own their pane
+  layout and use their protocol-specific identifiers and permissions.
 - **Every state is visible.** Distinguish empty, loading, error, not cached and offline. A view
   built from the cache says so (`partialCache`, `queryStale`, `staleProperties`); never present a
   partial cache as the whole mailbox, or a truncated body as complete.

@@ -8,7 +8,7 @@ FEP-400e/7aa9, 관리자 컴포저 화면은 이 구현에 포함하지 않는�
 - Actors: `ax_actor_featured` 멤버십, `ax_actor_featured_state` 원격 동기화 상태.
 - Activities: 로컬 Add/Remove의 인증·인가와 불변 Activity 기록.
 - OP: `ap-featured` 계약, Actor의 `featured`, OrderedCollection 렌더와 GET.
-- Bridge: 서명 검증된 수신의 `ax_featured_receipts`, 기존 발신 큐 사용.
+- Bridge: 서명 검증된 수신의 `axismundi_activitypub_bridge_featured_receipts`, 기존 발신 큐 사용.
 
 범용 Collection 테이블이나 Forum 테이블을 사용하지 않는다. 로컬 원본과 원격
 관찰은 Actor의 origin으로 구분하며 원격 목록에 대한 로컬 편집 경로는 없다.

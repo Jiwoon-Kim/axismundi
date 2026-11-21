@@ -4,7 +4,7 @@ defined( 'ABSPATH' ) || exit;
 
 function axismundi_activitypub_bridge_collection_controls_table() : string {
 	global $wpdb;
-	return $wpdb->prefix . 'ax_collection_controls';
+	return $wpdb->prefix . 'axismundi_activitypub_bridge_collection_controls';
 }
 
 function axismundi_activitypub_bridge_install_collection_controls() : bool {
@@ -29,11 +29,11 @@ function axismundi_activitypub_bridge_install_collection_controls() : bool {
 	) ENGINE=InnoDB {$charset};" );
 	$columns = $wpdb->get_col( $wpdb->prepare( 'SHOW COLUMNS FROM %i', $table ) );
 	if ( array_diff( array( 'operation_key', 'group_uri', 'target_uri', 'remote_activity_uri', 'envelope_uri', 'envelope_json', 'payload_json', 'payload_hash', 'outcome', 'received_at' ), (array) $columns ) ) { return false; }
-	update_option( 'ax_bridge_collection_controls_schema', '2', false );
+	update_option( 'axismundi_activitypub_bridge_collection_controls_schema', '2', false );
 	return true;
 }
 add_action( 'plugins_loaded', static function () : void {
-	if ( '2' !== get_option( 'ax_bridge_collection_controls_schema' ) ) { axismundi_activitypub_bridge_install_collection_controls(); }
+	if ( '2' !== get_option( 'axismundi_activitypub_bridge_collection_controls_schema' ) ) { axismundi_activitypub_bridge_install_collection_controls(); }
 } );
 
 /** Stable object-key ordering only; arrays and all supplied fields retain their meaning. */
@@ -107,7 +107,7 @@ function axismundi_activitypub_bridge_receive_collection_control( array $payload
 	// Scope observations by Group and exact intent; conflicting direct deliveries
 	// are still rejected by the independently authenticated immutable ledger below.
 	$key = hash( 'sha256', $group->get_uri() . ':' . ( $inner['id'] ?? ( $announced ? ( $payload['id'] ?? '' ) : '' ) ) . ':' . $intent_json );
-	$lock = 'ax-control-' . substr( $key, 0, 48 );
+	$lock = 'axismundi-bridge-control-' . substr( $key, 0, 39 );
 	if ( '1' !== (string) $wpdb->get_var( $wpdb->prepare( 'SELECT GET_LOCK(%s,5)', $lock ) ) ) { return new WP_Error( 'ax_bridge_control_busy', 'Collection control is busy.' ); }
 	try {
 		$table = axismundi_activitypub_bridge_collection_controls_table();

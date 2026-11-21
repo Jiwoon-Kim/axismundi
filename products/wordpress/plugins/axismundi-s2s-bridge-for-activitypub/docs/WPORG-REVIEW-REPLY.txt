@@ -1,8 +1,12 @@
 Hello Plugin Review Team,
 
-Please reserve axismundi-s2s-bridge-for-activitypub as the new slug for Axismundi S2S Bridge for ActivityPub.
+Thank you for the review. We have uploaded a corrected version.
 
-This is an independent Axismundi add-on that uses the ActivityPub plugin for server-to-server federation. We also checked the distributed PHP for collisions; its declarations and plugin-owned settings use Axismundi-specific prefixes.
+Every name the plugin registers globally now uses the prefix axismundi_activitypub_bridge_, which its functions, hooks and constants already used: options, the settings group and setting, the four custom tables, nonce actions, admin form fields and the database lock name. No option, setting, table, function, class, constant or hook keeps the short "ax" prefix. We also removed a migration that only read data written by unreleased development builds, because those stored names could not be renamed.
+
+WP_Error codes such as ax_bridge_inbox_missing are unchanged, since they are not registered globally. If you would like them renamed as well, we will do so.
+
+Our previous reply said the plugin-owned settings already used Axismundi-specific prefixes. That was not true of ax_bridge_shared_inbox_public, and we are sorry for the error.
 
 Thank you,
 Jiwoon Kim

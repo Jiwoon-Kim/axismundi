@@ -7,7 +7,7 @@ $checks = 0;
 $assert = static function ( bool $ok, string $label ) use ( &$checks ) { ++$checks; if ( ! $ok ) { throw new RuntimeException( $label ); } echo "PASS $label\n"; };
 $actors = array(); $uris = array(); $documents = array(); $uid = 0; $original_requests = 0;
 $previous = get_current_user_id();
-$previous_diagnostics = get_option( 'ax_activitypub_bridge_inbox_diagnostics', null );
+$previous_diagnostics = get_option( 'axismundi_activitypub_bridge_inbox_diagnostics', null );
 $prefix = 'https://example.com/ax-controls-' . wp_generate_uuid4();
 $http = static function ( $pre, $args, $url ) use ( &$documents, &$original_requests ) {
 	if ( isset( $documents[$url] ) ) { ++$original_requests; return new WP_Error( 'ax_op_remote_signed_fetch_required', 'The original Activity is not accessible to this server.' ); }
@@ -119,8 +119,8 @@ try {
 	$assert( $principals === $wpdb->get_results( 'SELECT * FROM ' . axismundi_actors_managers_table() . ' ORDER BY identity_id,principal_kind,principal_id', ARRAY_A ), 'No principal grants are created' );
 	$assert( $relations === $wpdb->get_results( 'SELECT * FROM ' . axismundi_act_relations_table() . ' ORDER BY id', ARRAY_A ), 'No relation membership changes' );
 } finally {
-	if ( null === $previous_diagnostics ) { delete_option( 'ax_activitypub_bridge_inbox_diagnostics' ); }
-	else { update_option( 'ax_activitypub_bridge_inbox_diagnostics', $previous_diagnostics, false ); }
+	if ( null === $previous_diagnostics ) { delete_option( 'axismundi_activitypub_bridge_inbox_diagnostics' ); }
+	else { update_option( 'axismundi_activitypub_bridge_inbox_diagnostics', $previous_diagnostics, false ); }
 	remove_filter( 'pre_http_request', $http, 999 );
 	if ( $key_lookup ) { remove_filter( 'activitypub_pre_http_get_remote_object', $key_lookup, 10 ); }
 	if ( $handler ) { remove_filter( 'axismundi_activitypub_bridge_collection_control_handler', $handler, 10 ); }

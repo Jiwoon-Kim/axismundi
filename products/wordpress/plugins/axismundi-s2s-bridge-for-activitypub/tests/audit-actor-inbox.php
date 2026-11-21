@@ -18,7 +18,7 @@ $assert = static function ( bool $ok, string $label ) use ( &$checks ) : void {
 $fail = null;
 $defer = null;
 $key_lookup = null;
-$shared_public_before = get_option( 'ax_bridge_shared_inbox_public', null );
+$shared_public_before = get_option( 'axismundi_activitypub_bridge_shared_inbox_public', null );
 try {
 	$assert( axismundi_act_install(), 'Receipt schema installs and verifies' );
 	for ( $i = 0; $i < 2; ++$i ) {
@@ -252,7 +252,7 @@ try {
 	$follower_activity = axismundi_act_get( $follower_payload['id'] );
 	$assert( 202 === $follower_response->get_status() && $follower_activity instanceof Axismundi_Activity && 1 === (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE activity_id=%d AND actor_identity_id=%d', axismundi_act_inbox_table(), $follower_activity->get_id(), $actors[0]->get_identity_id() ) ), 'Public shared delivery reaches the accepted local follower' );
 	$assert( 1 === (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE activity_id=%d', axismundi_act_inbox_table(), $follower_activity->get_id() ) ), 'Public shared delivery never becomes a site-wide broadcast' );
-	delete_option( 'ax_bridge_shared_inbox_public' );
+	delete_option( 'axismundi_activitypub_bridge_shared_inbox_public' );
 	$read_shared = new WP_REST_Request( 'GET', '/axismundi/activitypub/inbox' );
 	$read_shared->set_param( 'page', 1 );
 	wp_set_current_user( 0 );
@@ -285,7 +285,7 @@ try {
 	$bad_shared = new WP_REST_Request( 'GET', '/axismundi/activitypub/inbox' );
 	$bad_shared->set_param( 'cursor', 'bad' );
 	$assert( 400 === rest_do_request( $bad_shared )->get_status(), 'Shared GET rejects malformed cursors' );
-	update_option( 'ax_bridge_shared_inbox_public', '0' );
+	update_option( 'axismundi_activitypub_bridge_shared_inbox_public', '0' );
 	$assert( 404 === rest_do_request( $read_shared )->get_status(), 'Disclosure setting hides shared GET from all viewers' );
 	$assert( 202 === rest_do_request( $shared_request )->get_status(), 'Disabling shared GET does not disable signed POST reception' );
 	wp_set_current_user( $users[0] );
@@ -373,7 +373,7 @@ try {
 	}
 	echo "PASS: {$checks} Actor Inbox checks\n";
 } finally {
-	if ( null === $shared_public_before ) { delete_option( 'ax_bridge_shared_inbox_public' ); } else { update_option( 'ax_bridge_shared_inbox_public', $shared_public_before ); }
+	if ( null === $shared_public_before ) { delete_option( 'axismundi_activitypub_bridge_shared_inbox_public' ); } else { update_option( 'axismundi_activitypub_bridge_shared_inbox_public', $shared_public_before ); }
 	if ( $fail ) { remove_filter( 'query', $fail ); }
 	if ( $defer ) { remove_filter( 'activitypub_defer_signature_verification', $defer ); }
 	if ( $key_lookup ) { remove_filter( 'activitypub_pre_http_get_remote_object', $key_lookup, 10 ); }

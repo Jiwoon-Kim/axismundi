@@ -20,27 +20,27 @@ function axismundi_activitypub_bridge_register_admin_page() : void {
 add_action( 'admin_menu', 'axismundi_activitypub_bridge_register_admin_page' );
 
 add_action( 'admin_init', static function (): void {
-	register_setting( 'ax_bridge_disclosure', 'ax_bridge_shared_inbox_public', array(
+	register_setting( 'axismundi_activitypub_bridge_disclosure', 'axismundi_activitypub_bridge_shared_inbox_public', array(
 		'type' => 'boolean', 'default' => true, 'sanitize_callback' => 'rest_sanitize_boolean',
 	) );
 } );
 
 /** Run the explicit read-only dry scan for this request only. */
 function axismundi_activitypub_bridge_requested_legacy_report() : ?array {
-	if ( ! isset( $_POST['ax_bridge_legacy_scan'] ) ) {
+	if ( ! isset( $_POST['axismundi_activitypub_bridge_legacy_scan'] ) ) {
 		return null;
 	}
-	check_admin_referer( 'ax_bridge_legacy_scan' );
+	check_admin_referer( 'axismundi_activitypub_bridge_legacy_scan' );
 	return axismundi_activitypub_bridge_scan_legacy_data();
 }
 
 /** Run the explicit import after an exact typed confirmation. */
 function axismundi_activitypub_bridge_requested_legacy_import() : ?array {
-	if ( ! isset( $_POST['ax_bridge_legacy_import'] ) ) {
+	if ( ! isset( $_POST['axismundi_activitypub_bridge_legacy_import'] ) ) {
 		return null;
 	}
-	check_admin_referer( 'ax_bridge_legacy_import' );
-	$confirmation = isset( $_POST['ax_bridge_legacy_confirmation'] ) ? sanitize_text_field( wp_unslash( $_POST['ax_bridge_legacy_confirmation'] ) ) : '';
+	check_admin_referer( 'axismundi_activitypub_bridge_legacy_import' );
+	$confirmation = isset( $_POST['axismundi_activitypub_bridge_legacy_confirmation'] ) ? sanitize_text_field( wp_unslash( $_POST['axismundi_activitypub_bridge_legacy_confirmation'] ) ) : '';
 	if ( 'IMPORT' !== $confirmation ) {
 		return array(
 			'generated_at'     => current_time( 'mysql', true ),
@@ -58,20 +58,20 @@ function axismundi_activitypub_bridge_requested_legacy_import() : ?array {
 
 /** Requeue one explicitly selected failed transport job. */
 function axismundi_activitypub_bridge_requested_delivery_retry() {
-	if ( ! isset( $_POST['ax_bridge_retry_delivery'] ) ) {
+	if ( ! isset( $_POST['axismundi_activitypub_bridge_retry_delivery'] ) ) {
 		return null;
 	}
-	$id = isset( $_POST['ax_bridge_delivery_id'] ) ? absint( $_POST['ax_bridge_delivery_id'] ) : 0;
-	check_admin_referer( 'ax_bridge_retry_delivery_' . $id );
+	$id = isset( $_POST['axismundi_activitypub_bridge_delivery_id'] ) ? absint( $_POST['axismundi_activitypub_bridge_delivery_id'] ) : 0;
+	check_admin_referer( 'axismundi_activitypub_bridge_retry_delivery_' . $id );
 	return axismundi_activitypub_bridge_retry_failed_delivery( $id );
 }
 
 function axismundi_activitypub_bridge_requested_delivery_cancel() {
-	if ( ! isset( $_POST['ax_bridge_cancel_delivery'] ) ) {
+	if ( ! isset( $_POST['axismundi_activitypub_bridge_cancel_delivery'] ) ) {
 		return null;
 	}
-	$id = isset( $_POST['ax_bridge_delivery_id'] ) ? absint( $_POST['ax_bridge_delivery_id'] ) : 0;
-	check_admin_referer( 'ax_bridge_cancel_delivery_' . $id );
+	$id = isset( $_POST['axismundi_activitypub_bridge_delivery_id'] ) ? absint( $_POST['axismundi_activitypub_bridge_delivery_id'] ) : 0;
+	check_admin_referer( 'axismundi_activitypub_bridge_cancel_delivery_' . $id );
 	return axismundi_activitypub_bridge_cancel_delivery( $id );
 }
 
@@ -130,14 +130,14 @@ function axismundi_activitypub_bridge_render_legacy_scan( ?array $report, ?array
 	<h2><?php esc_html_e( 'Legacy ActivityPub migration', 'axismundi-s2s-bridge-for-activitypub' ); ?></h2>
 	<p><?php esc_html_e( 'Scan official ActivityPub storage without changing any row, then explicitly import supported Actor, Object, and Inbox records through Axismundi repositories. Import never deletes official rows or performs network requests. Purge remains disabled.', 'axismundi-s2s-bridge-for-activitypub' ); ?></p>
 	<form method="post">
-		<?php wp_nonce_field( 'ax_bridge_legacy_scan' ); ?>
-		<?php submit_button( __( 'Run migration dry scan', 'axismundi-s2s-bridge-for-activitypub' ), 'secondary', 'ax_bridge_legacy_scan', false ); ?>
+		<?php wp_nonce_field( 'axismundi_activitypub_bridge_legacy_scan' ); ?>
+		<?php submit_button( __( 'Run migration dry scan', 'axismundi-s2s-bridge-for-activitypub' ), 'secondary', 'axismundi_activitypub_bridge_legacy_scan', false ); ?>
 	</form>
 	<form method="post" style="margin-top: 1em;">
-		<?php wp_nonce_field( 'ax_bridge_legacy_import' ); ?>
-		<label for="ax-bridge-legacy-confirmation"><?php esc_html_e( 'Type IMPORT to import and verify supported rows:', 'axismundi-s2s-bridge-for-activitypub' ); ?></label>
-		<input id="ax-bridge-legacy-confirmation" name="ax_bridge_legacy_confirmation" type="text" autocomplete="off" value="">
-		<?php submit_button( __( 'Import and verify', 'axismundi-s2s-bridge-for-activitypub' ), 'primary', 'ax_bridge_legacy_import', false ); ?>
+		<?php wp_nonce_field( 'axismundi_activitypub_bridge_legacy_import' ); ?>
+		<label for="axismundi-activitypub-bridge-legacy-confirmation"><?php esc_html_e( 'Type IMPORT to import and verify supported rows:', 'axismundi-s2s-bridge-for-activitypub' ); ?></label>
+		<input id="axismundi-activitypub-bridge-legacy-confirmation" name="axismundi_activitypub_bridge_legacy_confirmation" type="text" autocomplete="off" value="">
+		<?php submit_button( __( 'Import and verify', 'axismundi-s2s-bridge-for-activitypub' ), 'primary', 'axismundi_activitypub_bridge_legacy_import', false ); ?>
 	</form>
 	<?php if ( is_array( $import_result ) ) : ?>
 		<h3><?php esc_html_e( 'Import result', 'axismundi-s2s-bridge-for-activitypub' ); ?></h3>
@@ -270,9 +270,9 @@ function axismundi_activitypub_bridge_render_admin_page() : void {
 	<div class="wrap">
 		<h1><?php esc_html_e( 'ActivityPub Bridge', 'axismundi-s2s-bridge-for-activitypub' ); ?></h1>
 		<form method="post" action="options.php">
-			<?php settings_fields( 'ax_bridge_disclosure' ); ?>
-			<input type="hidden" name="ax_bridge_shared_inbox_public" value="0">
-			<label><input type="checkbox" name="ax_bridge_shared_inbox_public" value="1" <?php checked( (bool) get_option( 'ax_bridge_shared_inbox_public', true ) ); ?>> <?php esc_html_e( 'Public shared Inbox collection', 'axismundi-s2s-bridge-for-activitypub' ); ?></label>
+			<?php settings_fields( 'axismundi_activitypub_bridge_disclosure' ); ?>
+			<input type="hidden" name="axismundi_activitypub_bridge_shared_inbox_public" value="0">
+			<label><input type="checkbox" name="axismundi_activitypub_bridge_shared_inbox_public" value="1" <?php checked( (bool) get_option( 'axismundi_activitypub_bridge_shared_inbox_public', true ) ); ?>> <?php esc_html_e( 'Public shared Inbox collection', 'axismundi-s2s-bridge-for-activitypub' ); ?></label>
 			<?php submit_button( __( 'Save', 'axismundi-s2s-bridge-for-activitypub' ), 'secondary', 'submit', false ); ?>
 		</form>
 		<p><?php esc_html_e( 'Axismundi owns Actor representations and Activity state. The Bridge owns this outbound queue and reuses the official ActivityPub plugin only for HTTP signature generation and Inbox verification.', 'axismundi-s2s-bridge-for-activitypub' ); ?></p>
@@ -338,23 +338,23 @@ function axismundi_activitypub_bridge_render_admin_page() : void {
 				<td>
 				<?php if ( 'failed' === (string) $job->status ) : ?>
 					<form method="post">
-						<?php wp_nonce_field( 'ax_bridge_retry_delivery_' . (int) $job->id ); ?>
-						<input type="hidden" name="ax_bridge_delivery_id" value="<?php echo esc_attr( (string) $job->id ); ?>">
-						<?php submit_button( __( 'Retry', 'axismundi-s2s-bridge-for-activitypub' ), 'small', 'ax_bridge_retry_delivery', false ); ?>
+						<?php wp_nonce_field( 'axismundi_activitypub_bridge_retry_delivery_' . (int) $job->id ); ?>
+						<input type="hidden" name="axismundi_activitypub_bridge_delivery_id" value="<?php echo esc_attr( (string) $job->id ); ?>">
+						<?php submit_button( __( 'Retry', 'axismundi-s2s-bridge-for-activitypub' ), 'small', 'axismundi_activitypub_bridge_retry_delivery', false ); ?>
 					</form>
 				<?php endif; ?>
 				<?php if ( 'pending' === $job->undo_status && 'clear' === $job->send_evidence && null === $job->lock_token && in_array( $job->status, array( 'queued', 'retrying', 'failed' ), true ) ) : ?>
 					<form method="post">
-						<?php wp_nonce_field( 'ax_bridge_cancel_delivery_' . (int) $job->id ); ?>
-						<input type="hidden" name="ax_bridge_delivery_id" value="<?php echo esc_attr( (string) $job->id ); ?>">
-						<?php submit_button( __( 'Cancel delivery', 'axismundi-s2s-bridge-for-activitypub' ), 'small', 'ax_bridge_cancel_delivery', false ); ?>
+						<?php wp_nonce_field( 'axismundi_activitypub_bridge_cancel_delivery_' . (int) $job->id ); ?>
+						<input type="hidden" name="axismundi_activitypub_bridge_delivery_id" value="<?php echo esc_attr( (string) $job->id ); ?>">
+						<?php submit_button( __( 'Cancel delivery', 'axismundi-s2s-bridge-for-activitypub' ), 'small', 'axismundi_activitypub_bridge_cancel_delivery', false ); ?>
 					</form>
 				<?php endif; ?>
-				<a href="<?php echo esc_url( $details === (int) $job->id ? $queue_url : add_query_arg( 'delivery', (int) $job->id, $queue_url ) . '#ax-delivery-details' ); ?>"><?php echo esc_html( $details === (int) $job->id ? __( 'Hide Inbox details', 'axismundi-s2s-bridge-for-activitypub' ) : __( 'Inbox details', 'axismundi-s2s-bridge-for-activitypub' ) ); ?></a>
+				<a href="<?php echo esc_url( $details === (int) $job->id ? $queue_url : add_query_arg( 'delivery', (int) $job->id, $queue_url ) . '#axismundi-activitypub-bridge-delivery-details' ); ?>"><?php echo esc_html( $details === (int) $job->id ? __( 'Hide Inbox details', 'axismundi-s2s-bridge-for-activitypub' ) : __( 'Inbox details', 'axismundi-s2s-bridge-for-activitypub' ) ); ?></a>
 				</td>
 			</tr>
 			<?php if ( $details === (int) $job->id ) : ?>
-				<tr id="ax-delivery-details"><td colspan="7"><?php axismundi_activitypub_bridge_render_delivery_details( $details, $offset, add_query_arg( 'delivery', $details, $queue_url ) . '#ax-delivery-details' ); ?></td></tr>
+				<tr id="axismundi-activitypub-bridge-delivery-details"><td colspan="7"><?php axismundi_activitypub_bridge_render_delivery_details( $details, $offset, add_query_arg( 'delivery', $details, $queue_url ) . '#axismundi-activitypub-bridge-delivery-details' ); ?></td></tr>
 			<?php endif; ?>
 		<?php endforeach; ?>
 		</tbody></table>

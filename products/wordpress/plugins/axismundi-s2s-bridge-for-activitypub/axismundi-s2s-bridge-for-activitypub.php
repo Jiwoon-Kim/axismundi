@@ -53,19 +53,19 @@ register_activation_hook( __FILE__, 'axismundi_activitypub_bridge_install_delive
 /** Rebuild rewrite rules after dormant ownership callbacks have been applied. */
 function axismundi_activitypub_bridge_maybe_refresh_rewrites() : void {
 	if ( ! axismundi_activitypub_bridge_ready()
-		|| AXISMUNDI_ACTIVITYPUB_BRIDGE_REWRITE_VERSION === (int) get_option( 'ax_activitypub_bridge_rewrite_version', 0 )
+		|| AXISMUNDI_ACTIVITYPUB_BRIDGE_REWRITE_VERSION === (int) get_option( 'axismundi_activitypub_bridge_rewrite_version', 0 )
 	) {
 		return;
 	}
 
 	flush_rewrite_rules( false );
-	update_option( 'ax_activitypub_bridge_rewrite_version', AXISMUNDI_ACTIVITYPUB_BRIDGE_REWRITE_VERSION, false );
+	update_option( 'axismundi_activitypub_bridge_rewrite_version', AXISMUNDI_ACTIVITYPUB_BRIDGE_REWRITE_VERSION, false );
 }
 add_action( 'init', 'axismundi_activitypub_bridge_maybe_refresh_rewrites', 99 );
 
 /** Let the official plugin rebuild its routes on the request after deactivation. */
 function axismundi_activitypub_bridge_deactivate() : void {
-	delete_option( 'ax_activitypub_bridge_rewrite_version' );
+	delete_option( 'axismundi_activitypub_bridge_rewrite_version' );
 	delete_option( 'rewrite_rules' );
 }
 register_deactivation_hook( __FILE__, 'axismundi_activitypub_bridge_deactivate' );
@@ -326,7 +326,7 @@ function axismundi_activitypub_bridge_record_inbox( array $activity, array $reci
 function axismundi_activitypub_bridge_record_inbox_diagnostic( string $route, array $activity, $result ) : void {
 	$activity_uri = function_exists( 'axismundi_act_member_uri' ) ? axismundi_act_member_uri( $activity['id'] ?? '' ) : '';
 	$outcome      = $result instanceof Axismundi_Activity || ( is_array( $result ) && ( isset( $result['featured_receipt'] ) || isset( $result['collection_control_receipt'] ) ) ) ? 'recorded' : ( is_wp_error( $result ) ? 'unclaimed' : 'unknown' );
-	$entries      = get_option( 'ax_activitypub_bridge_inbox_diagnostics', array() );
+	$entries      = get_option( 'axismundi_activitypub_bridge_inbox_diagnostics', array() );
 	$entries      = is_array( $entries ) ? $entries : array();
 	array_unshift(
 		$entries,
@@ -339,12 +339,12 @@ function axismundi_activitypub_bridge_record_inbox_diagnostic( string $route, ar
 			'code'             => is_wp_error( $result ) ? sanitize_key( $result->get_error_code() ) : '',
 		)
 	);
-	update_option( 'ax_activitypub_bridge_inbox_diagnostics', array_slice( $entries, 0, 50 ), false );
+	update_option( 'axismundi_activitypub_bridge_inbox_diagnostics', array_slice( $entries, 0, 50 ), false );
 }
 
 /** Read the bounded Inbox diagnostic ring buffer. */
 function axismundi_activitypub_bridge_inbox_diagnostics() : array {
-	$entries = get_option( 'ax_activitypub_bridge_inbox_diagnostics', array() );
+	$entries = get_option( 'axismundi_activitypub_bridge_inbox_diagnostics', array() );
 	return is_array( $entries ) ? $entries : array();
 }
 

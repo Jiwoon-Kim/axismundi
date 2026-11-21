@@ -2,7 +2,7 @@
 /** Verified featured delivery observations, not invented remote Activity identities. */
 defined( 'ABSPATH' ) || exit;
 
-function axismundi_activitypub_bridge_featured_receipts_table() : string { global $wpdb; return $wpdb->prefix . 'ax_featured_receipts'; }
+function axismundi_activitypub_bridge_featured_receipts_table() : string { global $wpdb; return $wpdb->prefix . 'axismundi_activitypub_bridge_featured_receipts'; }
 
 function axismundi_activitypub_bridge_install_featured_receipts() : bool {
 	global $wpdb;
@@ -21,11 +21,11 @@ function axismundi_activitypub_bridge_install_featured_receipts() : bool {
 	) ENGINE=InnoDB {$charset};" );
 	$columns = $wpdb->get_col( $wpdb->prepare( 'SHOW COLUMNS FROM %i', $table ) );
 	if ( ! is_array( $columns ) || array_diff( array( 'actor_id', 'remote_activity_uri', 'payload_json', 'received_at', 'outcome' ), $columns ) ) { return false; }
-	update_option( 'ax_bridge_featured_receipts_schema', '1', false );
+	update_option( 'axismundi_activitypub_bridge_featured_receipts_schema', '1', false );
 	return true;
 }
 add_action( 'plugins_loaded', static function () : void {
-	if ( '1' !== get_option( 'ax_bridge_featured_receipts_schema', '' ) ) { axismundi_activitypub_bridge_install_featured_receipts(); }
+	if ( '1' !== get_option( 'axismundi_activitypub_bridge_featured_receipts_schema', '' ) ) { axismundi_activitypub_bridge_install_featured_receipts(); }
 } );
 
 /** This shape alone grants nothing; the HTTP verifier and collection ownership checks still run. */
@@ -39,7 +39,7 @@ function axismundi_activitypub_bridge_featured_control( array $payload ) : bool 
 /** Called only after verified ingress and recipient moderation, like record_inbox itself. */
 function axismundi_activitypub_bridge_receive_featured( array $payload, Axismundi_Actor $sender ) {
 	global $wpdb;
-	if ( '1' !== get_option( 'ax_bridge_featured_receipts_schema', '' ) ) { return new WP_Error( 'ax_bridge_featured_schema', 'Featured receipts are unavailable.', array( 'status' => 503 ) ); }
+	if ( '1' !== get_option( 'axismundi_activitypub_bridge_featured_receipts_schema', '' ) ) { return new WP_Error( 'ax_bridge_featured_schema', 'Featured receipts are unavailable.', array( 'status' => 503 ) ); }
 	if ( $sender->is_local() || 'Person' !== $sender->get_type() || ! axismundi_activitypub_bridge_featured_control( $payload )
 		|| $sender->get_uri() !== $payload['actor'] || axismundi_actors_featured_uri( $sender ) !== $payload['target'] ) {
 		return new WP_Error( 'ax_bridge_featured_authority', 'The sender does not control this featured collection.', array( 'status' => 403 ) );

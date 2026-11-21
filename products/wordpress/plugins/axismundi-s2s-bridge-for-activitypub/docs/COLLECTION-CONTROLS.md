@@ -40,7 +40,7 @@ callback은 operation_key로 자체 SQL 효과를 멱등 처리해야 한다. �
 
 ## Receipt Identity
 
-`ax_collection_controls`는 Group·내부 id·정확한 intent에 한정된 관측 기록이다.
+`axismundi_activitypub_bridge_collection_controls`는 Group·내부 id·정확한 intent에 한정된 관측 기록이다.
 내부 id만으로 전역 저자 정체성을 선점하지 않는다. 서로 다른 Group 주장 또는 상충하는
 미검증 내용은 독립 증거이며, Person 원장의 검증된 내용을 덮어쓰지 못한다.
 직접 수신과 Announce가 같은 intent면 한 operation으로 합쳐진다.

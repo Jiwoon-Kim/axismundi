@@ -11,7 +11,7 @@ global $wpdb;
 $checks = 0;
 $assert = static function ( bool $ok, string $label ) use ( &$checks ) { ++$checks; if ( ! $ok ) { throw new RuntimeException( $label ); } echo "PASS $label\n"; };
 $users = array(); $actors = array(); $documents = array(); $previous_user = get_current_user_id();
-$previous_diagnostics = get_option( 'ax_activitypub_bridge_inbox_diagnostics', null );
+$previous_diagnostics = get_option( 'axismundi_activitypub_bridge_inbox_diagnostics', null );
 $prefix = 'https://example.com/moderators-' . wp_generate_uuid4();
 $race = false; $remote_group = null;
 $http = static function ( $pre, $args, $url ) use ( &$documents, &$race, &$remote_group ) {
@@ -166,7 +166,7 @@ try {
 } finally {
 	remove_filter( 'pre_http_request', $http, 999 );
 	add_action( 'axismundi_act_activity_recorded', 'axismundi_activitypub_bridge_queue_outbound', 10 );
-	if ( null === $previous_diagnostics ) { delete_option( 'ax_activitypub_bridge_inbox_diagnostics' ); } else { update_option( 'ax_activitypub_bridge_inbox_diagnostics', $previous_diagnostics, false ); }
+	if ( null === $previous_diagnostics ) { delete_option( 'axismundi_activitypub_bridge_inbox_diagnostics' ); } else { update_option( 'axismundi_activitypub_bridge_inbox_diagnostics', $previous_diagnostics, false ); }
 	foreach ( $actors as $actor ) {
 		if ( ! $actor instanceof Axismundi_Actor ) { continue; }
 		$rows = $wpdb->get_col( $wpdb->prepare( 'SELECT id FROM %i WHERE actor_uri=%s', axismundi_act_activities_table(), $actor->get_uri() ) );

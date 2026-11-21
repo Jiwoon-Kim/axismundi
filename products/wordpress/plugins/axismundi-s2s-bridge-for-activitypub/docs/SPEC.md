@@ -30,7 +30,7 @@ repositories to supported network-facing extension points in the official Activi
    the Bridge is ready. If the Bridge itself is unavailable, the official controller retains its
    degraded fallback store rather than acknowledging a lost delivery.
 4. Outbound delivery stores a complete payload, URI-backed signing Actor descriptor, and explicit
-   recipient inboxes in `{prefix}ax_ap_deliveries`. `ap_outbox` and the Posts state machine are never reused.
+   recipient inboxes in `{prefix}axismundi_activitypub_bridge_deliveries`. `ap_outbox` and the Posts state machine are never reused.
    A worker sends the pending Inbox list in bounded batches and schedules the remainder, so a
    follower collection is never a recipient ceiling. The immutable recipient set remains on the
    one Activity-keyed row for retry and administrator inspection.

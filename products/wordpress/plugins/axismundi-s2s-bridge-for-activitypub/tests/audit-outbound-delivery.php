@@ -18,9 +18,7 @@ $ax_bridge_delivery_results     = array();
 $ax_bridge_delivery_user        = 0;
 $ax_bridge_delivery_actor_ids   = array();
 $ax_bridge_delivery_ids         = array();
-$ax_bridge_delivery_sources     = array();
 $ax_bridge_delivery_social_uris = array();
-$ax_bridge_migration_before     = get_option( 'ax_activitypub_bridge_delivery_migration', null );
 $GLOBALS['ax_bridge_delivery_http_args'] = array();
 $GLOBALS['ax_bridge_delivery_http_urls'] = array();
 
@@ -308,7 +306,6 @@ try {
 	$batch_final = axismundi_activitypub_bridge_get_delivery( (int) $batch_id );
 	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'one delivery row pages a large pending recipient list without dropping its final batch', is_int( $batch_id ) && is_object( $batch_mid ) && 'queued' === $batch_mid->status && array( 'https://example.com/inbox/3' ) === json_decode( (string) $batch_mid->pending_inboxes_json, true ) && is_object( $batch_final ) && 'delivered' === $batch_final->status && array( 'https://example.com/inbox/1', 'https://example.com/inbox/2', 'https://example.com/inbox/3' ) === $GLOBALS['ax_bridge_delivery_http_urls'] );
 
-	$provisional_uri = home_url( '/activities/provisional-' . wp_generate_uuid4() . '/' );
 	$mixed_payload = $batch_payload;
 	$mixed_payload['id'] = home_url( '/activities/mixed-' . wp_generate_uuid4() . '/' );
 	$mixed_inboxes = array( 'https://example.com/inbox/mixed', 'https://example.org/inbox/mixed' );
@@ -380,57 +377,6 @@ try {
 	$end_states = axismundi_activitypub_bridge_delivery_report( (int) $retry_id )['inboxes'];
 	wp_set_current_user( $saved_user );
 	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'transient failure retries only the pending Inbox and preserves previous acceptance', 'retrying' === $mid_retry->status && 'accepted' === $mid_states[ $mixed_inboxes[0] ]['state'] && 'queued' === $mid_states[ $mixed_inboxes[1] ]['state'] && 'delivered' === $end_retry->status && 1 === $end_states[ $mixed_inboxes[0] ]['attempt'] && 2 === $end_states[ $mixed_inboxes[1] ]['attempt'] && array( $mixed_inboxes[0], $mixed_inboxes[1], $mixed_inboxes[1] ) === $GLOBALS['ax_bridge_delivery_http_urls'] );
-	$provisional_payload = array( 'id' => $provisional_uri, 'type' => 'Like', 'actor' => $local->get_uri(), 'object' => 'https://example.com/objects/provisional', 'to' => array( $remote_uri ) );
-	$provisional_source = wp_insert_post(
-		array(
-			'post_type'    => AXISMUNDI_ACTIVITYPUB_BRIDGE_LEGACY_POST_TYPE,
-			'post_status'  => 'pending',
-			'post_content' => wp_slash( wp_json_encode( $provisional_payload ) ),
-			'meta_input'   => array(
-				'_ax_ap_actor_uri'       => $local->get_uri(),
-				'_ax_ap_key_id'          => $sender['key_id'],
-				'_ax_ap_inboxes'         => wp_json_encode( array( 'https://example.com/inbox' ) ),
-				'_ax_ap_pending_inboxes' => wp_json_encode( array( 'https://example.com/inbox' ) ),
-				'_ax_ap_attempt'         => 0,
-				'_ax_ap_status'          => 'queued',
-			),
-		),
-		true
-	);
-	$ax_bridge_delivery_sources[] = (int) $provisional_source;
-	$cpt_migrated = ! is_wp_error( $provisional_source ) && axismundi_activitypub_bridge_migrate_delivery_cpt();
-	$provisional_id = axismundi_activitypub_bridge_find_delivery( $provisional_uri );
-	if ( $provisional_id > 0 ) {
-		$ax_bridge_delivery_ids[] = $provisional_id;
-	}
-	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'provisional CPT jobs migrate without deleting their source rows', $cpt_migrated && $provisional_id > 0 && AXISMUNDI_ACTIVITYPUB_BRIDGE_LEGACY_POST_TYPE === get_post_type( $provisional_source ) && $provisional_id === (int) get_post_meta( $provisional_source, '_ax_ap_migrated_to_table', true ) );
-
-	$legacy_uri = home_url( '/activities/legacy-' . wp_generate_uuid4() . '/' );
-	$legacy_payload = array( 'id' => $legacy_uri, 'type' => 'Like', 'actor' => $local->get_uri(), 'object' => 'https://example.com/objects/legacy', 'to' => array( $remote_uri ) );
-	$legacy_source = wp_insert_post(
-		array(
-			'post_type'    => 'ap_outbox',
-			'post_status'  => 'pending',
-			'post_content' => wp_slash( wp_json_encode( $legacy_payload ) ),
-			'meta_input'   => array(
-				'_activitypub_external_delivery'        => 1,
-				'_activitypub_external_actor_uri'       => $local->get_uri(),
-				'_activitypub_external_key_id'          => $sender['key_id'],
-				'_activitypub_external_inboxes'         => wp_json_encode( array( 'https://example.com/inbox' ) ),
-				'_activitypub_external_pending_inboxes' => wp_json_encode( array( 'https://example.com/inbox' ) ),
-				'_activitypub_external_attempt'         => 0,
-				'_activitypub_external_status'          => 'queued',
-			),
-		),
-		true
-	);
-	$ax_bridge_delivery_sources[] = (int) $legacy_source;
-	$legacy_migrated = ! is_wp_error( $legacy_source ) && axismundi_activitypub_bridge_migrate_external_outbox_rows();
-	$legacy_id = axismundi_activitypub_bridge_find_delivery( $legacy_uri );
-	if ( $legacy_id > 0 ) {
-		$ax_bridge_delivery_ids[] = $legacy_id;
-	}
-	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'legacy external Outbox jobs migrate without deletion and leave the stock pending scan', $legacy_migrated && $legacy_id > 0 && 'publish' === get_post_status( $legacy_source ) && $legacy_id === (int) get_post_meta( $legacy_source, '_ax_ap_migrated_to_table', true ) );
 } finally {
 	remove_filter( 'pre_http_request', 'ax_bridge_delivery_http_mock', 99 );
 	foreach ( array_unique( $ax_bridge_delivery_ids ) as $delivery_id ) {
@@ -439,16 +385,6 @@ try {
 		}
 		$wpdb->delete( axismundi_activitypub_bridge_delivery_table(), array( 'id' => $delivery_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB
 		$wpdb->delete( axismundi_activitypub_bridge_delivery_recipients_table(), array( 'delivery_id' => $delivery_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB
-	}
-	foreach ( array_unique( $ax_bridge_delivery_sources ) as $source_id ) {
-		if ( $source_id > 0 ) {
-			wp_delete_post( $source_id, true );
-		}
-	}
-	if ( null === $ax_bridge_migration_before ) {
-		delete_option( 'ax_activitypub_bridge_delivery_migration' );
-	} else {
-		update_option( 'ax_activitypub_bridge_delivery_migration', $ax_bridge_migration_before, false );
 	}
 	foreach ( array_filter( array_unique( $ax_bridge_delivery_social_uris ) ) as $social_uri ) {
 		$wpdb->delete( axismundi_act_relations_table(), array( 'initiating_activity_uri' => $social_uri ) ); // phpcs:ignore WordPress.DB

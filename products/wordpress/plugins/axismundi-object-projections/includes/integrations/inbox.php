@@ -46,7 +46,7 @@ function axismundi_op_get_actor_inbox( WP_REST_Request $request ) {
 
 /** The existing site disclosure setting controls GET only, never POST reception. */
 function axismundi_op_get_shared_inbox( WP_REST_Request $request ) {
-	if ( ! (bool) get_option( 'ax_bridge_shared_inbox_public', true ) ) {
+	if ( ! (bool) get_option( 'axismundi_activitypub_bridge_shared_inbox_public', true ) ) {
 		return new WP_Error( 'ax_bridge_shared_private', 'The shared Inbox collection is not public.', array( 'status' => 404 ) );
 	}
 	$page = axismundi_op_read_collection_contract( 'ap-shared-inbox', 20, (string) $request['cursor'] );

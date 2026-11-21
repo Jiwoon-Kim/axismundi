@@ -32,7 +32,7 @@ $ax_bridge_quote_delete    = '';
 $ax_bridge_quote_auth      = '';
 $ax_bridge_quote_post      = 0;
 $ax_bridge_note_post       = 0;
-$ax_bridge_diagnostics_before = get_option( 'ax_activitypub_bridge_inbox_diagnostics', null );
+$ax_bridge_diagnostics_before = get_option( 'axismundi_activitypub_bridge_inbox_diagnostics', null );
 $ax_bridge_inbox_current_user = get_current_user_id();
 $ax_bridge_site_blocks_before = get_option( 'activitypub_site_blocked_domains', null );
 
@@ -458,9 +458,9 @@ try {
 		wp_delete_user( $ax_bridge_inbox_user );
 	}
 	if ( null === $ax_bridge_diagnostics_before ) {
-		delete_option( 'ax_activitypub_bridge_inbox_diagnostics' );
+		delete_option( 'axismundi_activitypub_bridge_inbox_diagnostics' );
 	} else {
-		update_option( 'ax_activitypub_bridge_inbox_diagnostics', $ax_bridge_diagnostics_before, false );
+		update_option( 'axismundi_activitypub_bridge_inbox_diagnostics', $ax_bridge_diagnostics_before, false );
 	}
 	if ( null === $ax_bridge_site_blocks_before ) {
 		delete_option( 'activitypub_site_blocked_domains' );

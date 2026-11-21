@@ -8,9 +8,8 @@
 defined( 'ABSPATH' ) || exit;
 
 const AXISMUNDI_ACTIVITYPUB_BRIDGE_DELIVERY_DB_VERSION        = '3';
-const AXISMUNDI_ACTIVITYPUB_BRIDGE_DELIVERY_DB_VERSION_OPTION = 'ax_activitypub_bridge_delivery_db_version';
+const AXISMUNDI_ACTIVITYPUB_BRIDGE_DELIVERY_DB_VERSION_OPTION = 'axismundi_activitypub_bridge_delivery_db_version';
 const AXISMUNDI_ACTIVITYPUB_BRIDGE_DELIVERY_HOOK              = 'axismundi_activitypub_bridge_process_delivery';
-const AXISMUNDI_ACTIVITYPUB_BRIDGE_LEGACY_POST_TYPE           = 'ax_ap_delivery';
 const AXISMUNDI_ACTIVITYPUB_BRIDGE_DELIVERY_BATCH_SIZE        = 100;
 
 /** Bound one worker invocation without imposing a recipient ceiling. */
@@ -21,12 +20,12 @@ function axismundi_activitypub_bridge_delivery_batch_size() : int {
 /** Delivery table for the current site. */
 function axismundi_activitypub_bridge_delivery_table() : string {
 	global $wpdb;
-	return $wpdb->prefix . 'ax_ap_deliveries';
+	return $wpdb->prefix . 'axismundi_activitypub_bridge_deliveries';
 }
 
 function axismundi_activitypub_bridge_delivery_recipients_table() : string {
 	global $wpdb;
-	return $wpdb->prefix . 'ax_ap_delivery_recipients';
+	return $wpdb->prefix . 'axismundi_activitypub_bridge_delivery_recipients';
 }
 
 /** Create or upgrade the private delivery spool and record only a verified version. */
@@ -736,155 +735,3 @@ function axismundi_activitypub_bridge_delivery_jobs( int $limit = 100 ) : array 
 	return $wpdb->get_results( $wpdb->prepare( 'SELECT id,activity_uri,actor_uri,status,undo_status,send_evidence,lock_token,attempt,last_error FROM %i ORDER BY created_at DESC, id DESC LIMIT %d', $table, $limit ) );
 }
 
-/** Remove scheduled events for one provisional CPT delivery. */
-function axismundi_activitypub_bridge_clear_provisional_delivery_events( int $id ) : void {
-	for ( $attempt = 1; $attempt <= 10; ++$attempt ) {
-		wp_clear_scheduled_hook( AXISMUNDI_ACTIVITYPUB_BRIDGE_DELIVERY_HOOK, array( $id, $attempt ) );
-	}
-}
-
-/** Remove fork-worker events for one legacy external Outbox row. */
-function axismundi_activitypub_bridge_clear_legacy_delivery_events( int $id ) : void {
-	for ( $attempt = 1; $attempt <= 10; ++$attempt ) {
-		wp_clear_scheduled_hook( 'activitypub_process_external_delivery', array( $id, $attempt ) );
-	}
-}
-
-/** Apply preserved transport state to one newly migrated table row. */
-function axismundi_activitypub_bridge_apply_migrated_delivery_state( int $id, string $status, int $attempt, array $pending, string $error ) : bool {
-	global $wpdb;
-	if ( ! in_array( $status, array( 'queued', 'retrying', 'delivered', 'failed' ), true ) ) {
-		$status = 'failed';
-		$error  = '' !== $error ? $error : 'The source delivery status was not recognized; retransmission was suppressed.';
-	}
-	$table = axismundi_activitypub_bridge_delivery_table();
-	$now   = current_time( 'mysql', true );
-	$ok    = $wpdb->update(
-		$table,
-		array(
-			'status'               => $status,
-			'attempt'              => max( 0, $attempt ),
-			'pending_inboxes_json' => wp_json_encode( $pending ),
-			'send_evidence'        => 'uncertain',
-			'last_error'           => substr( $error, 0, 4000 ),
-			'available_at'         => $now,
-			'updated_at'           => $now,
-		),
-		array( 'id' => $id ),
-		array( '%s', '%d', '%s', '%s', '%s', '%s', '%s' ),
-		array( '%d' )
-	);
-	if ( false !== $ok && in_array( $status, array( 'queued', 'retrying' ), true ) ) {
-		wp_schedule_single_event( time(), AXISMUNDI_ACTIVITYPUB_BRIDGE_DELIVERY_HOOK, array( $id, max( 1, $attempt + 1 ) ) );
-	}
-	return false !== $ok;
-}
-
-/** Migrate provisional Bridge CPT jobs without deleting their source rows. */
-function axismundi_activitypub_bridge_migrate_delivery_cpt() : bool {
-	global $wpdb;
-	$posts = $wpdb->posts;
-	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Core posts table identifier.
-	$source_ids = $wpdb->get_col( $wpdb->prepare( "SELECT ID FROM {$posts} WHERE post_type = %s", AXISMUNDI_ACTIVITYPUB_BRIDGE_LEGACY_POST_TYPE ) );
-	$complete   = true;
-	foreach ( $source_ids as $source_id ) {
-		$source_id = (int) $source_id;
-		$source    = get_post( $source_id );
-		$payload   = $source instanceof WP_Post ? json_decode( $source->post_content, true ) : null;
-		$inboxes   = json_decode( (string) get_post_meta( $source_id, '_ax_ap_inboxes', true ), true );
-		$sender    = array(
-			'actor_uri' => (string) get_post_meta( $source_id, '_ax_ap_actor_uri', true ),
-			'key_id'    => (string) get_post_meta( $source_id, '_ax_ap_key_id', true ),
-		);
-		if ( ! is_array( $payload ) || ! is_array( $inboxes ) ) {
-			$complete = false;
-			continue;
-		}
-		axismundi_activitypub_bridge_clear_provisional_delivery_events( $source_id );
-		$id = axismundi_activitypub_bridge_enqueue_delivery( $payload, $sender, $inboxes, false );
-		if ( is_wp_error( $id ) ) {
-			$complete = false;
-			continue;
-		}
-		$id      = (int) $id;
-		$status  = (string) get_post_meta( $source_id, '_ax_ap_status', true );
-		$attempt = (int) get_post_meta( $source_id, '_ax_ap_attempt', true );
-		$pending = json_decode( (string) get_post_meta( $source_id, '_ax_ap_pending_inboxes', true ), true );
-		$pending = is_array( $pending ) ? $pending : array();
-		if ( ! in_array( $status, array( 'delivered', 'failed' ), true ) && empty( $pending ) ) {
-			$pending = $inboxes;
-		}
-		if ( ! axismundi_activitypub_bridge_apply_migrated_delivery_state( $id, $status, $attempt, $pending, (string) get_post_meta( $source_id, '_ax_ap_last_error', true ) ) ) {
-			$complete = false;
-			continue;
-		}
-		update_post_meta( $source_id, '_ax_ap_migrated_to_table', $id );
-	}
-	return $complete;
-}
-
-/** Migrate experimental fork Outbox jobs without deleting their source rows. */
-function axismundi_activitypub_bridge_migrate_external_outbox_rows() : bool {
-	$source_ids = get_posts(
-		array(
-			'post_type'      => 'ap_outbox',
-			'post_status'    => array( 'pending', 'publish' ),
-			'posts_per_page' => -1,
-			'fields'         => 'ids',
-			'meta_key'       => '_activitypub_external_delivery', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
-			'meta_value'     => 1, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
-		)
-	);
-	$complete = true;
-	foreach ( $source_ids as $source_id ) {
-		$source_id = (int) $source_id;
-		$source    = get_post( $source_id );
-		$payload   = $source instanceof WP_Post ? json_decode( $source->post_content, true ) : null;
-		$inboxes   = json_decode( (string) get_post_meta( $source_id, '_activitypub_external_inboxes', true ), true );
-		$sender    = array(
-			'actor_uri' => (string) get_post_meta( $source_id, '_activitypub_external_actor_uri', true ),
-			'key_id'    => (string) get_post_meta( $source_id, '_activitypub_external_key_id', true ),
-		);
-		if ( ! is_array( $payload ) || ! is_array( $inboxes ) ) {
-			$complete = false;
-			continue;
-		}
-		$id = axismundi_activitypub_bridge_enqueue_delivery( $payload, $sender, $inboxes, false );
-		if ( is_wp_error( $id ) ) {
-			$complete = false;
-			continue;
-		}
-		$id      = (int) $id;
-		$status  = (string) get_post_meta( $source_id, '_activitypub_external_status', true );
-		$attempt = (int) get_post_meta( $source_id, '_activitypub_external_attempt', true );
-		$pending = json_decode( (string) get_post_meta( $source_id, '_activitypub_external_pending_inboxes', true ), true );
-		$pending = is_array( $pending ) ? $pending : array();
-		if ( ! in_array( $status, array( 'delivered', 'failed' ), true ) && empty( $pending ) ) {
-			$pending = $inboxes;
-		}
-		if ( ! axismundi_activitypub_bridge_apply_migrated_delivery_state( $id, $status, $attempt, $pending, (string) get_post_meta( $source_id, '_activitypub_external_last_error', true ) ) ) {
-			$complete = false;
-			continue;
-		}
-		update_post_meta( $source_id, '_ax_ap_migrated_to_table', $id );
-		axismundi_activitypub_bridge_clear_legacy_delivery_events( $source_id );
-		if ( 'pending' === get_post_status( $source_id ) ) {
-			wp_publish_post( $source_id );
-		}
-	}
-	return $complete;
-}
-
-/** Migrate both superseded transport stores exactly once, preserving every source row. */
-function axismundi_activitypub_bridge_migrate_delivery_stores() : void {
-	if ( ! axismundi_activitypub_bridge_ready()
-		|| ! axismundi_activitypub_bridge_delivery_ready()
-		|| 2 === (int) get_option( 'ax_activitypub_bridge_delivery_migration', 0 )
-	) {
-		return;
-	}
-	if ( axismundi_activitypub_bridge_migrate_delivery_cpt() && axismundi_activitypub_bridge_migrate_external_outbox_rows() ) {
-		update_option( 'ax_activitypub_bridge_delivery_migration', 2, false );
-	}
-}
-add_action( 'init', 'axismundi_activitypub_bridge_migrate_delivery_stores', 20 );

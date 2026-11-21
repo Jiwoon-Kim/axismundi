@@ -56,7 +56,15 @@ without the Tauri backend, so every `invoke` fails there; that is why the MCP se
 ```txt
 npm --prefix gui run build                                         Angular compiles
 cargo test --manifest-path gui/src-tauri/Cargo.toml --lib          IPC layer
+node --test gui/src/app/mail/mail-rows.spec.ts                     IPC response shape → rows
 ```
+
+`invoke<T>()` only casts: a wrong `T` compiles and renders blanks. A command returns a shape
+declared in `src-tauri` (a `Serialize` struct), not the cache's raw documents. Its Rust test
+serializes a real core response and compares it with a fixture file under `gui/src/`; the
+`*.spec.ts` beside the TypeScript type reads that same file. Change the shape on one side only and
+one of the two tests fails. Regenerate with `AXISMUNDI_UPDATE_FIXTURES=1 cargo test ...`.
+Node 24 runs the spec with no test framework; `*.spec.ts` stays out of the app build.
 
 Run from `products/axismundi-client`. Code comments are English; design notes may be Korean,
 as everywhere in this repository.

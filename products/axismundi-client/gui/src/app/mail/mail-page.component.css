@@ -1,6 +1,6 @@
 :host {
   display: grid;
-  grid-template-columns: 240px minmax(0, 1fr);
+  grid-template-columns: 220px minmax(280px, 360px) minmax(0, 1fr);
   block-size: 100%;
 }
 
@@ -13,7 +13,7 @@
   overflow-y: auto;
 }
 
-.mailboxes button {
+.mailboxes a {
   display: flex;
   justify-content: space-between;
   padding: 8px 12px;
@@ -22,24 +22,34 @@
   background: none;
   color: var(--mat-sys-on-surface-variant);
   font: var(--mat-sys-label-large);
-  text-align: start;
-  cursor: pointer;
+  text-decoration: none;
 }
 
-.mailboxes button:hover { background: color-mix(in srgb, var(--mat-sys-on-surface) 8%, transparent); }
-.mailboxes button.active { background: var(--mat-sys-secondary-container); color: var(--mat-sys-on-secondary-container); }
+.mailboxes a:hover { background: color-mix(in srgb, var(--mat-sys-on-surface) 8%, transparent); }
+.mailboxes a.active { background: var(--mat-sys-secondary-container); color: var(--mat-sys-on-secondary-container); }
 
-.list { padding: 12px 20px; overflow-y: auto; }
+.list {
+  padding: 12px 0;
+  border-inline-end: 1px solid var(--mat-sys-outline-variant);
+  overflow-y: auto;
+}
+.summary { padding-inline: 16px; }
+app-mail-detail { min-inline-size: 0; }
 .summary { color: var(--mat-sys-on-surface-variant); font: var(--mat-sys-body-small); }
 .error { color: var(--mat-sys-error); }
 
 ul { list-style: none; margin: 0; padding: 0; }
-li {
+li { border-block-end: 1px solid var(--mat-sys-outline-variant); }
+li a, li.unavailable, li.none {
   display: grid;
   gap: 2px;
-  padding: 10px 0;
-  border-block-end: 1px solid var(--mat-sys-outline-variant);
+  padding: 10px 16px;
+  color: inherit;
+  text-decoration: none;
 }
+li a:hover { background: color-mix(in srgb, var(--mat-sys-on-surface) 8%, transparent); }
+li a.active { background: var(--mat-sys-secondary-container); color: var(--mat-sys-on-secondary-container); }
+li a:focus-visible, .mailboxes a:focus-visible { outline: 2px solid var(--mat-sys-secondary); outline-offset: -2px; }
 .from { font: var(--mat-sys-title-small); }
 .subject { color: var(--mat-sys-on-surface-variant); }
 li.unread .subject { color: var(--mat-sys-on-surface); font-weight: 600; }

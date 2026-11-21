@@ -1,0 +1,365 @@
+[
+  {
+    "available": true,
+    "coverage": {
+      "attachments": true,
+      "blobId": true,
+      "bodyStructure": true,
+      "bodyValues": {
+        "fetchHTMLBodyValues": true,
+        "fetchTextBodyValues": true,
+        "maxBodyValueBytes": 65536,
+        "parts": {
+          "0": {
+            "cachedBytes": 146,
+            "isEncodingProblem": false,
+            "isTruncated": false
+          }
+        }
+      },
+      "cc": true,
+      "from": true,
+      "hasAttachment": true,
+      "htmlBody": true,
+      "id": true,
+      "keywords": true,
+      "mailboxIds": true,
+      "preview": true,
+      "receivedAt": true,
+      "sentAt": true,
+      "size": true,
+      "subject": true,
+      "textBody": true,
+      "threadId": true,
+      "to": true
+    },
+    "document": {
+      "attachments": [],
+      "blobId": "cbuuhm2vfx9cnm7b2t31dgbzyjlvo9cntv0e7lb7bkupntnn9crguaqabm",
+      "bodyStructure": {
+        "blobId": "cfuuhm2vfx9cnm7b2t31dgbzyjlvo9cntv0e7lb7bkupntnn9crguaqabo3ahfib",
+        "charset": "utf-8",
+        "cid": null,
+        "disposition": null,
+        "language": null,
+        "location": null,
+        "name": null,
+        "partId": "0",
+        "size": 149,
+        "type": "text/plain"
+      },
+      "bodyValues": {
+        "0": {
+          "isEncodingProblem": false,
+          "isTruncated": false,
+          "value": "Probe conversation, message 3 of 4.\n\nThis is local test mail between admin and Alice.\nUse it to inspect Inbox/Sent threading and reply references."
+        }
+      },
+      "cc": null,
+      "from": [
+        {
+          "email": "admin@example.org",
+          "name": null
+        }
+      ],
+      "hasAttachment": false,
+      "htmlBody": [
+        {
+          "blobId": "cfuuhm2vfx9cnm7b2t31dgbzyjlvo9cntv0e7lb7bkupntnn9crguaqabo3ahfib",
+          "charset": "utf-8",
+          "cid": null,
+          "disposition": null,
+          "language": null,
+          "location": null,
+          "name": null,
+          "partId": "0",
+          "size": 149,
+          "type": "text/plain"
+        }
+      ],
+      "id": "beaaaaal",
+      "keywords": {
+        "$hasnoattachment": true
+      },
+      "mailboxIds": {
+        "a": true
+      },
+      "preview": "Probe conversation, message 3 of 4.\n\nThis is local test mail between admin and Alice.\nUse it to inspect Inbox/Sent threading and reply references.",
+      "receivedAt": "2026-11-19T10:44:13Z",
+      "sentAt": "2026-11-19T10:44:13Z",
+      "size": 647,
+      "subject": "Re: [Axismundi probe v1] Conversation",
+      "textBody": [
+        {
+          "blobId": "cfuuhm2vfx9cnm7b2t31dgbzyjlvo9cntv0e7lb7bkupntnn9crguaqabo3ahfib",
+          "charset": "utf-8",
+          "cid": null,
+          "disposition": null,
+          "language": null,
+          "location": null,
+          "name": null,
+          "partId": "0",
+          "size": 149,
+          "type": "text/plain"
+        }
+      ],
+      "threadId": "j",
+      "to": [
+        {
+          "email": "alice@example.org",
+          "name": null
+        }
+      ]
+    },
+    "id": "beaaaaal",
+    "staleProperties": []
+  },
+  {
+    "available": true,
+    "coverage": {
+      "attachments": true,
+      "blobId": true,
+      "bodyStructure": true,
+      "bodyValues": {
+        "fetchHTMLBodyValues": true,
+        "fetchTextBodyValues": true,
+        "maxBodyValueBytes": 65536,
+        "parts": {
+          "0": {
+            "cachedBytes": 146,
+            "isEncodingProblem": false,
+            "isTruncated": false
+          }
+        }
+      },
+      "cc": true,
+      "from": true,
+      "hasAttachment": true,
+      "htmlBody": true,
+      "id": true,
+      "keywords": true,
+      "mailboxIds": true,
+      "preview": true,
+      "receivedAt": true,
+      "sentAt": true,
+      "size": true,
+      "subject": true,
+      "textBody": true,
+      "threadId": true,
+      "to": true
+    },
+    "document": {
+      "attachments": [],
+      "blobId": "cbuuhm2vfx9cnm7b2t31dgbzyjlvo9cntv0e7lb7bkupntnn9crguaqabm",
+      "bodyStructure": {
+        "blobId": "cfuuhm2vfx9cnm7b2t31dgbzyjlvo9cntv0e7lb7bkupntnn9crguaqabo3ahfib",
+        "charset": "utf-8",
+        "cid": null,
+        "disposition": null,
+        "language": null,
+        "location": null,
+        "name": null,
+        "partId": "0",
+        "size": 149,
+        "type": "text/plain"
+      },
+      "bodyValues": {
+        "0": {
+          "isEncodingProblem": false,
+          "isTruncated": false,
+          "value": "<p>Probe</p>"
+        }
+      },
+      "cc": null,
+      "from": [
+        {
+          "email": "admin@example.org",
+          "name": null
+        }
+      ],
+      "hasAttachment": false,
+      "htmlBody": [
+        {
+          "blobId": "cfuuhm2vfx9cnm7b2t31dgbzyjlvo9cntv0e7lb7bkupntnn9crguaqabo3ahfib",
+          "charset": "utf-8",
+          "cid": null,
+          "disposition": null,
+          "language": null,
+          "location": null,
+          "name": null,
+          "partId": "0",
+          "size": 149,
+          "type": "text/html"
+        }
+      ],
+      "id": "htmlonly",
+      "keywords": {
+        "$hasnoattachment": true
+      },
+      "mailboxIds": {
+        "a": true
+      },
+      "preview": "Probe conversation, message 3 of 4.\n\nThis is local test mail between admin and Alice.\nUse it to inspect Inbox/Sent threading and reply references.",
+      "receivedAt": "2026-11-19T10:44:13Z",
+      "sentAt": "2026-11-19T10:44:13Z",
+      "size": 647,
+      "subject": "Re: [Axismundi probe v1] Conversation",
+      "textBody": [
+        {
+          "blobId": "cfuuhm2vfx9cnm7b2t31dgbzyjlvo9cntv0e7lb7bkupntnn9crguaqabo3ahfib",
+          "charset": "utf-8",
+          "cid": null,
+          "disposition": null,
+          "language": null,
+          "location": null,
+          "name": null,
+          "partId": "0",
+          "size": 149,
+          "type": "text/html"
+        }
+      ],
+      "threadId": "j",
+      "to": [
+        {
+          "email": "alice@example.org",
+          "name": null
+        }
+      ]
+    },
+    "id": "htmlonly",
+    "staleProperties": []
+  },
+  {
+    "available": true,
+    "coverage": {
+      "attachments": true,
+      "blobId": true,
+      "bodyStructure": true,
+      "bodyValues": {
+        "fetchHTMLBodyValues": true,
+        "fetchTextBodyValues": true,
+        "maxBodyValueBytes": 65536,
+        "parts": {
+          "0": {
+            "cachedBytes": 146,
+            "isEncodingProblem": false,
+            "isTruncated": false
+          }
+        }
+      },
+      "cc": true,
+      "from": true,
+      "hasAttachment": true,
+      "htmlBody": true,
+      "id": true,
+      "keywords": true,
+      "mailboxIds": true,
+      "preview": true,
+      "receivedAt": true,
+      "sentAt": true,
+      "size": true,
+      "subject": true,
+      "textBody": true,
+      "threadId": true,
+      "to": true
+    },
+    "document": {
+      "attachments": [
+        {
+          "partId": "2",
+          "name": "probe.txt",
+          "type": "text/plain",
+          "size": 12,
+          "blobId": "cfx",
+          "charset": "utf-8",
+          "cid": null,
+          "disposition": "attachment",
+          "language": null,
+          "location": null
+        }
+      ],
+      "blobId": "cbuuhm2vfx9cnm7b2t31dgbzyjlvo9cntv0e7lb7bkupntnn9crguaqabm",
+      "bodyStructure": {
+        "blobId": "cfuuhm2vfx9cnm7b2t31dgbzyjlvo9cntv0e7lb7bkupntnn9crguaqabo3ahfib",
+        "charset": "utf-8",
+        "cid": null,
+        "disposition": null,
+        "language": null,
+        "location": null,
+        "name": null,
+        "partId": "0",
+        "size": 149,
+        "type": "text/plain"
+      },
+      "bodyValues": {
+        "0": {
+          "isEncodingProblem": false,
+          "isTruncated": true,
+          "value": "Probe conversation, message 3 of 4.\n\nThis is local test mail between admin and Alice.\nUse it to inspect Inbox/Sent threading and reply references."
+        }
+      },
+      "cc": null,
+      "from": [
+        {
+          "email": "admin@example.org",
+          "name": null
+        }
+      ],
+      "hasAttachment": false,
+      "htmlBody": [
+        {
+          "blobId": "cfuuhm2vfx9cnm7b2t31dgbzyjlvo9cntv0e7lb7bkupntnn9crguaqabo3ahfib",
+          "charset": "utf-8",
+          "cid": null,
+          "disposition": null,
+          "language": null,
+          "location": null,
+          "name": null,
+          "partId": "0",
+          "size": 149,
+          "type": "text/plain"
+        }
+      ],
+      "id": "truncated",
+      "keywords": {
+        "$hasnoattachment": true
+      },
+      "mailboxIds": {
+        "a": true
+      },
+      "preview": "Probe conversation, message 3 of 4.\n\nThis is local test mail between admin and Alice.\nUse it to inspect Inbox/Sent threading and reply references.",
+      "receivedAt": "2026-11-19T10:44:13Z",
+      "sentAt": "2026-11-19T10:44:13Z",
+      "size": 647,
+      "subject": "Re: [Axismundi probe v1] Conversation",
+      "textBody": [
+        {
+          "blobId": "cfuuhm2vfx9cnm7b2t31dgbzyjlvo9cntv0e7lb7bkupntnn9crguaqabo3ahfib",
+          "charset": "utf-8",
+          "cid": null,
+          "disposition": null,
+          "language": null,
+          "location": null,
+          "name": null,
+          "partId": "0",
+          "size": 149,
+          "type": "text/plain"
+        }
+      ],
+      "threadId": "j",
+      "to": [
+        {
+          "email": "alice@example.org",
+          "name": null
+        }
+      ]
+    },
+    "id": "truncated",
+    "staleProperties": []
+  },
+  {
+    "id": "zzzzzzzz",
+    "available": false,
+    "reason": "notFound"
+  }
+]

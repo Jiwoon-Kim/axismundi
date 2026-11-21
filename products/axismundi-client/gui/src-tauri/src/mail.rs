@@ -150,6 +150,126 @@ fn list_view(view: &Value) -> Result<ListView, String> {
     })
 }
 
+/// What mail_read returns: one message for the reading pane.
+#[derive(Debug, Serialize)]
+#[serde(tag = "kind", rename_all = "camelCase", rename_all_fields = "camelCase")]
+pub enum DetailView {
+    Message {
+        id: String,
+        thread_id: Option<String>,
+        subject: Option<String>,
+        from: Vec<Address>,
+        to: Vec<Address>,
+        cc: Vec<Address>,
+        received_at: Option<String>,
+        sent_at: Option<String>,
+        body: Body,
+        attachments: Vec<Attachment>,
+    },
+    Unavailable { id: String, reason: String },
+}
+
+#[derive(Debug, Serialize)]
+pub struct Address {
+    name: Option<String>,
+    email: Option<String>,
+}
+
+/// Plain text first: HTML is never handed to the webview until it has its own policy.
+#[derive(Debug, Serialize)]
+#[serde(tag = "kind", rename_all = "camelCase", rename_all_fields = "camelCase")]
+pub enum Body {
+    Text { text: String, truncated: bool, encoding_problem: bool },
+    /// The message offers no text/plain part; its HTML is not shown yet.
+    HtmlOnly,
+    /// A text part exists but its value was not fetched.
+    NotFetched,
+    Empty,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Attachment {
+    part_id: Option<String>,
+    name: Option<String>,
+    r#type: Option<String>,
+    size: Option<u64>,
+}
+
+fn addresses(document: &Value, key: &str) -> Vec<Address> {
+    document[key]
+        .as_array()
+        .map(|list| {
+            list.iter()
+                .map(|address| Address {
+                    name: text(address, "/name").filter(|name| !name.is_empty()),
+                    email: text(address, "/email"),
+                })
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+fn body(document: &Value) -> Body {
+    let parts = document["textBody"].as_array().map(Vec::as_slice).unwrap_or_default();
+    if parts.is_empty() {
+        return Body::Empty;
+    }
+    let plain: Vec<&Value> = parts
+        .iter()
+        .filter(|part| part["type"].as_str().is_some_and(|kind| kind.eq_ignore_ascii_case("text/plain")))
+        .collect();
+    if plain.is_empty() {
+        return Body::HtmlOnly;
+    }
+    let mut texts = Vec::new();
+    let (mut truncated, mut encoding_problem) = (false, false);
+    for part in plain {
+        let Some(value) = part["partId"].as_str().and_then(|id| document["bodyValues"].get(id)) else {
+            return Body::NotFetched;
+        };
+        let Some(text) = value["value"].as_str() else { return Body::NotFetched };
+        texts.push(text);
+        truncated |= value["isTruncated"] == Value::Bool(true);
+        encoding_problem |= value["isEncodingProblem"] == Value::Bool(true);
+    }
+    Body::Text { text: texts.join("\n\n"), truncated, encoding_problem }
+}
+
+/// `Store::email` after a detail fetch → the reading pane.
+fn detail_view(entry: &Value) -> Result<DetailView, String> {
+    let id = text(entry, "/id").ok_or("Mail: the message has no id")?;
+    if entry["available"] != Value::Bool(true) {
+        let reason = text(entry, "/reason").unwrap_or_else(|| "notCached".into());
+        return Ok(DetailView::Unavailable { id, reason });
+    }
+    let document = &entry["document"];
+    Ok(DetailView::Message {
+        id,
+        thread_id: text(document, "/threadId"),
+        subject: text(document, "/subject"),
+        from: addresses(document, "from"),
+        to: addresses(document, "to"),
+        cc: addresses(document, "cc"),
+        received_at: text(document, "/receivedAt"),
+        sent_at: text(document, "/sentAt"),
+        body: body(document),
+        attachments: document["attachments"]
+            .as_array()
+            .map(|list| {
+                list.iter()
+                    .map(|part| Attachment {
+                        part_id: text(part, "/partId"),
+                        name: text(part, "/name"),
+                        r#type: text(part, "/type"),
+                        size: part["size"].as_u64(),
+                    })
+                    .collect()
+            })
+            .unwrap_or_default(),
+    })
+}
+
 fn rows(value: &str) -> Result<Rows, String> {
     match value {
         "messages" => Ok(Rows::Messages),
@@ -247,9 +367,11 @@ pub async fn mail_read(
     account_id: String,
     email_id: String,
     state: tauri::State<'_, Connection>,
-) -> Result<Value, String> {
+) -> Result<DetailView, String> {
     with_mail(&state, connection_id, move |active, mail, store| {
-        cache::read(&active.client, &mail.session, store, &account_id, &email_id).map_err(explain)
+        let entry = cache::read(&active.client, &mail.session, store, &account_id, &email_id)
+            .map_err(explain)?;
+        detail_view(&entry)
     })
     .await
 }
@@ -313,6 +435,30 @@ mod tests {
         assert_eq!(rows[2]["unread"], Value::Null);
         assert_eq!(rows[3], json!({"kind": "unavailable", "id": "zzzzzzzz", "reason": "notFound"}));
         assert_eq!(rows[4]["unread"], Value::Null, "a stale $seen is not a read state");
+    }
+
+    /// A real `mail-read` response (2026-11-21) and three edits of it: HTML-only parts, a
+    /// truncated body with one attachment, and an unavailable entry.
+    #[test]
+    fn detail_serializes_to_the_shape_the_gui_reads() {
+        let entries: Vec<Value> = serde_json::from_str(include_str!("../fixtures/mail-read.core.json")).unwrap();
+        let actual = Value::Array(
+            entries.iter().map(|entry| serde_json::to_value(detail_view(entry).unwrap()).unwrap()).collect(),
+        );
+        let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../src/app/mail/mail-detail.fixture.json");
+        if std::env::var_os("AXISMUNDI_UPDATE_FIXTURES").is_some() {
+            std::fs::write(&path, serde_json::to_string_pretty(&actual).unwrap() + "
+").unwrap();
+        }
+        let expected: Value = serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+        assert_eq!(actual, expected, "GUI fixture is stale; rerun with AXISMUNDI_UPDATE_FIXTURES=1");
+        assert_eq!(actual[0]["body"]["kind"], "text");
+        assert!(actual[0]["body"]["text"].as_str().unwrap().starts_with("Probe conversation, message 3 of 4."));
+        assert_eq!(actual[0]["from"], json!([{"name": null, "email": "admin@example.org"}]));
+        assert_eq!(actual[1]["body"], json!({"kind": "htmlOnly"}), "HTML is never handed to the webview");
+        assert_eq!(actual[2]["body"]["truncated"], true);
+        assert_eq!(actual[2]["attachments"][0]["name"], "probe.txt");
+        assert_eq!(actual[3]["kind"], "unavailable");
     }
 
     #[test]

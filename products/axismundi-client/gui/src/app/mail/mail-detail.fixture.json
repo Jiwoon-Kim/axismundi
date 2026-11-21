@@ -1,0 +1,95 @@
+[
+  {
+    "attachments": [],
+    "body": {
+      "encodingProblem": false,
+      "kind": "text",
+      "text": "Probe conversation, message 3 of 4.\n\nThis is local test mail between admin and Alice.\nUse it to inspect Inbox/Sent threading and reply references.",
+      "truncated": false
+    },
+    "cc": [],
+    "from": [
+      {
+        "email": "admin@example.org",
+        "name": null
+      }
+    ],
+    "id": "beaaaaal",
+    "kind": "message",
+    "receivedAt": "2026-11-19T10:44:13Z",
+    "sentAt": "2026-11-19T10:44:13Z",
+    "subject": "Re: [Axismundi probe v1] Conversation",
+    "threadId": "j",
+    "to": [
+      {
+        "email": "alice@example.org",
+        "name": null
+      }
+    ]
+  },
+  {
+    "attachments": [],
+    "body": {
+      "kind": "htmlOnly"
+    },
+    "cc": [],
+    "from": [
+      {
+        "email": "admin@example.org",
+        "name": null
+      }
+    ],
+    "id": "htmlonly",
+    "kind": "message",
+    "receivedAt": "2026-11-19T10:44:13Z",
+    "sentAt": "2026-11-19T10:44:13Z",
+    "subject": "Re: [Axismundi probe v1] Conversation",
+    "threadId": "j",
+    "to": [
+      {
+        "email": "alice@example.org",
+        "name": null
+      }
+    ]
+  },
+  {
+    "attachments": [
+      {
+        "name": "probe.txt",
+        "partId": "2",
+        "size": 12,
+        "type": "text/plain"
+      }
+    ],
+    "body": {
+      "encodingProblem": false,
+      "kind": "text",
+      "text": "Probe conversation, message 3 of 4.\n\nThis is local test mail between admin and Alice.\nUse it to inspect Inbox/Sent threading and reply references.",
+      "truncated": true
+    },
+    "cc": [],
+    "from": [
+      {
+        "email": "admin@example.org",
+        "name": null
+      }
+    ],
+    "id": "truncated",
+    "kind": "message",
+    "receivedAt": "2026-11-19T10:44:13Z",
+    "sentAt": "2026-11-19T10:44:13Z",
+    "subject": "Re: [Axismundi probe v1] Conversation",
+    "threadId": "j",
+    "to": [
+      {
+        "email": "alice@example.org",
+        "name": null
+      }
+    ]
+  },
+  {
+    "id": "zzzzzzzz",
+    "kind": "unavailable",
+    "reason": "notFound"
+  }
+]

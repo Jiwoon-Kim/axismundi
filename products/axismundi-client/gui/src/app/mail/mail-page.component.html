@@ -1,19 +1,16 @@
-@if (!connection.account()) {
-  <p role="status">Select a JMAP Account from the account menu.</p>
-} @else {
+@if (connection.account(); as account) {
   <nav class="mailboxes" aria-label="Mailboxes">
-    @for (mailbox of mailboxes(); track mailbox.id) {
-      <button type="button" [class.active]="mailbox.id === selectedMailbox()"
-              [attr.aria-current]="mailbox.id === selectedMailbox() ? 'true' : null"
-              (click)="mailboxId.set(mailbox.id)">
-        <span>{{ mailbox.name }}</span>
-        @if (mailbox.unreadEmails) { <span class="count">{{ mailbox.unreadEmails }}</span> }
-      </button>
+    @for (box of mailboxes(); track box.id) {
+      <a routerLink="/mail" [queryParams]="{mailbox: box.id}" [class.active]="box.id === selectedMailbox()"
+         [attr.aria-current]="box.id === selectedMailbox() ? 'page' : null">
+        <span>{{ box.name }}</span>
+        @if (box.unreadEmails) { <span class="count" [attr.aria-label]="box.unreadEmails + ' unread'">{{ box.unreadEmails }}</span> }
+      </a>
     }
   </nav>
   <section class="list" aria-label="Messages">
-    @if (view.isLoading()) { <p role="status">Loading…</p> }
-    @if (view.error(); as error) { <p class="error" role="alert">{{ error.cause ?? error.message }}</p> }
+    @if (view.isLoading()) { <p class="summary" role="status">Loading…</p> }
+    @if (view.error(); as error) { <p class="summary error" role="alert">{{ error.cause ?? error.message }}</p> }
     @if (view.hasValue()) {
       <p class="summary">
         {{ view.value().rows.length }}{{ view.value().total !== null ? " of " + view.value().total : "" }} messages
@@ -23,17 +20,23 @@
         @for (row of rows(); track row.id) {
           @if (row.kind === "message") {
             <li [class.unread]="row.unread">
-              <span class="from">{{ row.sender }}</span>
-              <span class="subject">{{ row.subject }}@if (row.unread) {<span class="visually-hidden"> (unread)</span>}</span>
-              @if (row.preview) { <span class="preview">{{ row.preview }}</span> }
+              <a routerLink="/mail" [queryParams]="{mailbox: mailbox() ?? null, email: row.id}"
+                 [class.active]="row.id === email()" [attr.aria-current]="row.id === email() ? 'true' : null">
+                <span class="from">{{ row.sender }}</span>
+                <span class="subject">{{ row.subject }}@if (row.unread) {<span class="visually-hidden"> (unread)</span>}</span>
+                @if (row.preview) { <span class="preview">{{ row.preview }}</span> }
+              </a>
             </li>
           } @else {
             <li class="unavailable">Message not in the cache ({{ row.reason }})</li>
           }
         } @empty {
-          <li>No messages in this mailbox.</li>
+          <li class="none">No messages in this mailbox.</li>
         }
       </ul>
     }
   </section>
+  <app-mail-detail [accountId]="account.id" [emailId]="email() ?? null" />
+} @else {
+  <p role="status">Select a JMAP Account from the account menu.</p>
 }

@@ -1,0 +1,35 @@
+@if (!emailId()) {
+  <p class="empty" role="status">Select a message to read it.</p>
+} @else {
+  @if (detail.isLoading()) { <p role="status">Loading…</p> }
+  @if (detail.error(); as error) { <p class="error" role="alert">{{ error.cause ?? error.message }}</p> }
+  @if (detail.hasValue()) {
+    @let message = detail.value();
+    @if (message.kind === "message") {
+      <article aria-labelledby="message-subject">
+        <h2 id="message-subject">{{ message.subject || "(no subject)" }}</h2>
+        <dl class="headers">
+          <dt>From</dt><dd>{{ addressList(message.from) || "(no sender)" }}</dd>
+          @if (message.to.length) { <dt>To</dt><dd>{{ addressList(message.to) }}</dd> }
+          @if (message.cc.length) { <dt>Cc</dt><dd>{{ addressList(message.cc) }}</dd> }
+          @if (message.receivedAt) { <dt>Received</dt><dd><time [attr.datetime]="message.receivedAt">{{ when(message.receivedAt) }}</time></dd> }
+        </dl>
+        @if (bodyNotice(message.body); as notice) { <p class="notice" role="note">{{ notice }}</p> }
+        @if (message.body.kind === "text") {
+          @if (message.body.encodingProblem) { <p class="notice" role="note">Some characters could not be decoded.</p> }
+          <div class="body">{{ message.body.text }}</div>
+        }
+        @if (message.attachments.length) {
+          <h3>Attachments</h3>
+          <ul class="attachments">
+            @for (attachment of message.attachments; track $index) {
+              <li>{{ attachment.name || "(unnamed)" }}{{ attachment.size !== null ? " · " + attachment.size + " bytes" : "" }}</li>
+            }
+          </ul>
+        }
+      </article>
+    } @else {
+      <p class="empty" role="status">This message is not available ({{ message.reason }}).</p>
+    }
+  }
+}

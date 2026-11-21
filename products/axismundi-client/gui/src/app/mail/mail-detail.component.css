@@ -1,0 +1,32 @@
+:host { display: block; padding: 16px 24px 32px; overflow-y: auto; }
+
+h2 { font: var(--mat-sys-headline-small); margin: 0 0 12px; overflow-wrap: anywhere; }
+
+.headers {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 4px 12px;
+  margin: 0 0 16px;
+  font: var(--mat-sys-body-medium);
+}
+.headers dt { color: var(--mat-sys-on-surface-variant); }
+.headers dd { margin: 0; overflow-wrap: anywhere; }
+
+.notice {
+  padding: 8px 12px;
+  border-radius: var(--mat-sys-corner-small);
+  background: var(--mat-sys-surface-container-high);
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-body-small);
+}
+
+.body {
+  margin: 16px 0;
+  font: var(--mat-sys-body-large);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.attachments { padding-inline-start: 20px; font: var(--mat-sys-body-medium); }
+.error { color: var(--mat-sys-error); }
+.empty { color: var(--mat-sys-on-surface-variant); }

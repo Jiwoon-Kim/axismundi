@@ -56,7 +56,7 @@ without the Tauri backend, so every `invoke` fails there; that is why the MCP se
 ```txt
 npm --prefix gui run build                                         Angular compiles
 cargo test --manifest-path gui/src-tauri/Cargo.toml --lib          IPC layer
-node --test gui/src/app/mail/mail-rows.spec.ts                     IPC response shape → rows
+node --test "gui/src/**/*.spec.ts"                                IPC response shapes → labels
 ```
 
 `invoke<T>()` only casts: a wrong `T` compiles and renders blanks. A command returns a shape

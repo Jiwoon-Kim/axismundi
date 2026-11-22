@@ -13,6 +13,7 @@ pub fn configure<R: tauri::Runtime>(builder: tauri::Builder<R>) -> tauri::Builde
             connection::discover_server,
             connection::connect_server,
             connection::disconnect_server,
+            connection::disconnect_all,
             connection::actor_document,
             connection::outbox_page,
             connection::object_by_id,

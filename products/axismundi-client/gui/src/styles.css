@@ -46,3 +46,4 @@
   font: var(--mat-sys-label-medium);
   color: var(--mat-sys-on-surface-variant);
 }
+.account-menu .menu-note { color: var(--mat-sys-on-surface-variant); }

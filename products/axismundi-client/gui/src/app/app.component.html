@@ -14,7 +14,7 @@
 <mat-menu #accounts="matMenu" xPosition="before" class="account-menu">
   <!-- Two sessions sharing one sign-in: each list keeps its own selection. -->
   @if (connection.actors().length) {
-    <div class="menu-heading" role="presentation">ActivityPub</div>
+    <div class="menu-heading" role="presentation">ActivityPub actors</div>
     @for (actor of connection.actors(); track actor.id) {
       <button mat-menu-item role="menuitemradio" [attr.aria-checked]="actor.id === connection.actorId()"
               (click)="connection.actorId.set(actor.id)">
@@ -25,15 +25,27 @@
   }
   @if (connection.actors().length && connection.accounts().length) { <mat-divider /> }
   @if (connection.accounts().length) {
-    <div class="menu-heading" role="presentation">JMAP</div>
+    <div class="menu-heading" role="presentation">JMAP accounts</div>
     @for (account of connection.accounts(); track account.id) {
       <button mat-menu-item role="menuitemradio" [attr.aria-checked]="account.id === connection.accountId()"
               (click)="connection.accountId.set(account.id)">
         <mat-icon>{{ account.id === connection.accountId() ? "radio_button_checked" : "radio_button_unchecked" }}</mat-icon>
-        <span>{{ account.name || account.id }}</span>
+        <span>{{ account.name || account.id }}@if (!account.isPersonal) { <span class="menu-note"> · shared</span> }</span>
       </button>
     }
   }
+  <mat-divider />
+  <!-- A connection is a saved sign-in; switching it resets both selections above. -->
+  <div class="menu-heading" role="presentation">Connections</div>
+  @for (item of connection.connections(); track item.id) {
+    <button mat-menu-item role="menuitemradio" [attr.aria-checked]="item.id === connection.activeId()"
+            (click)="connection.switchTo(item.id)">
+      <mat-icon>{{ item.id === connection.activeId() ? "radio_button_checked" : "radio_button_unchecked" }}</mat-icon>
+      <span>{{ item.username }} · {{ item.server }}</span>
+    </button>
+  }
+  <a mat-menu-item routerLink="/settings"><mat-icon>add</mat-icon><span>Add a connection</span></a>
+  <button mat-menu-item (click)="connection.disconnectAll()"><mat-icon>logout</mat-icon><span>Sign out of all connections</span></button>
 </mat-menu>
 
 <div class="body">

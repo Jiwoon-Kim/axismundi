@@ -50,3 +50,8 @@ pre {
   .server-form, .login-form { grid-template-columns: minmax(0, 1fr); }
   form button { justify-self: start; }
 }
+
+.connections { margin-block-end: 12px; }
+.connection-row { grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
+.row-actions { display: flex; gap: 4px; }
+.active-tag { color: var(--mat-sys-primary); }

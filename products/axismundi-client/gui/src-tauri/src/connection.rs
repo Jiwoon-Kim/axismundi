@@ -11,21 +11,26 @@ use url::{Host, Url};
 #[derive(Default)]
 pub struct Connection(Mutex<ConnectionState>);
 
+/// Every signed-in connection, by id. The GUI chooses which one it shows; each command names its
+/// connection, so an answer for one never lands in another.
 #[derive(Default)]
 struct ConnectionState {
-    revision: u32,
+    /// Ids are never reused within a run, so a late answer cannot match a newer connection.
+    next_id: u32,
+    /// Bumped by each discovery, so an older discovery's result does not replace a newer plan.
+    discovery: u32,
     plan: Option<LoginPlan>,
-    active: Option<Arc<Active>>,
+    connections: std::collections::BTreeMap<u32, Arc<Active>>,
 }
 
 impl Connection {
-    /// The live connection, if `connection_id` still names it.
+    /// The connection `connection_id` names, while it is still signed in.
     pub(crate) fn current(&self, connection_id: u32) -> Result<Arc<Active>, String> {
-        let state = self.lock()?;
-        if state.revision != connection_id {
-            return Err("This connection has ended".into());
-        }
-        state.active.clone().ok_or_else(|| "Connect first".into())
+        self.lock()?
+            .connections
+            .get(&connection_id)
+            .cloned()
+            .ok_or_else(|| "This connection has ended".into())
     }
 
     fn lock(&self) -> Result<std::sync::MutexGuard<'_, ConnectionState>, String> {
@@ -36,6 +41,8 @@ impl Connection {
 }
 
 pub(crate) struct Active {
+    /// The approved addresses and username: one live connection per login.
+    login: (Vec<String>, String),
     pub(crate) client: Client,
     /// The JMAP Session and Mail cache, when the connection signed in to a Mail server.
     pub(crate) mail: Option<crate::mail::Mail>,
@@ -131,6 +138,9 @@ struct AccountSummary {
 #[derive(Default, Serialize)]
 pub struct Connected {
     id: u32,
+    /// Who signed in, and where: the label of this connection in the GUI.
+    username: String,
+    server: String,
     wordpress: Option<String>,
     wordpress_document: Option<Value>,
     jmap: Option<Vec<AccountSummary>>,
@@ -148,19 +158,19 @@ pub async fn discover_server(
     options: Option<DiscoveryOptions>,
     state: tauri::State<'_, Connection>,
 ) -> Result<DiscoveryResult, String> {
+    // Discovering another server leaves the signed-in connections alone: it may be adding one.
     let revision = {
         let mut state = state.lock()?;
-        state.revision += 1;
+        state.discovery += 1;
         state.plan = None;
-        state.active = None;
-        state.revision
+        state.discovery
     };
     let discovery = tauri::async_runtime::spawn_blocking(move || discover_selected(&input, options.unwrap_or_default()))
         .await
         .map_err(|_| "Discovery did not complete")??;
     let (login, notices) = login_plan(&discovery);
     let mut state = state.lock()?;
-    if state.revision != revision {
+    if state.discovery != revision {
         return Err("Discovery was superseded".into());
     }
     state.plan = Some(login.clone());
@@ -184,8 +194,8 @@ pub async fn connect_server<R: tauri::Runtime>(
     if username.trim().is_empty() || username.contains(':') || password.is_empty() {
         return Err("Enter a valid username and password".into());
     }
-    let (plan, revision) = {
-        let mut state = state.lock()?;
+    let plan = {
+        let state = state.lock()?;
         let plan = state
             .plan
             .clone()
@@ -193,9 +203,11 @@ pub async fn connect_server<R: tauri::Runtime>(
         if approved.is_empty() || plan.addresses() != approved {
             return Err("The approved addresses changed. Discover the server again.".into());
         }
-        state.revision += 1;
-        state.active = None;
-        (plan, state.revision)
+        let login = (approved.clone(), username.clone());
+        if state.connections.values().any(|active| active.login == login) {
+            return Err("This login is already connected. Switch to it instead.".into());
+        }
+        plan
     };
     let (mut connected, active) = tauri::async_runtime::spawn_blocking(move || {
         connect(
@@ -210,24 +222,32 @@ pub async fn connect_server<R: tauri::Runtime>(
     .await
     .map_err(|_| "Sign-in did not complete")??;
     let mut state = state.lock()?;
-    if state.revision != revision {
-        return Err("Sign-in was superseded".into());
+    // A second sign-in with the same login may have finished meanwhile.
+    if state.connections.values().any(|other| other.login == active.login) {
+        return Err("This login is already connected. Switch to it instead.".into());
     }
-    connected.id = revision;
-    state.active = Some(Arc::new(active));
+    state.next_id += 1;
+    connected.id = state.next_id;
+    state.connections.insert(connected.id, Arc::new(active));
     Ok(connected)
 }
 
+/// Ends one connection. Its cache stays on disk; nothing is revoked on the server.
 #[tauri::command]
 pub fn disconnect_server(
     connection_id: u32,
     state: tauri::State<'_, Connection>,
 ) -> Result<(), String> {
+    state.lock()?.connections.remove(&connection_id);
+    Ok(())
+}
+
+/// Ends every connection and forgets the pending discovery.
+#[tauri::command]
+pub fn disconnect_all(state: tauri::State<'_, Connection>) -> Result<(), String> {
     let mut state = state.lock()?;
-    if state.revision == connection_id {
-        state.revision += 1;
-        state.active = None;
-    }
+    state.connections.clear();
+    state.plan = None;
     Ok(())
 }
 
@@ -236,16 +256,7 @@ async fn read_ap(
     connection_id: u32,
     address: impl FnOnce(&Active) -> Option<Url>,
 ) -> Result<Value, String> {
-    let active = {
-        let state = state.lock()?;
-        if state.revision != connection_id {
-            return Err("This connection has ended".into());
-        }
-        state
-            .active
-            .clone()
-            .ok_or("Connect before reading documents")?
-    };
+    let active = state.current(connection_id)?;
     let url =
         address(&active).ok_or("This Actor or endpoint is not available on the connection")?;
     let document = tauri::async_runtime::spawn_blocking(move || {
@@ -254,9 +265,7 @@ async fn read_ap(
     .await
     .map_err(|_| "ActivityPub request did not complete")?
     .map_err(|error| failure("ActivityPub", &error))?;
-    if state.lock()?.revision != connection_id {
-        return Err("This connection has ended".into());
-    }
+    state.current(connection_id)?;
     Ok(document)
 }
 
@@ -266,16 +275,7 @@ pub async fn actor_document(
     actor_id: String,
     state: tauri::State<'_, Connection>,
 ) -> Result<Value, String> {
-    let active = {
-        let state = state.lock()?;
-        if state.revision != connection_id {
-            return Err("This connection has ended".into());
-        }
-        state
-            .active
-            .clone()
-            .ok_or("Connect before reading documents")?
-    };
+    let active = state.current(connection_id)?;
     let url = active
         .actor_document_url(&actor_id)
         .ok_or("Actor is not available on this connection")?;
@@ -285,9 +285,7 @@ pub async fn actor_document(
             .await
             .map_err(|_| "Actor request did not complete")?
             .map_err(|error| failure("Actor", &error))?;
-    if state.lock()?.revision != connection_id {
-        return Err("This connection has ended".into());
-    }
+    state.current(connection_id)?;
     active.remember_actor_document(&expected, &document)?;
     Ok(document)
 }
@@ -311,16 +309,7 @@ pub async fn object_by_id(
     object_id: String,
     state: tauri::State<'_, Connection>,
 ) -> Result<Value, String> {
-    let active = {
-        let state = state.lock()?;
-        if state.revision != connection_id {
-            return Err("This connection has ended".into());
-        }
-        state
-            .active
-            .clone()
-            .ok_or("Connect before reading documents")?
-    };
+    let active = state.current(connection_id)?;
     let url = active
         .object_url(&actor_id, &object_id)
         .ok_or("Invalid Object URI or Actor")?;
@@ -330,9 +319,7 @@ pub async fn object_by_id(
             .await
             .map_err(|_| "Object request did not complete")?
             .map_err(|error| failure("Object", &error))?;
-    if state.lock()?.revision != connection_id {
-        return Err("This connection has ended".into());
-    }
+    state.current(connection_id)?;
     if document["id"].as_str() != Some(expected.as_str()) {
         return Err("The response does not identify the requested Object".into());
     }
@@ -430,9 +417,20 @@ fn connect(
     data_dir: Option<std::path::PathBuf>,
 ) -> Result<(Connected, Active), String> {
     let username = credentials.user.clone();
+    let login = (plan.addresses().into_iter().map(str::to_owned).collect::<Vec<_>>(), username.clone());
+    let server = plan
+        .addresses()
+        .first()
+        .and_then(|address| Url::parse(address).ok())
+        .map(|url| url.origin().ascii_serialization())
+        .unwrap_or_default();
     let client = Client::new(credentials);
     let mut mail = None;
-    let mut connected = Connected::default();
+    let mut connected = Connected {
+        username: username.clone(),
+        server,
+        ..Connected::default()
+    };
     if let Some(address) = &plan.wordpress {
         match client.wordpress_user_document(address) {
             Ok(document) => {
@@ -519,6 +517,7 @@ fn connect(
     Ok((
         connected,
         Active {
+            login,
             client,
             mail,
             actors_url,
@@ -630,12 +629,42 @@ mod tests {
         assert!(validated_outbox(&actors, &format!("{address}?rest_route=/wp/v2/users")).is_none());
     }
 
+    fn offline(user: &str) -> Arc<Active> {
+        Arc::new(Active {
+            login: (vec!["https://mail.test/session".into()], user.into()),
+            client: Client::without_redirects(Credentials { user: user.into(), secret: "secret".into() }),
+            mail: None,
+            actors_url: None,
+            actor_ids: vec![],
+            outboxes: Mutex::new(Default::default()),
+        })
+    }
+
+    /// Two logins live side by side; ending one leaves the other, and its id never comes back.
+    #[test]
+    fn connections_are_independent_and_an_ended_one_stays_ended() {
+        let state = Connection::default();
+        {
+            let mut inner = state.lock().unwrap();
+            inner.next_id = 2;
+            inner.connections.insert(1, offline("alice"));
+            inner.connections.insert(2, offline("team"));
+        }
+        assert!(state.current(1).is_ok() && state.current(2).is_ok());
+        state.lock().unwrap().connections.remove(&1);
+        assert_eq!(state.current(1).err().as_deref(), Some("This connection has ended"));
+        assert_eq!(state.current(2).unwrap().login.1, "team");
+        state.lock().unwrap().connections.clear();
+        assert!(state.current(2).is_err());
+    }
+
     #[test]
     fn actor_reference_is_not_a_collection_query_and_outbox_comes_from_document() {
         let id = "https://blog.test/actors/12345678-1234-1234-1234-123456789abc";
         let root = Url::parse("https://blog.test/wp-json/axismundi/activitypub/actors").unwrap();
         let address = format!("{root}/12345678-1234-1234-1234-123456789abc/outbox");
         let active = Active {
+            login: (vec![], "user".into()),
             client: Client::without_redirects(Credentials {
                 user: "user".into(),
                 secret: "secret".into(),

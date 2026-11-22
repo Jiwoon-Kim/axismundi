@@ -1,4 +1,27 @@
-<h1>Server connection</h1>
+<h1>Connections</h1>
+@if (connection.connections().length) {
+  <mat-list class="connections" aria-label="Signed-in connections">
+    @for (item of connection.connections(); track item.id) {
+      <mat-list-item>
+        <div class="entry connection-row">
+          <span>
+            <strong>{{ item.username }}</strong> · {{ item.server }}
+            @if (item.id === connection.activeId()) { <span class="active-tag">· shown</span> }
+          </span>
+          <span class="row-actions">
+            @if (item.id !== connection.activeId()) {
+              <button matButton type="button" (click)="connection.switchTo(item.id)">Switch</button>
+            }
+            <button matButton type="button" [disabled]="!!connection.busy()" (click)="connection.disconnect(item.id)">Sign out</button>
+          </span>
+        </div>
+      </mat-list-item>
+    }
+  </mat-list>
+  <button matButton="outlined" type="button" [disabled]="!!connection.busy()" (click)="connection.disconnectAll()">Sign out of all connections</button>
+  <mat-divider />
+  <h2>Add a connection</h2>
+}
 <form class="server-form" (submit)="discover($event, address.value)">
   <mat-form-field appearance="outline" subscriptSizing="dynamic">
     <mat-label>Server address</mat-label>
@@ -26,7 +49,7 @@
     @for (notice of result.notices; track notice) { <p role="status">{{ notice }}</p> }
   </section>
 
-  @if (connection.addresses().length && !connection.connected()) {
+  @if (connection.addresses().length) {
     <mat-divider />
     <section aria-labelledby="sign-in">
       <h2 id="sign-in">Sign in</h2>
@@ -51,7 +74,7 @@
 @if (connection.connected(); as result) {
   <mat-divider />
   <section aria-labelledby="connection-result">
-    <h2 id="connection-result">Connected</h2>
+    <h2 id="connection-result">{{ result.username }} · {{ result.server }}</h2>
     @if (result.wordpress) { <p>WordPress · {{ result.wordpress }}</p> }
     <mat-accordion multi>
       @if (result.wordpress_document; as document) {
@@ -99,6 +122,6 @@
         }
       </mat-list>
     }
-    <button class="disconnect" matButton="outlined" type="button" [disabled]="!!connection.busy()" (click)="connection.disconnect()">Disconnect</button>
+    <button class="disconnect" matButton="outlined" type="button" [disabled]="!!connection.busy()" (click)="connection.disconnect(result.id)">Sign out of this connection</button>
   </section>
 }

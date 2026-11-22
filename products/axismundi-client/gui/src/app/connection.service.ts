@@ -30,6 +30,9 @@ export interface Actor {id: string}
 
 export interface Connected {
   id: number;
+  /** Who signed in and where: how the connection is named in the GUI. */
+  username: string;
+  server: string;
   wordpress: string | null;
   wordpress_document: object | null;
   jmap: Account[] | null;
@@ -46,9 +49,10 @@ export type DiscoveryOptions = {wordpress: boolean; jmap: boolean; activitypub: 
 export const MAIL = "urn:ietf:params:jmap:mail";
 
 /**
- * The one connection the app holds, shared by the shell and every domain route.
- * JMAP Account and ActivityPub Actor selections are independent: the two sessions
- * share authentication only, and neither selection ever changes the other.
+ * The signed-in connections and the one the app shows, shared by the shell and every route.
+ * Within a connection, JMAP Account and ActivityPub Actor selections are independent: the two
+ * sessions share authentication only, and neither selection ever changes the other. Switching
+ * connection resets both, and every request names its connection, so nothing crosses over.
  */
 @Service()
 export class ConnectionService {
@@ -56,7 +60,10 @@ export class ConnectionService {
   readonly busy = signal<"discover" | "connect" | "disconnect" | null>(null);
   readonly error = signal("");
   readonly discovered = signal<Discovery | null>(null);
-  readonly connected = signal<Connected | null>(null);
+  readonly connections = signal<Connected[]>([]);
+  readonly activeId = signal<number | null>(null);
+  /** The connection the app shows. */
+  readonly connected = computed(() => this.connections().find(item => item.id === this.activeId()) ?? null);
 
   readonly accounts = computed(() => this.connected()?.jmap ?? []);
   readonly actors = computed(() => this.connected()?.activitypub ?? []);
@@ -82,10 +89,10 @@ export class ConnectionService {
     return login ? [login.wordpress, login.jmap, login.activitypub].filter((url): url is string => url !== null) : [];
   });
 
+  /** Discovery adds a connection; the ones already signed in stay. */
   async discover(address: string, options: DiscoveryOptions): Promise<void> {
     if (this.busy()) return;
     this.discovered.set(null);
-    this.connected.set(null);
     this.error.set("");
     this.busy.set("discover");
     try {
@@ -99,11 +106,13 @@ export class ConnectionService {
 
   async connect(username: string, password: string): Promise<void> {
     if (this.busy()) return;
-    this.connected.set(null);
     this.error.set("");
     this.busy.set("connect");
     try {
-      this.connected.set(await invoke<Connected>("connect_server", {approved: this.addresses(), username, password}));
+      const added = await invoke<Connected>("connect_server", {approved: this.addresses(), username, password});
+      this.connections.update(list => [...list, added]);
+      this.activeId.set(added.id);
+      this.discovered.set(null);
     } catch (error) {
       this.error.set(String(error));
     } finally {
@@ -111,14 +120,37 @@ export class ConnectionService {
     }
   }
 
-  async disconnect(): Promise<void> {
-    const connectionId = this.connected()?.id;
-    if (connectionId === undefined || this.busy()) return;
+  switchTo(connectionId: number): void {
+    if (this.connections().some(item => item.id === connectionId)) this.activeId.set(connectionId);
+  }
+
+  /** Ends one connection; the app moves to another if one is left. */
+  async disconnect(connectionId = this.activeId()): Promise<void> {
+    if (connectionId === null || this.busy()) return;
     this.busy.set("disconnect");
     this.error.set("");
     try {
       await invoke("disconnect_server", {connectionId});
-      this.connected.set(null);
+      const left = this.connections().filter(item => item.id !== connectionId);
+      this.connections.set(left);
+      if (this.activeId() === connectionId) this.activeId.set(left[0]?.id ?? null);
+    } catch (error) {
+      this.error.set(String(error));
+    } finally {
+      this.busy.set(null);
+    }
+  }
+
+  /** Ends every connection. Caches stay on disk, and no password or token is revoked on a server. */
+  async disconnectAll(): Promise<void> {
+    if (this.busy()) return;
+    this.busy.set("disconnect");
+    this.error.set("");
+    try {
+      await invoke("disconnect_all");
+      this.connections.set([]);
+      this.activeId.set(null);
+      this.discovered.set(null);
     } catch (error) {
       this.error.set(String(error));
     } finally {

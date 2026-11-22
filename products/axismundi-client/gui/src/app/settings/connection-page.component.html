@@ -18,6 +18,33 @@
       </mat-list-item>
     }
   </mat-list>
+}
+@if (connection.saved().length) {
+  <h2>Saved, not connected</h2>
+  <ul class="saved">
+    @for (item of connection.saved(); track item.key) {
+      <li>
+        <div><strong>{{ item.username }}</strong> · {{ item.server }}</div>
+        @switch (item.state) {
+          @case ("restoring") { <p role="status">Signing in…</p> }
+          @case ("signInRequired") { <p role="status">Sign-in required: the saved password is not on this device.</p> }
+          @case ("failed") { <p class="error" role="status">{{ item.message }}</p> }
+        }
+        @if (item.state !== "restoring") {
+          <form class="login-form" (submit)="signInSaved($event, item.key, again)">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>Password for {{ item.username }}</mat-label>
+              <input matInput #again type="password" autocomplete="off">
+            </mat-form-field>
+            <button matButton="filled" type="submit">Sign in</button>
+            <button matButton type="button" (click)="connection.forgetSaved(item.key)">Remove</button>
+          </form>
+        }
+      </li>
+    }
+  </ul>
+}
+@if (connection.connections().length || connection.saved().length) {
   <button matButton="outlined" type="button" [disabled]="!!connection.busy()" (click)="connection.disconnectAll()">Sign out of all connections</button>
   <mat-divider />
   <h2>Add a connection</h2>
@@ -67,6 +94,11 @@
         </mat-form-field>
         <button matButton="filled" type="submit" [disabled]="!!connection.busy()">Sign in</button>
       </form>
+      <mat-checkbox [checked]="rememberSignIn() && connection.canStoreSecrets()" [disabled]="!connection.canStoreSecrets()"
+                    (change)="rememberSignIn.set($event.checked)">Remember this sign-in on this device</mat-checkbox>
+      @if (!connection.canStoreSecrets()) {
+        <p role="note">This platform cannot store sign-ins yet, so you will sign in again next time.</p>
+      }
     </section>
   }
 }

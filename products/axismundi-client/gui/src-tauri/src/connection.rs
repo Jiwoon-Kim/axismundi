@@ -4,7 +4,7 @@ use axismundi_jmap_core::{
     ActingActor, Client, Credentials, Error,
     discovery::{AP_SESSION_ROUTE, Discovery, DiscoveryOptions, Probe, discover_selected},
 };
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use url::{Host, Url};
 
@@ -19,6 +19,9 @@ struct ConnectionState {
     next_id: u32,
     /// Bumped by each discovery, so an older discovery's result does not replace a newer plan.
     discovery: u32,
+    /// Bumped by signing out of everything. A sign-in or restore that started before is not
+    /// admitted when it finishes: it read a secret that has since been forgotten.
+    epoch: u64,
     plan: Option<LoginPlan>,
     connections: std::collections::BTreeMap<u32, Arc<Active>>,
 }
@@ -41,8 +44,11 @@ impl Connection {
 }
 
 pub(crate) struct Active {
-    /// The approved addresses and username: one live connection per login.
-    login: (Vec<String>, String),
+    /// Origin, username and auth method: one live connection per login, whichever services it
+    /// reaches. Not a credential id — the saved key is.
+    login: (String, String, &'static str),
+    /// The saved-connection key whose secret this connection was signed in with, if saved.
+    saved: Option<String>,
     pub(crate) client: Client,
     /// The JMAP Session and Mail cache, when the connection signed in to a Mail server.
     pub(crate) mail: Option<crate::mail::Mail>,
@@ -101,16 +107,25 @@ impl Active {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
-struct LoginPlan {
-    wordpress: Option<String>,
-    jmap: Option<String>,
-    activitypub: Option<String>,
+pub(crate) struct LoginPlan {
+    pub(crate) wordpress: Option<String>,
+    pub(crate) jmap: Option<String>,
+    pub(crate) activitypub: Option<String>,
 }
 
 impl LoginPlan {
-    fn addresses(&self) -> Vec<&str> {
+    /// The one origin a plan's addresses share (an address on another origin is dropped).
+    pub(crate) fn origin(&self) -> String {
+        self.addresses()
+            .first()
+            .and_then(|address| Url::parse(address).ok())
+            .map(|url| url.origin().ascii_serialization())
+            .unwrap_or_default()
+    }
+
+    pub(crate) fn addresses(&self) -> Vec<&str> {
         [&self.wordpress, &self.jmap, &self.activitypub]
             .into_iter()
             .filter_map(|s| s.as_deref())
@@ -138,6 +153,8 @@ struct AccountSummary {
 #[derive(Default, Serialize)]
 pub struct Connected {
     id: u32,
+    /// The saved-connection key, when the sign-in is kept in the credential store.
+    saved_key: Option<String>,
     /// Who signed in, and where: the label of this connection in the GUI.
     username: String,
     server: String,
@@ -181,16 +198,105 @@ pub async fn discover_server(
     })
 }
 
+/// What a finished sign-in should keep on this device, if anything.
+struct Persist {
+    dir: std::path::PathBuf,
+    entry: crate::saved::Saved,
+    secret: String,
+}
+
+/// Signs in over the network without holding any lock, then hands the result to
+/// [`finish_sign_in`], the one place a sign-in becomes a connection and a saved entry.
+async fn add_connection(
+    state: &Connection,
+    plan: LoginPlan,
+    credentials: Credentials,
+    data_dir: Option<std::path::PathBuf>,
+    persist: Option<Persist>,
+    still_saved: Option<(std::path::PathBuf, String)>,
+    secrets: &dyn crate::saved::Secrets,
+) -> Result<Connected, String> {
+    let login = (plan.origin(), credentials.user.clone(), crate::saved::PASSWORD);
+    let epoch = {
+        let state = state.lock()?;
+        if state.connections.values().any(|active| active.login == login) {
+            return Err("This login is already connected. Switch to it instead.".into());
+        }
+        state.epoch
+    };
+    let (connected, active) = tauri::async_runtime::spawn_blocking(move || connect(plan, credentials, data_dir))
+        .await
+        .map_err(|_| "Sign-in did not complete")??;
+    finish_sign_in(state, epoch, active, connected, persist, still_saved, secrets)
+}
+
+/// Decides a finished sign-in under the connection lock, which every sign-out also holds, so the
+/// two cannot interleave: a sign-out that came first leaves nothing to save or admit, and one that
+/// comes after finds and forgets what was just saved.
+///
+/// In order: refused if everything was signed out since it began (`epoch`), if a restored entry
+/// was removed meanwhile (`still_saved`), or if the same login finished first; then it saves the
+/// secret and list entry when asked, and admits the connection. A failure to save keeps the
+/// sign-in in memory and says so.
+fn finish_sign_in(
+    state: &Connection,
+    epoch: u64,
+    mut active: Active,
+    mut connected: Connected,
+    persist: Option<Persist>,
+    still_saved: Option<(std::path::PathBuf, String)>,
+    secrets: &dyn crate::saved::Secrets,
+) -> Result<Connected, String> {
+    let mut state = state.lock()?;
+    if state.epoch != epoch {
+        return Err("Signed out while signing in".into());
+    }
+    if let Some((dir, key)) = &still_saved {
+        if !crate::saved::list(dir)?.iter().any(|item| &item.key == key) {
+            return Err("This saved connection was removed while it was signing in".into());
+        }
+        active.saved = Some(key.clone());
+        connected.saved_key = Some(key.clone());
+    }
+    if state.connections.values().any(|other| other.login == active.login) {
+        return Err("This login is already connected. Switch to it instead.".into());
+    }
+    if let Some(Persist { dir, entry, secret }) = persist {
+        let key = entry.key.clone();
+        let saved = secrets.put(&key, &secret).and_then(|()| {
+            crate::saved::upsert(&dir, entry).inspect_err(|_| {
+                let _ = secrets.delete(&key); // no secret without its list entry
+            })
+        });
+        match saved {
+            Ok(()) => {
+                active.saved = Some(key.clone());
+                connected.saved_key = Some(key);
+            }
+            Err(reason) => connected.errors.push(format!("Not saved on this device: {reason}.")),
+        }
+    }
+    state.next_id += 1;
+    connected.id = state.next_id;
+    state.connections.insert(connected.id, Arc::new(active));
+    Ok(connected)
+}
+
+fn data_dir<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Option<std::path::PathBuf> {
+    use tauri::Manager;
+    app.path().app_data_dir().ok()
+}
+
 #[tauri::command]
 pub async fn connect_server<R: tauri::Runtime>(
     approved: Vec<String>,
     username: String,
     password: String,
+    remember_sign_in: Option<bool>,
     app: tauri::AppHandle<R>,
     state: tauri::State<'_, Connection>,
 ) -> Result<Connected, String> {
-    use tauri::Manager;
-    let data_dir = app.path().app_data_dir().ok();
+    let data_dir = data_dir(&app);
     if username.trim().is_empty() || username.contains(':') || password.is_empty() {
         return Err("Enter a valid username and password".into());
     }
@@ -203,52 +309,165 @@ pub async fn connect_server<R: tauri::Runtime>(
         if approved.is_empty() || plan.addresses() != approved {
             return Err("The approved addresses changed. Discover the server again.".into());
         }
-        let login = (approved.clone(), username.clone());
-        if state.connections.values().any(|active| active.login == login) {
-            return Err("This login is already connected. Switch to it instead.".into());
-        }
         plan
     };
-    let (mut connected, active) = tauri::async_runtime::spawn_blocking(move || {
-        connect(
-            plan,
-            Credentials {
-                user: username,
-                secret: password,
-            },
-            data_dir,
-        )
-    })
-    .await
-    .map_err(|_| "Sign-in did not complete")??;
-    let mut state = state.lock()?;
-    // A second sign-in with the same login may have finished meanwhile.
-    if state.connections.values().any(|other| other.login == active.login) {
-        return Err("This login is already connected. Switch to it instead.".into());
-    }
-    state.next_id += 1;
-    connected.id = state.next_id;
-    state.connections.insert(connected.id, Arc::new(active));
+    let mut cannot_save = None;
+    let persist = if remember_sign_in.unwrap_or(true) {
+        match &data_dir {
+            Some(dir) => Some(Persist {
+                dir: dir.clone(),
+                entry: crate::saved::Saved {
+                    key: crate::saved::key_for(Some(dir), &plan.origin(), &username, crate::saved::PASSWORD),
+                    username: username.clone(),
+                    server: plan.origin(),
+                    auth: crate::saved::PASSWORD.into(),
+                    plan: plan.clone(),
+                    forget_failed: false,
+                },
+                secret: password.clone(),
+            }),
+            None => {
+                cannot_save = Some("Not saved on this device: no app data folder.");
+                None
+            }
+        }
+    } else {
+        None
+    };
+    let credentials = Credentials { user: username, secret: password };
+    let vault = crate::saved::Vault::platform();
+    let mut connected = add_connection(&state, plan, credentials, data_dir, persist, None, &vault).await?;
+    connected.errors.extend(cannot_save.map(String::from));
     Ok(connected)
 }
 
-/// Ends one connection. Its cache stays on disk; nothing is revoked on the server.
-#[tauri::command]
-pub fn disconnect_server(
-    connection_id: u32,
-    state: tauri::State<'_, Connection>,
-) -> Result<(), String> {
-    state.lock()?.connections.remove(&connection_id);
-    Ok(())
+/// What the app can restore at start: the saved list, and whether secrets can be stored here.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SavedConnections {
+    can_store_secrets: bool,
+    items: Vec<crate::saved::Saved>,
 }
 
-/// Ends every connection and forgets the pending discovery.
 #[tauri::command]
-pub fn disconnect_all(state: tauri::State<'_, Connection>) -> Result<(), String> {
+pub fn saved_connections<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> Result<SavedConnections, String> {
+    let items = match data_dir(&app) {
+        Some(dir) => crate::saved::list(&dir)?,
+        None => Vec::new(),
+    };
+    Ok(SavedConnections { can_store_secrets: crate::saved::Vault::platform().available(), items })
+}
+
+/// Signs a saved connection in. With no `password` the stored secret is used, and a missing one
+/// answers "Sign-in required"; a password typed again replaces the stored secret once it works.
+#[tauri::command]
+pub async fn restore_connection<R: tauri::Runtime>(
+    key: String,
+    password: Option<String>,
+    app: tauri::AppHandle<R>,
+    state: tauri::State<'_, Connection>,
+) -> Result<Connected, String> {
+    let dir = data_dir(&app).ok_or("No app data folder")?;
+    let saved = crate::saved::list(&dir)?
+        .into_iter()
+        .find(|item| item.key == key)
+        .ok_or("This saved connection no longer exists")?;
+    saved.restorable()?;
+    let vault = crate::saved::Vault::platform();
+    let typed = password.filter(|value| !value.is_empty());
+    let secret = match &typed {
+        Some(value) => value.clone(),
+        None => vault.get(&key)?.ok_or("Sign-in required")?,
+    };
+    let persist = typed.map(|secret| Persist { dir: dir.clone(), entry: saved.clone(), secret });
+    let credentials = Credentials { user: saved.username.clone(), secret };
+    add_connection(&state, saved.plan.clone(), credentials, Some(dir.clone()), persist, Some((dir, key)), &vault).await
+}
+
+/// Signing out always ends the connection; forgetting the saved sign-in can fail on its own and
+/// is reported apart, so the GUI never keeps showing a connection that is gone.
+#[derive(Default, Serialize)]
+pub struct SignedOut {
+    warnings: Vec<String>,
+}
+
+/// Forgets one saved sign-in: the secret first, and the list entry only once the secret is gone,
+/// so a failure leaves an entry the person can see and retry rather than an orphaned secret.
+/// Callers hold the connection lock, which a finishing sign-in also holds.
+fn forget(dir: &std::path::Path, key: &str, secrets: &dyn crate::saved::Secrets) -> Result<(), String> {
+    if let Err(reason) = secrets.delete(key) {
+        // The secret is still there: keep the entry for another try, but never restore it.
+        let _ = crate::saved::mark_forget_failed(dir, key);
+        return Err(reason);
+    }
+    crate::saved::remove(dir, key)
+}
+
+/// Removes a saved connection and its secret. Nothing is revoked on the server.
+#[tauri::command]
+pub fn forget_connection<R: tauri::Runtime>(
+    key: String,
+    app: tauri::AppHandle<R>,
+    state: tauri::State<'_, Connection>,
+) -> Result<(), String> {
+    let dir = data_dir(&app).ok_or("No app data folder")?;
+    let _held = state.lock()?;
+    forget(&dir, &key, &crate::saved::Vault::platform())
+}
+
+fn sign_out_one(state: &Connection, connection_id: u32, dir: Option<&std::path::Path>, secrets: &dyn crate::saved::Secrets) -> Result<SignedOut, String> {
     let mut state = state.lock()?;
+    let ended = state.connections.remove(&connection_id);
+    let mut result = SignedOut::default();
+    if let Some(key) = ended.and_then(|active| active.saved.clone()) {
+        match dir {
+            Some(dir) => {
+                if let Err(reason) = forget(dir, &key, secrets) {
+                    result.warnings.push(format!("Signed out, but the saved sign-in was not removed: {reason}"));
+                }
+            }
+            None => result.warnings.push("Signed out, but the saved sign-in could not be reached".into()),
+        }
+    }
+    Ok(result)
+}
+
+fn sign_out_all(state: &Connection, dir: Option<&std::path::Path>, secrets: &dyn crate::saved::Secrets) -> Result<SignedOut, String> {
+    let mut state = state.lock()?;
+    state.epoch += 1;
     state.connections.clear();
     state.plan = None;
-    Ok(())
+    let mut result = SignedOut::default();
+    if let Some(dir) = dir {
+        match crate::saved::list(dir) {
+            Ok(items) => {
+                for item in items {
+                    if let Err(reason) = forget(dir, &item.key, secrets) {
+                        result.warnings.push(format!("{} @ {}: the saved sign-in was not removed: {reason}", item.username, item.server));
+                    }
+                }
+            }
+            Err(reason) => result.warnings.push(format!("Signed out, but saved sign-ins were not removed: {reason}")),
+        }
+    }
+    Ok(result)
+}
+
+/// Ends one connection and forgets its saved sign-in. Its Mail cache stays on disk, and nothing
+/// is revoked on the server.
+#[tauri::command]
+pub fn disconnect_server<R: tauri::Runtime>(
+    connection_id: u32,
+    app: tauri::AppHandle<R>,
+    state: tauri::State<'_, Connection>,
+) -> Result<SignedOut, String> {
+    sign_out_one(&state, connection_id, data_dir(&app).as_deref(), &crate::saved::Vault::platform())
+}
+
+/// Ends every connection, cancels sign-ins in flight, and forgets every saved sign-in it can.
+#[tauri::command]
+pub fn disconnect_all<R: tauri::Runtime>(app: tauri::AppHandle<R>, state: tauri::State<'_, Connection>) -> Result<SignedOut, String> {
+    sign_out_all(&state, data_dir(&app).as_deref(), &crate::saved::Vault::platform())
 }
 
 async fn read_ap(
@@ -417,13 +636,8 @@ fn connect(
     data_dir: Option<std::path::PathBuf>,
 ) -> Result<(Connected, Active), String> {
     let username = credentials.user.clone();
-    let login = (plan.addresses().into_iter().map(str::to_owned).collect::<Vec<_>>(), username.clone());
-    let server = plan
-        .addresses()
-        .first()
-        .and_then(|address| Url::parse(address).ok())
-        .map(|url| url.origin().ascii_serialization())
-        .unwrap_or_default();
+    let login = (plan.origin(), username.clone(), crate::saved::PASSWORD);
+    let server = plan.origin();
     let client = Client::new(credentials);
     let mut mail = None;
     let mut connected = Connected {
@@ -518,6 +732,7 @@ fn connect(
         connected,
         Active {
             login,
+            saved: None,
             client,
             mail,
             actors_url,
@@ -541,6 +756,7 @@ pub(crate) fn failure(service: &str, error: &Error) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::saved::Secrets;
     use axismundi_jmap_core::discovery::{Jmap, WordPress, discover};
 
     #[test]
@@ -631,13 +847,134 @@ mod tests {
 
     fn offline(user: &str) -> Arc<Active> {
         Arc::new(Active {
-            login: (vec!["https://mail.test/session".into()], user.into()),
+            login: ("https://mail.test".into(), user.into(), crate::saved::PASSWORD),
+            saved: None,
             client: Client::without_redirects(Credentials { user: user.into(), secret: "secret".into() }),
             mail: None,
             actors_url: None,
             actor_ids: vec![],
             outboxes: Mutex::new(Default::default()),
         })
+    }
+
+    /// An in-memory credential store, so the ordering tests touch no real vault. `refuse_delete`
+    /// stands in for a vault that will not let a secret go.
+    #[derive(Default)]
+    struct FakeSecrets(Mutex<std::collections::BTreeMap<String, String>>, std::sync::atomic::AtomicBool);
+    impl FakeSecrets {
+        fn refuse_delete(&self) {
+            self.1.store(true, std::sync::atomic::Ordering::SeqCst);
+        }
+    }
+    impl crate::saved::Secrets for FakeSecrets {
+        fn put(&self, key: &str, secret: &str) -> Result<(), String> {
+            self.0.lock().unwrap().insert(key.into(), secret.into());
+            Ok(())
+        }
+        fn get(&self, key: &str) -> Result<Option<String>, String> {
+            Ok(self.0.lock().unwrap().get(key).cloned())
+        }
+        fn delete(&self, key: &str) -> Result<(), String> {
+            if self.1.load(std::sync::atomic::Ordering::SeqCst) {
+                return Err("Credential store: access denied".into());
+            }
+            self.0.lock().unwrap().remove(key);
+            Ok(())
+        }
+    }
+
+    /// Signing out when the vault will not delete: the connection ends, the entry stays for another
+    /// try, and it is not restorable — the person signed out.
+    #[test]
+    fn a_secret_that_cannot_be_deleted_is_not_restored_next_time() {
+        let (state, dir, secrets) = (Connection::default(), scratch("refused"), FakeSecrets::default());
+        let epoch = state.lock().unwrap().epoch;
+        let connected = finish_sign_in(&state, epoch, unwrap(offline("alice")), Connected::default(), Some(persist(&dir, "conn-a")), None, &secrets).unwrap();
+        secrets.refuse_delete();
+        let out = sign_out_one(&state, connected.id, Some(&dir), &secrets).unwrap();
+        assert_eq!(out.warnings.len(), 1);
+        assert!(state.lock().unwrap().connections.is_empty());
+        let left = crate::saved::list(&dir).unwrap();
+        assert_eq!(left.len(), 1);
+        assert!(left[0].forget_failed);
+        assert!(left[0].restorable().is_err());
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    fn scratch(name: &str) -> std::path::PathBuf {
+        let dir = std::env::temp_dir().join(format!("axismundi-{name}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    fn persist(dir: &std::path::Path, key: &str) -> Persist {
+        Persist {
+            dir: dir.into(),
+            entry: crate::saved::Saved {
+                key: key.into(),
+                username: "alice".into(),
+                server: "https://mail.test".into(),
+                auth: crate::saved::PASSWORD.into(),
+                plan: LoginPlan { jmap: Some("https://mail.test/session".into()), ..LoginPlan::default() },
+                forget_failed: false,
+            },
+            secret: "test-only".into(),
+        }
+    }
+
+    fn unwrap(active: Arc<Active>) -> Active {
+        Arc::try_unwrap(active).ok().unwrap()
+    }
+
+    /// Sign-out of everything lands while the network sign-in is in flight: nothing is admitted,
+    /// and nothing is saved — no list entry, no secret.
+    #[test]
+    fn sign_out_first_leaves_nothing_saved_or_connected() {
+        let (state, dir, secrets) = (Connection::default(), scratch("out-first"), FakeSecrets::default());
+        let epoch = state.lock().unwrap().epoch;
+        sign_out_all(&state, Some(&dir), &secrets).unwrap();
+        let late = finish_sign_in(&state, epoch, unwrap(offline("alice")), Connected::default(), Some(persist(&dir, "conn-a")), None, &secrets);
+        assert_eq!(late.err().as_deref(), Some("Signed out while signing in"));
+        assert!(state.lock().unwrap().connections.is_empty());
+        assert!(crate::saved::list(&dir).unwrap().is_empty());
+        assert_eq!(secrets.get("conn-a").unwrap(), None);
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    /// The sign-in finishes and saves first; signing out after forgets what it saved.
+    #[test]
+    fn save_first_then_sign_out_forgets_what_was_saved() {
+        let (state, dir, secrets) = (Connection::default(), scratch("save-first"), FakeSecrets::default());
+        let epoch = state.lock().unwrap().epoch;
+        let connected = finish_sign_in(&state, epoch, unwrap(offline("alice")), Connected::default(), Some(persist(&dir, "conn-a")), None, &secrets).unwrap();
+        assert_eq!(connected.saved_key.as_deref(), Some("conn-a"));
+        assert_eq!(secrets.get("conn-a").unwrap().as_deref(), Some("test-only"));
+        assert_eq!(crate::saved::list(&dir).unwrap().len(), 1);
+        let out = sign_out_one(&state, connected.id, Some(&dir), &secrets).unwrap();
+        assert!(out.warnings.is_empty());
+        assert!(state.lock().unwrap().connections.is_empty());
+        assert!(crate::saved::list(&dir).unwrap().is_empty());
+        assert_eq!(secrets.get("conn-a").unwrap(), None);
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    /// A restore whose saved entry is removed while it signs in is neither admitted nor re-saved,
+    /// even when a password was typed again.
+    #[test]
+    fn a_restore_whose_entry_was_removed_does_not_come_back() {
+        let (state, dir, secrets) = (Connection::default(), scratch("removed"), FakeSecrets::default());
+        let epoch = state.lock().unwrap().epoch;
+        // The entry existed when the restore began, and was then removed.
+        crate::saved::upsert(&dir, persist(&dir, "conn-a").entry).unwrap();
+        forget(&dir, "conn-a", &secrets).unwrap();
+        let late = finish_sign_in(&state, epoch, unwrap(offline("alice")), Connected::default(),
+            Some(persist(&dir, "conn-a")), Some((dir.clone(), "conn-a".into())), &secrets);
+        assert!(late.is_err());
+        assert!(state.lock().unwrap().connections.is_empty());
+        assert!(crate::saved::list(&dir).unwrap().is_empty());
+        assert_eq!(secrets.get("conn-a").unwrap(), None);
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 
     /// Two logins live side by side; ending one leaves the other, and its id never comes back.
@@ -664,7 +1001,8 @@ mod tests {
         let root = Url::parse("https://blog.test/wp-json/axismundi/activitypub/actors").unwrap();
         let address = format!("{root}/12345678-1234-1234-1234-123456789abc/outbox");
         let active = Active {
-            login: (vec![], "user".into()),
+            login: (String::new(), "user".into(), crate::saved::PASSWORD),
+            saved: None,
             client: Client::without_redirects(Credentials {
                 user: "user".into(),
                 secret: "secret".into(),

@@ -30,6 +30,7 @@ tauri = { version = "2", default-features = false, features = ["wry", "compressi
 tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+keyring-core = "1.1.0"
 
 
 # Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration
@@ -42,3 +43,6 @@ strip = true
 
 [dev-dependencies]
 tauri = { version = "2", default-features = false, features = ["test"] }
+
+[target."cfg(windows)".dependencies]
+windows-native-keyring-store = "1.1.0"

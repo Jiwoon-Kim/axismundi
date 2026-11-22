@@ -55,3 +55,5 @@ pre {
 .connection-row { grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
 .row-actions { display: flex; gap: 4px; }
 .active-tag { color: var(--mat-sys-primary); }
+.saved { list-style: none; padding: 0; margin: 0 0 16px; display: grid; gap: 12px; }
+.saved .login-form { grid-template-columns: minmax(0, 1fr) auto auto; }

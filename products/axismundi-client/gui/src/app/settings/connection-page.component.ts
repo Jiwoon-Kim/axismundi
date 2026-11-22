@@ -22,6 +22,7 @@ export class ConnectionPageComponent {
   protected readonly probeWordpress = signal(false);
   protected readonly probeJmap = signal(true);
   protected readonly probeActivitypub = signal(false);
+  protected readonly rememberSignIn = signal(true);
 
   protected discover(event: SubmitEvent, address: string): void {
     event.preventDefault();
@@ -34,7 +35,14 @@ export class ConnectionPageComponent {
     event.preventDefault();
     const password = input.value;
     input.value = "";
-    void this.connection.connect(username, password);
+    void this.connection.connect(username, password, this.rememberSignIn() && this.connection.canStoreSecrets());
+  }
+
+  protected signInSaved(event: SubmitEvent, key: string, input: HTMLInputElement): void {
+    event.preventDefault();
+    const password = input.value;
+    input.value = "";
+    void this.connection.signInSaved(key, password);
   }
 
   protected describe<T>(probe: Probe<T>, label: (detail: T) => string): string {

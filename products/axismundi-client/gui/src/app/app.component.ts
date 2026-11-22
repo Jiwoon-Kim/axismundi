@@ -1,4 +1,5 @@
-import { Component, computed, effect, inject } from "@angular/core";
+import { Component, computed, effect, inject, untracked } from "@angular/core";
+import { MatSnackBar } from "@angular/material/snack-bar";
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from "@angular/router";
 import { MatIcon } from "@angular/material/icon";
 import { MatIconButton } from "@angular/material/button";
@@ -26,6 +27,7 @@ interface Destination {path: string; label: string; icon: string}
 export class AppComponent {
   protected readonly connection = inject(ConnectionService);
   private readonly router = inject(Router);
+  private readonly snackBar = inject(MatSnackBar);
 
   /**
    * Order is fixed; a destination appears only when the connection offers it and the
@@ -37,6 +39,13 @@ export class AppComponent {
   ]);
 
   constructor() {
+    // Results that need attention are shown once; the lasting state stays on its own screen.
+    effect(() => {
+      const notice = this.connection.notice();
+      if (!notice) return;
+      this.snackBar.open(notice, "Dismiss", {duration: 10000});
+      untracked(() => this.connection.notice.set(""));
+    });
     // A new connection opens its default domain; losing it returns to Settings.
     effect(() => {
       const connected = this.connection.connected();

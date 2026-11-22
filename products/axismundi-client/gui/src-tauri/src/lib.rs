@@ -1,5 +1,6 @@
 mod connection;
 mod mail;
+mod saved;
 
 /// The application's wiring, kept apart from `run` so a test can build the same
 /// thing against a mock runtime. A test that registered its own handler would
@@ -14,6 +15,9 @@ pub fn configure<R: tauri::Runtime>(builder: tauri::Builder<R>) -> tauri::Builde
             connection::connect_server,
             connection::disconnect_server,
             connection::disconnect_all,
+            connection::saved_connections,
+            connection::restore_connection,
+            connection::forget_connection,
             connection::actor_document,
             connection::outbox_page,
             connection::object_by_id,

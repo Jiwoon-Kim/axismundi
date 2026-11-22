@@ -29,7 +29,12 @@ export const routes: Routes = [
   },
   {
     path: "settings",
-    loadComponent: () => import("./settings/connection-page.component").then(m => m.ConnectionPageComponent),
+    loadComponent: () => import("./settings/settings-page").then(m => m.SettingsPage),
+    children: [
+      {path: "", pathMatch: "full", redirectTo: "connections"},
+      {path: "connections", loadComponent: () => import("./settings/connection-page.component").then(m => m.ConnectionPageComponent)},
+      {path: "appearance", loadComponent: () => import("./settings/appearance-page").then(m => m.AppearancePage)},
+    ],
   },
   {path: "**", redirectTo: ""},
 ];

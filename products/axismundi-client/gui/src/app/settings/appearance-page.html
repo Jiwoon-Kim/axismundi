@@ -1,0 +1,30 @@
+<h1>Appearance</h1>
+<h2 id="brightness-label">Brightness</h2>
+<mat-radio-group aria-labelledby="brightness-label" [value]="appearance().brightness"
+                 (change)="change('brightness', $event.value)">
+  @for (mode of brightnessOptions; track mode) {
+    <mat-radio-button [value]="mode"><span class="option-label">{{ mode }}</span></mat-radio-button>
+  }
+</mat-radio-group>
+<h2 id="contrast-label">Contrast</h2>
+<mat-radio-group aria-labelledby="contrast-label" [value]="appearance().contrast"
+                 (change)="change('contrast', $event.value)">
+  @for (mode of contrastOptions; track mode) {
+    <mat-radio-button [value]="mode"><span class="option-label">{{ mode }}</span></mat-radio-button>
+  }
+</mat-radio-group>
+<h2 id="accent-label">Colors</h2>
+<mat-radio-group aria-labelledby="accent-label" [value]="appearance().accent"
+                 (change)="change('accent', $event.value)">
+  @for (preset of presets; track preset.id) {
+    <mat-radio-button [value]="preset.id">
+      <span class="swatches" aria-hidden="true">
+        @for (color of preset.colors; track color) {
+          <span class="swatch" [style.background-color]="color"></span>
+        }
+      </span>
+      {{ preset.label }}
+    </mat-radio-button>
+  }
+</mat-radio-group>
+@if (storageFailed()) { <p role="status">Appearance could not be saved on this device.</p> }

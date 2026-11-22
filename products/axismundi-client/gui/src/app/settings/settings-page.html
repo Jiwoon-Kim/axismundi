@@ -1,0 +1,7 @@
+<nav mat-tab-nav-bar [tabPanel]="panel" aria-label="Settings">
+  <a mat-tab-link routerLink="connections" routerLinkActive #connections="routerLinkActive"
+     [active]="connections.isActive">Connections</a>
+  <a mat-tab-link routerLink="appearance" routerLinkActive #appearance="routerLinkActive"
+     [active]="appearance.isActive">Appearance</a>
+</nav>
+<mat-tab-nav-panel #panel><router-outlet /></mat-tab-nav-panel>

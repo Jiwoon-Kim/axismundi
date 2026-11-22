@@ -47,8 +47,12 @@ export class AppComponent {
       untracked(() => this.connection.notice.set(""));
     });
     // A new connection opens its default domain; losing it returns to Settings.
+    let hadConnection = false;
     effect(() => {
       const connected = this.connection.connected();
+      const shouldNavigate = !!connected || hadConnection;
+      hadConnection = !!connected;
+      if (!shouldNavigate || untracked(() => this.router.url.startsWith("/settings/appearance"))) return;
       void this.router.navigateByUrl(connected ? "/" : "/settings");
     });
   }

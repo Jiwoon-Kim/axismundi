@@ -1,0 +1,9 @@
+:host { display: block; padding: 24px; max-width: 56rem; }
+h1 { font: var(--mat-sys-headline-small); margin: 0 0 24px; }
+h2 { font: var(--mat-sys-title-medium); margin: 24px 0 4px; }
+mat-radio-group { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+mat-radio-button { min-width: 0; }
+.option-label { text-transform: capitalize; }
+p { color: var(--mat-sys-on-surface-variant); margin: 4px 0; }
+.swatches { display: inline-flex; gap: 3px; margin-inline-end: 4px; }
+.swatch { inline-size: 12px; block-size: 12px; border-radius: 50%; border: 1px solid var(--mat-sys-outline); }

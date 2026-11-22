@@ -5,6 +5,16 @@
     <title>Axismundi</title>
     <base href="/" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script>
+      try {
+        const appearance = JSON.parse(localStorage.getItem("axismundi.appearance"));
+        for (const key of ["brightness", "contrast", "accent"]) {
+          if (typeof appearance?.[key] === "string") {
+            document.documentElement.dataset[key] = appearance[key];
+          }
+        }
+      } catch { /* The stylesheet supplies defaults. */ }
+    </script>
   </head>
   <body>
     <app-root></app-root>

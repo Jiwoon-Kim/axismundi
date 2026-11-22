@@ -22,6 +22,9 @@ export type DetailView =
       cc: Address[];
       receivedAt: string | null;
       sentAt: string | null;
+      /** null when keywords are unknown, as in the listing. */
+      unread: boolean | null;
+      flagged: boolean | null;
       body: Body;
       attachments: Attachment[];
     }

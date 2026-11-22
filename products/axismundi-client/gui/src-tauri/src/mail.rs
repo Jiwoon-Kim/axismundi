@@ -84,6 +84,8 @@ pub enum MailRow {
         /// `null` when keywords were never fetched or the cached copy is stale: unknown is not
         /// unread, and an old `$seen` is not today's read state.
         unread: Option<bool>,
+        /// `null` on the same terms as `unread`.
+        flagged: Option<bool>,
         has_attachment: Option<bool>,
     },
     /// Not in the cache, and not a message with an empty subject.
@@ -101,15 +103,7 @@ fn mail_row(entry: &Value) -> Result<MailRow, String> {
         return Ok(MailRow::Unavailable { id, reason });
     }
     let document = &entry["document"];
-    let stale = |property: &str| {
-        entry["staleProperties"]
-            .as_array()
-            .is_some_and(|stale| stale.iter().any(|name| name == property))
-    };
-    let keywords = document
-        .get("keywords")
-        .and_then(Value::as_object)
-        .filter(|_| !stale("keywords"));
+    let keywords = known_keywords(entry);
     Ok(MailRow::Message {
         id,
         thread_id: text(document, "/threadId"),
@@ -118,9 +112,23 @@ fn mail_row(entry: &Value) -> Result<MailRow, String> {
         subject: text(document, "/subject"),
         preview: text(document, "/preview"),
         received_at: text(document, "/receivedAt"),
-        unread: keywords.map(|keywords| keywords.get("$seen") != Some(&Value::Bool(true))),
+        unread: keywords.map(|keywords| !has(keywords, "$seen")),
+        flagged: keywords.map(|keywords| has(keywords, "$flagged")),
         has_attachment: document.get("hasAttachment").and_then(Value::as_bool),
     })
+}
+
+/// A cached message's keywords, when they were fetched and are not stale. Unknown is not "off":
+/// an old `$seen` is not today's read state.
+fn known_keywords(entry: &Value) -> Option<&serde_json::Map<String, Value>> {
+    let stale = entry["staleProperties"]
+        .as_array()
+        .is_some_and(|stale| stale.iter().any(|name| name == "keywords"));
+    entry["document"].get("keywords").and_then(Value::as_object).filter(|_| !stale)
+}
+
+fn has(keywords: &serde_json::Map<String, Value>, keyword: &str) -> bool {
+    keywords.get(keyword) == Some(&Value::Bool(true))
 }
 
 fn mailbox_row(mailbox: &Value) -> Result<MailboxRow, String> {
@@ -163,6 +171,9 @@ pub enum DetailView {
         cc: Vec<Address>,
         received_at: Option<String>,
         sent_at: Option<String>,
+        /// `null` when keywords are unknown, as in the listing.
+        unread: Option<bool>,
+        flagged: Option<bool>,
         body: Body,
         attachments: Vec<Attachment>,
     },
@@ -253,6 +264,8 @@ fn detail_view(entry: &Value) -> Result<DetailView, String> {
         cc: addresses(document, "cc"),
         received_at: text(document, "/receivedAt"),
         sent_at: text(document, "/sentAt"),
+        unread: known_keywords(entry).map(|keywords| !has(keywords, "$seen")),
+        flagged: known_keywords(entry).map(|keywords| has(keywords, "$flagged")),
         body: body(document),
         attachments: document["attachments"]
             .as_array()
@@ -406,6 +419,32 @@ pub async fn mail_read(
         let entry = cache::read(&active.client, &mail.session, store, &account_id, &email_id)
             .map_err(explain)?;
         detail_view(&entry)
+    })
+    .await
+}
+
+/// Sets or clears `$seen` or `$flagged` on one message. The change is shown only once the server
+/// confirms it (see core `mail::set_keyword`); the answer is the message's row as the server now
+/// has it, or `null` when the server confirmed the change but reading the message back failed. The
+/// write stands either way; the caller only has to read again (a sync), never to resend.
+#[tauri::command]
+pub async fn mail_set_keyword(
+    connection_id: u32,
+    account_id: String,
+    email_id: String,
+    keyword: String,
+    on: bool,
+    state: tauri::State<'_, Connection>,
+) -> Result<Option<MailRow>, String> {
+    let keyword = match keyword.as_str() {
+        "seen" => axismundi_jmap_core::mail::Keyword::Seen,
+        "flagged" => axismundi_jmap_core::mail::Keyword::Flagged,
+        _ => return Err("keyword takes seen or flagged".into()),
+    };
+    with_mail(&state, connection_id, move |active, mail, store| {
+        let entry = cache::set_keyword(&active.client, &mail.session, store, &account_id, &email_id, keyword, on)
+            .map_err(explain)?;
+        entry.as_ref().map(mail_row).transpose()
     })
     .await
 }

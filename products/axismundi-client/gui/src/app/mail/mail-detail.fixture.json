@@ -8,6 +8,7 @@
       "truncated": false
     },
     "cc": [],
+    "flagged": false,
     "from": [
       {
         "email": "admin@example.org",
@@ -25,7 +26,8 @@
         "email": "alice@example.org",
         "name": null
       }
-    ]
+    ],
+    "unread": true
   },
   {
     "attachments": [],
@@ -33,6 +35,7 @@
       "kind": "htmlOnly"
     },
     "cc": [],
+    "flagged": false,
     "from": [
       {
         "email": "admin@example.org",
@@ -50,7 +53,8 @@
         "email": "alice@example.org",
         "name": null
       }
-    ]
+    ],
+    "unread": true
   },
   {
     "attachments": [
@@ -68,6 +72,7 @@
       "truncated": true
     },
     "cc": [],
+    "flagged": false,
     "from": [
       {
         "email": "admin@example.org",
@@ -85,7 +90,8 @@
         "email": "alice@example.org",
         "name": null
       }
-    ]
+    ],
+    "unread": true
   },
   {
     "id": "zzzzzzzz",

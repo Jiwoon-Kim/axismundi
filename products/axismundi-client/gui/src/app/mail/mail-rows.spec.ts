@@ -15,6 +15,7 @@ test("a message shows the sender and subject the command sent", () => {
     subject: "Re: [Axismundi probe v1] Conversation", unread: true,
     preview: (view.rows[0] as {preview: string}).preview,
     receivedAt: "2026-11-19T10:44:13Z",
+    flagged: false,
   });
 });
 
@@ -34,6 +35,11 @@ test("an unavailable entry is its own state, not a message without a subject", (
 test("a cached $seen that is no longer covered is not shown as a read state", () => {
   assert.equal(view.rows[4].kind === "message" && view.rows[4].unread, null);
   assert.equal(labels[4].kind === "message" && labels[4].unread, false);
+});
+
+test("flagged is known only when keywords are: never fetched or stale is null, not false", () => {
+  assert.deepEqual(view.rows.map(row => row.kind === "message" ? row.flagged : "unavailable"),
+    [false, false, null, "unavailable", null]);
 });
 
 test("rows keep the server's order", () => {

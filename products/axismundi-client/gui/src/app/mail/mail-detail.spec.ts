@@ -17,6 +17,8 @@ test("a text message shows its body, sender and recipients", () => {
   assert.equal(real.body.kind, "text");
   assert.ok(real.body.kind === "text" && real.body.text.startsWith("Probe conversation, message 3 of 4."));
   assert.equal(bodyNotice(real.body), null);
+  assert.equal(real.unread, true);
+  assert.equal(real.flagged, false);
 });
 
 test("an HTML-only message carries no markup and says why nothing is shown", () => {

@@ -26,6 +26,7 @@ pub fn configure<R: tauri::Runtime>(builder: tauri::Builder<R>) -> tauri::Builde
             mail::mail_view,
             mail::mail_read,
             mail::mail_thread,
+            mail::mail_set_keyword,
         ])
 }
 

@@ -62,6 +62,7 @@
   "queryStale": false,
   "rows": [
     {
+      "flagged": false,
       "hasAttachment": false,
       "id": "beaaaaal",
       "kind": "message",
@@ -74,6 +75,7 @@
       "unread": true
     },
     {
+      "flagged": false,
       "hasAttachment": false,
       "id": "beaaaaaj",
       "kind": "message",
@@ -86,6 +88,7 @@
       "unread": false
     },
     {
+      "flagged": null,
       "hasAttachment": false,
       "id": "eaaaaab",
       "kind": "message",
@@ -103,6 +106,7 @@
       "reason": "notFound"
     },
     {
+      "flagged": null,
       "hasAttachment": false,
       "id": "staleseen",
       "kind": "message",

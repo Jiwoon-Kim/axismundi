@@ -24,6 +24,8 @@ export type MailRow =
       receivedAt: string | null;
       /** null: keywords were not fetched, so read state is unknown. */
       unread: boolean | null;
+      /** null on the same terms as unread. */
+      flagged: boolean | null;
       hasAttachment: boolean | null;
     }
   | {kind: "unavailable"; id: string; reason: string};
@@ -40,7 +42,7 @@ export interface ListView {
 }
 
 export type RowLabel =
-  | {kind: "message"; id: string; sender: string; subject: string; preview: string; unread: boolean; receivedAt: string | null}
+  | {kind: "message"; id: string; sender: string; subject: string; preview: string; unread: boolean; flagged: boolean | null; receivedAt: string | null}
   | {kind: "unavailable"; id: string; reason: string};
 
 /** Unknown read state is shown as read: only a fetched keyword set without `$seen` is unread. */
@@ -53,6 +55,7 @@ export function rowLabel(row: MailRow): RowLabel {
     subject: row.subject || "(no subject)",
     preview: row.preview ?? "",
     unread: row.unread === true,
+    flagged: row.flagged,
     receivedAt: row.receivedAt,
   };
 }

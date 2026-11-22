@@ -44,6 +44,7 @@ impl Connection {
 }
 
 pub(crate) struct Active {
+    summary: Connected,
     /// Origin, username and auth method: one live connection per login, whichever services it
     /// reaches. Not a credential id — the saved key is.
     login: (String, String, &'static str),
@@ -140,7 +141,7 @@ pub struct DiscoveryResult {
     notices: Vec<String>,
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct AccountSummary {
     id: String,
@@ -150,7 +151,7 @@ struct AccountSummary {
     capabilities: Vec<String>,
 }
 
-#[derive(Default, Serialize)]
+#[derive(Clone, Default, Serialize)]
 pub struct Connected {
     id: u32,
     /// The saved-connection key, when the sign-in is kept in the credential store.
@@ -278,6 +279,7 @@ fn finish_sign_in(
     }
     state.next_id += 1;
     connected.id = state.next_id;
+    active.summary = connected.clone();
     state.connections.insert(connected.id, Arc::new(active));
     Ok(connected)
 }
@@ -347,15 +349,18 @@ pub async fn connect_server<R: tauri::Runtime>(
 pub struct SavedConnections {
     can_store_secrets: bool,
     items: Vec<crate::saved::Saved>,
+    active: Vec<Connected>,
 }
 
 #[tauri::command]
-pub fn saved_connections<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> Result<SavedConnections, String> {
+pub fn saved_connections<R: tauri::Runtime>(app: tauri::AppHandle<R>, state: tauri::State<'_, Connection>) -> Result<SavedConnections, String> {
+    let state = state.lock()?;
     let items = match data_dir(&app) {
         Some(dir) => crate::saved::list(&dir)?,
         None => Vec::new(),
     };
-    Ok(SavedConnections { can_store_secrets: crate::saved::Vault::platform().available(), items })
+    let active = state.connections.values().map(|entry| entry.summary.clone()).collect();
+    Ok(SavedConnections { can_store_secrets: crate::saved::Vault::platform().available(), items, active })
 }
 
 /// Signs a saved connection in. With no `password` the stored secret is used, and a missing one
@@ -731,6 +736,7 @@ fn connect(
     Ok((
         connected,
         Active {
+            summary: Connected::default(),
             login,
             saved: None,
             client,
@@ -847,6 +853,7 @@ mod tests {
 
     fn offline(user: &str) -> Arc<Active> {
         Arc::new(Active {
+            summary: Connected::default(),
             login: ("https://mail.test".into(), user.into(), crate::saved::PASSWORD),
             saved: None,
             client: Client::without_redirects(Credentials { user: user.into(), secret: "secret".into() }),
@@ -949,6 +956,9 @@ mod tests {
         let epoch = state.lock().unwrap().epoch;
         let connected = finish_sign_in(&state, epoch, unwrap(offline("alice")), Connected::default(), Some(persist(&dir, "conn-a")), None, &secrets).unwrap();
         assert_eq!(connected.saved_key.as_deref(), Some("conn-a"));
+        let attached = state.current(connected.id).unwrap();
+        assert_eq!(attached.summary.id, connected.id);
+        assert_eq!(attached.summary.saved_key.as_deref(), Some("conn-a"));
         assert_eq!(secrets.get("conn-a").unwrap().as_deref(), Some("test-only"));
         assert_eq!(crate::saved::list(&dir).unwrap().len(), 1);
         let out = sign_out_one(&state, connected.id, Some(&dir), &secrets).unwrap();
@@ -1001,6 +1011,7 @@ mod tests {
         let root = Url::parse("https://blog.test/wp-json/axismundi/activitypub/actors").unwrap();
         let address = format!("{root}/12345678-1234-1234-1234-123456789abc/outbox");
         let active = Active {
+            summary: Connected::default(),
             login: (String::new(), "user".into(), crate::saved::PASSWORD),
             saved: None,
             client: Client::without_redirects(Credentials {

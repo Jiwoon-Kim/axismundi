@@ -55,7 +55,7 @@ pub struct Account {
     pub account_capabilities: BTreeMap<String, Value>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ActingActor {
     pub id: String,

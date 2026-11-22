@@ -99,11 +99,14 @@ export class ConnectionService {
   /** Signs saved connections back in, one at a time, keeping any that cannot as entries. */
   private async restoreSaved(): Promise<void> {
     try {
-      const list = await invoke<{canStoreSecrets: boolean; items: SavedItem[]}>("saved_connections");
+      const list = await invoke<{canStoreSecrets: boolean; items: SavedItem[]; active: Connected[]}>("saved_connections");
       this.canStoreSecrets.set(list.canStoreSecrets);
-      this.saved.set(list.items.map(entryFor));
+      this.connections.set(list.active);
+      if (this.activeId() === null) this.activeId.set(list.active[0]?.id ?? null);
+      const pending = list.items.filter(item => !list.active.some(active => active.saved_key === item.key));
+      this.saved.set(pending.map(entryFor));
       // An entry whose secret could not be removed at sign-out is shown, never signed in.
-      for (const item of list.items) if (!item.forgetFailed) await this.signInSaved(item.key);
+      for (const item of pending) if (!item.forgetFailed) await this.signInSaved(item.key);
     } catch (error) {
       this.error.set(String(error));
     }

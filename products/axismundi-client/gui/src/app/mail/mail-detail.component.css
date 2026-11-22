@@ -4,6 +4,7 @@ h2 { font: var(--mat-sys-headline-small); margin: 0 0 12px; overflow-wrap: anywh
 .message-actions { display: flex; gap: 4px; margin: -4px 0 8px; }
 .message-actions .on { color: var(--mat-sys-primary); }
 .message-actions .on mat-icon { font-variation-settings: 'FILL' 1; }
+.message-actions .check { color: var(--mat-sys-error); }
 
 .headers {
   display: grid;

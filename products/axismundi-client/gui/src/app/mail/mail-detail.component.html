@@ -31,17 +31,22 @@
     @if (message.kind === "message") {
       <article aria-labelledby="message-subject">
         <h2 id="message-subject">{{ message.subject || "(no subject)" }}</h2>
+        @let isUnread = unread(message.id, message.unread);
+        @let isStarred = starred(message.id, message.flagged);
+        @let seenCheck = actions.unverified(accountId(), message.id, "seen");
+        @let starCheck = actions.unverified(accountId(), message.id, "flagged");
         <div class="message-actions" role="toolbar" aria-label="Message actions">
-          <button matButton type="button" [disabled]="actions.busy(message.id, 'seen')"
-                  (click)="actions.setKeyword(accountId(), message.id, 'seen', message.unread !== false)">
-            <mat-icon>{{ message.unread === false ? "mark_email_unread" : "mark_email_read" }}</mat-icon>
-            {{ message.unread === false ? "Mark as unread" : "Mark as read" }}
+          <button matButton type="button" [class.check]="seenCheck" [disabled]="actions.busy(message.id, 'seen')"
+                  (click)="actions.setKeyword(accountId(), message.id, 'seen', isUnread)">
+            <mat-icon>{{ seenCheck ? "sync_problem" : isUnread ? "mark_email_read" : "mark_email_unread" }}</mat-icon>
+            {{ seenCheck ? "Check read status" : isUnread ? "Mark as read" : "Mark as unread" }}
           </button>
-          <button matButton type="button" [class.on]="message.flagged" [attr.aria-pressed]="message.flagged === true"
+          <button matButton type="button" [class.on]="isStarred && !starCheck" [class.check]="starCheck"
+                  [attr.aria-pressed]="starCheck ? null : isStarred"
                   [disabled]="actions.busy(message.id, 'flagged')"
-                  (click)="actions.setKeyword(accountId(), message.id, 'flagged', !message.flagged)">
-            <mat-icon>star</mat-icon>
-            {{ message.flagged ? "Starred" : "Star" }}
+                  (click)="actions.setKeyword(accountId(), message.id, 'flagged', !isStarred)">
+            <mat-icon>{{ starCheck ? "sync_problem" : "star" }}</mat-icon>
+            {{ starCheck ? "Check star status" : isStarred ? "Starred" : "Star" }}
           </button>
         </div>
         @if (members().length > 1) {

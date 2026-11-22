@@ -56,6 +56,9 @@ li.message button { --mat-icon-button-state-layer-size: 32px; padding: 4px; }
 .star { flex: none; margin: 4px 4px 0; color: var(--mat-sys-on-surface-variant); }
 .star.on { color: var(--mat-sys-primary); }
 .star.on mat-icon { font-variation-settings: 'FILL' 1; }
+/* A control whose last change is unknown stays visible until it is checked. */
+.check { color: var(--mat-sys-error); }
+@media (hover: hover) { .row-actions.check { opacity: 1; } }
 .row-actions { display: flex; color: var(--mat-sys-on-surface-variant); }
 @media (hover: hover) {
   .row-actions { position: absolute; inset-block-start: 4px; inset-inline-end: 8px; opacity: 0; }

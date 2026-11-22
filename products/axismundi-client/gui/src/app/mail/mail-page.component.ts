@@ -60,8 +60,23 @@ export class MailPageComponent {
         ? undefined
         : {connectionId, accountId, mailboxId: this.mailbox() ?? null, rows: "messages"};
     },
-    loader: ({params}) => invoke<ListView>("mail_sync", params),
+    loader: async ({params}) => {
+      const from = this.actions.mark();
+      const view = await invoke<ListView>("mail_sync", params);
+      this.loadedFrom.set(from);
+      return view;
+    },
   });
+  /** When the rows on screen started loading; values the server confirmed after that show instead. */
+  private readonly loadedFrom = signal(0);
+
+  protected starred(accountId: string, id: string, viewFlagged: boolean | null): boolean {
+    return this.actions.shown(accountId, id, "flagged", viewFlagged, this.loadedFrom()) === true;
+  }
+
+  protected unread(accountId: string, id: string, viewUnread: boolean): boolean {
+    return this.actions.shown(accountId, id, "seen", !viewUnread, this.loadedFrom()) === false;
+  }
 
   protected readonly mailboxes = computed(() => this.view.hasValue() ? this.view.value().mailboxes : []);
   protected readonly selectedMailbox = computed(() => this.view.hasValue() ? this.view.value().mailboxId : null);

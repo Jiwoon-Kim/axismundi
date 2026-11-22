@@ -35,30 +35,36 @@
               <ul>
                 @for (row of rows(); track row.id) {
                   @if (row.kind === "message") {
-                    <li class="message" [class.unread]="row.unread">
-                      <button matIconButton type="button" class="star" [class.on]="row.flagged"
-                              [matTooltip]="row.flagged ? 'Remove star' : 'Star'"
-                              [attr.aria-pressed]="row.flagged === true" [attr.aria-label]="'Star: ' + row.subject"
+                    @let isStarred = starred(account.id, row.id, row.flagged);
+                    @let isUnread = unread(account.id, row.id, row.unread);
+                    @let starCheck = actions.unverified(account.id, row.id, "flagged");
+                    @let seenCheck = actions.unverified(account.id, row.id, "seen");
+                    <li class="message" [class.unread]="isUnread">
+                      <!-- An unverified control reads the server instead of writing, and says so first. -->
+                      <button matIconButton type="button" class="star" [class.on]="isStarred && !starCheck" [class.check]="starCheck"
+                              [matTooltip]="starCheck ? 'Check status' : isStarred ? 'Remove star' : 'Star'"
+                              [attr.aria-pressed]="starCheck ? null : isStarred"
+                              [attr.aria-label]="(starCheck ? 'Check star status: ' : 'Star: ') + row.subject"
                               [disabled]="actions.busy(row.id, 'flagged')"
-                              (click)="actions.setKeyword(account.id, row.id, 'flagged', !row.flagged)">
-                        <mat-icon>star</mat-icon>
+                              (click)="actions.setKeyword(account.id, row.id, 'flagged', !isStarred)">
+                        <mat-icon>{{ starCheck ? "sync_problem" : "star" }}</mat-icon>
                       </button>
                       <a routerLink="/mail" [queryParams]="{mailbox: mailbox() ?? null, email: row.id}"
                          [class.active]="row.id === email()" [attr.aria-current]="row.id === email() ? 'true' : null">
                         <span class="from">{{ row.sender }}</span>
                         <span class="text">
-                          <span class="subject">{{ row.subject }}@if (row.unread) {<span class="visually-hidden"> (unread)</span>}</span>
+                          <span class="subject">{{ row.subject }}@if (isUnread) {<span class="visually-hidden"> (unread)</span>}</span>
                           @if (row.preview) { <span class="preview">{{ row.preview }}</span> }
                         </span>
                         @if (row.receivedAt) { <time class="date" [attr.datetime]="row.receivedAt">{{ listDate(row.receivedAt) }}</time> }
                       </a>
-                      <span class="row-actions">
+                      <span class="row-actions" [class.check]="seenCheck">
                         <button matIconButton type="button"
-                                [matTooltip]="row.unread ? 'Mark as read' : 'Mark as unread'"
-                                [attr.aria-label]="(row.unread ? 'Mark as read: ' : 'Mark as unread: ') + row.subject"
+                                [matTooltip]="seenCheck ? 'Check status' : isUnread ? 'Mark as read' : 'Mark as unread'"
+                                [attr.aria-label]="(seenCheck ? 'Check read status: ' : isUnread ? 'Mark as read: ' : 'Mark as unread: ') + row.subject"
                                 [disabled]="actions.busy(row.id, 'seen')"
-                                (click)="actions.setKeyword(account.id, row.id, 'seen', row.unread)">
-                          <mat-icon>{{ row.unread ? "mark_email_read" : "mark_email_unread" }}</mat-icon>
+                                (click)="actions.setKeyword(account.id, row.id, 'seen', isUnread)">
+                          <mat-icon>{{ seenCheck ? "sync_problem" : isUnread ? "mark_email_read" : "mark_email_unread" }}</mat-icon>
                         </button>
                       </span>
                     </li>

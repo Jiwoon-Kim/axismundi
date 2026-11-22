@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, input, linkedSignal, resource, untracked } from "@angular/core";
+import { Component, computed, effect, inject, input, linkedSignal, resource, signal, untracked } from "@angular/core";
 import { MatButton } from "@angular/material/button";
 import { MatIcon } from "@angular/material/icon";
 import { NgTemplateOutlet } from "@angular/common";
@@ -36,8 +36,24 @@ export class MailDetailComponent {
         ? undefined
         : {connectionId, accountId: this.accountId(), emailId};
     },
-    loader: ({params}) => invoke<DetailView>("mail_read", params),
+    loader: async ({params}) => {
+      const from = this.actions.mark();
+      const detail = await invoke<DetailView>("mail_read", params);
+      this.loadedFrom.set(from);
+      return detail;
+    },
   });
+  /** When the message on screen started loading; values the server confirmed after that show instead. */
+  private readonly loadedFrom = signal(0);
+
+  protected starred(id: string, viewFlagged: boolean | null): boolean {
+    return this.actions.shown(this.accountId(), id, "flagged", viewFlagged, this.loadedFrom()) === true;
+  }
+
+  /** Unknown read state counts as unread, as before: the button offers "Mark as read". */
+  protected unread(id: string, viewUnread: boolean | null): boolean {
+    return this.actions.shown(this.accountId(), id, "seen", viewUnread === null ? null : !viewUnread, this.loadedFrom()) !== true;
+  }
 
   /**
    * The thread resource depends on this id only, so opening another member of the same thread does

@@ -9,7 +9,7 @@ export interface Discovery {
   discovery: {
     base: string;
     wordpress: Probe<{name: string; ap_session_advertised: boolean}>;
-    jmap: Probe<{session_url: string}>;
+    jmap: Probe<{session_url: string; origin_changed: boolean; srv: string | null}>;
     activitypub: Probe<{software: string | null}>;
   };
   login: {wordpress: string | null; jmap: string | null; activitypub: string | null};

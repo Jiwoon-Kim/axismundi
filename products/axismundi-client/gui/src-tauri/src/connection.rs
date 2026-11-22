@@ -683,6 +683,7 @@ mod tests {
             jmap: Probe::LoginRequired(Jmap {
                 session_url: "https://jmap.test/session".into(),
                 origin_changed: true,
+                srv: None,
             }),
             activitypub: Probe::NotFound("not advertised".into()),
         };
@@ -691,6 +692,7 @@ mod tests {
         discovery.jmap = Probe::LoginRequired(Jmap {
             session_url: "https://blog.test/session".into(),
             origin_changed: false,
+            srv: None,
         });
         let (plan, _) = login_plan(&discovery);
         assert_eq!(

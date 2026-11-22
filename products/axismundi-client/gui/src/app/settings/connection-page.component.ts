@@ -48,7 +48,8 @@ export class ConnectionPageComponent {
   }
 
   protected readonly wordpressLabel = (info: {name: string}) => info.name || "Detected";
-  protected readonly jmapLabel = (info: {session_url: string}) => info.session_url;
+  protected readonly jmapLabel = (info: {session_url: string; origin_changed: boolean; srv: string | null}) =>
+    info.session_url + (info.srv ? ` · found by DNS SRV ${info.srv}` : "") + (info.origin_changed ? " · different host" : "");
   protected readonly apLabel = (info: {software: string | null}) => info.software || "Advertised";
 
   protected apSessionStatus(probe: Discovery["discovery"]["wordpress"]): string {

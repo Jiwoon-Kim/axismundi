@@ -40,7 +40,10 @@ pub struct WordPress {
 #[derive(Debug, Serialize)]
 pub struct Jmap {
     pub session_url: String,
+    /// The Session is on another origin than the site the user entered: say so and ask again.
     pub origin_changed: bool,
+    /// `host:port` from a `_jmap._tcp` SRV record, when that is how the host was found.
+    pub srv: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -88,10 +91,16 @@ pub fn discover_selected(input: &str, options: DiscoveryOptions) -> Result<Disco
         .build()
         .into();
     let wordpress = if options.wordpress { wordpress(&agent, site.clone()) } else { Probe::Skipped };
-    let jmap = if options.jmap { jmap(
-        &agent,
-        site.join("/.well-known/jmap").expect("HTTP site URL"),
-    ) } else { Probe::Skipped };
+    let jmap = if options.jmap {
+        // RFC 8620 §2.2: a bare domain may name its JMAP host in DNS. A URL the user typed in
+        // full already names the host, so it is not looked up.
+        let srv = if input_url.contains("://") { Srv::Absent } else { jmap_srv(&site) };
+        match srv {
+            Srv::Target(url, record) => jmap(&agent, url, &site.origin(), Some(record)),
+            Srv::NotOffered(record) => Probe::NotFound(format!("_jmap._tcp SRV {record} says JMAP is not offered")),
+            Srv::Absent => jmap(&agent, site.join("/.well-known/jmap").expect("HTTP site URL"), &site.origin(), None),
+        }
+    } else { Probe::Skipped };
     let activitypub = if options.activitypub { activitypub(
         &agent,
         site.join("/.well-known/nodeinfo").expect("HTTP site URL"),
@@ -142,13 +151,66 @@ fn wordpress(agent: &ureq::Agent, url: Url) -> Probe<WordPress> {
     })
 }
 
-fn jmap(agent: &ureq::Agent, url: Url) -> Probe<Jmap> {
-    let origin = url.origin();
+enum Srv {
+    /// The well-known URL on the record's host, and the record as `host:port`.
+    Target(Url, String),
+    /// RFC 2782: a target of "." means the service is decidedly not available at this domain.
+    NotOffered(String),
+    /// No record, a host that is not a DNS name, or a lookup that failed: use the domain itself.
+    Absent,
+}
+
+fn jmap_srv(site: &Url) -> Srv {
+    let Some(url::Host::Domain(host)) = site.host() else { return Srv::Absent };
+    if host == "localhost" || host.ends_with(".localhost") || !host.contains('.') {
+        return Srv::Absent;
+    }
+    let Ok(runtime) = tokio::runtime::Builder::new_current_thread().enable_all().build() else { return Srv::Absent };
+    let name = format!("_jmap._tcp.{host}.");
+    let answers = runtime.block_on(async {
+        let resolver = hickory_resolver::TokioResolver::builder_tokio().ok()?.build().ok()?;
+        tokio::time::timeout(Duration::from_secs(5), resolver.srv_lookup(name.as_str())).await.ok()?.ok()
+    });
+    let Some(lookup) = answers else { return Srv::Absent };
+    let records: Vec<(u16, u16, u16, String)> = lookup
+        .answers()
+        .iter()
+        .filter_map(|record| match &record.data {
+            hickory_resolver::proto::rr::RData::SRV(srv) => {
+                Some((srv.priority, srv.weight, srv.port, srv.target.to_ascii()))
+            }
+            _ => None,
+        })
+        .collect();
+    choose_srv(&records)
+}
+
+/// `(priority, weight, port, target)` records → the one to try. Lowest priority, then highest
+/// weight: RFC 2782 picks among equal priorities by weighted chance, but this client tries a
+/// single target, so it takes the heaviest rather than a random one.
+fn choose_srv(records: &[(u16, u16, u16, String)]) -> Srv {
+    let Some((_, _, port, target)) = records.iter().min_by_key(|(priority, weight, _, _)| (*priority, std::cmp::Reverse(*weight))) else {
+        return Srv::Absent;
+    };
+    let target = target.trim_end_matches('.');
+    let record = format!("{target}:{port}");
+    if target.is_empty() {
+        return Srv::NotOffered(record);
+    }
+    let address = if *port == 443 { format!("https://{target}/.well-known/jmap") } else { format!("https://{target}:{port}/.well-known/jmap") };
+    match checked_url(Url::parse(&address), None) {
+        Ok(url) => Srv::Target(url, record),
+        Err(_) => Srv::Absent,
+    }
+}
+
+fn jmap(agent: &ureq::Agent, url: Url, site: &url::Origin, srv: Option<String>) -> Probe<Jmap> {
     match get(agent, url) {
         Ok((target, mut response)) => {
             let info = Jmap {
-                origin_changed: target.origin() != origin,
+                origin_changed: target.origin() != *site,
                 session_url: target.to_string(),
+                srv: srv.clone(),
             };
             match response.status().as_u16() {
                 401 | 403 => Probe::LoginRequired(info),
@@ -163,7 +225,7 @@ fn jmap(agent: &ureq::Agent, url: Url) -> Probe<Jmap> {
                 {
                     Probe::Found(info)
                 }
-                404 if target.path() == "/.well-known/jmap" && target.origin() == origin => {
+                404 if target.path() == "/.well-known/jmap" && srv.is_none() && target.origin() == *site => {
                     Probe::NotFound(format!("{target}: HTTP 404"))
                 }
                 200 => Probe::Unconfirmed(format!("{target}: not a JMAP Session document")),
@@ -401,7 +463,7 @@ mod tests {
         );
         let discovered = discover(&format!("{site_url}/blog")).unwrap();
         assert!(
-            matches!(discovered.jmap, Probe::LoginRequired(Jmap { session_url, origin_changed: true }) if session_url == target)
+            matches!(discovered.jmap, Probe::LoginRequired(Jmap { session_url, origin_changed: true, srv: None }) if session_url == target)
         );
         assert!(
             matches!(discovered.wordpress, Probe::Found(info) if info.namespaces == ["wp/v2"] && info.ap_session_advertised)
@@ -474,5 +536,46 @@ mod tests {
         let result=discover_selected(&address,DiscoveryOptions{wordpress:true,jmap:false,activitypub:false}).unwrap();
         assert!(matches!(result.wordpress,Probe::NotFound(_)));
         server.join().unwrap();
+    }
+
+    #[test]
+    fn srv_choice_takes_lowest_priority_then_heaviest_weight() {
+        let records = [
+            (10, 100, 443, "backup.example.".to_owned()),
+            (0, 1, 443, "light.example.".to_owned()),
+            (0, 5, 8443, "heavy.example.".to_owned()),
+        ];
+        match choose_srv(&records) {
+            Srv::Target(url, record) => {
+                assert_eq!(url.as_str(), "https://heavy.example:8443/.well-known/jmap");
+                assert_eq!(record, "heavy.example:8443");
+            }
+            _ => panic!("expected a target"),
+        }
+        match choose_srv(&[(0, 0, 443, "api.example.".into())]) {
+            Srv::Target(url, _) => assert_eq!(url.as_str(), "https://api.example/.well-known/jmap"),
+            _ => panic!("expected a target"),
+        }
+    }
+
+    #[test]
+    fn srv_dot_target_means_not_offered_and_no_record_means_absent() {
+        assert!(matches!(choose_srv(&[(0, 0, 0, ".".into())]), Srv::NotOffered(_)));
+        assert!(matches!(choose_srv(&[]), Srv::Absent));
+    }
+
+    /// Real DNS: fastmail.com publishes `_jmap._tcp` → api.fastmail.com:443 (checked 2026-11-22).
+    #[test]
+    #[ignore = "needs public DNS"]
+    fn fastmail_srv_names_its_api_host() {
+        let site = Url::parse("https://fastmail.com/").unwrap();
+        match jmap_srv(&site) {
+            Srv::Target(url, record) => {
+                assert_eq!(record, "api.fastmail.com:443");
+                assert_eq!(url.as_str(), "https://api.fastmail.com/.well-known/jmap");
+            }
+            _ => panic!("expected fastmail.com to publish a _jmap._tcp record"),
+        }
+        assert!(matches!(jmap_srv(&Url::parse("http://localhost:8884/").unwrap()), Srv::Absent));
     }
 }

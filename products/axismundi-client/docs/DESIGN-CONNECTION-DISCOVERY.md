@@ -107,7 +107,7 @@ GUI는 발견한 주소를 사용자에게 보여 주고 승인된 plan과 실�
 ```txt
 ① WordPress?    홈페이지의 https://api.w.org/ REST 링크를 따라간다
                 → 광고된 REST 인덱스의 name·namespaces
-                링크가 없으면 /wp-json/을 추측해 요청하지 않는다
+                링크가 없으면 /wp-json/을 추측해 요청하지 않는다 (2026-11-22 변경 → 아래 "발견 순서")
                 답하는 것: 어떤 **표면**이 있는가
 
 ② JMAP?         GET /.well-known/jmap          (RFC 8620 §2.2)
@@ -154,6 +154,63 @@ AP 에 있는 것     NodeInfo (서버 수준, 그나마 W3C 가 아니라 fediv
 
 AP Session의 참조 id를 익명 AS2 GET하고, outbox는 그 Actor 문서에서 얻는다.
 name·type·outboxSubmitUrl 사본을 Session 필수 항목으로 복원하지 않는다.
+
+## 발견 순서 — 소유자 결정 (2026-11-22, 구현 전)
+
+사용자가 확인할 서비스(WordPress · ActivityPub C2S · JMAP)를 고르면 각자 아래 순서로 인증 위치를
+찾는다. 표준이 정한 단계와 관행·제안을 구분해 적는다.
+
+```txt
+JMAP         ① SRV _jmap._tcp.<domain>  → https://<target>:<port>/.well-known/jmap   RFC 8620 §2.2
+             ② https://<domain>/.well-known/jmap                                     관행(지금 구현)
+             SRV 대상은 입력과 다른 오리진일 수 있다 — "오리진이 바뀌면 알리고 다시 승인" 규칙 그대로.
+             Stalwart 로컬 zone 에 _jmap._tcp 레코드가 있다(실측 검증 대상)
+
+WordPress    ① 홈페이지 HEAD 의 HTTP Link 헤더  rel="https://api.w.org/"
+             ② HTML <link rel="https://api.w.org/">                                  지금 구현
+             ③ /?rest_route=/                                                        추측, 소유자 허용
+             /wp-json/ 이 아니라 rest_route 인 이유: 퍼머링크 "기본" 사이트에서도 답한다.
+             이 행이 위 탐침표의 "추측하지 않는다" 를 바꾼다
+
+ActivityPub  다중 Actor Session — 우리 Pre-FEP (docs/UPSTREAM-SOCIALHUB-PRE-FEP-C2S-SESSION.md)
+             ① https://<domain>/.well-known/activitypub → { "session": <같은 오리진 URL> }
+             ② WordPress REST 의 users/me (Activities C2S.md §15, 지금 서버가 내는 유일한 경로)
+             서버는 아직 ① 을 내지 않는다. ① 을 서버에 붙이는 일은 Pre-FEP 진행과 같이 정한다.
+             SRV _activitypub._tcp 는 Pre-FEP 에 없다 — 넣으려면 Pre-FEP 토론 쪽 질문이다
+```
+
+### AP 인증은 두 모델이고, 우리는 앞쪽이다
+
+```txt
+다중 Actor Session   인증(사람·자격증명) ⊥ 권한(행위 가능한 Actor 들). 로그인 한 번 → Actor 여럿.
+                    WordPress Application Password 가 기본이고 OAuth 는 플러그인 몫이라 바로 쓸 수 없다
+Actor 별 인증        Actor 문서 endpoints 의 oauthAuthorizationEndpoint / oauthTokenEndpoint
+                    (AP §4.1.1) — Actor 하나에 grant 하나. Outlook 의 "IMAP/SMTP 계정 추가" 와 같은 모양
+```
+
+Actor 별 모델은 "WordPress 세션으로 로그인한 상태에서 다른 서버 계정을 추가" 하는 자리다. 우리처럼
+한 사람이 여러 Actor 를 운영하는 서버에는 맞지 않는다 — 그것이 Pre-FEP 가 다루는 빈자리다.
+
+비유(2026-11-22, Outlook 데스크톱 실측 스크린샷): Microsoft 계정으로 로그인한 앱 안에서 Gmail 은 OAuth,
+네이버는 IMAP/SMTP 로 **계정을 추가**한다. 추가된 계정은 각자 자격증명과 상태를 가진다 — 폴더 트리의
+계정 섹션에 경고 아이콘, 설정의 "로그인 필요 / 로그인 / 관리". AP `endpoints` 의 네 항목
+(`oauthAuthorizationEndpoint` · `oauthTokenEndpoint` · `provideClientKey` · `signClientKey`)이 이 "추가"
+자리다. 가져올 것: 세션·추가 계정마다 상태를 보인다("로그인 필요" 는 오류가 아니라 상태).
+
+**결정 (2026-11-22): 추가 계정은 클라이언트에만 둔다.** Outlook 은 추가 계정을 Microsoft 계정 쪽에
+보관해 기기를 따라가지만, 우리 서버가 다른 서버의 토큰을 맡으면 보안 경계와 운영 부담이 커진다.
+자격증명은 OS 키체인, 기기 로컬이다.
+
+나중에 가능한 구조(지금 범위 밖): 서버 세션이 외부 계정을 모으는 쪽 — WordPress JMAP 세션에 Stalwart
+IMAP/SMTP Account 를, WordPress AP 세션에 Mastodon·Lemmy 계정을 붙이는 것. 하게 되면 서버 측 결정이다.
+참고: Mastodon 은 AP C2S 를 구현하지 않고 자체 API 를 쓴다. "Mastodon 계정 추가" 는 AP C2S 가 아니라
+별도 어댑터이고 지금 범위 밖이다.
+
+### 세션 관리 UI
+
+앱 바 아바타 메뉴: 현재 세션의 AP Actor 선택 · JMAP Account 선택(서로 독립, 위 결정 그대로) 아래에
+**세션 전환 · 세션 추가 · 모든 세션에서 로그아웃**. 세션 = 이 문서의 인증 프로필. 바꾸면 두 선택이
+새 세션 기준으로 초기화된다. 자격증명은 OS 키체인에만 둔다(아래 "평문 파일·DB 금지" 그대로).
 
 ## 라우트 존재는 권한이 아니다
 

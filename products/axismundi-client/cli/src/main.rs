@@ -285,8 +285,9 @@ fn run() -> Result<bool, String> {
         println!("base          {}", result.base);
         print_probe("wordpress", result.wordpress, |details| {
             format!(
-                "name={:?} namespaces={}",
+                "name={:?} via={} namespaces={}",
                 details.name,
+                details.found_by,
                 details.namespaces.join(", ")
             )
         });

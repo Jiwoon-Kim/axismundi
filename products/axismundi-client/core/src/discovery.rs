@@ -32,6 +32,8 @@ pub struct Discovery {
 #[derive(Debug, Serialize)]
 pub struct WordPress {
     pub index_url: String,
+    /// How the REST root was found: `link_header`, `html_link` or `rest_route` (a guess).
+    pub found_by: &'static str,
     pub name: String,
     pub namespaces: Vec<String>,
     pub ap_session_advertised: bool,
@@ -114,6 +116,11 @@ pub fn discover_selected(input: &str, options: DiscoveryOptions) -> Result<Disco
     })
 }
 
+const WP_REST_REL: &str = "https://api.w.org/";
+
+/// The REST root, in the order WordPress advertises it: the HTTP `Link` header every front-end
+/// response carries, the same link in the HTML head, then a guess at `?rest_route=/`, which
+/// answers even where pretty permalinks (and so `/wp-json/`) are off.
 fn wordpress(agent: &ureq::Agent, url: Url) -> Probe<WordPress> {
     let (target, mut response) = match get_accept(agent,url,"text/html") {
         Ok(value) => value,
@@ -122,17 +129,55 @@ fn wordpress(agent: &ureq::Agent, url: Url) -> Probe<WordPress> {
     if response.status().as_u16() != 200 {
         return Probe::Unconfirmed(format!("{target}: HTTP {}",response.status().as_u16()));
     }
-    let html=match response.body_mut().with_config().limit(1024*1024).read_to_string() {
-        Ok(body) => scraper::Html::parse_document(&body),
-        Err(error) => return Probe::Unconfirmed(format!("{target}: {error}")),
+    let header = link_rel(
+        response.headers().get_all("link").iter().filter_map(|value| value.to_str().ok()),
+        WP_REST_REL,
+    );
+    let (reference, found_by) = if let Some(reference) = header {
+        (reference, "link_header")
+    } else {
+        let html=match response.body_mut().with_config().limit(1024*1024).read_to_string() {
+            Ok(body) => scraper::Html::parse_document(&body),
+            Err(error) => return Probe::Unconfirmed(format!("{target}: {error}")),
+        };
+        let selector=scraper::Selector::parse("head link[rel][href]").expect("static selector");
+        let advertised=html.select(&selector).find_map(|node| {
+            node.value().attr("rel")?.split_whitespace().any(|rel|rel==WP_REST_REL)
+                .then(||node.value().attr("href")).flatten()
+        });
+        match advertised {
+            Some(reference) => (reference.to_owned(), "html_link"),
+            None => {
+                let mut guess = target.clone();
+                guess.set_fragment(None);
+                guess.set_query(Some("rest_route=/"));
+                return match index(agent, guess, "rest_route") {
+                    Probe::Found(found) => Probe::Found(found),
+                    _ => Probe::NotFound(format!(
+                        "{target} advertises no WordPress REST root and ?rest_route=/ is not a REST index"
+                    )),
+                };
+            }
+        }
     };
-    let selector=scraper::Selector::parse("head link[rel][href]").expect("static selector");
-    let advertised=html.select(&selector).find_map(|node| {
-        node.value().attr("rel")?.split_whitespace().any(|rel|rel=="https://api.w.org/")
-            .then(||node.value().attr("href")).flatten()
-    });
-    let Some(reference)=advertised else { return Probe::NotFound("Homepage does not advertise a WordPress REST root".into()); };
-    let url=match resolve(&target,reference) { Ok(url)=>url, Err(reason)=>return Probe::Unconfirmed(reason) };
+    let url=match resolve(&target,&reference) { Ok(url)=>url, Err(reason)=>return Probe::Unconfirmed(reason) };
+    index(agent, url, found_by)
+}
+
+/// `<url>; rel="a b"` entries of RFC 8288 `Link` headers: the first URL carrying `rel`.
+fn link_rel<'a>(values: impl Iterator<Item = &'a str>, rel: &str) -> Option<String> {
+    values.flat_map(|value| value.split(',')).find_map(|link| {
+        let (target, params) = link.trim().strip_prefix('<')?.split_once('>')?;
+        params.split(';').find_map(|param| {
+            let (name, value) = param.trim().split_once('=')?;
+            (name.trim().eq_ignore_ascii_case("rel")
+                && value.trim().trim_matches('"').split_whitespace().any(|token| token == rel))
+            .then(|| target.to_owned())
+        })
+    })
+}
+
+fn index(agent: &ureq::Agent, url: Url, found_by: &'static str) -> Probe<WordPress> {
     inspect(agent, url, |target, body| {
         let name = body.get("name")?.as_str()?.to_owned();
         let namespaces = strings(body.get("namespaces")?)?;
@@ -144,6 +189,7 @@ fn wordpress(agent: &ureq::Agent, url: Url) -> Probe<WordPress> {
             .is_some_and(|methods| methods.iter().any(|method| method.as_str() == Some("GET")));
         Some(WordPress {
             index_url: target.to_string(),
+            found_by,
             name,
             namespaces,
             ap_session_advertised,
@@ -532,10 +578,49 @@ mod tests {
     fn wordpress_requires_a_homepage_advertisement() {
         let listener=TcpListener::bind("127.0.0.1:0").unwrap();
         let address=origin(&listener);
-        let server=serve(listener,[("/".into(),"200 OK".into(),String::new(),"<html><head></head><body>Not WordPress</body></html>".into())]);
+        let server=serve(listener,[
+            ("/".into(),"200 OK".into(),String::new(),"<html><head></head><body>Not WordPress</body></html>".into()),
+            ("/?rest_route=/".into(),"200 OK".into(),String::new(),"<html><body>Not WordPress</body></html>".into()),
+        ]);
         let result=discover_selected(&address,DiscoveryOptions{wordpress:true,jmap:false,activitypub:false}).unwrap();
         assert!(matches!(result.wordpress,Probe::NotFound(_)));
         server.join().unwrap();
+    }
+
+    const INDEX: &str = r#"{"name":"Blog","namespaces":["wp/v2"],"routes":{}}"#;
+
+    #[test]
+    fn wordpress_link_header_is_read_before_the_html() {
+        let listener=TcpListener::bind("127.0.0.1:0").unwrap();
+        let address=origin(&listener);
+        let server=serve(listener,[
+            ("/".into(),"200 OK".into(),"Link: </api/>; rel=\"https://api.w.org/\"\r\n".into(),
+                r#"<html><head><link rel="https://api.w.org/" href="/wrong/"></head></html>"#.into()),
+            ("/api/".into(),"200 OK".into(),String::new(),INDEX.into()),
+        ]);
+        let result=discover_selected(&address,DiscoveryOptions{wordpress:true,jmap:false,activitypub:false}).unwrap();
+        assert!(matches!(&result.wordpress,Probe::Found(info) if info.found_by=="link_header" && info.index_url.ends_with("/api/")));
+        server.join().unwrap();
+    }
+
+    #[test]
+    fn wordpress_without_an_advertisement_is_found_at_rest_route() {
+        let listener=TcpListener::bind("127.0.0.1:0").unwrap();
+        let address=origin(&listener);
+        let server=serve(listener,[
+            ("/".into(),"200 OK".into(),String::new(),"<html><head></head></html>".into()),
+            ("/?rest_route=/".into(),"200 OK".into(),String::new(),INDEX.into()),
+        ]);
+        let result=discover_selected(&address,DiscoveryOptions{wordpress:true,jmap:false,activitypub:false}).unwrap();
+        assert!(matches!(&result.wordpress,Probe::Found(info) if info.found_by=="rest_route" && info.name=="Blog"));
+        server.join().unwrap();
+    }
+
+    #[test]
+    fn link_header_parsing_finds_the_rel_among_several_links() {
+        let values=[r#"<https://a.test/wp-json/wp/v2/pages/2>; rel="alternate"; type="application/json", <https://a.test/wp-json/>; rel="https://api.w.org/""#];
+        assert_eq!(link_rel(values.into_iter(),WP_REST_REL).as_deref(),Some("https://a.test/wp-json/"));
+        assert_eq!(link_rel([r#"<https://a.test/x>; rel="shortlink""#].into_iter(),WP_REST_REL),None);
     }
 
     #[test]

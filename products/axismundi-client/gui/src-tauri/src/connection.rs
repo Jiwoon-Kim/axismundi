@@ -676,6 +676,7 @@ mod tests {
             base: "https://blog.test".into(),
             wordpress: Probe::Found(WordPress {
                 index_url: "https://blog.test/sub/wp-json/".into(),
+                found_by: "html_link",
                 name: "Blog".into(),
                 namespaces: vec!["wp/v2".into(), "axismundi/activitypub".into()],
                 ap_session_advertised: true,

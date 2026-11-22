@@ -344,6 +344,30 @@ pub fn read(
     store.email(account, id)
 }
 
+/// Sets or clears one keyword on the server, then keeps what the server showed afterwards.
+/// Nothing in the cache changes unless the server confirmed it (see `mail::set_keyword`).
+///
+/// `Ok(None)` is a confirmed write whose read-back failed: the cache is left as it was, and the
+/// next sync (Email/changes) brings the message up to date. The write is never resent.
+pub fn set_keyword(
+    client: &Client,
+    session: &Session,
+    store: &mut Store,
+    account: &str,
+    id: &str,
+    keyword: super::Keyword,
+    on: bool,
+) -> Result<Option<Value>> {
+    store.bind(client, session)?;
+    let revision = store.revision(account)?;
+    let written = super::set_keyword(client, session, account, id, keyword, on)?;
+    let Ok(result) = written.read_back else { return Ok(None) };
+    let tx = store.write(account, revision)?;
+    save_get(&tx, account, &result, false)?;
+    tx.commit()?;
+    store.email(account, id).map(Some)
+}
+
 /// Expands a thread and keeps what it learned about each message.
 ///
 /// The messages merge into the cache as listing-coverage rows, exactly as a listing's would, so a

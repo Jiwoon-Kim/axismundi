@@ -161,6 +161,106 @@ pub fn read(client: &Client, session: &Session, account: &str, id: &str) -> Resu
     Ok(result)
 }
 
+/// The keywords this client changes. Others on a message are left exactly as they are.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Keyword {
+    Seen,
+    Flagged,
+}
+
+impl Keyword {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Keyword::Seen => "$seen",
+            Keyword::Flagged => "$flagged",
+        }
+    }
+}
+
+/// Whether a failed request may still have reached the server, so the answer is unknown.
+fn uncertain(error: &Error) -> bool {
+    matches!(error, Error::Transport(_)) || matches!(error, Error::Status { status, .. } if *status >= 500)
+}
+
+/// A keyword change the server confirmed, and what reading the message back afterwards gave.
+#[derive(Debug)]
+pub struct KeywordWritten {
+    /// The `Email/get` (id, keywords, mailboxIds) to merge, or why it could not be read. A failed
+    /// read here does not undo the write: the server already said it applied, so only the read is
+    /// worth retrying, never the write.
+    pub read_back: Result<Value, Error>,
+}
+
+/// Sets or clears one keyword on one message, then reads it back.
+///
+/// It patches `keywords/<keyword>` alone (RFC 8621 §4.6 patch), so keywords another client set
+/// survive. A `notUpdated` entry is a failure even inside an HTTP 200. When the answer is lost
+/// (no response, or a 5xx) the request is not sent again: the message is read back, and the change
+/// counts only if the server returns the message and its `keywords` show the asked-for state. A
+/// message that is gone, or a read that fails, leaves the outcome unknown, which is an error.
+pub fn set_keyword(
+    client: &Client,
+    session: &Session,
+    account: &str,
+    id: &str,
+    keyword: Keyword,
+    on: bool,
+) -> Result<KeywordWritten, Error> {
+    choose_account(session, Some(account))?;
+    let patch = format!("keywords/{}", keyword.as_str());
+    let value = if on { Value::Bool(true) } else { Value::Null };
+    let sent = call(client, session, "Email/set", json!({"accountId":account,"update":{id:{patch:value}}}));
+    let unknown = match sent {
+        Ok(batch) => {
+            let result = arguments(&batch, "Email/set", account)?;
+            if let Some(refused) = result.pointer(&format!("/notUpdated/{}", pointer_token(id))) {
+                let kind = refused.get("type").and_then(Value::as_str).unwrap_or("unknown");
+                return Err(Error::Shape(format!("The server did not update the message: {kind}")));
+            }
+            if result.get("updated").and_then(|updated| updated.get(id)).is_none() {
+                return Err(Error::Shape("Email/set did not report the update".into()));
+            }
+            false
+        }
+        Err(error) if uncertain(&error) => true,
+        Err(error) => return Err(error),
+    };
+    let read_back = (|| {
+        let batch = call(
+            client,
+            session,
+            "Email/get",
+            json!({"accountId":account,"ids":[id],"properties":["id","keywords","mailboxIds"]}),
+        )?;
+        let result = arguments(&batch, "Email/get", account)?;
+        validate_get(&result, &[id.to_owned()])?;
+        Ok(result)
+    })();
+    if !unknown {
+        return Ok(KeywordWritten { read_back });
+    }
+    let result = read_back.map_err(|error| {
+        Error::Shape(format!("The answer was lost and the message could not be read back, so whether the change applied is unknown; nothing was resent ({error})"))
+    })?;
+    // Only a returned message with a keywords object counts; notFound proves nothing either way.
+    let keywords = result
+        .pointer("/list/0")
+        .filter(|row| row.get("id").and_then(Value::as_str) == Some(id))
+        .and_then(|row| row.get("keywords"))
+        .and_then(Value::as_object)
+        .ok_or_else(|| Error::Shape("The answer was lost and the message did not come back, so whether the change applied is unknown; nothing was resent".into()))?;
+    let shown = keywords.get(keyword.as_str()) == Some(&Value::Bool(true));
+    if shown != on {
+        return Err(Error::Shape("The change did not reach the server; nothing was resent".into()));
+    }
+    Ok(KeywordWritten { read_back: Ok(result) })
+}
+
+/// RFC 6901: `~` and `/` inside one JSON Pointer token.
+fn pointer_token(raw: &str) -> String {
+    raw.replace('~', "~0").replace('/', "~1")
+}
+
 /// Checks a Foo/get answer of any type: every id asked for comes back exactly once, in `list` or
 /// `notFound`, and nothing else does.
 pub(crate) fn validate_get(result: &Value, ids: &[String]) -> Result<(), Error> {
@@ -900,5 +1000,135 @@ mod tests {
         let result = thread(&client, &session, "a", "t").unwrap();
         assert_eq!(server.join().unwrap().len(), 1);
         assert_eq!(result["found"], false);
+    }
+
+    /// Answers each request in turn: `Some(body)` is a 200 with that JMAP response, `None` drops the
+    /// connection after reading the request, as a lost answer looks to the client. Returns the
+    /// method names each request carried.
+    fn scripted(replies: Vec<Option<Value>>) -> (String, std::thread::JoinHandle<Vec<Vec<String>>>) {
+        use std::io::{BufRead, BufReader, Read, Write};
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let api = format!("http://{}", listener.local_addr().unwrap());
+        let server = std::thread::spawn(move || {
+            let mut seen = Vec::new();
+            for reply in replies {
+                let (mut stream, _) = listener.accept().unwrap();
+                stream.set_read_timeout(Some(std::time::Duration::from_secs(5))).unwrap();
+                let mut reader = BufReader::new(&mut stream);
+                let mut length = 0;
+                loop {
+                    let mut line = String::new();
+                    reader.read_line(&mut line).unwrap();
+                    if line == "\r\n" || line.is_empty() {
+                        break;
+                    }
+                    if let Some(v) = line.to_ascii_lowercase().strip_prefix("content-length:") {
+                        length = v.trim().parse().unwrap();
+                    }
+                }
+                let mut bytes = vec![0; length];
+                reader.read_exact(&mut bytes).unwrap();
+                let request: Value = serde_json::from_slice(&bytes).unwrap();
+                seen.push(request["methodCalls"].as_array().unwrap().iter().map(|call| call[0].as_str().unwrap().to_owned()).collect());
+                if let Some(body) = reply {
+                    let body = body.to_string();
+                    write!(stream, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}", body.len(), body).unwrap();
+                }
+            }
+            seen
+        });
+        (api, server)
+    }
+
+    fn keyword_session(api: &str) -> (Client, Session) {
+        let session: Session = serde_json::from_value(json!({"apiUrl":api,"capabilities":{CORE_CAPABILITY:{"maxCallsInRequest":1,"maxObjectsInGet":2,"maxSizeRequest":10000},CAPABILITY:{}},"accounts":{"a":{"accountCapabilities":{CAPABILITY:{}}}}})).unwrap();
+        let client = Client::new(crate::Credentials { user: "u".into(), secret: "test-only".into() });
+        (client, session)
+    }
+
+    fn read_back(keywords: Value) -> Option<Value> {
+        Some(json!({"methodResponses":[["Email/get",{"accountId":"a","state":"s2","list":[{"id":"m1","keywords":keywords,"mailboxIds":{"in":true}}],"notFound":[]},"mail"]]}))
+    }
+
+    #[test]
+    fn a_keyword_is_patched_alone_and_read_back() {
+        let set = json!({"methodResponses":[["Email/set",{"accountId":"a","oldState":"s1","newState":"s2","updated":{"m1":null}},"mail"]]});
+        let (api, server) = scripted(vec![Some(set), read_back(json!({"$seen":true,"$label":true}))]);
+        let (client, session) = keyword_session(&api);
+        let result = set_keyword(&client, &session, "a", "m1", Keyword::Seen, true).unwrap().read_back.unwrap();
+        assert_eq!(result["list"][0]["keywords"]["$label"], true, "other keywords survive");
+        assert_eq!(server.join().unwrap(), vec![vec!["Email/set"], vec!["Email/get"]]);
+    }
+
+    #[test]
+    fn not_updated_inside_a_200_is_a_failure() {
+        let set = json!({"methodResponses":[["Email/set",{"accountId":"a","oldState":"s1","newState":"s1","notUpdated":{"m1":{"type":"forbidden"}}},"mail"]]});
+        let (api, server) = scripted(vec![Some(set)]);
+        let (client, session) = keyword_session(&api);
+        let error = set_keyword(&client, &session, "a", "m1", Keyword::Flagged, true).unwrap_err();
+        assert!(matches!(&error, Error::Shape(message) if message.contains("forbidden")), "{error:?}");
+        assert_eq!(server.join().unwrap(), vec![vec!["Email/set"]], "nothing is read back after a refusal");
+    }
+
+    /// The answer is lost and the server did apply it: the read-back confirms, nothing is resent.
+    #[test]
+    fn a_lost_answer_is_confirmed_by_reading_back_not_by_resending() {
+        let (api, server) = scripted(vec![None, read_back(json!({"$flagged":true}))]);
+        let (client, session) = keyword_session(&api);
+        set_keyword(&client, &session, "a", "m1", Keyword::Flagged, true).unwrap();
+        assert_eq!(server.join().unwrap(), vec![vec!["Email/set"], vec!["Email/get"]]);
+    }
+
+    /// The answer is lost and the server did not apply it: a failure, still without resending.
+    #[test]
+    fn a_lost_answer_the_server_does_not_show_is_a_failure() {
+        let (api, server) = scripted(vec![None, read_back(json!({}))]);
+        let (client, session) = keyword_session(&api);
+        let error = set_keyword(&client, &session, "a", "m1", Keyword::Flagged, true).unwrap_err();
+        assert!(matches!(&error, Error::Shape(message) if message.contains("nothing was resent")), "{error:?}");
+        assert_eq!(server.join().unwrap(), vec![vec!["Email/set"], vec!["Email/get"]]);
+    }
+
+    /// The server confirmed the write and only the read-back was lost: the write stands, and the
+    /// caller learns that only the read failed.
+    #[test]
+    fn a_confirmed_write_survives_a_failed_read_back() {
+        let set = json!({"methodResponses":[["Email/set",{"accountId":"a","oldState":"s1","newState":"s2","updated":{"m1":null}},"mail"]]});
+        let (api, server) = scripted(vec![Some(set), None]);
+        let (client, session) = keyword_session(&api);
+        let written = set_keyword(&client, &session, "a", "m1", Keyword::Flagged, true).unwrap();
+        assert!(written.read_back.is_err());
+        assert_eq!(server.join().unwrap(), vec![vec!["Email/set"], vec!["Email/get"]], "the write is not resent");
+    }
+
+    /// Clearing with a lost answer, then the message is gone: an absent keyword on a missing message
+    /// is not proof the clear applied.
+    #[test]
+    fn a_lost_clear_is_not_confirmed_by_not_found() {
+        let gone = json!({"methodResponses":[["Email/get",{"accountId":"a","state":"s2","list":[],"notFound":["m1"]},"mail"]]});
+        let (api, server) = scripted(vec![None, Some(gone)]);
+        let (client, session) = keyword_session(&api);
+        let error = set_keyword(&client, &session, "a", "m1", Keyword::Flagged, false).unwrap_err();
+        assert!(matches!(&error, Error::Shape(message) if message.contains("did not come back")), "{error:?}");
+        assert_eq!(server.join().unwrap(), vec![vec!["Email/set"], vec!["Email/get"]]);
+    }
+
+    /// A lost answer and then a failed read: unknown, so an error, and still nothing resent.
+    #[test]
+    fn a_lost_answer_and_a_failed_read_is_unknown() {
+        let (api, server) = scripted(vec![None, None]);
+        let (client, session) = keyword_session(&api);
+        let error = set_keyword(&client, &session, "a", "m1", Keyword::Seen, false).unwrap_err();
+        assert!(matches!(&error, Error::Shape(message) if message.contains("unknown")), "{error:?}");
+        assert_eq!(server.join().unwrap(), vec![vec!["Email/set"], vec!["Email/get"]]);
+    }
+
+    /// Clearing with a lost answer, and the message comes back without the keyword: confirmed.
+    #[test]
+    fn a_lost_clear_is_confirmed_by_the_keyword_being_absent() {
+        let (api, server) = scripted(vec![None, read_back(json!({"$label":true}))]);
+        let (client, session) = keyword_session(&api);
+        set_keyword(&client, &session, "a", "m1", Keyword::Flagged, false).unwrap();
+        assert_eq!(server.join().unwrap(), vec![vec!["Email/set"], vec!["Email/get"]]);
     }
 }

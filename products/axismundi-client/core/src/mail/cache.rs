@@ -345,27 +345,57 @@ pub fn read(
 }
 
 /// Sets or clears one keyword on the server, then keeps what the server showed afterwards.
-/// Nothing in the cache changes unless the server confirmed it (see `mail::set_keyword`).
+/// Sets or clears a keyword on many messages and keeps what the server shows afterwards.
 ///
-/// `Ok(None)` is a confirmed write whose read-back failed: the cache is left as it was, and the
-/// next sync (Email/changes) brings the message up to date. The write is never resent.
-pub fn set_keyword(
+/// Only the read-back (see `mail::set_keywords`) reaches the cache, never the request itself, so
+/// nothing changes here unless the server shows it. If the cache cannot take it, the outcomes still
+/// stand (they describe the server, not this file) and every confirmed id joins `not_read_back`, so
+/// the caller syncs instead of trusting the cache. No write is ever resent from here.
+pub fn set_keywords(
     client: &Client,
     session: &Session,
     store: &mut Store,
     account: &str,
-    id: &str,
+    ids: &[String],
     keyword: super::Keyword,
     on: bool,
-) -> Result<Option<Value>> {
+) -> Result<super::KeywordResults> {
     store.bind(client, session)?;
     let revision = store.revision(account)?;
-    let written = super::set_keyword(client, session, account, id, keyword, on)?;
-    let Ok(result) = written.read_back else { return Ok(None) };
+    let mut results = super::set_keywords(client, session, account, ids, keyword, on)?;
+    let saved = (|| -> Result<()> {
+        let tx = store.write(account, revision)?;
+        save_get(&tx, account, &results.read_back, false)?;
+        tx.commit()?;
+        Ok(())
+    })();
+    if saved.is_err() {
+        results.not_read_back = results
+            .outcomes
+            .iter()
+            .filter(|(_, outcome)| matches!(outcome, super::KeywordOutcome::Confirmed))
+            .map(|(id, _)| id.clone())
+            .collect();
+    }
+    Ok(results)
+}
+
+/// Reads the given messages' keywords from the server and keeps them; returns each message's cache
+/// entry afterwards, in the order asked. Read-only on the server (see `mail::read_keywords`).
+pub fn read_keywords(
+    client: &Client,
+    session: &Session,
+    store: &mut Store,
+    account: &str,
+    ids: &[String],
+) -> Result<Vec<Value>> {
+    store.bind(client, session)?;
+    let revision = store.revision(account)?;
+    let result = super::read_keywords(client, session, account, ids)?;
     let tx = store.write(account, revision)?;
     save_get(&tx, account, &result, false)?;
     tx.commit()?;
-    store.email(account, id).map(Some)
+    ids.iter().map(|id| store.email(account, id)).collect()
 }
 
 /// Expands a thread and keeps what it learned about each message.

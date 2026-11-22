@@ -423,28 +423,96 @@ pub async fn mail_read(
     .await
 }
 
-/// Sets or clears `$seen` or `$flagged` on one message. The change is shown only once the server
-/// confirms it (see core `mail::set_keyword`); the answer is the message's row as the server now
-/// has it, or `null` when the server confirmed the change but reading the message back failed. The
-/// write stands either way; the caller only has to read again (a sync), never to resend.
+/// How one message came out of a keyword change, as the GUI acts on it. Core's five outcomes fold
+/// into three because the GUI's choice is three-way: done; known not applied, so it may be tried
+/// again; or not known, so it has to be read before anything is sent again.
+#[derive(Debug, Serialize)]
+#[serde(tag = "outcome", rename_all = "camelCase")]
+pub enum KeywordResult {
+    Confirmed { id: String },
+    NotApplied { id: String, reason: String },
+    Unknown { id: String, reason: String },
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct KeywordsView {
+    /// One per distinct id asked for, in the order first asked.
+    results: Vec<KeywordResult>,
+    /// False when a confirmed change could not be read back into the cache: the write stands, and
+    /// the views have to sync to show it.
+    read_back_complete: bool,
+}
+
+fn keywords_view(results: axismundi_jmap_core::mail::KeywordResults) -> KeywordsView {
+    use axismundi_jmap_core::mail::KeywordOutcome as Outcome;
+    let read_back_complete = results.not_read_back.is_empty();
+    let results = results
+        .outcomes
+        .into_iter()
+        .map(|(id, outcome)| match outcome {
+            Outcome::Confirmed => KeywordResult::Confirmed { id },
+            Outcome::Refused(kind) => KeywordResult::NotApplied { id, reason: format!("The server refused it ({kind}).") },
+            Outcome::Failed(error) => KeywordResult::NotApplied { id, reason: failure("Mail", &error) },
+            Outcome::TooLarge => KeywordResult::NotApplied {
+                id,
+                reason: "Not sent: the request for this message is larger than the server accepts.".into(),
+            },
+            Outcome::Unchanged => KeywordResult::NotApplied {
+                id,
+                reason: "The answer was lost, and the server shows it unchanged.".into(),
+            },
+            Outcome::Unknown(None) => KeywordResult::Unknown {
+                id,
+                reason: "The answer was lost, and the message did not come back to check.".into(),
+            },
+            Outcome::Unknown(Some(error)) => KeywordResult::Unknown {
+                id,
+                reason: format!("The answer was lost, and reading it back failed. {}", failure("Mail", &error)),
+            },
+        })
+        .collect();
+    KeywordsView { results, read_back_complete }
+}
+
+/// Sets or clears `$seen` or `$flagged` on the given messages of one Account (see core
+/// `mail::set_keywords`). Each id settles on its own; nothing is resent, and nothing on screen should
+/// change except what the server confirmed. One message is the one-id case.
 #[tauri::command]
-pub async fn mail_set_keyword(
+pub async fn mail_set_keywords(
     connection_id: u32,
     account_id: String,
-    email_id: String,
+    email_ids: Vec<String>,
     keyword: String,
     on: bool,
     state: tauri::State<'_, Connection>,
-) -> Result<Option<MailRow>, String> {
+) -> Result<KeywordsView, String> {
     let keyword = match keyword.as_str() {
         "seen" => axismundi_jmap_core::mail::Keyword::Seen,
         "flagged" => axismundi_jmap_core::mail::Keyword::Flagged,
         _ => return Err("keyword takes seen or flagged".into()),
     };
     with_mail(&state, connection_id, move |active, mail, store| {
-        let entry = cache::set_keyword(&active.client, &mail.session, store, &account_id, &email_id, keyword, on)
+        let results = cache::set_keywords(&active.client, &mail.session, store, &account_id, &email_ids, keyword, on)
             .map_err(explain)?;
-        entry.as_ref().map(mail_row).transpose()
+        Ok(keywords_view(results))
+    })
+    .await
+}
+
+/// Reads the given messages' current keywords from the server (no write) and returns their rows. The
+/// GUI uses it to settle an `unknown` outcome before it allows another write to those messages.
+#[tauri::command]
+pub async fn mail_check_keywords(
+    connection_id: u32,
+    account_id: String,
+    email_ids: Vec<String>,
+    state: tauri::State<'_, Connection>,
+) -> Result<Vec<MailRow>, String> {
+    with_mail(&state, connection_id, move |active, mail, store| {
+        let entries = cache::read_keywords(&active.client, &mail.session, store, &account_id, &email_ids)
+            .map_err(explain)?;
+        entries.iter().map(mail_row).collect()
     })
     .await
 }
@@ -533,6 +601,38 @@ mod tests {
         assert_eq!(actual[2]["body"]["truncated"], true);
         assert_eq!(actual[2]["attachments"][0]["name"], "probe.txt");
         assert_eq!(actual[3]["kind"], "unavailable");
+    }
+
+    /// Every core outcome, as `set_keywords` can return them, folded into the three the GUI acts
+    /// on. The output is the file the GUI spec reads (`mail-keywords.fixture.json`).
+    #[test]
+    fn keyword_results_serialize_to_the_shape_the_gui_reads() {
+        use axismundi_jmap_core::mail::{KeywordOutcome as Outcome, KeywordResults};
+        let results = KeywordResults {
+            outcomes: vec![
+                ("m1".into(), Outcome::Confirmed),
+                ("m2".into(), Outcome::Refused("forbidden".into())),
+                ("m3".into(), Outcome::Failed(Error::Problem { status: 400, kind: "urn:ietf:params:jmap:error:limit".into(), detail: Some("remote text".into()) })),
+                ("m4".into(), Outcome::Unchanged),
+                ("m5".into(), Outcome::Unknown(None)),
+                ("m6".into(), Outcome::Unknown(Some(Error::Transport("connection reset".into())))),
+                ("m7".into(), Outcome::Confirmed),
+                ("m8".into(), Outcome::TooLarge),
+            ],
+            read_back: json!({"list": [], "notFound": []}),
+            not_read_back: vec!["m7".into()],
+        };
+        let actual = serde_json::to_value(keywords_view(results)).unwrap();
+        let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../src/app/mail/mail-keywords.fixture.json");
+        if std::env::var_os("AXISMUNDI_UPDATE_FIXTURES").is_some() {
+            std::fs::write(&path, serde_json::to_string_pretty(&actual).unwrap() + "\n").unwrap();
+        }
+        let expected: Value = serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+        assert_eq!(actual, expected, "GUI fixture is stale; rerun with AXISMUNDI_UPDATE_FIXTURES=1");
+        let outcomes: Vec<&str> = actual["results"].as_array().unwrap().iter().map(|r| r["outcome"].as_str().unwrap()).collect();
+        assert_eq!(outcomes, ["confirmed", "notApplied", "notApplied", "notApplied", "unknown", "unknown", "confirmed", "notApplied"]);
+        assert!(!actual.to_string().contains("remote text"), "remote response text never reaches the webview");
+        assert_eq!(actual["readBackComplete"], false);
     }
 
     /// A real `mail-thread` response for the four-message probe conversation (2026-11-21), the

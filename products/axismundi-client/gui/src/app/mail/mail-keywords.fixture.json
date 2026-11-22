@@ -1,0 +1,43 @@
+{
+  "readBackComplete": false,
+  "results": [
+    {
+      "id": "m1",
+      "outcome": "confirmed"
+    },
+    {
+      "id": "m2",
+      "outcome": "notApplied",
+      "reason": "The server refused it (forbidden)."
+    },
+    {
+      "id": "m3",
+      "outcome": "notApplied",
+      "reason": "Mail: HTTP 400."
+    },
+    {
+      "id": "m4",
+      "outcome": "notApplied",
+      "reason": "The answer was lost, and the server shows it unchanged."
+    },
+    {
+      "id": "m5",
+      "outcome": "unknown",
+      "reason": "The answer was lost, and the message did not come back to check."
+    },
+    {
+      "id": "m6",
+      "outcome": "unknown",
+      "reason": "The answer was lost, and reading it back failed. Mail: request failed."
+    },
+    {
+      "id": "m7",
+      "outcome": "confirmed"
+    },
+    {
+      "id": "m8",
+      "outcome": "notApplied",
+      "reason": "Not sent: the request for this message is larger than the server accepts."
+    }
+  ]
+}

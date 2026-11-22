@@ -27,6 +27,14 @@ pub struct Discovery {
     pub wordpress: Probe<WordPress>,
     pub jmap: Probe<Jmap>,
     pub activitypub: Probe<ActivityPub>,
+    /// The Pre-FEP "ActivityPub C2S Session Discovery" document at `/.well-known/activitypub`.
+    pub activitypub_session: Probe<ActivityPubSession>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ActivityPubSession {
+    /// Same origin as the discovery document, as the Pre-FEP requires.
+    pub session_url: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -107,12 +115,16 @@ pub fn discover_selected(input: &str, options: DiscoveryOptions) -> Result<Disco
         &agent,
         site.join("/.well-known/nodeinfo").expect("HTTP site URL"),
     ) } else { Probe::Skipped };
+    let activitypub_session = if options.activitypub {
+        activitypub_session(&agent, site.join("/.well-known/activitypub").expect("HTTP site URL"))
+    } else { Probe::Skipped };
     Ok(Discovery {
         input: input.into(),
         base: origin,
         wordpress,
         jmap,
         activitypub,
+        activitypub_session,
     })
 }
 
@@ -280,6 +292,15 @@ fn jmap(agent: &ureq::Agent, url: Url, site: &url::Origin, srv: Option<String>) 
         }
         Err(reason) => Probe::Unconfirmed(reason),
     }
+}
+
+/// NON-STANDARD: `/.well-known/activitypub` is the suffix our Pre-FEP proposes, not a registered
+/// one. A `session` on another origin is refused, as the draft requires (MUST).
+fn activitypub_session(agent: &ureq::Agent, url: Url) -> Probe<ActivityPubSession> {
+    inspect(agent, url, |document, body| {
+        let session = resolve(document, body.get("session")?.as_str()?).ok()?;
+        (session.origin() == document.origin()).then(|| ActivityPubSession { session_url: session.to_string() })
+    })
 }
 
 fn activitypub(agent: &ureq::Agent, url: Url) -> Probe<ActivityPub> {
@@ -662,5 +683,33 @@ mod tests {
             _ => panic!("expected fastmail.com to publish a _jmap._tcp record"),
         }
         assert!(matches!(jmap_srv(&Url::parse("http://localhost:8884/").unwrap()), Srv::Absent));
+    }
+
+    #[test]
+    fn activitypub_session_document_names_a_same_origin_session() {
+        let listener=TcpListener::bind("127.0.0.1:0").unwrap();
+        let address=origin(&listener);
+        let session=format!("{address}/wp-json/axismundi/activitypub/session");
+        let nodeinfo=r#"{"links":[]}"#;
+        let server=serve(listener,[
+            ("/.well-known/nodeinfo".into(),"200 OK".into(),String::new(),nodeinfo.into()),
+            ("/.well-known/activitypub".into(),"200 OK".into(),String::new(),format!(r#"{{"session":"{session}"}}"#)),
+        ]);
+        let result=discover_selected(&address,DiscoveryOptions{wordpress:false,jmap:false,activitypub:true}).unwrap();
+        assert!(matches!(&result.activitypub_session,Probe::Found(info) if info.session_url==session));
+        server.join().unwrap();
+    }
+
+    #[test]
+    fn activitypub_session_on_another_origin_is_refused() {
+        let listener=TcpListener::bind("127.0.0.1:0").unwrap();
+        let address=origin(&listener);
+        let server=serve(listener,[
+            ("/.well-known/nodeinfo".into(),"200 OK".into(),String::new(),r#"{"links":[]}"#.into()),
+            ("/.well-known/activitypub".into(),"200 OK".into(),String::new(),r#"{"session":"https://elsewhere.test/session"}"#.into()),
+        ]);
+        let result=discover_selected(&address,DiscoveryOptions{wordpress:false,jmap:false,activitypub:true}).unwrap();
+        assert!(!matches!(result.activitypub_session,Probe::Found(_)));
+        server.join().unwrap();
     }
 }

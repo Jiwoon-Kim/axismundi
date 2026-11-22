@@ -52,11 +52,15 @@ export class ConnectionPageComponent {
     info.session_url + (info.srv ? ` · found by DNS SRV ${info.srv}` : "") + (info.origin_changed ? " · different host" : "");
   protected readonly apLabel = (info: {software: string | null}) => info.software || "Advertised";
 
-  protected apSessionStatus(probe: Discovery["discovery"]["wordpress"]): string {
+  /** The Pre-FEP discovery document first, then the route the WordPress REST index lists. */
+  protected apSessionStatus(discovery: Discovery["discovery"]): string {
+    const wellKnown = discovery.activitypub_session;
+    if (wellKnown.status === "found") return `Advertised at /.well-known/activitypub · ${wellKnown.detail.session_url}`;
+    const probe = discovery.wordpress;
     if (probe.status === "skipped") return "Not requested";
     if (probe.status === "unconfirmed") return `Could not confirm · ${probe.detail}`;
     return typeof probe.detail !== "string" && probe.detail.ap_session_advertised
-      ? "Advertised · sign-in required"
+      ? "Advertised by the WordPress REST index · sign-in required"
       : "Not advertised";
   }
 }

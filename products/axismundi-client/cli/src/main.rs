@@ -306,6 +306,9 @@ fn run() -> Result<bool, String> {
                 details.software.as_deref().unwrap_or("(not advertised)")
             )
         });
+        print_probe("ap-session", result.activitypub_session, |details| {
+            format!("session={} (/.well-known/activitypub)", details.session_url)
+        });
         return Ok(true);
     }
     if matches!(command.as_str(), "contacts-offline" | "mail-offline") {

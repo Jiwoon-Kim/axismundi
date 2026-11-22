@@ -380,13 +380,25 @@ fn login_plan(discovery: &Discovery) -> (LoginPlan, Vec<String>) {
                         .map(|url| url.to_string());
                 }
             } else {
+                // Found through ?rest_route=/ (or another non-path root). Discovery can use it;
+                // signing in cannot yet, because the Actor and outbox routes are derived by path.
                 notices.push(
-                    "This WordPress REST index does not use a supported pretty-permalink URL."
+                    "WordPress was found at a ?rest_route= address. Signing in through it is not supported yet."
                         .into(),
                 );
             }
         } else {
             notices.push("WordPress requires HTTPS outside loopback development.".into());
+        }
+    }
+    // The Pre-FEP discovery document names the Session directly and wins over the WordPress route.
+    if let Probe::Found(info) = &discovery.activitypub_session {
+        match credential_url(&info.session_url) {
+            Some(url) if plan.jmap.as_deref().is_none_or(|jmap| same_origin(jmap, url.as_str())) => {
+                plan.activitypub = Some(url.to_string());
+            }
+            Some(_) => notices.push("ActivityPub and JMAP are on different origins. Only JMAP will receive these credentials.".into()),
+            None => notices.push("ActivityPub requires HTTPS outside loopback development.".into()),
         }
     }
     (plan, notices)
@@ -670,6 +682,28 @@ mod tests {
     }
 
     #[test]
+    fn the_well_known_activitypub_session_wins_over_the_wordpress_route() {
+        let discovery = Discovery {
+            input: "blog.test".into(),
+            base: "https://blog.test".into(),
+            wordpress: Probe::Found(WordPress {
+                index_url: "https://blog.test/wp-json/".into(),
+                found_by: "link_header",
+                name: "Blog".into(),
+                namespaces: vec!["wp/v2".into()],
+                ap_session_advertised: true,
+            }),
+            jmap: Probe::Skipped,
+            activitypub: Probe::Skipped,
+            activitypub_session: Probe::Found(axismundi_jmap_core::discovery::ActivityPubSession {
+                session_url: "https://blog.test/wp-json/axismundi/activitypub/session".into(),
+            }),
+        };
+        let (plan, _) = login_plan(&discovery);
+        assert_eq!(plan.activitypub.as_deref(), Some("https://blog.test/wp-json/axismundi/activitypub/session"));
+    }
+
+    #[test]
     fn credentials_never_share_a_plan_across_origins() {
         let mut discovery = Discovery {
             input: "blog.test".into(),
@@ -687,6 +721,7 @@ mod tests {
                 srv: None,
             }),
             activitypub: Probe::NotFound("not advertised".into()),
+            activitypub_session: Probe::Skipped,
         };
         let (plan, _) = login_plan(&discovery);
         assert_eq!(plan.addresses(), ["https://jmap.test/session"]);

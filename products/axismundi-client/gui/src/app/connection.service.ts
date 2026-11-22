@@ -11,6 +11,8 @@ export interface Discovery {
     wordpress: Probe<{name: string; ap_session_advertised: boolean}>;
     jmap: Probe<{session_url: string; origin_changed: boolean; srv: string | null}>;
     activitypub: Probe<{software: string | null}>;
+    /** Pre-FEP `/.well-known/activitypub`: the Session URL, same origin as the document. */
+    activitypub_session: Probe<{session_url: string}>;
   };
   login: {wordpress: string | null; jmap: string | null; activitypub: string | null};
   notices: string[];

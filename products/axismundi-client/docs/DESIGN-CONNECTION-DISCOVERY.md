@@ -179,6 +179,12 @@ ActivityPub  다중 Actor Session — 우리 Pre-FEP (docs/UPSTREAM-SOCIALHUB-PR
              SRV _activitypub._tcp 는 Pre-FEP 에 없다 — 넣으려면 Pre-FEP 토론 쪽 질문이다
 ```
 
+**구현 상태 (2026-11-22)**: 세 줄 모두 클라이언트에 들어갔다(d3b0958 SRV, 998f8bb WordPress, 그다음 AP).
+결과에 어느 경로로 찾았는지가 남는다(`srv`, `found_by`, `activitypub_session`). 남은 한계 하나 —
+`?rest_route=/` 로 찾은 WordPress 는 **로그인까지는 안 된다**. 로그인 계획이 `users/me`·AP Session·Actor
+경로를 REST 루트의 **경로**에서 계산하기 때문이다. 화면에 그렇게 알린다. 쿼리형 루트에서 경로를 만드는
+일은 후속이다.
+
 ### AP 인증은 두 모델이고, 우리는 앞쪽이다
 
 ```txt

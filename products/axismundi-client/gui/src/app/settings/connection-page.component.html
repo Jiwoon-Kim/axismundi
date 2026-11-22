@@ -9,7 +9,7 @@
 <div class="discovery-options">
   <mat-checkbox [checked]="probeWordpress()" (change)="probeWordpress.set($event.checked)" [disabled]="!!connection.busy()">WordPress / Axismundi</mat-checkbox>
   <mat-checkbox [checked]="probeJmap()" (change)="probeJmap.set($event.checked)" [disabled]="!!connection.busy()">JMAP</mat-checkbox>
-  <mat-checkbox [checked]="probeActivitypub()" (change)="probeActivitypub.set($event.checked)" [disabled]="!!connection.busy()">NodeInfo</mat-checkbox>
+  <mat-checkbox [checked]="probeActivitypub()" (change)="probeActivitypub.set($event.checked)" [disabled]="!!connection.busy()">ActivityPub</mat-checkbox>
 </div>
 @if (!connection.native) { <p role="status">Open the Axismundi desktop app to connect.</p> }
 @if (connection.error()) { <p class="error" role="alert">{{ connection.error() }}</p> }
@@ -21,7 +21,7 @@
       <dt>WordPress</dt><dd>{{ describe(result.discovery.wordpress, wordpressLabel) }}</dd>
       <dt>JMAP</dt><dd>{{ describe(result.discovery.jmap, jmapLabel) }}</dd>
       <dt>ActivityPub via NodeInfo</dt><dd>{{ describe(result.discovery.activitypub, apLabel) }}</dd>
-      <dt>ActivityPub Session</dt><dd>{{ apSessionStatus(result.discovery.wordpress) }}</dd>
+      <dt>ActivityPub Session</dt><dd>{{ apSessionStatus(result.discovery) }}</dd>
     </dl>
     @for (notice of result.notices; track notice) { <p role="status">{{ notice }}</p> }
   </section>

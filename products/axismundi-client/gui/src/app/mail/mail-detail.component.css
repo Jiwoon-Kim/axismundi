@@ -1,6 +1,9 @@
 :host { display: block; padding: 16px 24px 32px; overflow-y: auto; }
 
 h2 { font: var(--mat-sys-headline-small); margin: 0 0 12px; overflow-wrap: anywhere; }
+.message-actions { display: flex; gap: 4px; margin: -4px 0 8px; }
+.message-actions .on { color: var(--mat-sys-primary); }
+.message-actions .on mat-icon { font-variation-settings: 'FILL' 1; }
 
 .headers {
   display: grid;

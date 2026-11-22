@@ -1,14 +1,16 @@
-import { Component, computed, effect, inject, input, resource, signal } from "@angular/core";
+import { Component, computed, effect, inject, input, resource, signal, untracked } from "@angular/core";
 import { toSignal } from "@angular/core/rxjs-interop";
 import { BreakpointObserver } from "@angular/cdk/layout";
 import { MatIconButton, MatIconAnchor } from "@angular/material/button";
 import { MatIcon } from "@angular/material/icon";
 import { MatSidenav, MatSidenavContainer, MatSidenavContent } from "@angular/material/sidenav";
+import { MatTooltip } from "@angular/material/tooltip";
 import { Router, RouterLink } from "@angular/router";
 import { map } from "rxjs";
 import { invoke } from "@tauri-apps/api/core";
 import { ConnectionService } from "../connection.service";
 import { MailDetailComponent } from "./mail-detail.component";
+import { MailActions } from "./mail-actions";
 import { ListView, rowLabel } from "./mail-rows";
 
 /**
@@ -27,12 +29,13 @@ const EXPANDED = "(min-width: 840px)";
 @Component({
   selector: "app-mail-page",
   imports: [MailDetailComponent, MatIcon, MatIconAnchor, MatIconButton, MatSidenav, MatSidenavContainer,
-    MatSidenavContent, RouterLink],
+    MatSidenavContent, MatTooltip, RouterLink],
   templateUrl: "./mail-page.component.html",
   styleUrl: "./mail-page.component.css",
 })
 export class MailPageComponent {
   protected readonly connection = inject(ConnectionService);
+  protected readonly actions = inject(MailActions);
   private readonly router = inject(Router);
 
   /** Query parameters, bound by the router. */
@@ -76,6 +79,16 @@ export class MailPageComponent {
   }
 
   constructor() {
+    // A confirmed change syncs the listing again: deltas only, with mailbox counts. reload() keeps
+    // the rows on screen while it runs.
+    let seen = this.actions.changed();
+    effect(() => {
+      const count = this.actions.changed();
+      if (count !== seen) {
+        seen = count;
+        untracked(() => this.view.reload());
+      }
+    });
     // Mailbox and message ids belong to one Account: switching Accounts clears the selection.
     let previous: string | null | undefined;
     effect(() => {

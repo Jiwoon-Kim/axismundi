@@ -31,6 +31,19 @@
     @if (message.kind === "message") {
       <article aria-labelledby="message-subject">
         <h2 id="message-subject">{{ message.subject || "(no subject)" }}</h2>
+        <div class="message-actions" role="toolbar" aria-label="Message actions">
+          <button matButton type="button" [disabled]="actions.busy(message.id, 'seen')"
+                  (click)="actions.setKeyword(accountId(), message.id, 'seen', message.unread !== false)">
+            <mat-icon>{{ message.unread === false ? "mark_email_unread" : "mark_email_read" }}</mat-icon>
+            {{ message.unread === false ? "Mark as unread" : "Mark as read" }}
+          </button>
+          <button matButton type="button" [class.on]="message.flagged" [attr.aria-pressed]="message.flagged === true"
+                  [disabled]="actions.busy(message.id, 'flagged')"
+                  (click)="actions.setKeyword(accountId(), message.id, 'flagged', !message.flagged)">
+            <mat-icon>star</mat-icon>
+            {{ message.flagged ? "Starred" : "Star" }}
+          </button>
+        </div>
         @if (members().length > 1) {
           <p class="thread-count">{{ members().length }} messages in this conversation</p>
           @for (member of members(); track member.id) {

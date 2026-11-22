@@ -45,6 +45,25 @@ mat-sidenav-container { block-size: 100%; background: transparent; }
 
 ul { list-style: none; margin: 0; padding: 0; }
 li { border-block-end: 1px solid var(--mat-sys-outline-variant); }
+/* Gmail's arrangement: the star is a fixed leading column, always visible (outlined when off),
+   and the other row actions take the date's place while the row is hovered or holds focus.
+   Hidden buttons stay focusable: focus reveals them. */
+li.message { position: relative; display: flex; align-items: flex-start; }
+li.message > a { flex: 1; min-inline-size: 0; padding-inline-start: 0; }
+li.message:hover { background: color-mix(in srgb, var(--mat-sys-on-surface) 8%, transparent); }
+li.message:has(> a.active) { background: var(--mat-sys-secondary-container); color: var(--mat-sys-on-secondary-container); }
+li.message button { --mat-icon-button-state-layer-size: 32px; padding: 4px; }
+.star { flex: none; margin: 4px 4px 0; color: var(--mat-sys-on-surface-variant); }
+.star.on { color: var(--mat-sys-primary); }
+.star.on mat-icon { font-variation-settings: 'FILL' 1; }
+.row-actions { display: flex; color: var(--mat-sys-on-surface-variant); }
+@media (hover: hover) {
+  .row-actions { position: absolute; inset-block-start: 4px; inset-inline-end: 8px; opacity: 0; }
+  li.message:hover .row-actions, li.message:focus-within .row-actions { opacity: 1; }
+  li.message:hover .date, li.message:focus-within .date { visibility: hidden; }
+}
+/* Without hover the actions cannot appear on demand, so they stay in the row. */
+@media (hover: none) { .row-actions { flex: none; margin: 4px 4px 0 0; } }
 
 /* A row is three lines while the list is narrow, one line once the list itself is wide enough:
    the list's own width decides, not the window's. */
@@ -68,11 +87,12 @@ li a {
   .text { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .subject, .preview { display: inline; }
   .preview::before { content: " — "; }
+  li.message { align-items: center; }
+  .star { margin-block-start: 0; }
+  @media (hover: hover) { .row-actions { inset-block-start: 50%; translate: 0 -50%; } }
 }
 
 li.unread .from, li.unread .subject { color: var(--mat-sys-on-surface); font-weight: 600; }
-li a:hover { background: color-mix(in srgb, var(--mat-sys-on-surface) 8%, transparent); }
-li a.active { background: var(--mat-sys-secondary-container); color: var(--mat-sys-on-secondary-container); }
 li a:focus-visible, .mailboxes a:focus-visible, .back:focus-visible { outline: 2px solid var(--mat-sys-secondary); outline-offset: -2px; }
 .unavailable, .none { padding: 10px 16px; color: var(--mat-sys-on-surface-variant); }
 .unavailable { font-style: italic; }
@@ -81,8 +101,13 @@ li a:focus-visible, .mailboxes a:focus-visible, .back:focus-visible { outline: 2
 .reader app-mail-detail { min-block-size: 0; }
 .back-bar { padding: 4px; border-block-end: 1px solid var(--mat-sys-outline-variant); }
 
+/* Pinned to the start of its containing block (as cdk-visually-hidden does). Left at its static
+   position it sits where the text would end, past a truncated subject, and once a row became a
+   positioned box that point was inside the list's scroll area and widened it sideways. */
 .visually-hidden {
   position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
   inline-size: 1px;
   block-size: 1px;
   overflow: hidden;

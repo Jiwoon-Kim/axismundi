@@ -58,6 +58,10 @@ avatar 팝오버:  ActivityPub Actors (선택 1)  |  JMAP Accounts (선택 1)  �
 - **From 은 작성 화면에만 있다.** 현재 Account 의 `Identity/get` 그대로. 값은 `identityId`, 표시는
   이름 + 주소. 주소로 중복 제거하지 않는다(RFC 8621 은 email 중복을 막지 않고, fixture 에서
   `team@` 이 두 Account 에 다 있다). 다른 Account 의 Identity 와 합치지 않는다.
+  메일함 트리 아래에 Account 의 주소(Identity)를 보여 주는 안은 작성·발송(EmailSubmission) GUI 때 본다
+  (2026-11-22). Identity 는 메일을 담지 않으므로 트리에 두더라도 메일함이 아니라 "이 주소로 쓰기" 또는
+  `to`/`from` 검색이다. 앱 바 메뉴의 JMAP 항목은 Account 다 — Stalwart 는 Account 이름에 주소를 넣어서
+  Identity 처럼 보일 뿐이다.
 
 ## 창 폭별 접힘
 

@@ -16,17 +16,64 @@
     <mat-sidenav-content>
       <div class="panes" [class.single]="!twoPanes()">
         @if (twoPanes() || !email()) {
-          <section class="list" aria-labelledby="mailbox-title">
-            <div class="list-head">
-              @if (!large()) {
-                <button matIconButton type="button" aria-label="Mailboxes" (click)="drawerOpen.set(true)"><mat-icon>menu</mat-icon></button>
-              }
-              <h1 id="mailbox-title">{{ mailboxName() }}</h1>
-              @if (view.hasValue()) {
-                <span class="summary">
-                  {{ view.value().rows.length }}{{ view.value().total !== null ? " of " + view.value().total : "" }}
-                  @if (view.value().queryStale) { · may be out of date }
-                </span>
+          <section class="list" aria-labelledby="mailbox-title" [class.selecting]="selecting()"
+                   (keydown.escape)="endSelection()">
+            <!-- Checkboxes exist only in selection mode (iCloud Mail's Select): the list stays a list. -->
+            <div class="list-head" [class.selecting-head]="selecting()">
+              @if (selecting()) {
+                <div class="bulk-toolbar" role="toolbar" aria-label="Selected message actions">
+                  <button matIconButton type="button" matTooltip="Done" aria-label="Done selecting"
+                          [disabled]="bulkBusy()" (click)="endSelection()"><mat-icon>arrow_back</mat-icon></button>
+                  <span class="bulk-count" aria-live="polite">{{ selected().size ? selected().size + " selected" : "Select messages" }}</span>
+                  <!-- M3 toolbar: trailing actions collapse into an overflow menu when the list is narrow
+                       (container query in the CSS), so the header never scrolls sideways. -->
+                  <span class="inline-actions">
+                    @for (command of bulkCommands; track command.label) {
+                      @let check = checkSelection(account.id, command.keyword);
+                      <button matIconButton type="button" [disabled]="bulkBusy() || !selected().size"
+                              [matTooltip]="check ? command.check : command.label"
+                              [attr.aria-label]="check ? command.check : command.label"
+                              (click)="applySelection(account.id, command.keyword, command.on)">
+                        <mat-icon [class.filled]="command.filled">{{ check ? "sync_problem" : command.icon }}</mat-icon>
+                      </button>
+                    }
+                  </span>
+                  <button matIconButton type="button" class="overflow-actions" matTooltip="More actions"
+                          aria-label="More actions" [disabled]="bulkBusy() || !selected().size"
+                          [matMenuTriggerFor]="bulkMenu"><mat-icon>more_vert</mat-icon></button>
+                  <mat-menu #bulkMenu="matMenu">
+                    @for (command of bulkCommands; track command.label) {
+                      @let check = checkSelection(account.id, command.keyword);
+                      <button mat-menu-item type="button" (click)="applySelection(account.id, command.keyword, command.on)">
+                        <mat-icon [class.filled]="command.filled">{{ check ? "sync_problem" : command.icon }}</mat-icon>
+                        <span>{{ check ? command.check : command.label }}</span>
+                      </button>
+                    }
+                  </mat-menu>
+                </div>
+                <!-- Second row, so select-all lines up with the row checkboxes below it. -->
+                <div class="select-row">
+                <mat-checkbox class="select-all" [aria-label]="'Select all loaded messages'"
+                              [matTooltip]="'Select all loaded messages'"
+                              [disabled]="bulkBusy() || !eligible().length"
+                              [checked]="eligible().length > 0 && selected().size === eligible().length"
+                              [indeterminate]="selected().size > 0 && selected().size < eligible().length"
+                              (change)="selectAll($event.checked)">Select all</mat-checkbox>
+                </div>
+                <h1 id="mailbox-title" class="visually-hidden">{{ mailboxName() }}</h1>
+              } @else {
+                @if (!large()) {
+                  <button matIconButton type="button" aria-label="Mailboxes" (click)="drawerOpen.set(true)"><mat-icon>menu</mat-icon></button>
+                }
+                <h1 id="mailbox-title">{{ mailboxName() }}</h1>
+                @if (view.hasValue()) {
+                  <span class="summary">
+                    {{ view.value().rows.length }}{{ view.value().total !== null ? " of " + view.value().total : "" }}
+                    @if (view.value().queryStale) { · may be out of date }
+                  </span>
+                }
+                <button matIconButton type="button" matTooltip="Select messages" aria-label="Select messages"
+                        [disabled]="!eligible().length" (click)="selecting.set(true)"><mat-icon>checklist</mat-icon></button>
               }
             </div>
             @if (view.isLoading()) { <p class="status" role="status">Loading…</p> }
@@ -39,7 +86,13 @@
                     @let isUnread = unread(account.id, row.id, row.unread);
                     @let starCheck = actions.unverified(account.id, row.id, "flagged");
                     @let seenCheck = actions.unverified(account.id, row.id, "seen");
-                    <li class="message" [class.unread]="isUnread">
+                    @let isSelected = selected().has(row.id);
+                    <li class="message" [class.unread]="isUnread" [class.bulk-selected]="isSelected">
+                      @if (selecting()) {
+                        <mat-checkbox class="row-select" [aria-label]="'Select: ' + row.subject"
+                                      [checked]="isSelected" [disabled]="bulkBusy()"
+                                      (change)="select(row.id)" />
+                      }
                       <!-- An unverified control reads the server instead of writing, and says so first. -->
                       <button matIconButton type="button" class="star" [class.on]="isStarred && !starCheck" [class.check]="starCheck"
                               [matTooltip]="starCheck ? 'Check status' : isStarred ? 'Remove star' : 'Star'"
@@ -49,12 +102,23 @@
                               (click)="actions.setKeyword(account.id, row.id, 'flagged', !isStarred)">
                         <mat-icon>{{ starCheck ? "sync_problem" : "star" }}</mat-icon>
                       </button>
-                      <a routerLink="/mail" [queryParams]="{mailbox: mailbox() ?? null, email: row.id}"
+                      <!-- In selection mode a row click selects instead of opening (routerLink null = no navigation). -->
+                      <a [routerLink]="selecting() ? null : '/mail'" [queryParams]="{mailbox: mailbox() ?? null, email: row.id}"
+                         (click)="selecting() && select(row.id)" [attr.aria-pressed]="selecting() ? isSelected : null"
                          [class.active]="row.id === email()" [attr.aria-current]="row.id === email() ? 'true' : null">
                         <span class="from">{{ row.sender }}</span>
                         <span class="text">
                           <span class="subject">{{ row.subject }}@if (isUnread) {<span class="visually-hidden"> (unread)</span>}</span>
                           @if (row.preview) { <span class="preview">{{ row.preview }}</span> }
+                          @if (starCheck || seenCheck) {
+                            <span class="row-result" matTooltip="The last change could not be confirmed.">
+                              <mat-icon aria-hidden="true">sync_problem</mat-icon> Status unknown
+                            </span>
+                          } @else if (refusal(row.id); as reason) {
+                            <span class="row-result" [matTooltip]="reason">
+                              <mat-icon aria-hidden="true">error_outline</mat-icon> Not applied
+                            </span>
+                          }
                         </span>
                         @if (row.receivedAt) { <time class="date" [attr.datetime]="row.receivedAt">{{ listDate(row.receivedAt) }}</time> }
                       </a>
@@ -87,7 +151,11 @@
                 </a>
               </div>
             } @else { <div></div> }
-            <app-mail-detail [accountId]="account.id" [emailId]="email() ?? null" [mailbox]="mailbox() ?? null" />
+            @if (!email() && selecting() && selected().size) {
+              <p class="reader-selection">{{ selected().size }} {{ selected().size === 1 ? "message" : "messages" }} selected</p>
+            } @else {
+              <app-mail-detail [accountId]="account.id" [emailId]="email() ?? null" [mailbox]="mailbox() ?? null" />
+            }
           </div>
         }
       </div>

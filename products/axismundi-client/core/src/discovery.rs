@@ -40,7 +40,7 @@ pub struct ActivityPubSession {
 #[derive(Debug, Serialize)]
 pub struct WordPress {
     pub index_url: String,
-    /// How the REST root was found: `link_header`, `html_link` or `rest_route` (a guess).
+    /// How the REST root was found: `link_header`, or `html_link` as the fallback.
     pub found_by: &'static str,
     pub name: String,
     pub namespaces: Vec<String>,
@@ -130,9 +130,10 @@ pub fn discover_selected(input: &str, options: DiscoveryOptions) -> Result<Disco
 
 const WP_REST_REL: &str = "https://api.w.org/";
 
-/// The REST root, in the order WordPress advertises it: the HTTP `Link` header every front-end
-/// response carries, the same link in the HTML head, then a guess at `?rest_route=/`, which
-/// answers even where pretty permalinks (and so `/wp-json/`) are off.
+/// The REST root as WordPress advertises it: the HTTP `Link` header every front-end response
+/// carries, with the same link in the HTML head as a fallback. Nothing is guessed: a site that
+/// advertises neither is reported as not found. With plain permalinks the advertised root is a
+/// `?rest_route=/` address, which the header carries like any other.
 fn wordpress(agent: &ureq::Agent, url: Url) -> Probe<WordPress> {
     let (target, mut response) = match get_accept(agent,url,"text/html") {
         Ok(value) => value,
@@ -159,17 +160,7 @@ fn wordpress(agent: &ureq::Agent, url: Url) -> Probe<WordPress> {
         });
         match advertised {
             Some(reference) => (reference.to_owned(), "html_link"),
-            None => {
-                let mut guess = target.clone();
-                guess.set_fragment(None);
-                guess.set_query(Some("rest_route=/"));
-                return match index(agent, guess, "rest_route") {
-                    Probe::Found(found) => Probe::Found(found),
-                    _ => Probe::NotFound(format!(
-                        "{target} advertises no WordPress REST root and ?rest_route=/ is not a REST index"
-                    )),
-                };
-            }
+            None => return Probe::NotFound("Homepage does not advertise a WordPress REST root".into()),
         }
     };
     let url=match resolve(&target,&reference) { Ok(url)=>url, Err(reason)=>return Probe::Unconfirmed(reason) };
@@ -599,10 +590,7 @@ mod tests {
     fn wordpress_requires_a_homepage_advertisement() {
         let listener=TcpListener::bind("127.0.0.1:0").unwrap();
         let address=origin(&listener);
-        let server=serve(listener,[
-            ("/".into(),"200 OK".into(),String::new(),"<html><head></head><body>Not WordPress</body></html>".into()),
-            ("/?rest_route=/".into(),"200 OK".into(),String::new(),"<html><body>Not WordPress</body></html>".into()),
-        ]);
+        let server=serve(listener,[("/".into(),"200 OK".into(),String::new(),"<html><head></head><body>Not WordPress</body></html>".into())]);
         let result=discover_selected(&address,DiscoveryOptions{wordpress:true,jmap:false,activitypub:false}).unwrap();
         assert!(matches!(result.wordpress,Probe::NotFound(_)));
         server.join().unwrap();
@@ -621,19 +609,6 @@ mod tests {
         ]);
         let result=discover_selected(&address,DiscoveryOptions{wordpress:true,jmap:false,activitypub:false}).unwrap();
         assert!(matches!(&result.wordpress,Probe::Found(info) if info.found_by=="link_header" && info.index_url.ends_with("/api/")));
-        server.join().unwrap();
-    }
-
-    #[test]
-    fn wordpress_without_an_advertisement_is_found_at_rest_route() {
-        let listener=TcpListener::bind("127.0.0.1:0").unwrap();
-        let address=origin(&listener);
-        let server=serve(listener,[
-            ("/".into(),"200 OK".into(),String::new(),"<html><head></head></html>".into()),
-            ("/?rest_route=/".into(),"200 OK".into(),String::new(),INDEX.into()),
-        ]);
-        let result=discover_selected(&address,DiscoveryOptions{wordpress:true,jmap:false,activitypub:false}).unwrap();
-        assert!(matches!(&result.wordpress,Probe::Found(info) if info.found_by=="rest_route" && info.name=="Blog"));
         server.join().unwrap();
     }
 

@@ -107,7 +107,7 @@ GUI는 발견한 주소를 사용자에게 보여 주고 승인된 plan과 실�
 ```txt
 ① WordPress?    홈페이지의 https://api.w.org/ REST 링크를 따라간다
                 → 광고된 REST 인덱스의 name·namespaces
-                링크가 없으면 /wp-json/을 추측해 요청하지 않는다 (2026-11-22 변경 → 아래 "발견 순서")
+                링크가 없으면 /wp-json/을 추측해 요청하지 않는다 (2026-11-22 재확인 → 아래 "발견 순서")
                 답하는 것: 어떤 **표면**이 있는가
 
 ② JMAP?         GET /.well-known/jmap          (RFC 8620 §2.2)
@@ -166,11 +166,10 @@ JMAP         ① SRV _jmap._tcp.<domain>  → https://<target>:<port>/.well-know
              SRV 대상은 입력과 다른 오리진일 수 있다 — "오리진이 바뀌면 알리고 다시 승인" 규칙 그대로.
              Stalwart 로컬 zone 에 _jmap._tcp 레코드가 있다(실측 검증 대상)
 
-WordPress    ① 홈페이지 HEAD 의 HTTP Link 헤더  rel="https://api.w.org/"
-             ② HTML <link rel="https://api.w.org/">                                  지금 구현
-             ③ /?rest_route=/                                                        추측, 소유자 허용
-             /wp-json/ 이 아니라 rest_route 인 이유: 퍼머링크 "기본" 사이트에서도 답한다.
-             이 행이 위 탐침표의 "추측하지 않는다" 를 바꾼다
+WordPress    ① 홈페이지 응답의 HTTP Link 헤더  rel="https://api.w.org/"               기본
+             ② HTML <link rel="https://api.w.org/">                                  보완 수단
+             추측은 하지 않는다 — ?rest_route=/ 추측을 잠시 넣었다가 뺐다(소유자, 2026-11-22).
+             퍼머링크 "기본" 사이트는 Link 헤더에 ?rest_route=/ 주소를 직접 광고하므로 추측이 필요 없다
 
 ActivityPub  다중 Actor Session — 우리 Pre-FEP (docs/UPSTREAM-SOCIALHUB-PRE-FEP-C2S-SESSION.md)
              ① https://<domain>/.well-known/activitypub → { "session": <같은 오리진 URL> }
@@ -181,9 +180,21 @@ ActivityPub  다중 Actor Session — 우리 Pre-FEP (docs/UPSTREAM-SOCIALHUB-PR
 
 **구현 상태 (2026-11-22)**: 세 줄 모두 클라이언트에 들어갔다(d3b0958 SRV, 998f8bb WordPress, 그다음 AP).
 결과에 어느 경로로 찾았는지가 남는다(`srv`, `found_by`, `activitypub_session`). 남은 한계 하나 —
-`?rest_route=/` 로 찾은 WordPress 는 **로그인까지는 안 된다**. 로그인 계획이 `users/me`·AP Session·Actor
+퍼머링크 "기본" 사이트처럼 `?rest_route=` 루트를 광고하는 WordPress 는 **로그인까지는 안 된다**. 로그인 계획이 `users/me`·AP Session·Actor
 경로를 REST 루트의 **경로**에서 계산하기 때문이다. 화면에 그렇게 알린다. 쿼리형 루트에서 경로를 만드는
 일은 후속이다.
+
+### 비인증 Session 요청의 응답 — 세 서버 비교 (2026-11-22 실측)
+
+```txt
+Fastmail   401 + WWW-Authenticate: Bearer resource_metadata=".../.well-known/oauth-protected-resource/..."
+           (RFC 9728) — 로그인 필요 · 인증 방식 · 인가 서버 위치를 한 응답이 말한다.  가장 좋다
+우리 WP    401, WWW-Authenticate 없음 — axismundi-jmap http.php 의 NON-STANDARD 결정(Basic 챌린지는
+           브라우저 로그인 창을 띄운다). OAuth 를 지원하면 Bearer + resource_metadata 를 붙인다
+           (Bearer 는 창을 띄우지 않는다). 운영 사이트는 이 수정(63476c2) 이전 빌드라 아직 403
+Stalwart   200 익명 Session(빈 accounts·username) — 로그인 전 capability 가 보이지만 "로그인 안 함"
+           과 "Account 0개" 를 빈 username 으로만 구분한다. 따르지 않는다
+```
 
 ### AP 인증은 두 모델이고, 우리는 앞쪽이다
 

@@ -37,6 +37,26 @@ html[data-brightness='dark'] { color-scheme: dark; }
 }
 
 @media (forced-colors: none) {
+  // NON-STANDARD: ::-webkit-scrollbar instead of scrollbar-color / scrollbar-width.
+  // The thumb should rise in emphasis as it is approached: quiet at rest, stronger on hover,
+  // strongest while dragged, in light and dark alike. scrollbar-color takes one thumb color and
+  // Chromium (WebView2) derives the hover color itself by darkening it: measured 2026-11-23 in
+  // dark mode, 141 at rest went to 99 on hover, so the thumb faded as the pointer reached it.
+  // Standard CSS has no hover color. Setting scrollbar-color or a non-auto scrollbar-width also
+  // switches these pseudo-elements off in Chromium, so neither may be set anywhere.
+  // Tauri's other webviews (WKWebView, WebKitGTK) read the same pseudo-elements.
+  // Only under forced-colors: none, so Windows high-contrast mode keeps the system scrollbar.
+  ::-webkit-scrollbar { width: 10px; height: 10px; background: transparent; }
+  ::-webkit-scrollbar-corner { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    border: 2px solid transparent;
+    border-radius: var(--mat-sys-corner-full);
+    background: var(--mat-sys-outline-variant) padding-box;
+  }
+  ::-webkit-scrollbar-thumb:hover { background-color: var(--mat-sys-outline); }
+  ::-webkit-scrollbar-thumb:active { background-color: var(--mat-sys-on-surface-variant); }
+
+
   html:not([data-accent='rose-red'], [data-accent='magenta-violet'], [data-accent='cyan-orange'])[data-contrast='high'] {
     @include contrast.high-contrast-overrides(color-scheme);
   }

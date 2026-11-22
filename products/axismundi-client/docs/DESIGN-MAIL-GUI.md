@@ -147,14 +147,43 @@ compact <600     medium 과 같고 rail 도 drawer 안으로
 메일 열기     읽음으로 만들지 않는다.  읽음은 사용자가 누를 때만
 ```
 
-코어 `mail::set_keyword` · `cache::set_keyword`, Tauri `mail_set_keyword`, GUI `MailActions`. 목록 행에는 별표,
-읽기 창에는 읽음/안 읽음·별표.  목록 행은 Gmail 배치: 별표는 앞쪽 고정 열(꺼짐은 외곽선), 읽음 토글은
-마우스를 올리거나 포커스가 들어오면 날짜 자리에 뜬다(hover 없는 기기는 항상 보임). 응답의 `unread`·`flagged` 는 키워드를 받지 않았거나 낡았으면 `null` 이다.
-회귀: 코어의 스크립트 서버 테스트 여덟(단일 키 패치, notUpdated, 유실 후 반영됨·안 됨, 확인 후 조회 실패,
-유실 후 notFound, 유실 후 조회 실패, 유실 후 해제 확인 — 모두 `Email/set` 이 정확히 한 번만 갔는지까지 본다).
+코어 `mail::set_keywords` · `cache::set_keywords`, Tauri `mail_set_keywords`, GUI `MailActions` · `mail-keywords.ts`.
+단건도 id 하나짜리 일괄이다 — 경로가 하나라 규칙도 하나다. 목록 행에는 별표, 읽기 창에는 읽음/안 읽음·별표.
+목록 행은 Gmail 배치: 별표는 앞쪽 고정 열(꺼짐은 외곽선), 읽음 토글은 마우스를 올리거나 포커스가 들어오면 날짜
+자리에 뜬다(hover 없는 기기는 항상 보임). 응답의 `unread`·`flagged` 는 키워드를 받지 않았거나 낡았으면 `null` 이다.
 
-다음: 같은 두 동작의 일괄 처리(현재 Account 의 불러온 메시지 행만 선택, 스레드 행은 보류, Rust 가
-`maxObjectsInSet` 으로 분할·집계, 성공 행만 선택 해제, 거부와 결과 모름은 다르게 표시), 그 뒤 휴지통 이동.
+### 일괄 (2026-11-23)
+
+```txt
+분할       건수(Email/set 은 maxObjectsInSet, Email/get 은 maxObjectsInGet)와 바이트(maxSizeRequest) 둘 다로 채워
+           나눈다.  혼자서도 바이트를 넘는 id 는 보내지 않고 TooLarge(적용 안 됨).  중복 id 는 한 번.
+           조회 전용 mail_check_keywords 도 같은 분할, 넘치는 id 가 있으면 조회 전체 실패(잠금 유지)
+id 별 판정  updated → 확인.  notUpdated · 메서드 오류 → 거부(아무것도 적용 안 됨, RFC 8620 §3.6.2·§5.3)
+           요청 수준 문제·4xx → 실패(서버가 처리 안 함).  전송 오류·5xx·읽을 수 없는 응답·updated 와
+           notUpdated 둘 다에 없는 id → 응답 유실 → 되읽어 판정 (확인 / 그대로 / 모름)
+결과 세 갈래 (GUI)  confirmed · notApplied(다시 보내도 안전) · unknown(읽기 전엔 다시 보내지 않음)
+캐시       되읽은 것만 들어간다.  캐시 저장이 실패해도 결과는 서버 기준이라 그대로, 확인된 id 는 "되읽기 안 됨"
+Err        Account·Core 한도 같은 전제 조건뿐.  보낸 뒤의 일은 전부 id 별 결과로
+결과 모름 잠금 (GUI, KeywordWriter)
+           unknown 인 (연결, Account, 메일, 키워드) 는 쓰기 금지.  누르면 mail_check_keywords(조회 전용)가 돈다.
+           조회가 그 키워드를 보여 주거나 메일이 없어졌을 때만 해제.  조회 실패 = 잠금 유지.
+           쓰기 IPC 자체가 실패해도 결과 모름.  목록 재조회(changed)는 확인이 아니다 — 진행 중이거나 실패했을 수 있다
+화면 값    서버가 확인한 값(확인된 쓰기, 조회 결과)은 KeywordWriter 가 도장과 함께 보관하고, 그 도장 이후에 로드를
+           시작한 뷰가 도착하기 전까지 뷰 값 앞에 선다(shown).  잠금 해제와 값 보관은 같은 동기 단계 — 쓰기가
+           허용되는 순간 화면은 이미 확인된 값을 보인다.  잠긴 버튼은 "Check status"(조회)로 보이고 누르기 전에 말한다
+```
+
+회귀: 코어 스크립트 서버 테스트 열하나(단건 여덟 + 분할·중복·부분 거부, 메서드 오류, 보고 누락 id) — 모두
+`Email/set` 이 id 마다 한 번만 갔는지 본다. 가드 다섯(보고 누락 신뢰, 메서드 오류를 유실로, 중복 제거,
+notFound 를 해제로, 되읽기 실패를 쓰기 실패로)은 각각 되돌리면 테스트가 깨지는 것을 확인했다. Tauri 는 다섯
+결과 → 세 갈래 접기와 원격 응답 본문 비노출을 fixture 로 고정, `settle()` spec 이 그 fixture 를 읽는다.
+`KeywordWriter` spec 여섯이 "모름 → 조회 실패 → 다시 눌러도 쓰기 IPC 없음" 을 포함해 잠금을 고정하고, 가드
+다섯(잠긴 id 쓰기, 조회 실패 시 해제, null 키워드를 확인으로, 쓰기 요청 실패를 잠그지 않음, 키워드 무시)은
+각각 되돌리면 spec 이 깨진다. 화면 값 spec 둘("조회는 됐는데 목록이 아직 안 바뀜 → 확인된 값이 토글 방향을
+정함", "확인된 쓰기는 즉시 보이고 이후 로드가 다시 이김")과 가드 셋(값 없이 잠금 해제, 이후 로드 무시, 확인된
+쓰기 미보관)도 같다.
+
+다음: 선택 UI — [BRIEF-BULK-SELECTION.md](BRIEF-BULK-SELECTION.md). 그 뒤 휴지통 이동.
 
 ## 원격 바이트 — 언제 가져오고, 남기는가 (2026-11-21)
 

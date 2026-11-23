@@ -68,6 +68,13 @@ pub struct MailboxRow {
     sort_order: Option<u64>,
     total_emails: Option<u64>,
     unread_emails: Option<u64>,
+    /// `myRights.mayAddItems`: a move may end here. `null` when the server did not say.
+    may_add_items: Option<bool>,
+    /// `myRights.mayRemoveItems`: a move may start here.
+    may_remove_items: Option<bool>,
+    /// `myRights.maySetSeen`: `$seen` may change on a message here. A message in several mailboxes
+    /// needs it in all of them (RFC 8621 §2).
+    may_set_seen: Option<bool>,
 }
 
 #[derive(Debug, Serialize)]
@@ -87,6 +94,9 @@ pub enum MailRow {
         /// `null` on the same terms as `unread`.
         flagged: Option<bool>,
         has_attachment: Option<bool>,
+        /// The mailboxes the message is in, or `null` when not fetched or stale. In a shared Account
+        /// only the mailboxes this login can see.
+        mailbox_ids: Option<Vec<String>>,
     },
     /// Not in the cache, and not a message with an empty subject.
     Unavailable { id: String, reason: String },
@@ -115,16 +125,22 @@ fn mail_row(entry: &Value) -> Result<MailRow, String> {
         unread: keywords.map(|keywords| !has(keywords, "$seen")),
         flagged: keywords.map(|keywords| has(keywords, "$flagged")),
         has_attachment: document.get("hasAttachment").and_then(Value::as_bool),
+        mailbox_ids: known(entry, "mailboxIds").map(|boxes| boxes.keys().cloned().collect()),
     })
 }
 
 /// A cached message's keywords, when they were fetched and are not stale. Unknown is not "off":
 /// an old `$seen` is not today's read state.
 fn known_keywords(entry: &Value) -> Option<&serde_json::Map<String, Value>> {
+    known(entry, "keywords")
+}
+
+/// One of a cached message's mutable properties, when it was fetched and is not stale.
+fn known<'a>(entry: &'a Value, property: &str) -> Option<&'a serde_json::Map<String, Value>> {
     let stale = entry["staleProperties"]
         .as_array()
-        .is_some_and(|stale| stale.iter().any(|name| name == "keywords"));
-    entry["document"].get("keywords").and_then(Value::as_object).filter(|_| !stale)
+        .is_some_and(|stale| stale.iter().any(|name| name == property));
+    entry["document"].get(property).and_then(Value::as_object).filter(|_| !stale)
 }
 
 fn has(keywords: &serde_json::Map<String, Value>, keyword: &str) -> bool {
@@ -140,6 +156,9 @@ fn mailbox_row(mailbox: &Value) -> Result<MailboxRow, String> {
         sort_order: mailbox.get("sortOrder").and_then(Value::as_u64),
         total_emails: mailbox.get("totalEmails").and_then(Value::as_u64),
         unread_emails: mailbox.get("unreadEmails").and_then(Value::as_u64),
+        may_add_items: mailbox.pointer("/myRights/mayAddItems").and_then(Value::as_bool),
+        may_remove_items: mailbox.pointer("/myRights/mayRemoveItems").and_then(Value::as_bool),
+        may_set_seen: mailbox.pointer("/myRights/maySetSeen").and_then(Value::as_bool),
     })
 }
 
@@ -174,6 +193,8 @@ pub enum DetailView {
         /// `null` when keywords are unknown, as in the listing.
         unread: Option<bool>,
         flagged: Option<bool>,
+        /// As in the listing: the mailboxes it is in, or `null` when unknown or stale.
+        mailbox_ids: Option<Vec<String>>,
         body: Body,
         attachments: Vec<Attachment>,
     },
@@ -266,6 +287,7 @@ fn detail_view(entry: &Value) -> Result<DetailView, String> {
         sent_at: text(document, "/sentAt"),
         unread: known_keywords(entry).map(|keywords| !has(keywords, "$seen")),
         flagged: known_keywords(entry).map(|keywords| has(keywords, "$flagged")),
+        mailbox_ids: known(entry, "mailboxIds").map(|boxes| boxes.keys().cloned().collect()),
         body: body(document),
         attachments: document["attachments"]
             .as_array()
@@ -423,12 +445,12 @@ pub async fn mail_read(
     .await
 }
 
-/// How one message came out of a keyword change, as the GUI acts on it. Core's five outcomes fold
+/// How one message came out of a change (keyword or move), as the GUI acts on it. Core's five outcomes fold
 /// into three because the GUI's choice is three-way: done; known not applied, so it may be tried
 /// again; or not known, so it has to be read before anything is sent again.
 #[derive(Debug, Serialize)]
 #[serde(tag = "outcome", rename_all = "camelCase")]
-pub enum KeywordResult {
+pub enum UpdateResult {
     Confirmed { id: String },
     NotApplied { id: String, reason: String },
     Unknown { id: String, reason: String },
@@ -436,43 +458,43 @@ pub enum KeywordResult {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct KeywordsView {
+pub struct UpdateView {
     /// One per distinct id asked for, in the order first asked.
-    results: Vec<KeywordResult>,
+    results: Vec<UpdateResult>,
     /// False when a confirmed change could not be read back into the cache: the write stands, and
     /// the views have to sync to show it.
     read_back_complete: bool,
 }
 
-fn keywords_view(results: axismundi_jmap_core::mail::KeywordResults) -> KeywordsView {
-    use axismundi_jmap_core::mail::KeywordOutcome as Outcome;
+fn update_view(results: axismundi_jmap_core::mail::UpdateResults) -> UpdateView {
+    use axismundi_jmap_core::mail::UpdateOutcome as Outcome;
     let read_back_complete = results.not_read_back.is_empty();
     let results = results
         .outcomes
         .into_iter()
         .map(|(id, outcome)| match outcome {
-            Outcome::Confirmed => KeywordResult::Confirmed { id },
-            Outcome::Refused(kind) => KeywordResult::NotApplied { id, reason: format!("The server refused it ({kind}).") },
-            Outcome::Failed(error) => KeywordResult::NotApplied { id, reason: failure("Mail", &error) },
-            Outcome::TooLarge => KeywordResult::NotApplied {
+            Outcome::Confirmed => UpdateResult::Confirmed { id },
+            Outcome::Refused(kind) => UpdateResult::NotApplied { id, reason: format!("The server refused it ({kind}).") },
+            Outcome::Failed(error) => UpdateResult::NotApplied { id, reason: failure("Mail", &error) },
+            Outcome::TooLarge => UpdateResult::NotApplied {
                 id,
                 reason: "Not sent: the request for this message is larger than the server accepts.".into(),
             },
-            Outcome::Unchanged => KeywordResult::NotApplied {
+            Outcome::Unchanged => UpdateResult::NotApplied {
                 id,
                 reason: "The answer was lost, and the server shows it unchanged.".into(),
             },
-            Outcome::Unknown(None) => KeywordResult::Unknown {
+            Outcome::Unknown(None) => UpdateResult::Unknown {
                 id,
                 reason: "The answer was lost, and the message did not come back to check.".into(),
             },
-            Outcome::Unknown(Some(error)) => KeywordResult::Unknown {
+            Outcome::Unknown(Some(error)) => UpdateResult::Unknown {
                 id,
                 reason: format!("The answer was lost, and reading it back failed. {}", failure("Mail", &error)),
             },
         })
         .collect();
-    KeywordsView { results, read_back_complete }
+    UpdateView { results, read_back_complete }
 }
 
 /// Sets or clears `$seen` or `$flagged` on the given messages of one Account (see core
@@ -486,7 +508,7 @@ pub async fn mail_set_keywords(
     keyword: String,
     on: bool,
     state: tauri::State<'_, Connection>,
-) -> Result<KeywordsView, String> {
+) -> Result<UpdateView, String> {
     let keyword = match keyword.as_str() {
         "seen" => axismundi_jmap_core::mail::Keyword::Seen,
         "flagged" => axismundi_jmap_core::mail::Keyword::Flagged,
@@ -495,15 +517,40 @@ pub async fn mail_set_keywords(
     with_mail(&state, connection_id, move |active, mail, store| {
         let results = cache::set_keywords(&active.client, &mail.session, store, &account_id, &email_ids, keyword, on)
             .map_err(explain)?;
-        Ok(keywords_view(results))
+        Ok(update_view(results))
     })
     .await
 }
 
-/// Reads the given messages' current keywords from the server (no write) and returns their rows. The
-/// GUI uses it to settle an `unknown` outcome before it allows another write to those messages.
+/// Moves messages of one Account from the mailbox they are listed in to another (see core
+/// `cache::move_emails`). `exclusive` takes them out of every mailbox this login sees, not just
+/// `from`; the GUI asks for it for Trash and Junk. Results as for keywords; nothing is resent.
 #[tauri::command]
-pub async fn mail_check_keywords(
+pub async fn mail_move(
+    connection_id: u32,
+    account_id: String,
+    email_ids: Vec<String>,
+    from: String,
+    to: String,
+    exclusive: bool,
+    state: tauri::State<'_, Connection>,
+) -> Result<UpdateView, String> {
+    if from == to {
+        return Err("Move: the message is already in that mailbox.".into());
+    }
+    with_mail(&state, connection_id, move |active, mail, store| {
+        let results = cache::move_emails(&active.client, &mail.session, store, &account_id, &email_ids, &from, &to, exclusive)
+            .map_err(explain)?;
+        Ok(update_view(results))
+    })
+    .await
+}
+
+/// Reads the given messages' current keywords and mailboxes from the server (no write) and returns
+/// their rows. The GUI uses it to settle an `unknown` outcome before it allows another write to those
+/// messages.
+#[tauri::command]
+pub async fn mail_check(
     connection_id: u32,
     account_id: String,
     email_ids: Vec<String>,
@@ -577,6 +624,9 @@ mod tests {
         assert_eq!(rows[2]["unread"], Value::Null);
         assert_eq!(rows[3], json!({"kind": "unavailable", "id": "zzzzzzzz", "reason": "notFound"}));
         assert_eq!(rows[4]["unread"], Value::Null, "a stale $seen is not a read state");
+        assert!(rows[0]["mailboxIds"].as_array().is_some_and(|boxes| !boxes.is_empty()), "moves need memberships");
+        let trash = actual["mailboxes"].as_array().unwrap().iter().find(|b| b["role"] == "trash").unwrap();
+        assert_eq!((trash["mayAddItems"].clone(), trash["mayRemoveItems"].clone()), (json!(true), json!(true)));
     }
 
     /// A real `mail-read` response (2026-11-21) and three edits of it: HTML-only parts, a
@@ -603,12 +653,12 @@ mod tests {
         assert_eq!(actual[3]["kind"], "unavailable");
     }
 
-    /// Every core outcome, as `set_keywords` can return them, folded into the three the GUI acts
-    /// on. The output is the file the GUI spec reads (`mail-keywords.fixture.json`).
+    /// Every core outcome, as `update` can return them, folded into the three the GUI acts on. The
+    /// output is the file the GUI spec reads (`mail-updates.fixture.json`).
     #[test]
-    fn keyword_results_serialize_to_the_shape_the_gui_reads() {
-        use axismundi_jmap_core::mail::{KeywordOutcome as Outcome, KeywordResults};
-        let results = KeywordResults {
+    fn update_results_serialize_to_the_shape_the_gui_reads() {
+        use axismundi_jmap_core::mail::{UpdateOutcome as Outcome, UpdateResults};
+        let results = UpdateResults {
             outcomes: vec![
                 ("m1".into(), Outcome::Confirmed),
                 ("m2".into(), Outcome::Refused("forbidden".into())),
@@ -622,8 +672,8 @@ mod tests {
             read_back: json!({"list": [], "notFound": []}),
             not_read_back: vec!["m7".into()],
         };
-        let actual = serde_json::to_value(keywords_view(results)).unwrap();
-        let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../src/app/mail/mail-keywords.fixture.json");
+        let actual = serde_json::to_value(update_view(results)).unwrap();
+        let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../src/app/mail/mail-updates.fixture.json");
         if std::env::var_os("AXISMUNDI_UPDATE_FIXTURES").is_some() {
             std::fs::write(&path, serde_json::to_string_pretty(&actual).unwrap() + "\n").unwrap();
         }

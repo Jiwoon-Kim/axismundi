@@ -35,6 +35,7 @@
         @let isStarred = starred(message.id, message.flagged);
         @let seenCheck = actions.unverified(accountId(), message.id, "seen");
         @let starCheck = actions.unverified(accountId(), message.id, "flagged");
+        @let moveCheck = actions.unverified(accountId(), message.id, "mailboxes");
         <div class="message-actions" role="toolbar" aria-label="Message actions">
           <button matButton type="button" [class.check]="seenCheck" [disabled]="actions.busy(message.id, 'seen')"
                   (click)="actions.setKeyword(accountId(), message.id, 'seen', isUnread)">
@@ -48,6 +49,23 @@
             <mat-icon>{{ starCheck ? "sync_problem" : "star" }}</mat-icon>
             {{ starCheck ? "Check star status" : isStarred ? "Starred" : "Star" }}
           </button>
+          @if (moves(); as moves) {
+            @if (moves.showTrash) {
+              <button matButton type="button" [class.check]="moveCheck" disabledInteractive
+                      [disabled]="actions.busy(message.id, 'mailboxes') || !!moves.trashBlocked"
+                      [matTooltip]="moves.trashBlocked ?? ''"
+                      (click)="moveTo(message.id, moves.trash)">
+                <mat-icon>{{ moveCheck ? "sync_problem" : "delete" }}</mat-icon>
+                {{ moveCheck ? "Check status" : "Move to Trash" }}
+              </button>
+            }
+            <button matButton type="button" [class.check]="moveCheck" disabledInteractive
+                    [disabled]="actions.busy(message.id, 'mailboxes') || !!moves.moveBlocked"
+                    [matTooltip]="moves.moveBlocked ?? ''" [matMenuTriggerFor]="moveMenu.menu()">
+              <mat-icon>drive_file_move</mat-icon> Move to…
+            </button>
+            <app-mail-move-menu #moveMenu="moveMenu" [targets]="moves.targets" (chosen)="moveTo(message.id, $event)" />
+          }
         </div>
         @if (members().length > 1) {
           <p class="thread-count">{{ members().length }} messages in this conversation</p>

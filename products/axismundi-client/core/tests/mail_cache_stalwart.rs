@@ -170,3 +170,118 @@ fn mail_cache_external_delta_offline_and_destruction() {
         "PASS isolated Mail cache: snapshot, detail, offline reopen, external keyword delta, move vs destroy, profile isolation and cleanup"
     );
 }
+
+/// Move to Trash and back out, through the cache, against the server's own rules: an exclusive move
+/// of a message in two mailboxes leaves Trash alone (Stalwart later destroys Trash contents outright),
+/// a plain move keeps any other membership, and a message cannot be left in no mailbox.
+#[test]
+#[ignore = "requires explicit local Stalwart credentials; creates two isolated Mailboxes and one Email"]
+fn mail_cache_move_to_trash_and_back() {
+    let url = std::env::var("AXJ_SESSION_URL").unwrap();
+    let parsed = url::Url::parse(&url).unwrap();
+    assert!(matches!(parsed.host_str(), Some("localhost" | "127.0.0.1" | "[::1]")));
+    let client = Client::new(Credentials {
+        user: std::env::var("AXJ_USER").unwrap(),
+        secret: std::env::var("AXJ_SECRET").unwrap(),
+    });
+    let session = client.session(&url).unwrap();
+    let account = mail::choose_account(&session, None).unwrap();
+    let nonce = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos();
+    let path = std::env::temp_dir().join(format!("ax-mail-move-e2e-{nonce}.sqlite"));
+    let boxes = call(
+        &client,
+        &session,
+        "Mailbox/set",
+        json!({"accountId":account,"create":{
+            "one":{"name":format!("Axismundi move E2E one {nonce}")},
+            "two":{"name":format!("Axismundi move E2E two {nonce}")}
+        }}),
+    );
+    let one = boxes["created"]["one"]["id"].as_str().unwrap().to_owned();
+    let two = boxes["created"]["two"]["id"].as_str().unwrap().to_owned();
+    let mut created_email: Option<String> = None;
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let created = call(
+            &client,
+            &session,
+            "Email/set",
+            json!({"accountId":account,"create":{"email":{
+                "mailboxIds":{&one:true,&two:true},"keywords":{"$seen":true},"from":[{"email":"fixture@example.invalid"}],
+                "subject":format!("Move E2E {nonce}"),
+                "textBody":[{"partId":"text","type":"text/plain"}],"bodyValues":{"text":{"value":"Move synthetic body"}}
+            }}}),
+        );
+        let id = created["created"]["email"]["id"].as_str().unwrap().to_owned();
+        created_email = Some(id.clone());
+        let trash = mail::mailboxes(&client, &session, &account).unwrap()["list"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|v| v["role"] == "trash")
+            .expect("the account has a Trash mailbox")["id"]
+            .as_str()
+            .unwrap()
+            .to_owned();
+        let mut store = cache::Store::open(&path, "e2e-profile").unwrap();
+        cache::sync(&client, &session, &mut store, &account, Some(&one), Rows::Messages).unwrap();
+        let boxes_of = |store: &cache::Store| store.email(&account, &id).unwrap()["document"]["mailboxIds"].clone();
+        let confirmed = |results: &mail::UpdateResults| {
+            assert!(matches!(results.outcomes.as_slice(), [(_, mail::UpdateOutcome::Confirmed)]), "{:?}", results.outcomes);
+            assert!(results.not_read_back.is_empty());
+        };
+
+        // Into Trash from `one`, as the GUI's Move to Trash asks: out of every mailbox this login sees.
+        let results = cache::move_emails(&client, &session, &mut store, &account, &[id.clone()], &one, &trash, true).unwrap();
+        confirmed(&results);
+        assert_eq!(boxes_of(&store), json!({&trash: true}), "Trash is the only mailbox");
+
+        // Out of Trash into `two`: a plain move.
+        let results = cache::move_emails(&client, &session, &mut store, &account, &[id.clone()], &trash, &two, false).unwrap();
+        confirmed(&results);
+        assert_eq!(boxes_of(&store), json!({&two: true}));
+
+        // A plain move leaves other memberships alone: add `one` back, then move `two` → Inbox.
+        call(&client, &session, "Email/set", json!({"accountId":account,"update":{&id:{format!("mailboxIds/{one}"):true}}}));
+        cache::sync(&client, &session, &mut store, &account, Some(&one), Rows::Messages).unwrap();
+        let inbox = mail::mailboxes(&client, &session, &account).unwrap()["list"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|v| v["role"] == "inbox")
+            .unwrap()["id"]
+            .as_str()
+            .unwrap()
+            .to_owned();
+        let results = cache::move_emails(&client, &session, &mut store, &account, &[id.clone()], &two, &inbox, false).unwrap();
+        confirmed(&results);
+        assert_eq!(boxes_of(&store), json!({&one: true, &inbox: true}), "the other membership stays");
+
+        // The server, not the client, refuses an empty membership: a raw patch removing both is refused.
+        let refused = client
+            .request(
+                &session,
+                &[axismundi_jmap_core::CORE_CAPABILITY, mail::CAPABILITY],
+                vec![("Email/set", json!({"accountId":account,"update":{&id:{"mailboxIds":{}}}}), "fixture")],
+            )
+            .unwrap();
+        let answer = refused.response("fixture", "Email/set").unwrap().arguments.clone();
+        assert_eq!(answer["notUpdated"][&id]["type"], "invalidProperties", "{answer}");
+        drop(store);
+    }));
+    if let Some(id) = created_email {
+        call(&client, &session, "Email/set", json!({"accountId":account,"destroy":[id]}));
+    }
+    call(
+        &client,
+        &session,
+        "Mailbox/set",
+        json!({"accountId":account,"destroy":[one, two],"onDestroyRemoveEmails":true}),
+    );
+    for suffix in ["", "-wal", "-shm"] {
+        let _ = std::fs::remove_file(format!("{}{suffix}", path.display()));
+    }
+    if let Err(panic) = result {
+        std::panic::resume_unwind(panic);
+    }
+    println!("PASS exclusive move to Trash leaves Trash alone, plain move keeps other memberships, empty membership refused");
+}

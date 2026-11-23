@@ -37,6 +37,22 @@
                         <mat-icon [class.filled]="command.filled">{{ check ? "sync_problem" : command.icon }}</mat-icon>
                       </button>
                     }
+                    @let moveCheck = checkSelection(account.id, "mailboxes");
+                    @if (moves().showTrash) {
+                      <button matIconButton type="button" disabledInteractive
+                              [disabled]="bulkBusy() || !selected().size || !!moves().trashBlocked"
+                              [matTooltip]="moves().trashBlocked ?? (moveCheck ? 'Check status' : 'Move to Trash')"
+                              [attr.aria-label]="moveCheck ? 'Check status' : 'Move to Trash'"
+                              (click)="moveSelection(account.id, moves().trash)">
+                        <mat-icon>{{ moveCheck ? "sync_problem" : "delete" }}</mat-icon>
+                      </button>
+                    }
+                    <button matIconButton type="button" disabledInteractive
+                            [disabled]="bulkBusy() || !selected().size || !!moves().moveBlocked"
+                            [matTooltip]="moves().moveBlocked ?? 'Move to…'" aria-label="Move to…"
+                            [matMenuTriggerFor]="moveMenu.menu()">
+                      <mat-icon>drive_file_move</mat-icon>
+                    </button>
                   </span>
                   <button matIconButton type="button" class="overflow-actions" matTooltip="More actions"
                           aria-label="More actions" [disabled]="bulkBusy() || !selected().size"
@@ -49,7 +65,18 @@
                         <span>{{ check ? command.check : command.label }}</span>
                       </button>
                     }
+                    @if (moves().showTrash) {
+                      <button mat-menu-item type="button" [disabled]="!!moves().trashBlocked"
+                              (click)="moveSelection(account.id, moves().trash)">
+                        <mat-icon>delete</mat-icon><span>{{ moves().trashBlocked ?? "Move to Trash" }}</span>
+                      </button>
+                    }
+                    <button mat-menu-item type="button" [disabled]="!!moves().moveBlocked" [matMenuTriggerFor]="moveMenu.menu()">
+                      <mat-icon>drive_file_move</mat-icon><span>{{ moves().moveBlocked ?? "Move to…" }}</span>
+                    </button>
                   </mat-menu>
+                  <app-mail-move-menu #moveMenu="moveMenu" [targets]="moves().targets"
+                                      (chosen)="moveSelection(account.id, $event)" />
                 </div>
                 <!-- Second row, so select-all lines up with the row checkboxes below it. -->
                 <div class="select-row">
@@ -86,6 +113,7 @@
                     @let isUnread = unread(account.id, row.id, row.unread);
                     @let starCheck = actions.unverified(account.id, row.id, "flagged");
                     @let seenCheck = actions.unverified(account.id, row.id, "seen");
+                    @let moveCheck = actions.unverified(account.id, row.id, "mailboxes");
                     @let isSelected = selected().has(row.id);
                     <li class="message" [class.unread]="isUnread" [class.bulk-selected]="isSelected">
                       @if (selecting()) {
@@ -110,7 +138,7 @@
                         <span class="text">
                           <span class="subject">{{ row.subject }}@if (isUnread) {<span class="visually-hidden"> (unread)</span>}</span>
                           @if (row.preview) { <span class="preview">{{ row.preview }}</span> }
-                          @if (starCheck || seenCheck) {
+                          @if (starCheck || seenCheck || moveCheck) {
                             <span class="row-result" matTooltip="The last change could not be confirmed.">
                               <mat-icon aria-hidden="true">sync_problem</mat-icon> Status unknown
                             </span>
@@ -122,7 +150,7 @@
                         </span>
                         @if (row.receivedAt) { <time class="date" [attr.datetime]="row.receivedAt">{{ listDate(row.receivedAt) }}</time> }
                       </a>
-                      <span class="row-actions" [class.check]="seenCheck">
+                      <span class="row-actions" [class.check]="seenCheck || moveCheck">
                         <button matIconButton type="button"
                                 [matTooltip]="seenCheck ? 'Check status' : isUnread ? 'Mark as read' : 'Mark as unread'"
                                 [attr.aria-label]="(seenCheck ? 'Check read status: ' : isUnread ? 'Mark as read: ' : 'Mark as unread: ') + row.subject"
@@ -130,6 +158,15 @@
                                 (click)="actions.setKeyword(account.id, row.id, 'seen', isUnread)">
                           <mat-icon>{{ seenCheck ? "sync_problem" : isUnread ? "mark_email_read" : "mark_email_unread" }}</mat-icon>
                         </button>
+                        @if (moves().showTrash && !moves().trashBlocked) {
+                          <button matIconButton type="button"
+                                  [matTooltip]="moveCheck ? 'Check status' : 'Move to Trash'"
+                                  [attr.aria-label]="(moveCheck ? 'Check status: ' : 'Move to Trash: ') + row.subject"
+                                  [disabled]="actions.busy(row.id, 'mailboxes')"
+                                  (click)="moveRow(account.id, row.id, moves().trash)">
+                            <mat-icon>{{ moveCheck ? "sync_problem" : "delete" }}</mat-icon>
+                          </button>
+                        }
                       </span>
                     </li>
                   } @else {
@@ -154,7 +191,8 @@
             @if (!email() && selecting() && selected().size) {
               <p class="reader-selection">{{ selected().size }} {{ selected().size === 1 ? "message" : "messages" }} selected</p>
             } @else {
-              <app-mail-detail [accountId]="account.id" [emailId]="email() ?? null" [mailbox]="mailbox() ?? null" />
+              <app-mail-detail [accountId]="account.id" [emailId]="email() ?? null" [mailbox]="mailbox() ?? null"
+                               [listedIn]="selectedMailbox()" [moves]="moves()" [mailboxes]="mailboxes()" />
             }
           </div>
         }

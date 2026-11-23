@@ -10,6 +10,12 @@ export interface MailboxRow {
   sortOrder: number | null;
   totalEmails: number | null;
   unreadEmails: number | null;
+  /** myRights.mayAddItems: a move may end here. null when the server did not say. */
+  mayAddItems: boolean | null;
+  /** myRights.mayRemoveItems: a move may start here. */
+  mayRemoveItems: boolean | null;
+  /** myRights.maySetSeen: $seen may change on a message here (in every mailbox it is in). */
+  maySetSeen: boolean | null;
 }
 
 export type MailRow =
@@ -27,6 +33,8 @@ export type MailRow =
       /** null on the same terms as unread. */
       flagged: boolean | null;
       hasAttachment: boolean | null;
+      /** The mailboxes it is in (in a shared Account, those this login can see); null when unknown. */
+      mailboxIds: string[] | null;
     }
   | {kind: "unavailable"; id: string; reason: string};
 

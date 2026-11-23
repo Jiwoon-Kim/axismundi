@@ -25,10 +25,34 @@ export type DetailView =
       /** null when keywords are unknown, as in the listing. */
       unread: boolean | null;
       flagged: boolean | null;
+      /** The mailboxes it is in; null when unknown. */
+      mailboxIds: string[] | null;
       body: Body;
       attachments: Attachment[];
     }
   | {kind: "unavailable"; id: string; reason: string};
+
+/**
+ * Whether opening a message marks it read: only when the server's keywords say it is unread (`seen`
+ * false; null means unknown and is left alone), not while an earlier read-state write is still
+ * unknown (the click would be a check, not a write), and not where `$seen` may not be changed — a
+ * read-only shared mailbox would refuse a write the user never asked for. The caller asks once per
+ * opening, so a reload or the user's own "Mark as unread" afterwards is never overwritten.
+ */
+export function markReadOnOpen(seen: boolean | null, blocked: boolean, maySetSeen: boolean): boolean {
+  return seen === false && !blocked && maySetSeen;
+}
+
+/**
+ * Whether `$seen` may change on a message, from the rights of the mailboxes it is in: it needs
+ * maySetSeen in every one (RFC 8621 §2). Only a stated `false` says no; when the message's mailboxes
+ * are unknown, the mailbox it is listed in stands for them.
+ */
+export function maySetSeen(mailboxes: readonly {id: string; maySetSeen: boolean | null}[],
+                           mailboxIds: readonly string[] | null, listedIn: string | null): boolean {
+  const ids = mailboxIds ?? (listedIn ? [listedIn] : []);
+  return ids.every(id => mailboxes.find(box => box.id === id)?.maySetSeen !== false);
+}
 
 /** "Name <email>", or whichever half exists. */
 export function addressLabel(address: Address): string {

@@ -17,6 +17,9 @@
     ],
     "id": "beaaaaal",
     "kind": "message",
+    "mailboxIds": [
+      "a"
+    ],
     "receivedAt": "2026-11-19T10:44:13Z",
     "sentAt": "2026-11-19T10:44:13Z",
     "subject": "Re: [Axismundi probe v1] Conversation",
@@ -44,6 +47,9 @@
     ],
     "id": "htmlonly",
     "kind": "message",
+    "mailboxIds": [
+      "a"
+    ],
     "receivedAt": "2026-11-19T10:44:13Z",
     "sentAt": "2026-11-19T10:44:13Z",
     "subject": "Re: [Axismundi probe v1] Conversation",
@@ -81,6 +87,9 @@
     ],
     "id": "truncated",
     "kind": "message",
+    "mailboxIds": [
+      "a"
+    ],
     "receivedAt": "2026-11-19T10:44:13Z",
     "sentAt": "2026-11-19T10:44:13Z",
     "subject": "Re: [Axismundi probe v1] Conversation",

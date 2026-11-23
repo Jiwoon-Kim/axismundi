@@ -12,8 +12,11 @@ import { map } from "rxjs";
 import { invoke } from "@tauri-apps/api/core";
 import { ConnectionService } from "../connection.service";
 import { MailDetailComponent } from "./mail-detail.component";
-import { MailActions, type Keyword } from "./mail-actions";
-import { ListView, rowLabel } from "./mail-rows";
+import { MailActions, type Aspect, type Keyword } from "./mail-actions";
+import { MailMoveMenuComponent } from "./mail-move-menu.component";
+import { moveOptions } from "./mail-moves";
+import { ListView, type MailboxRow, rowLabel } from "./mail-rows";
+import type { WriteResult } from "./mail-updates";
 
 /**
  * M3 window size classes (Material 3, Layout › Breakpoints). CDK's `Breakpoints` are the older
@@ -30,8 +33,8 @@ const EXPANDED = "(min-width: 840px)";
  */
 @Component({
   selector: "app-mail-page",
-  imports: [MailDetailComponent, MatIcon, MatIconAnchor, MatIconButton, MatSidenav, MatSidenavContainer,
-    MatSidenavContent, MatTooltip, MatCheckbox, MatMenu, MatMenuItem, MatMenuTrigger, RouterLink],
+  imports: [MailDetailComponent, MailMoveMenuComponent, MatIcon, MatIconAnchor, MatIconButton, MatSidenav,
+    MatSidenavContainer, MatSidenavContent, MatTooltip, MatCheckbox, MatMenu, MatMenuItem, MatMenuTrigger, RouterLink],
   templateUrl: "./mail-page.component.html",
   styleUrl: "./mail-page.component.css",
 })
@@ -84,7 +87,19 @@ export class MailPageComponent {
   protected readonly selectedMailbox = computed(() => this.view.hasValue() ? this.view.value().mailboxId : null);
   protected readonly mailboxName = computed(
     () => this.mailboxes().find(box => box.id === this.selectedMailbox())?.name ?? "Mail");
-  protected readonly rows = computed(() => this.view.hasValue() ? this.view.value().rows.map(rowLabel) : []);
+  /**
+   * The listing's rows, less any message the server confirmed has left this mailbox since the rows
+   * loaded: a confirmed move shows at once, and the reload it triggers then takes over.
+   */
+  protected readonly rows = computed(() => {
+    if (!this.view.hasValue()) return [];
+    const {accountId, mailboxId, rows} = this.view.value();
+    return rows
+      .filter(row => row.kind !== "message" || this.actions.shownIn(accountId, row.id, mailboxId, true, this.loadedFrom()))
+      .map(rowLabel);
+  });
+  /** Move to Trash and Move to… as this listing offers them (see `moveOptions`). */
+  protected readonly moves = computed(() => moveOptions(this.mailboxes(), this.selectedMailbox()));
   /**
    * Selected message ids. Selection is local to this list: it empties when the connection, Account
    * or mailbox changes, and an id whose row is gone from the listing drops out. It never decides
@@ -130,24 +145,62 @@ export class MailPageComponent {
     return this.refused().has(id) ? "The server did not apply the last change." : undefined;
   }
 
-  /** Whether any selected message is blocked for this keyword: the button then checks instead. */
-  protected checkSelection(accountId: string, keyword: Keyword): boolean {
-    return [...this.selected()].some(id => this.actions.unverified(accountId, id, keyword));
+  /** Whether any selected message is blocked for this aspect: the button then checks instead. */
+  protected checkSelection(accountId: string, aspect: Aspect): boolean {
+    return [...this.selected()].some(id => this.actions.unverified(accountId, id, aspect));
+  }
+
+  protected applySelection(accountId: string, keyword: Keyword, on: boolean): Promise<void> {
+    return this.forSelection(ids => this.actions.setKeywords(accountId, ids, keyword, on), false);
+  }
+
+  protected moveSelection(accountId: string, to: MailboxRow | null): Promise<void> {
+    const from = this.selectedMailbox();
+    if (!to || !from) return Promise.resolve();
+    return this.forSelection(ids => this.actions.move(accountId, ids, from, to), true);
+  }
+
+  /** One message from its row: out of the mailbox this list shows. */
+  protected async moveRow(accountId: string, id: string, to: MailboxRow | null): Promise<void> {
+    const from = this.selectedMailbox();
+    if (!to || !from) return;
+    const scope = this.scope();
+    const result = await this.actions.move(accountId, [id], from, to);
+    if (this.scope() === scope) this.leaveIfMoved(result);
+  }
+
+  /**
+   * Which connection, Account and mailbox the screen shows. An answer that arrives after it changed
+   * belongs to a screen that is gone: it must not close the reading pane or touch the selection here.
+   */
+  private scope(): string {
+    return JSON.stringify([this.connection.connected()?.id, this.connection.accountId(), this.selectedMailbox()]);
+  }
+
+  /** The open message moved out of this listing: back to the list, as Gmail does. Moves only. */
+  private leaveIfMoved(result: WriteResult | null): void {
+    const open = this.email();
+    if (open && result?.settled?.confirmed.includes(open)) {
+      void this.router.navigate(["/mail"], {queryParams: {mailbox: this.mailbox() ?? null}});
+    }
   }
 
   /**
    * Sends one action for every selected message, in list order. Blocked ones are held back and
    * checked by MailActions, not here. Confirmed ids leave the selection; everything else stays.
    */
-  protected async applySelection(accountId: string, keyword: Keyword, on: boolean): Promise<void> {
+  private async forSelection(run: (ids: readonly string[]) => Promise<WriteResult | null>, moves: boolean): Promise<void> {
     if (this.bulkBusy()) return;
     const ids = this.eligible().filter(id => this.selected().has(id));
     if (!ids.length) return;
+    const scope = this.scope();
     this.bulkBusy.set(true);
     this.refused.set(new Set());
     try {
-      const result = await this.actions.setKeywords(accountId, ids, keyword, on);
-      if (!result) return;
+      const result = await run(ids);
+      // The selection was emptied when the scope changed; this answer is not about the new one.
+      if (!result || this.scope() !== scope) return;
+      if (moves) this.leaveIfMoved(result);
       const confirmed = new Set(result.settled?.confirmed ?? []);
       this.selected.update(set => new Set([...set].filter(id => !confirmed.has(id))));
       this.refused.set(new Set(result.settled?.notApplied ?? []));

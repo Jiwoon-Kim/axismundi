@@ -5,6 +5,9 @@
   "mailboxes": [
     {
       "id": "a",
+      "mayAddItems": true,
+      "mayRemoveItems": true,
+      "maySetSeen": true,
       "name": "Inbox",
       "parentId": null,
       "role": "inbox",
@@ -14,6 +17,9 @@
     },
     {
       "id": "b",
+      "mayAddItems": true,
+      "mayRemoveItems": true,
+      "maySetSeen": true,
       "name": "Deleted Items",
       "parentId": null,
       "role": "trash",
@@ -23,6 +29,9 @@
     },
     {
       "id": "c",
+      "mayAddItems": true,
+      "mayRemoveItems": true,
+      "maySetSeen": true,
       "name": "Junk Mail",
       "parentId": null,
       "role": "junk",
@@ -32,6 +41,9 @@
     },
     {
       "id": "d",
+      "mayAddItems": true,
+      "mayRemoveItems": true,
+      "maySetSeen": true,
       "name": "Drafts",
       "parentId": null,
       "role": "drafts",
@@ -41,6 +53,9 @@
     },
     {
       "id": "e",
+      "mayAddItems": true,
+      "mayRemoveItems": true,
+      "maySetSeen": true,
       "name": "Sent Items",
       "parentId": null,
       "role": "sent",
@@ -50,6 +65,9 @@
     },
     {
       "id": "h",
+      "mayAddItems": true,
+      "mayRemoveItems": true,
+      "maySetSeen": true,
       "name": "Axismundi Probe",
       "parentId": null,
       "role": null,
@@ -66,6 +84,9 @@
       "hasAttachment": false,
       "id": "beaaaaal",
       "kind": "message",
+      "mailboxIds": [
+        "a"
+      ],
       "preview": "Probe conversation, message 3 of 4.\n\nThis is local test mail between admin and Alice.\nUse it to inspect Inbox/Sent threading and reply references.",
       "receivedAt": "2026-11-19T10:44:13Z",
       "senderEmail": "admin@example.org",
@@ -79,6 +100,10 @@
       "hasAttachment": false,
       "id": "beaaaaaj",
       "kind": "message",
+      "mailboxIds": [
+        "a",
+        "h"
+      ],
       "preview": "Probe conversation, message 1 of 4.\n\nThis is local test mail between admin and Alice.\nUse it to inspect Inbox/Sent threading and reply references.",
       "receivedAt": "2026-11-19T10:42:17Z",
       "senderEmail": "admin@example.org",
@@ -92,6 +117,9 @@
       "hasAttachment": false,
       "id": "eaaaaab",
       "kind": "message",
+      "mailboxIds": [
+        "a"
+      ],
       "preview": "Axismundi local Submission interop. No external recipients.",
       "receivedAt": "2026-11-19T09:49:39Z",
       "senderEmail": "admin@example.org",
@@ -110,6 +138,9 @@
       "hasAttachment": false,
       "id": "staleseen",
       "kind": "message",
+      "mailboxIds": [
+        "a"
+      ],
       "preview": "Probe conversation, message 3 of 4.\n\nThis is local test mail between admin and Alice.\nUse it to inspect Inbox/Sent threading and reply references.",
       "receivedAt": "2026-11-19T10:44:13Z",
       "senderEmail": "admin@example.org",

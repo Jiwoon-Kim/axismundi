@@ -7,6 +7,10 @@
         "hasAttachment": false,
         "id": "beaaaaaj",
         "kind": "message",
+        "mailboxIds": [
+          "a",
+          "h"
+        ],
         "preview": "Probe conversation, message 1 of 4.\n\nThis is local test mail between admin and Alice.\nUse it to inspect Inbox/Sent threading and reply references.",
         "receivedAt": "2026-11-19T10:42:17Z",
         "senderEmail": "admin@example.org",
@@ -20,6 +24,9 @@
         "hasAttachment": false,
         "id": "beaaaaak",
         "kind": "message",
+        "mailboxIds": [
+          "e"
+        ],
         "preview": "Probe conversation, message 2 of 4.\n\nThis is local test mail between admin and Alice.\nUse it to inspect Inbox/Sent threading and reply references.",
         "receivedAt": "2026-11-19T10:44:12Z",
         "senderEmail": "alice@example.org",
@@ -33,6 +40,9 @@
         "hasAttachment": false,
         "id": "beaaaaal",
         "kind": "message",
+        "mailboxIds": [
+          "a"
+        ],
         "preview": "Probe conversation, message 3 of 4.\n\nThis is local test mail between admin and Alice.\nUse it to inspect Inbox/Sent threading and reply references.",
         "receivedAt": "2026-11-19T10:44:13Z",
         "senderEmail": "admin@example.org",
@@ -46,6 +56,9 @@
         "hasAttachment": false,
         "id": "beaaaaam",
         "kind": "message",
+        "mailboxIds": [
+          "e"
+        ],
         "preview": "Probe conversation, message 4 of 4.\n\nThis is local test mail between admin and Alice.\nUse it to inspect Inbox/Sent threading and reply references.",
         "receivedAt": "2026-11-19T10:44:13Z",
         "senderEmail": "alice@example.org",
@@ -65,6 +78,10 @@
         "hasAttachment": false,
         "id": "beaaaaaj",
         "kind": "message",
+        "mailboxIds": [
+          "a",
+          "h"
+        ],
         "preview": "Probe conversation, message 1 of 4.\n\nThis is local test mail between admin and Alice.\nUse it to inspect Inbox/Sent threading and reply references.",
         "receivedAt": "2026-11-19T10:42:17Z",
         "senderEmail": "admin@example.org",
@@ -78,6 +95,9 @@
         "hasAttachment": false,
         "id": "beaaaaak",
         "kind": "message",
+        "mailboxIds": [
+          "e"
+        ],
         "preview": "Probe conversation, message 2 of 4.\n\nThis is local test mail between admin and Alice.\nUse it to inspect Inbox/Sent threading and reply references.",
         "receivedAt": "2026-11-19T10:44:12Z",
         "senderEmail": "alice@example.org",
@@ -91,6 +111,9 @@
         "hasAttachment": false,
         "id": "beaaaaal",
         "kind": "message",
+        "mailboxIds": [
+          "a"
+        ],
         "preview": "Probe conversation, message 3 of 4.\n\nThis is local test mail between admin and Alice.\nUse it to inspect Inbox/Sent threading and reply references.",
         "receivedAt": "2026-11-19T10:44:13Z",
         "senderEmail": "admin@example.org",
@@ -104,6 +127,9 @@
         "hasAttachment": false,
         "id": "beaaaaam",
         "kind": "message",
+        "mailboxIds": [
+          "e"
+        ],
         "preview": "Probe conversation, message 4 of 4.\n\nThis is local test mail between admin and Alice.\nUse it to inspect Inbox/Sent threading and reply references.",
         "receivedAt": "2026-11-19T10:44:13Z",
         "senderEmail": "alice@example.org",

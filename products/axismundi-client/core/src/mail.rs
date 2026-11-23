@@ -228,9 +228,68 @@ fn uncertain(error: &Error) -> bool {
     }
 }
 
-/// How one message came out of a keyword change.
+/// One change applied to many messages of one Account: the only two things about an Email that can
+/// change are its keywords and its mailboxIds (RFC 8621 §4).
+#[derive(Clone, Copy, Debug)]
+pub enum Change<'a> {
+    /// Sets or clears one keyword, patching `keywords/<keyword>` alone so keywords another client set
+    /// survive.
+    Keyword { keyword: Keyword, on: bool },
+    /// Takes the messages out of `from` and puts them in `to`, patching those two memberships alone:
+    /// a message also in a third mailbox stays there (RFC 8621 §4.6 patch).
+    Move { from: &'a str, to: &'a str },
+    /// Puts the messages in `to` and takes them out of every mailbox in `out_of`, as one patch: a
+    /// null for each listed membership, whether the message has it or not (Stalwart 1.1.0 accepts a
+    /// null for a mailbox the message is not in). Memberships not listed are left alone, so a caller
+    /// lists only the mailboxes it can see and never touches ones it cannot — unlike replacing
+    /// `mailboxIds` whole. Which destinations call for this is the caller's policy, not this module's.
+    OnlyIn { to: &'a str, out_of: &'a [String] },
+}
+
+impl Change<'_> {
+    fn patch(&self) -> Result<Value, Error> {
+        Ok(match *self {
+            Change::Keyword { keyword, on } => {
+                json!({ format!("keywords/{}", keyword.as_str()): if on { Value::Bool(true) } else { Value::Null } })
+            }
+            Change::Move { from, to } if from == to => {
+                return Err(Error::Shape("a move needs two different mailboxes".into()));
+            }
+            Change::Move { from, to } => json!({ format!("mailboxIds/{from}"): null, format!("mailboxIds/{to}"): true }),
+            Change::OnlyIn { to, out_of } => {
+                let mut patch: serde_json::Map<String, Value> =
+                    out_of.iter().map(|id| (format!("mailboxIds/{id}"), Value::Null)).collect();
+                // Inserted last, so a destination that is also listed ends up set, not nulled.
+                patch.insert(format!("mailboxIds/{to}"), Value::Bool(true));
+                Value::Object(patch)
+            }
+        })
+    }
+
+    /// Whether a message read back from the server shows this change; `None` when it came back
+    /// without the property the change is about, which proves nothing.
+    fn holds(&self, row: &Value) -> Option<bool> {
+        match *self {
+            Change::Keyword { keyword, on } => {
+                let keywords = row.get("keywords")?.as_object()?;
+                Some((keywords.get(keyword.as_str()) == Some(&Value::Bool(true))) == on)
+            }
+            Change::Move { from, to } => {
+                let boxes = row.get("mailboxIds")?.as_object()?;
+                Some(boxes.get(to) == Some(&Value::Bool(true)) && !boxes.contains_key(from))
+            }
+            Change::OnlyIn { to, out_of } => {
+                let boxes = row.get("mailboxIds")?.as_object()?;
+                let left = out_of.iter().any(|id| id.as_str() != to && boxes.contains_key(id.as_str()));
+                Some(boxes.get(to) == Some(&Value::Bool(true)) && !left)
+            }
+        }
+    }
+}
+
+/// How one message came out of a change.
 #[derive(Debug)]
-pub enum KeywordOutcome {
+pub enum UpdateOutcome {
     /// Applied: the server said so in `updated`, or a read after a lost answer shows it.
     Confirmed,
     /// The server refused it, by a `notUpdated` SetError or a method-level error for its request,
@@ -240,18 +299,19 @@ pub enum KeywordOutcome {
     Failed(Error),
     /// Not sent: even alone, the request for this id exceeds the server's maxSizeRequest.
     TooLarge,
-    /// The answer was lost, and reading back shows the keyword as it was. Safe to send again.
+    /// The answer was lost, and reading back shows the change not applied. Safe to send again.
     Unchanged,
     /// The answer was lost and reading back did not settle it: the read failed (`Some`), or the
-    /// message did not come back with keywords (`None`, notFound included). Read before resending.
+    /// message did not come back with the changed property (`None`, notFound included). Read before
+    /// resending.
     Unknown(Option<Error>),
 }
 
-/// The outcome of one keyword change over many messages.
+/// The outcome of one change over many messages.
 #[derive(Debug)]
-pub struct KeywordResults {
+pub struct UpdateResults {
     /// One per distinct id asked for, in the order first asked.
-    pub outcomes: Vec<(String, KeywordOutcome)>,
+    pub outcomes: Vec<(String, UpdateOutcome)>,
     /// What was read after the write (id, keywords, mailboxIds), as one Email/get-shaped
     /// `{list, notFound}` for the caller to merge. It covers only what could be read.
     pub read_back: Value,
@@ -259,20 +319,7 @@ pub struct KeywordResults {
     pub not_read_back: Vec<String>,
 }
 
-/// Sets or clears one keyword on many messages of one Account.
-///
-/// Each message gets a patch of `keywords/<keyword>` alone (RFC 8621 §4.6), so keywords another
-/// client set survive. The ids go out in `Email/set` requests that respect both `maxObjectsInSet`
-/// and `maxSizeRequest` (see `pack`), and each message's result is read from `updated` /
-/// `notUpdated` on its own, so one refusal does not fail the rest. Afterwards every confirmed
-/// message, and every message whose answer was lost, is read back in `Email/get` requests packed
-/// the same way against `maxObjectsInGet`. An id too large for any request is `TooLarge`, unsent.
-///
-/// A lost answer (no response, a 5xx, an unreadable response, or a message missing from both
-/// `updated` and `notUpdated`) is never answered by sending again. It counts as applied only if
-/// the message comes back with a `keywords` object showing the asked-for state; notFound or a
-/// failed read leaves it Unknown. A confirmed write whose read fails stays Confirmed and is listed
-/// in `not_read_back`. Only a precondition (unknown Account, missing Core limits) is an `Err`.
+/// Sets or clears one keyword on many messages of one Account: `update` with `Change::Keyword`.
 pub fn set_keywords(
     client: &Client,
     session: &Session,
@@ -280,28 +327,52 @@ pub fn set_keywords(
     ids: &[String],
     keyword: Keyword,
     on: bool,
-) -> Result<KeywordResults, Error> {
+) -> Result<UpdateResults, Error> {
+    update(client, session, account, ids, Change::Keyword { keyword, on })
+}
+
+/// Applies one change to many messages of one Account.
+///
+/// Every message gets the same patch (see `Change`). The ids go out in `Email/set` requests that
+/// respect both `maxObjectsInSet` and `maxSizeRequest` (see `pack`), and each message's result is
+/// read from `updated` / `notUpdated` on its own, so one refusal does not fail the rest. Afterwards
+/// every confirmed message, and every message whose answer was lost, is read back in `Email/get`
+/// requests packed the same way against `maxObjectsInGet`. An id too large for any request is
+/// `TooLarge`, unsent.
+///
+/// A lost answer (no response, a 5xx, an unreadable response, or a message missing from both
+/// `updated` and `notUpdated`) is never answered by sending again. It counts as applied only if
+/// the message comes back with the changed property showing the change; notFound or a failed read
+/// leaves it Unknown. A confirmed write whose read fails stays Confirmed and is listed in
+/// `not_read_back`. Only a precondition (unknown Account, missing Core limits, a move onto its own
+/// mailbox) is an `Err`.
+pub fn update(
+    client: &Client,
+    session: &Session,
+    account: &str,
+    ids: &[String],
+    change: Change<'_>,
+) -> Result<UpdateResults, Error> {
     use std::collections::{BTreeMap, BTreeSet};
     choose_account(session, Some(account))?;
     let set_size = limit(session, "maxObjectsInSet")?;
     let get_size = limit(session, "maxObjectsInGet")?;
     let mut seen = BTreeSet::new();
     let ids: Vec<&String> = ids.iter().filter(|id| seen.insert(id.as_str())).collect();
-    let patch = format!("keywords/{}", keyword.as_str());
-    let value = if on { Value::Bool(true) } else { Value::Null };
+    let patch = change.patch()?;
     let set_args = |chunk: &[&str]| {
         let update: serde_json::Map<String, Value> =
-            chunk.iter().map(|id| ((*id).to_owned(), json!({ patch.as_str(): value.clone() }))).collect();
+            chunk.iter().map(|id| ((*id).to_owned(), patch.clone())).collect();
         json!({"accountId":account,"update":update})
     };
     let get_args = |chunk: &[&str]| json!({"accountId":account,"ids":chunk,"properties":["id","keywords","mailboxIds"]});
 
-    let mut outcomes: BTreeMap<&str, KeywordOutcome> = BTreeMap::new();
+    let mut outcomes: BTreeMap<&str, UpdateOutcome> = BTreeMap::new();
     let mut lost: BTreeSet<&str> = BTreeSet::new();
     let all: Vec<&str> = ids.iter().map(|id| id.as_str()).collect();
     let (set_chunks, oversize) = pack(session, &all, set_size, "Email/set", set_args)?;
     for id in oversize {
-        outcomes.insert(id, KeywordOutcome::TooLarge);
+        outcomes.insert(id, UpdateOutcome::TooLarge);
     }
     for chunk in &set_chunks {
         let sent = call(client, session, "Email/set", set_args(chunk));
@@ -314,7 +385,7 @@ pub fn set_keywords(
             Err(error) => {
                 // A request-level failure processed nothing; each id gets its own copy of the reason.
                 for &id in chunk {
-                    outcomes.insert(id, KeywordOutcome::Failed(copy_error(&error)));
+                    outcomes.insert(id, UpdateOutcome::Failed(copy_error(&error)));
                 }
                 continue;
             }
@@ -322,7 +393,7 @@ pub fn set_keywords(
         if let Some(refusal) = batch.errors().first() {
             let kind = refusal.error_type().unwrap_or("unknown").to_owned();
             for &id in chunk {
-                outcomes.insert(id, KeywordOutcome::Refused(kind.clone()));
+                outcomes.insert(id, UpdateOutcome::Refused(kind.clone()));
             }
             continue;
         }
@@ -333,9 +404,9 @@ pub fn set_keywords(
         for &id in chunk {
             if let Some(refused) = result.get("notUpdated").and_then(|map| map.get(id)) {
                 let kind = refused.get("type").and_then(Value::as_str).unwrap_or("unknown");
-                outcomes.insert(id, KeywordOutcome::Refused(kind.to_owned()));
+                outcomes.insert(id, UpdateOutcome::Refused(kind.to_owned()));
             } else if result.get("updated").and_then(|map| map.get(id)).is_some() {
-                outcomes.insert(id, KeywordOutcome::Confirmed);
+                outcomes.insert(id, UpdateOutcome::Confirmed);
             } else {
                 lost.insert(id);
             }
@@ -345,7 +416,7 @@ pub fn set_keywords(
     let to_read: Vec<&str> = ids
         .iter()
         .map(|id| id.as_str())
-        .filter(|id| lost.contains(id) || matches!(outcomes.get(id), Some(KeywordOutcome::Confirmed)))
+        .filter(|id| lost.contains(id) || matches!(outcomes.get(id), Some(UpdateOutcome::Confirmed)))
         .collect();
     let mut list = Vec::new();
     let mut not_found = Vec::new();
@@ -377,20 +448,17 @@ pub fn set_keywords(
 
     for id in &lost {
         let outcome = if let Some(error) = read_errors.remove(id) {
-            KeywordOutcome::Unknown(Some(error))
+            UpdateOutcome::Unknown(Some(error))
         } else {
-            let keywords = list
+            let holds = list
                 .iter()
                 .find(|row| row.get("id").and_then(Value::as_str) == Some(*id))
-                .and_then(|row| row.get("keywords"))
-                .and_then(Value::as_object);
-            match keywords {
-                // Only a returned message with a keywords object counts; notFound proves nothing.
-                None => KeywordOutcome::Unknown(None),
-                Some(keywords) if (keywords.get(keyword.as_str()) == Some(&Value::Bool(true))) == on => {
-                    KeywordOutcome::Confirmed
-                }
-                Some(_) => KeywordOutcome::Unchanged,
+                .and_then(|row| change.holds(row));
+            match holds {
+                // Only a returned message with the changed property counts; notFound proves nothing.
+                None => UpdateOutcome::Unknown(None),
+                Some(true) => UpdateOutcome::Confirmed,
+                Some(false) => UpdateOutcome::Unchanged,
             }
         };
         outcomes.insert(id, outcome);
@@ -407,7 +475,7 @@ pub fn set_keywords(
             ((*id).clone(), outcome)
         })
         .collect();
-    Ok(KeywordResults {
+    Ok(UpdateResults {
         outcomes,
         read_back: json!({"list": list, "notFound": not_found}),
         not_read_back,
@@ -1193,6 +1261,20 @@ mod tests {
     /// connection after reading the request, as a lost answer looks to the client. Returns the
     /// method names each request carried.
     fn scripted(replies: Vec<Option<Value>>) -> (String, std::thread::JoinHandle<Vec<Vec<String>>>) {
+        let (api, server) = recorded(replies);
+        let names = std::thread::spawn(move || {
+            server
+                .join()
+                .unwrap()
+                .iter()
+                .map(|calls| calls.as_array().unwrap().iter().map(|call| call[0].as_str().unwrap().to_owned()).collect())
+                .collect()
+        });
+        (api, names)
+    }
+
+    /// `scripted`, returning each request's whole `methodCalls` so a test can read the arguments.
+    fn recorded(replies: Vec<Option<Value>>) -> (String, std::thread::JoinHandle<Vec<Value>>) {
         use std::io::{BufRead, BufReader, Read, Write};
         let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
         let api = format!("http://{}", listener.local_addr().unwrap());
@@ -1216,7 +1298,7 @@ mod tests {
                 let mut bytes = vec![0; length];
                 reader.read_exact(&mut bytes).unwrap();
                 let request: Value = serde_json::from_slice(&bytes).unwrap();
-                seen.push(request["methodCalls"].as_array().unwrap().iter().map(|call| call[0].as_str().unwrap().to_owned()).collect());
+                seen.push(request["methodCalls"].clone());
                 if let Some(body) = reply {
                     let body = body.to_string();
                     write!(stream, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}", body.len(), body).unwrap();
@@ -1255,9 +1337,113 @@ mod tests {
         get_reply(json!([{"id":"m1","keywords":keywords,"mailboxIds":{"in":true}}]), json!([]))
     }
 
-    fn one(results: &KeywordResults) -> &KeywordOutcome {
+    fn one(results: &UpdateResults) -> &UpdateOutcome {
         assert_eq!(results.outcomes.len(), 1);
         &results.outcomes[0].1
+    }
+
+    fn boxes_back(mailbox_ids: Value) -> Option<Value> {
+        get_reply(json!([{"id":"m1","keywords":{},"mailboxIds":mailbox_ids}]), json!([]))
+    }
+
+    /// The patch a request sent for m1.
+    fn sent_patch(calls: &[Value]) -> Value {
+        assert_eq!(calls[0][0][0], "Email/set");
+        calls[0][0][1]["update"]["m1"].clone()
+    }
+
+    /// A move patches exactly two memberships, so a message also in a third mailbox stays there.
+    #[test]
+    fn a_move_patches_only_its_two_mailboxes() {
+        let (api, server) = recorded(vec![set_reply(json!({"updated":{"m1":null}})), boxes_back(json!({"sent":true,"project":true}))]);
+        let (client, session) = keyword_session(&api);
+        let results = update(&client, &session, "a", &ids(&["m1"]), Change::Move { from: "trash", to: "sent" }).unwrap();
+        assert!(matches!(one(&results), UpdateOutcome::Confirmed));
+        let calls = server.join().unwrap();
+        assert_eq!(sent_patch(&calls), json!({"mailboxIds/trash":null,"mailboxIds/sent":true}));
+        assert_eq!(calls[1][0][0], "Email/get");
+    }
+
+    fn visible() -> Vec<String> {
+        ids(&["in", "project", "trash"])
+    }
+
+    /// Only-in nulls each listed mailbox and adds the destination; it never replaces mailboxIds whole,
+    /// so a membership the caller cannot see is not in the request at all.
+    #[test]
+    fn only_in_patches_each_listed_mailbox_and_nothing_else() {
+        let (api, server) = recorded(vec![set_reply(json!({"updated":{"m1":null}})), boxes_back(json!({"trash":true,"hidden":true}))]);
+        let (client, session) = keyword_session(&api);
+        let out_of = visible();
+        let results = update(&client, &session, "a", &ids(&["m1"]), Change::OnlyIn { to: "trash", out_of: &out_of }).unwrap();
+        assert!(matches!(one(&results), UpdateOutcome::Confirmed), "a membership it did not list does not count against it");
+        assert_eq!(
+            sent_patch(&server.join().unwrap()),
+            json!({"mailboxIds/in":null,"mailboxIds/project":null,"mailboxIds/trash":true}),
+            "the destination is set, not also nulled"
+        );
+    }
+
+    /// A lost answer, read back in the destination plus a mailbox the caller did not list (one a
+    /// shared Account does not show it): that is the change as asked.
+    #[test]
+    fn a_lost_only_in_ignores_mailboxes_it_did_not_list() {
+        let (api, server) = scripted(vec![None, boxes_back(json!({"trash":true,"hidden":true}))]);
+        let (client, session) = keyword_session(&api);
+        let out_of = visible();
+        let results = update(&client, &session, "a", &ids(&["m1"]), Change::OnlyIn { to: "trash", out_of: &out_of }).unwrap();
+        assert!(matches!(one(&results), UpdateOutcome::Confirmed));
+        server.join().unwrap();
+    }
+
+    /// A lost answer, and a listed mailbox still holds the message: not applied as asked.
+    #[test]
+    fn a_lost_only_in_with_a_listed_mailbox_left_is_unchanged() {
+        let (api, server) = scripted(vec![None, boxes_back(json!({"trash":true,"project":true}))]);
+        let (client, session) = keyword_session(&api);
+        let out_of = visible();
+        let results = update(&client, &session, "a", &ids(&["m1"]), Change::OnlyIn { to: "trash", out_of: &out_of }).unwrap();
+        assert!(matches!(one(&results), UpdateOutcome::Unchanged));
+        assert_eq!(server.join().unwrap(), vec![vec!["Email/set"], vec!["Email/get"]], "nothing resent");
+    }
+
+    /// A lost answer for a move, read back already out of the source and in the destination.
+    #[test]
+    fn a_lost_move_is_confirmed_by_where_the_message_is() {
+        let (api, server) = scripted(vec![None, boxes_back(json!({"sent":true}))]);
+        let (client, session) = keyword_session(&api);
+        let results = update(&client, &session, "a", &ids(&["m1"]), Change::Move { from: "trash", to: "sent" }).unwrap();
+        assert!(matches!(one(&results), UpdateOutcome::Confirmed));
+        assert_eq!(server.join().unwrap(), vec![vec!["Email/set"], vec!["Email/get"]]);
+    }
+
+    /// In the destination but still in the source is not the move either.
+    #[test]
+    fn a_lost_move_still_in_its_source_is_unchanged() {
+        let (api, server) = scripted(vec![None, boxes_back(json!({"trash":true,"sent":true}))]);
+        let (client, session) = keyword_session(&api);
+        let results = update(&client, &session, "a", &ids(&["m1"]), Change::Move { from: "trash", to: "sent" }).unwrap();
+        assert!(matches!(one(&results), UpdateOutcome::Unchanged));
+        server.join().unwrap();
+    }
+
+    /// Read back without mailboxIds: nothing proves where the message is.
+    #[test]
+    fn a_lost_move_read_without_mailboxes_is_unknown() {
+        let (api, server) = scripted(vec![None, get_reply(json!([{"id":"m1","keywords":{}}]), json!([]))]);
+        let (client, session) = keyword_session(&api);
+        let results = update(&client, &session, "a", &ids(&["m1"]), Change::Move { from: "trash", to: "sent" }).unwrap();
+        assert!(matches!(one(&results), UpdateOutcome::Unknown(None)));
+        server.join().unwrap();
+    }
+
+    /// A move onto its own mailbox would cancel itself in one patch; it is refused before sending.
+    #[test]
+    fn a_move_onto_its_own_mailbox_sends_nothing() {
+        let (api, server) = scripted(vec![]);
+        let (client, session) = keyword_session(&api);
+        assert!(update(&client, &session, "a", &ids(&["m1"]), Change::Move { from: "in", to: "in" }).is_err());
+        assert!(server.join().unwrap().is_empty());
     }
 
     #[test]
@@ -1265,7 +1451,7 @@ mod tests {
         let (api, server) = scripted(vec![set_reply(json!({"updated":{"m1":null}})), read_back(json!({"$seen":true,"$label":true}))]);
         let (client, session) = keyword_session(&api);
         let results = set_keywords(&client, &session, "a", &ids(&["m1"]), Keyword::Seen, true).unwrap();
-        assert!(matches!(one(&results), KeywordOutcome::Confirmed));
+        assert!(matches!(one(&results), UpdateOutcome::Confirmed));
         assert_eq!(results.read_back["list"][0]["keywords"]["$label"], true, "other keywords survive");
         assert_eq!(server.join().unwrap(), vec![vec!["Email/set"], vec!["Email/get"]]);
     }
@@ -1275,7 +1461,7 @@ mod tests {
         let (api, server) = scripted(vec![set_reply(json!({"notUpdated":{"m1":{"type":"forbidden"}}}))]);
         let (client, session) = keyword_session(&api);
         let results = set_keywords(&client, &session, "a", &ids(&["m1"]), Keyword::Flagged, true).unwrap();
-        assert!(matches!(one(&results), KeywordOutcome::Refused(kind) if kind == "forbidden"));
+        assert!(matches!(one(&results), UpdateOutcome::Refused(kind) if kind == "forbidden"));
         assert_eq!(server.join().unwrap(), vec![vec!["Email/set"]], "nothing is read back after a refusal");
     }
 
@@ -1285,7 +1471,7 @@ mod tests {
         let (api, server) = scripted(vec![None, read_back(json!({"$flagged":true}))]);
         let (client, session) = keyword_session(&api);
         let results = set_keywords(&client, &session, "a", &ids(&["m1"]), Keyword::Flagged, true).unwrap();
-        assert!(matches!(one(&results), KeywordOutcome::Confirmed));
+        assert!(matches!(one(&results), UpdateOutcome::Confirmed));
         assert_eq!(server.join().unwrap(), vec![vec!["Email/set"], vec!["Email/get"]]);
     }
 
@@ -1295,7 +1481,7 @@ mod tests {
         let (api, server) = scripted(vec![None, read_back(json!({}))]);
         let (client, session) = keyword_session(&api);
         let results = set_keywords(&client, &session, "a", &ids(&["m1"]), Keyword::Flagged, true).unwrap();
-        assert!(matches!(one(&results), KeywordOutcome::Unchanged));
+        assert!(matches!(one(&results), UpdateOutcome::Unchanged));
         assert_eq!(server.join().unwrap(), vec![vec!["Email/set"], vec!["Email/get"]]);
     }
 
@@ -1306,7 +1492,7 @@ mod tests {
         let (api, server) = scripted(vec![set_reply(json!({"updated":{"m1":null}})), None]);
         let (client, session) = keyword_session(&api);
         let results = set_keywords(&client, &session, "a", &ids(&["m1"]), Keyword::Flagged, true).unwrap();
-        assert!(matches!(one(&results), KeywordOutcome::Confirmed));
+        assert!(matches!(one(&results), UpdateOutcome::Confirmed));
         assert_eq!(results.not_read_back, ["m1"]);
         assert_eq!(server.join().unwrap(), vec![vec!["Email/set"], vec!["Email/get"]], "the write is not resent");
     }
@@ -1318,7 +1504,7 @@ mod tests {
         let (api, server) = scripted(vec![None, get_reply(json!([]), json!(["m1"]))]);
         let (client, session) = keyword_session(&api);
         let results = set_keywords(&client, &session, "a", &ids(&["m1"]), Keyword::Flagged, false).unwrap();
-        assert!(matches!(one(&results), KeywordOutcome::Unknown(None)));
+        assert!(matches!(one(&results), UpdateOutcome::Unknown(None)));
         assert_eq!(server.join().unwrap(), vec![vec!["Email/set"], vec!["Email/get"]]);
     }
 
@@ -1328,7 +1514,7 @@ mod tests {
         let (api, server) = scripted(vec![None, None]);
         let (client, session) = keyword_session(&api);
         let results = set_keywords(&client, &session, "a", &ids(&["m1"]), Keyword::Seen, false).unwrap();
-        assert!(matches!(one(&results), KeywordOutcome::Unknown(Some(_))));
+        assert!(matches!(one(&results), UpdateOutcome::Unknown(Some(_))));
         assert_eq!(server.join().unwrap(), vec![vec!["Email/set"], vec!["Email/get"]]);
     }
 
@@ -1338,7 +1524,7 @@ mod tests {
         let (api, server) = scripted(vec![None, read_back(json!({"$label":true}))]);
         let (client, session) = keyword_session(&api);
         let results = set_keywords(&client, &session, "a", &ids(&["m1"]), Keyword::Flagged, false).unwrap();
-        assert!(matches!(one(&results), KeywordOutcome::Confirmed));
+        assert!(matches!(one(&results), UpdateOutcome::Confirmed));
         assert_eq!(server.join().unwrap(), vec![vec!["Email/set"], vec!["Email/get"]]);
     }
 
@@ -1356,10 +1542,10 @@ mod tests {
         let results = set_keywords(&client, &session, "a", &ids(&["m1", "m2", "m3", "m1", "m4"]), Keyword::Seen, true).unwrap();
         let order: Vec<&str> = results.outcomes.iter().map(|(id, _)| id.as_str()).collect();
         assert_eq!(order, ["m1", "m2", "m3", "m4"], "first-asked order, duplicates once");
-        assert!(matches!(results.outcomes[0].1, KeywordOutcome::Confirmed));
-        assert!(matches!(&results.outcomes[1].1, KeywordOutcome::Refused(kind) if kind == "notFound"));
-        assert!(matches!(results.outcomes[2].1, KeywordOutcome::Confirmed), "lost, then shown");
-        assert!(matches!(results.outcomes[3].1, KeywordOutcome::Unchanged), "lost, then not shown");
+        assert!(matches!(results.outcomes[0].1, UpdateOutcome::Confirmed));
+        assert!(matches!(&results.outcomes[1].1, UpdateOutcome::Refused(kind) if kind == "notFound"));
+        assert!(matches!(results.outcomes[2].1, UpdateOutcome::Confirmed), "lost, then shown");
+        assert!(matches!(results.outcomes[3].1, UpdateOutcome::Unchanged), "lost, then not shown");
         assert!(results.not_read_back.is_empty());
         assert_eq!(
             server.join().unwrap(),
@@ -1387,7 +1573,7 @@ mod tests {
         ]);
         let (client, session) = sized_session(&api, max);
         let results = set_keywords(&client, &session, "a", &ids(&["m1", "m2"]), Keyword::Seen, true).unwrap();
-        assert!(results.outcomes.iter().all(|(_, outcome)| matches!(outcome, KeywordOutcome::Confirmed)));
+        assert!(results.outcomes.iter().all(|(_, outcome)| matches!(outcome, UpdateOutcome::Confirmed)));
         assert!(results.not_read_back.is_empty());
         assert_eq!(server.join().unwrap(), vec![vec!["Email/set"], vec!["Email/set"], vec!["Email/get"], vec!["Email/get"]]);
     }
@@ -1403,8 +1589,8 @@ mod tests {
         ]);
         let (client, session) = sized_session(&api, max);
         let results = set_keywords(&client, &session, "a", &[long.clone(), "m1".into()], Keyword::Seen, true).unwrap();
-        assert!(matches!(results.outcomes[0].1, KeywordOutcome::TooLarge));
-        assert!(matches!(results.outcomes[1].1, KeywordOutcome::Confirmed));
+        assert!(matches!(results.outcomes[0].1, UpdateOutcome::TooLarge));
+        assert!(matches!(results.outcomes[1].1, UpdateOutcome::Confirmed));
         assert_eq!(server.join().unwrap(), vec![vec!["Email/set"], vec!["Email/get"]]);
     }
 
@@ -1414,7 +1600,7 @@ mod tests {
         let (api, server) = scripted(vec![Some(json!({"methodResponses":[["error",{"type":"stateMismatch"},"mail"]]}))]);
         let (client, session) = keyword_session(&api);
         let results = set_keywords(&client, &session, "a", &ids(&["m1", "m2"]), Keyword::Seen, true).unwrap();
-        assert!(results.outcomes.iter().all(|(_, outcome)| matches!(outcome, KeywordOutcome::Refused(kind) if kind == "stateMismatch")));
+        assert!(results.outcomes.iter().all(|(_, outcome)| matches!(outcome, UpdateOutcome::Refused(kind) if kind == "stateMismatch")));
         assert_eq!(server.join().unwrap(), vec![vec!["Email/set"]]);
     }
 
@@ -1440,8 +1626,8 @@ mod tests {
         )]);
         let (client, session) = keyword_session(&api);
         let results = set_keywords(&client, &session, "a", &ids(&["m1", "m2"]), Keyword::Flagged, true).unwrap();
-        assert!(matches!(results.outcomes[0].1, KeywordOutcome::Unchanged), "unreported, and the read shows it did not apply");
-        assert!(matches!(results.outcomes[1].1, KeywordOutcome::Confirmed));
+        assert!(matches!(results.outcomes[0].1, UpdateOutcome::Unchanged), "unreported, and the read shows it did not apply");
+        assert!(matches!(results.outcomes[1].1, UpdateOutcome::Confirmed));
         assert_eq!(server.join().unwrap(), vec![vec!["Email/set"], vec!["Email/get"]]);
     }
 }

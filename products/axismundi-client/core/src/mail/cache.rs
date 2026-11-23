@@ -189,6 +189,22 @@ impl Store {
         }
     }
 
+    /// Every cached mailbox of the Account that this login may remove items from (`myRights`
+    /// unstated counts as allowed: the server still decides).
+    fn removable_mailboxes(&self, account: &str) -> Result<Vec<String>> {
+        let mut stmt = self.db.prepare("SELECT id, document FROM mail_mailboxes WHERE account=?1 ORDER BY id")?;
+        let rows = stmt.query_map([account], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)))?;
+        let mut ids = Vec::new();
+        for row in rows {
+            let (id, document) = row?;
+            let document: Value = serde_json::from_str(&document)?;
+            if document.pointer("/myRights/mayRemoveItems") != Some(&Value::Bool(false)) {
+                ids.push(id);
+            }
+        }
+        Ok(ids)
+    }
+
     fn mailbox(&self, account: &str, id: &str) -> Result<Option<Value>> {
         let raw: Option<String> = self
             .db
@@ -344,13 +360,7 @@ pub fn read(
     store.email(account, id)
 }
 
-/// Sets or clears one keyword on the server, then keeps what the server showed afterwards.
 /// Sets or clears a keyword on many messages and keeps what the server shows afterwards.
-///
-/// Only the read-back (see `mail::set_keywords`) reaches the cache, never the request itself, so
-/// nothing changes here unless the server shows it. If the cache cannot take it, the outcomes still
-/// stand (they describe the server, not this file) and every confirmed id joins `not_read_back`, so
-/// the caller syncs instead of trusting the cache. No write is ever resent from here.
 pub fn set_keywords(
     client: &Client,
     session: &Session,
@@ -359,10 +369,58 @@ pub fn set_keywords(
     ids: &[String],
     keyword: super::Keyword,
     on: bool,
-) -> Result<super::KeywordResults> {
+) -> Result<super::UpdateResults> {
+    update(client, session, store, account, ids, super::Change::Keyword { keyword, on })
+}
+
+/// Moves many messages from one mailbox of an Account to another and keeps what the server shows
+/// afterwards. The caller says which move it means; nothing here looks at roles:
+///
+/// - `exclusive: false` — `Change::Move`: only `from` is left and only `to` joined; other
+///   memberships stay.
+/// - `exclusive: true` — `Change::OnlyIn`: taken out of every mailbox of the Account this login sees
+///   in the cache (and may remove items from), then put in `to`. Mailboxes a shared Account does not
+///   show this login are not in the request, so they are never touched. The GUI asks for this when
+///   moving to Trash or Junk (see `mail-moves.ts`).
+///
+/// An exclusive move with no cached mailbox list is an error: "every visible mailbox" would be a guess.
+pub fn move_emails(
+    client: &Client,
+    session: &Session,
+    store: &mut Store,
+    account: &str,
+    ids: &[String],
+    from: &str,
+    to: &str,
+    exclusive: bool,
+) -> Result<super::UpdateResults> {
+    if !exclusive {
+        return update(client, session, store, account, ids, super::Change::Move { from, to });
+    }
+    let out_of = store.removable_mailboxes(account)?;
+    if out_of.is_empty() {
+        return Err("no cached mailbox list for this Account; sync it first".into());
+    }
+    update(client, session, store, account, ids, super::Change::OnlyIn { to, out_of: &out_of })
+}
+
+/// Applies a change on the server, then keeps what the server shows afterwards.
+///
+/// Only the read-back (see `mail::update`) reaches the cache, never the request itself, so nothing
+/// changes here unless the server shows it. If the cache cannot take it, the outcomes still stand
+/// (they describe the server, not this file) and every confirmed id joins `not_read_back`, so the
+/// caller syncs instead of trusting the cache. No write is ever resent from here.
+fn update(
+    client: &Client,
+    session: &Session,
+    store: &mut Store,
+    account: &str,
+    ids: &[String],
+    change: super::Change<'_>,
+) -> Result<super::UpdateResults> {
     store.bind(client, session)?;
     let revision = store.revision(account)?;
-    let mut results = super::set_keywords(client, session, account, ids, keyword, on)?;
+    let mut results = super::update(client, session, account, ids, change)?;
     let saved = (|| -> Result<()> {
         let tx = store.write(account, revision)?;
         save_get(&tx, account, &results.read_back, false)?;
@@ -373,7 +431,7 @@ pub fn set_keywords(
         results.not_read_back = results
             .outcomes
             .iter()
-            .filter(|(_, outcome)| matches!(outcome, super::KeywordOutcome::Confirmed))
+            .filter(|(_, outcome)| matches!(outcome, super::UpdateOutcome::Confirmed))
             .map(|(id, _)| id.clone())
             .collect();
     }

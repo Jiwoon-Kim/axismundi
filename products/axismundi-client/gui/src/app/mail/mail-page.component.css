@@ -3,18 +3,28 @@ mat-sidenav-container { block-size: 100%; background: transparent; }
 
 /* Mailboxes: a side pane in large windows, an overlay drawer below that. */
 .mailboxes { inline-size: 240px; border-inline-end: 1px solid var(--mat-sys-outline-variant); }
-.mailboxes nav { display: flex; flex-direction: column; gap: 2px; padding: 12px; }
-.mailboxes a {
-  display: flex;
-  justify-content: space-between;
-  padding: 8px 12px;
+.mailbox-nav { padding: 12px; }
+/* M3 navigation drawer item: full-pill, 40px rows (density), secondary container when current. */
+.mailbox-tree { --mat-tree-node-min-height: 40px; background: transparent; }
+.mailbox-tree mat-tree-node {
+  gap: 12px;
+  margin-block-end: 2px;
+  padding-inline-end: 4px;  /* start: 16px + 20px per level, bound in the template */
   border-radius: var(--mat-sys-corner-full);
   color: var(--mat-sys-on-surface-variant);
   font: var(--mat-sys-label-large);
-  text-decoration: none;
+  cursor: pointer;
 }
-.mailboxes a:hover { background: color-mix(in srgb, var(--mat-sys-on-surface) 8%, transparent); }
-.mailboxes a.active { background: var(--mat-sys-secondary-container); color: var(--mat-sys-on-secondary-container); }
+.mailbox-tree mat-tree-node:hover { background: color-mix(in srgb, var(--mat-sys-on-surface) 8%, transparent); }
+.mailbox-tree mat-tree-node.active { background: var(--mat-sys-secondary-container); color: var(--mat-sys-on-secondary-container); }
+.mailbox-tree mat-tree-node:focus-visible { outline: 2px solid var(--mat-sys-secondary); outline-offset: -2px; }
+.mailbox-tree .toggle { flex: none; --mat-icon-button-state-layer-size: 32px; padding: 4px; margin-inline-start: -8px; }
+.mailbox-tree mat-tree-node { position: relative; }
+.mailbox-tree .box-icon { flex: none; display: flex; }
+.mailbox-tree .box-icon mat-icon { inline-size: 20px; block-size: 20px; font-size: 20px; }
+/* The badge sits on the icon's top-end corner, inside the 40px row. */
+.mailbox-tree { --mat-badge-large-size-container-overlap-offset: -8px; }
+.mailbox-tree .name { flex: 1; min-inline-size: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* Panes: list beside detail, or one of them. The count follows the window size class. */
 .panes { display: grid; block-size: 100%; grid-template-columns: minmax(280px, 380px) minmax(0, 1fr); }
@@ -119,7 +129,7 @@ li a {
 }
 
 li.unread .from, li.unread .subject { color: var(--mat-sys-on-surface); font-weight: 600; }
-li a:focus-visible, .mailboxes a:focus-visible, .back:focus-visible { outline: 2px solid var(--mat-sys-secondary); outline-offset: -2px; }
+li a:focus-visible, .back:focus-visible { outline: 2px solid var(--mat-sys-secondary); outline-offset: -2px; }
 .unavailable, .none { padding: 10px 16px; color: var(--mat-sys-on-surface-variant); }
 .unavailable { font-style: italic; }
 

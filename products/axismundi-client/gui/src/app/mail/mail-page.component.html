@@ -2,14 +2,32 @@
   <mat-sidenav-container>
     <mat-sidenav class="mailboxes" [mode]="large() ? 'side' : 'over'" [opened]="large() || drawerOpen()"
                  (closedStart)="drawerOpen.set(false)" [disableClose]="large()">
-      <nav aria-label="Mailboxes">
-        @for (box of mailboxes(); track box.id) {
-          <a routerLink="/mail" [queryParams]="{mailbox: box.id}" [class.active]="box.id === selectedMailbox()"
-             [attr.aria-current]="box.id === selectedMailbox() ? 'page' : null" (click)="drawerOpen.set(false)">
-            <span>{{ box.name }}</span>
-            @if (box.unreadEmails) { <span class="count" [attr.aria-label]="box.unreadEmails + ' unread'">{{ box.unreadEmails }}</span> }
-          </a>
-        }
+      <!-- Mailbox tree (CDK tree pattern: one tab stop, arrow keys move, Right/Left expand). A node is a
+           mailbox in its own right: click or Enter opens it; the trailing arrow only expands, and stays
+           out of the tab order so the treeitem holds the one focus. -->
+      <nav class="mailbox-nav">
+        <mat-tree #tree class="mailbox-tree" aria-label="Mailboxes" [dataSource]="mailboxNodes()"
+                  [childrenAccessor]="childrenOf" [expansionKey]="keyOf" [trackBy]="trackById">
+          <mat-tree-node *matTreeNodeDef="let node; let level = level" [style.padding-inline-start.px]="16 + level * 20"
+                         [isExpandable]="node.children.length > 0"
+                         [class.active]="node.box.id === selectedMailbox()"
+                         [attr.aria-current]="node.box.id === selectedMailbox() ? 'page' : null"
+                         (click)="openMailbox(node.box.id)" (activation)="openMailbox(node.box.id)">
+            <!-- M3 large badge on the item's icon. The badge is hidden from assistive tech, so the
+                 treeitem's name carries the count as text. -->
+            <span class="box-icon" [matBadge]="badgeLabel(node.box.unreadEmails)" [matBadgeHidden]="!node.box.unreadEmails"
+                  matBadgeSize="large" matBadgePosition="above after">
+              <mat-icon aria-hidden="true">{{ icon(node.box) }}</mat-icon>
+            </span>
+            <span class="name">{{ node.box.name || "(unnamed)" }}@if (node.box.unreadEmails) {<span class="visually-hidden">, {{ node.box.unreadEmails }} unread</span>}</span>
+            <!-- Trailing disclosure, as M3's navigation drawer: ▾ collapsed, ▴ expanded. -->
+            @if (node.children.length) {
+              <button matIconButton matTreeNodeToggle type="button" class="toggle" tabindex="-1" aria-hidden="true">
+                <mat-icon>{{ tree.isExpanded(node) ? "arrow_drop_up" : "arrow_drop_down" }}</mat-icon>
+              </button>
+            }
+          </mat-tree-node>
+        </mat-tree>
       </nav>
     </mat-sidenav>
 

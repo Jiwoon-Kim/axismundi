@@ -1,12 +1,14 @@
-import { Component, computed, effect, inject, input, resource, signal, untracked } from "@angular/core";
+import { Component, computed, effect, inject, input, linkedSignal, resource, signal, untracked, viewChild } from "@angular/core";
 import { toSignal } from "@angular/core/rxjs-interop";
 import { BreakpointObserver } from "@angular/cdk/layout";
 import { MatIconButton, MatIconAnchor } from "@angular/material/button";
 import { MatIcon } from "@angular/material/icon";
 import { MatMenu, MatMenuItem, MatMenuTrigger } from "@angular/material/menu";
+import { MatBadge } from "@angular/material/badge";
 import { MatCheckbox } from "@angular/material/checkbox";
 import { MatSidenav, MatSidenavContainer, MatSidenavContent } from "@angular/material/sidenav";
 import { MatTooltip } from "@angular/material/tooltip";
+import { MatTree, MatTreeNode, MatTreeNodeDef, MatTreeNodeToggle } from "@angular/material/tree";
 import { Router, RouterLink } from "@angular/router";
 import { map } from "rxjs";
 import { invoke } from "@tauri-apps/api/core";
@@ -14,7 +16,8 @@ import { ConnectionService } from "../connection.service";
 import { MailDetailComponent } from "./mail-detail.component";
 import { MailActions, type Aspect, type Keyword } from "./mail-actions";
 import { MailMoveMenuComponent } from "./mail-move-menu.component";
-import { moveOptions } from "./mail-moves";
+import { mailboxIcon, moveOptions } from "./mail-moves";
+import { type MailboxNode, ancestorsOf, mailboxTree } from "./mail-tree";
 import { ListView, type MailboxRow, rowLabel } from "./mail-rows";
 import type { WriteResult } from "./mail-updates";
 
@@ -33,8 +36,9 @@ const EXPANDED = "(min-width: 840px)";
  */
 @Component({
   selector: "app-mail-page",
-  imports: [MailDetailComponent, MailMoveMenuComponent, MatIcon, MatIconAnchor, MatIconButton, MatSidenav,
-    MatSidenavContainer, MatSidenavContent, MatTooltip, MatCheckbox, MatMenu, MatMenuItem, MatMenuTrigger, RouterLink],
+  imports: [MailDetailComponent, MailMoveMenuComponent, MatBadge, MatIcon, MatIconAnchor, MatIconButton, MatSidenav,
+    MatSidenavContainer, MatSidenavContent, MatTooltip, MatCheckbox, MatMenu, MatMenuItem, MatMenuTrigger, MatTree, MatTreeNode,
+    MatTreeNodeDef, MatTreeNodeToggle, RouterLink],
   templateUrl: "./mail-page.component.html",
   styleUrl: "./mail-page.component.css",
 })
@@ -83,7 +87,45 @@ export class MailPageComponent {
     return this.actions.shown(accountId, id, "seen", !viewUnread, this.loadedFrom()) === false;
   }
 
-  protected readonly mailboxes = computed(() => this.view.hasValue() ? this.view.value().mailboxes : []);
+  /**
+   * The Account's mailboxes. Opening another mailbox gives the listing new params, and while that
+   * loads it has no value; the list is held over from the last load of the same Account meanwhile,
+   * so the tree keeps its rows (and the keyboard focus on one of them) instead of emptying and
+   * rebuilding. Another Account or connection starts empty.
+   */
+  protected readonly mailboxes = linkedSignal<{scope: string; boxes: MailboxRow[] | null}, MailboxRow[]>({
+    source: () => ({
+      scope: JSON.stringify([this.connection.connected()?.id, this.connection.accountId()]),
+      boxes: this.view.hasValue() ? this.view.value().mailboxes : null,
+    }),
+    computation: (next, previous) =>
+      next.boxes ?? (previous && previous.source.scope === next.scope ? previous.value : []),
+  });
+  /** The mailboxes nested by parentId (see `mailboxTree`). */
+  protected readonly mailboxNodes = computed(() => mailboxTree(this.mailboxes()));
+  protected readonly childrenOf = (node: MailboxNode) => node.children;
+  /**
+   * Expansion is kept by connection, Account and mailbox id, so it survives every reload that rebuilds
+   * the nodes — and a mailbox id that repeats in another Account or login is not opened by it.
+   */
+  protected readonly keyOf = (node: MailboxNode) =>
+    JSON.stringify([this.connection.connected()?.id, this.connection.accountId(), node.box.id]);
+  /**
+   * Rows are kept by mailbox id too: every listing reload rebuilds the nodes, and without this the
+   * tree would recreate each row and drop keyboard focus from the one the user is on.
+   */
+  protected readonly trackById = (_: number, node: MailboxNode) => this.keyOf(node);
+  protected readonly icon = mailboxIcon;
+  /** M3 large badge: at most four characters, so counts above 999 read "999+". */
+  protected badgeLabel(count: number | null): string {
+    return !count ? "" : count > 999 ? "999+" : String(count);
+  }
+  private readonly treeRef = viewChild<MatTree<MailboxNode, string>>("tree");
+
+  protected openMailbox(id: string): void {
+    this.drawerOpen.set(false);
+    void this.router.navigate(["/mail"], {queryParams: {mailbox: id}});
+  }
   protected readonly selectedMailbox = computed(() => this.view.hasValue() ? this.view.value().mailboxId : null);
   protected readonly mailboxName = computed(
     () => this.mailboxes().find(box => box.id === this.selectedMailbox())?.name ?? "Mail");
@@ -219,6 +261,22 @@ export class MailPageComponent {
   }
 
   constructor() {
+    // The open mailbox is never left hidden inside a collapsed parent.
+    effect(() => {
+      const tree = this.treeRef();
+      const roots = this.mailboxNodes();
+      const ancestors = ancestorsOf(this.mailboxes(), this.selectedMailbox());
+      if (!tree || !ancestors.length) return;
+      const byId = new Map<string, MailboxNode>();
+      const walk = (nodes: MailboxNode[]) => nodes.forEach(node => { byId.set(node.box.id, node); walk(node.children); });
+      walk(roots);
+      untracked(() => {
+        for (const id of ancestors) {
+          const node = byId.get(id);
+          if (node) tree.expand(node);
+        }
+      });
+    });
     // Selection belongs to one connection, Account and mailbox.
     effect(() => {
       this.connection.connected();

@@ -94,7 +94,7 @@ compact <600     medium 과 같고 rail 도 drawer 안으로
 |---|---|---|
 | 전체 배치 | CSS Grid + `BreakpointObserver` | 그리드 열 정의 하나. 범용 pane 라이브러리로 만들지 않는다 |
 | 레일 | `mat-icon-button` + `routerLinkActive` + `matTooltip` | 세로 배치뿐. Material 에 nav rail 이 없다. 모자라면 그때 플러그인 `navigation_rail` 측정값 |
-| 메일함 트리 | `mat-tree`(childrenAccessor) — `Mailbox.parentId` 로 구성, CDK tree 키보드 탐색 | role 순서(inbox·drafts·sent·junk·trash·archive 먼저)와 미읽음 수 |
+| 메일함 트리 | `mat-tree`(childrenAccessor) — `Mailbox.parentId` 로 구성, CDK tree 키보드 탐색. 미읽음 수는 `MatBadge`(large, 아이콘 위, 999+) | role 순서(inbox·drafts·sent·junk·trash·archive 먼저)와 미읽음 수. 구현 2026-11-24 — 아래 "메일함 트리" |
 | 접힌 메일함 | `mat-sidenav` | — |
 | 앱 바와 Account 전환 | `mat-toolbar` + 아바타 버튼 + `mat-menu` | 우측에 배치, 아바타 없으면 이니셜 또는 계정 아이콘 |
 | 목록 | `cdk-virtual-scroll-viewport` + 행 선택은 `cdk/listbox` 또는 `mat-selection-list` (가상 스크롤과 같이 되는지 먼저 확인) | 3줄 행 템플릿, 미읽음 굵기 |
@@ -190,6 +190,28 @@ notFound 를 해제로, 되읽기 실패를 쓰기 실패로)은 각각 되돌�
 체크박스 열이 없다. 머리줄의 Select 로 들어가고 ← 나 Esc 로 나온다. 선택 모드에서 행 클릭은 열기가 아니라 선택.
 머리줄 1행 = ← · 개수 · 네 동작(목록 폭 440px 미만이면 ⋮ 메뉴로 접힘, M3 toolbar), 2행 = Select all(행 체크박스와
 같은 열). 체크박스 밀도 32px(행 버튼과 같음). 앱 셸(앱 바·레일)은 선택 모드에서도 그대로.
+
+### 메일함 트리 (2026-11-24)
+
+`mat-sidenav` 안에 `mat-tree`. M3 문서 사이트(m3.material.io, Angular 13.4)도 메뉴를 `role="tree"` 로 직접 만든다 —
+CDK tree 가 같은 ARIA 패턴을 구현하므로 그대로 쓴다. 다른 점: M3 의 부모는 펼침 전용이지만 우리 메일함은 부모도 열 수 있는 메일함.
+
+```txt
+행          아이콘(+MatBadge 미읽음) · 이름 · 끝에 ▾/▴ (arrow_drop_down/up, 소유자 결정: 앞이 아니라 뒤).
+            들여쓰기 16px + 20px×level (matTreeNodePadding 은 루트를 0 으로 덮어써서 쓰지 않음)
+동작        클릭·Enter = 그 메일함 열기 (CDK activation 은 Enter/Space 만, 클릭은 포커스만이라 둘 다 묶음).
+            ▾/▴ 클릭·→/← = 펼치기만.  화살표 버튼은 tabindex=-1·aria-hidden — 포커스는 treeitem 하나
+배지        M3 badge 는 아이콘 위.  badge 는 aria-hidden 이라 이름에 ", N unread" 를 숨은 글자로
+정렬        role 순서 → sortOrder → 이름.  모르는 role 은 나열된 role 뒤, role 없음 앞
+보이지 않는 부모  바로 위 부모가 안 보일 때만 그 메일함을 최상단으로 — 그 아래 보이는 계층은 유지.  순환은
+            자기에게 돌아오는 메일함만 최상단 (무한 루프·누락 없음)
+펼침        expansionKey·trackBy = [연결, Account, 메일함 id] — 재로드에도 유지, 다른 Account 의 같은 id 로 안 샘.
+            열린 메일함의 조상은 자동 펼침
+포커스 함정  메일함을 바꾸면 목록 resource 의 params 가 바뀌어 로드 중엔 값이 없다 → 메일함 목록이 비며 트리 행이
+            전부 재생성 → 포커스가 BODY 로.  같은 연결·Account 안에서는 이전 메일함 목록을 linkedSignal 로 유지.
+            WebView2 원격 디버깅(WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222)으로
+            CDP Input 이벤트를 보내 재현·확인했다 (창의 devtools 를 볼 수 없을 때의 측정 경로)
+```
 
 ### 이동 · 휴지통 (2026-11-23)
 

@@ -1,6 +1,7 @@
 # JMAP Mail Implementation Matrix
 
-2026-11-19. [RFC 8621](https://jmap.io/spec/rfc8621/) 전체 메서드의 제품 구현 범위다.
+2026-11-19 작성, **2026-11-24 갱신**(읽음·별표·이동 쓰기, RFC 8887 푸시, 메일함 관리 진행 반영).
+[RFC 8621](https://jmap.io/spec/rfc8621/) 전체 메서드의 제품 구현 범위다.
 Core가 임의 메서드를 전송할 수 있다는 사실과 각 동작의 제품 지원을 구분한다.
 전체 목록이 장기 구현 대상이며 아래 후속 항목을 첫 읽기 DB의 완료로 간주하지 않는다.
 
@@ -21,29 +22,31 @@ Contacts/Calendar 모델·원본 MIME·로컬 편집·서버 Email을 한 record
 | Identity | 후속 identity 연산, mail_identities | 발신 설정. ContactCard·AP Actor·Session과 별개 |
 | Submission | 후속 submission 연산, mail_submissions | 생성·대기·배달 결과·취소. Email과 별도 state/수명주기 |
 | 로컬 Draft | 후속 compose 연산, mail_drafts | 미전송 편집과 서버 $draft Email의 분리·명시적 연결 |
-| MIME/Blob | 후속 blob 연산, 파일과 메타데이터 | JSON으로 원문 바이트를 재구성했다고 간주하지 않음 |
+| MIME/Blob | `jmap::blob`(코어 구현: RFC 8620 업로드·다운로드, RFC 9404 Blob/get·upload·lookup), GUI 미사용 | JSON으로 원문 바이트를 재구성했다고 간주하지 않음. 디스크 캐시는 DESIGN-MAIL-GUI.md "바이트 원장"(미구현) |
 | VacationResponse | 후속 계정별 단일 설정 | Identity·Draft에 섞지 않음. 별도 singleton 저장 형태는 구현 시 결정 |
 | SearchSnippet | 후속 검색 view 결과 | 검색 조건에 종속. Email 본문이나 영구 정체성으로 취급하지 않음 |
 
 ## 메서드별 범위
 
 실서버 증거는 INTEROP-MAIL, 저장 증거는 IMPLEMENTATION-MAIL-CACHE 기록을 따른다.
-제품 쓰기는 아직 후속이며 자동 발송을 켜지 않는다.
+제품 쓰기는 읽음·별표·메일함 이동까지 구현됐다(DESIGN-MAIL-GUI.md "쓰기"·"이동"). 발송은 아직 후속이며 자동 발송을 켜지 않는다.
+푸시: RFC 8887 WebSocket(`jmap::websocket`, 구독 → 따라잡기)이 CLI·GUI 실시간 갱신에 쓰인다 — Stalwart 1.1.0 은 공유받은
+Account 의 변경을 그 사용자 소켓에 보내지 않아 그 화면은 새로고침(버튼·F5·당김)에 의존(DESIGN-MAIL-GUI.md "실시간 갱신").
 
 | 메서드 | 처리·저장·실패 계약 | 현재 상태 |
 |---|---|---|
 | Mailbox/get | role/rights/count와 계층 보존, 불완전 snapshot 거부 | 읽기 CLI·전체 snapshot 캐시 |
 | Mailbox/changes | Mailbox 전용 state, count만 바뀌는 경우의 updatedProperties 처리 | **구현**(2026-11-20): 첫 sync·계산 불가 시 스냅샷, 이후 델타. updatedProperties 는 보관 속성과의 교집합만 병합(Stalwart 는 thread 카운트도 보냄). 파괴 시 그 목록 삭제. Stalwart 델타 후 캐시 = 새 스냅샷 |
-| Mailbox/query | 조건·정렬·계층별 ID 창. Email query와 별개 | 후속 |
+| Mailbox/query | 조건·정렬·계층별 ID 창. Email query와 별개 | 후속 — 트리는 Mailbox/get 으로 충분해 당장 필요 없음 |
 | Mailbox/queryChanges | 해당 queryState의 소속/순서 변경, 불가 시 창 재조회 | 후속 |
-| Mailbox/set | 생성·이름/부모 변경·삭제, 권한·항목별 실패·파괴 옵션 | 후속 |
+| Mailbox/set | 생성·이름/부모 변경·삭제, 권한·항목별 실패·파괴 옵션 | **진행 중**(2026-11-24, BRIEF-MAILBOX-MANAGE): 생성(최상위·하위)·이름 변경·빈 메일함 삭제(`onDestroyRemoveEmails: false`). 생성 응답 유실은 재전송 없이 결과 모름. 부모 변경·sortOrder 는 후속 |
 | Thread/get | 서버 threadId와 emailIds 순서, 전개 수가 get 상한을 넘으면 분할 | 접힌 목록은 Thread/get 없이 동작. **전개 구현**(2026-11-20, `mail-thread`): Thread/get 단독 → emailIds를 maxObjectsInGet 청크로 Email/get, 절단 없음, 사이에 사라진 메시지는 notFound. 메시지는 목록 coverage로 캐시, **스레드 소속은 저장 안 함**(Thread/changes 후속) |
 | Thread/changes | Thread 전용 checkpoint와 캐시 무효화 | 후속 |
 | Email/get | projection·null/누락·unknown·body part/truncation, notFound | 읽기 CLI·부분 캐시·오프라인 |
 | Email/changes | Email 전용 state, hasMoreChanges, 파괴/dirty, 만료 복구 | 부분 캐시 구현·mock/실서버 검증. updated 는 가변 속성(keywords·mailboxIds)만 무효화하고 그 둘만 재요청(2026-11-21) |
-| Email/query | account/filter/sort/collapseThreads 및 queryState, 서버 순서 | 고정 조건의 첫 창·result reference·캐시. 메시지·접힌 스레드 목록이 **쿼리별 키**로 공존(스키마 v2). 페이지 이어 받기(`mail-more`, 같은 queryState 필수)·calculateTotal·hasMore(2026-11-21) |
+| Email/query | account/filter/sort/collapseThreads 및 queryState, 서버 순서 | 고정 조건(`inMailbox`)의 첫 창·result reference·캐시. 메시지·접힌 스레드 목록이 **쿼리별 키**로 공존(스키마 v2). 페이지 이어 받기(`mail-more`, 같은 queryState 필수)·calculateTotal·hasMore(2026-11-21) — **GUI 는 아직 `mail_more` 를 부르지 않음**(무한 스크롤 후속). **검색 filter(text·from·날짜 등)는 후속** |
 | Email/queryChanges | 객체 changes와 분리, same-query 적용, 계산 불가 시 창 재조회 | **구현**(2026-11-20): 캐시된 창이 canCalculateChanges=true·같은 인자면 델타 적용, 창이 줄면 그 구간만 position 으로 보충(같은 queryState 여야 함), 커버리지 없는 멤버만 get. 계산 불가·tooManyChanges·불일치는 창 재조회. Stalwart 외부 생성·삭제 후 캐시 = 새 query |
-| Email/set | 서버 Draft 생성·keywords/mailboxIds 변경·파괴. 로컬 의도 별도 보존 | fixture에서만 사용, 제품 후속 |
+| Email/set | 서버 Draft 생성·keywords/mailboxIds 변경·파괴. 로컬 의도 별도 보존 | **제품 구현(일부, 2026-11-23·24)**: keywords 패치(`$seen`·`$flagged`, 단건·일괄), mailboxIds 이동(Move·OnlyIn — Trash/Junk 는 보이는 소속 전부 빼고 넣기). 결과 판정·분할(maxObjectsInSet·maxSizeRequest)·응답 유실 시 재전송 없이 되읽기·결과 모름 잠금. **생성(서버 Draft)·파괴는 후속** |
 | Email/copy | source/target account 구별, 부분 성공·후속 원본 파괴 결과 분리 | 후속 |
 | Email/import | 업로드한 원문 Blob→서버 Email, 항목별 성공/실패와 생성 ID | 후속 |
 | Email/parse | Blob 파싱 결과, 저장된 Email 생성/동기화와 다름 | 후속 |

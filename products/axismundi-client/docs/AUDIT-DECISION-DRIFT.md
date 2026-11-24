@@ -44,7 +44,7 @@ Mail CLI와 실서버 테스트가 이미 있다. [PLAN-JMAP-MAIL.md](PLAN-JMAP-
 [DESIGN-CONNECTION-DISCOVERY.md](DESIGN-CONNECTION-DISCOVERY.md):76과
 [BRIEF-DISCOVER.md](BRIEF-DISCOVER.md):48은 well-known에 인증할 수 없다고 단정한다.
 최신 [네트워크 구현 기록](IMPLEMENTATION-NETWORK-TRUST.md):17은 동일 오리진 GET의
-수동 리다이렉트에서 인증을 유지한다고 정한다. core/src/lib.rs의
+수동 리다이렉트에서 인증을 유지한다고 정한다. core/src/http.rs의 (당시 core/src/lib.rs)
 same_origin_redirect_keeps_authorization 테스트도 후자를 검증한다.
 구 문장을 따르면 Stalwart에서 고친 인증 유실을 다시 도입할 수 있다.
 

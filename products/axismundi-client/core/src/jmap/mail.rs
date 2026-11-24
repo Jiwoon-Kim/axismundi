@@ -1,5 +1,9 @@
 //! Read-only Mail operations and a partial local cache. Never submits messages.
-use crate::{Batch, CORE_CAPABILITY, Client, Error, Session};
+use crate::{
+    Error,
+    http::Client,
+    jmap::{Batch, CORE_CAPABILITY, Session},
+};
 use serde_json::{Value, json};
 
 pub mod cache;
@@ -934,7 +938,7 @@ pub fn thread(client: &Client, session: &Session, account: &str, id: &str) -> Re
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Invocation;
+    use crate::jmap::Invocation;
     #[test]
     fn matching_uses_call_id_and_rejects_errors_and_duplicates() {
         let mut batch = Batch {
@@ -993,7 +997,7 @@ mod tests {
     #[test]
     fn invalid_call_and_byte_limits_fail_before_network() {
         let mut session: Session = serde_json::from_value(json!({"apiUrl":"http://127.0.0.1:1/never-contact","capabilities":{CORE_CAPABILITY:{"maxCallsInRequest":1,"maxSizeRequest":1}}})).unwrap();
-        let client = Client::new(crate::Credentials {
+        let client = Client::new(crate::http::Credentials {
             user: "u".into(),
             secret: "test-only".into(),
         });
@@ -1052,7 +1056,7 @@ mod tests {
             write!(stream,"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",body.len(),body).unwrap();
         });
         let session:Session=serde_json::from_value(json!({"apiUrl":api,"capabilities":{CORE_CAPABILITY:{"maxCallsInRequest":2,"maxObjectsInGet":2,"maxSizeRequest":10000}}})).unwrap();
-        let client = Client::new(crate::Credentials {
+        let client = Client::new(crate::http::Credentials {
             user: "u".into(),
             secret: "test-only".into(),
         });
@@ -1127,7 +1131,7 @@ mod tests {
             }
         });
         let session: Session = serde_json::from_value(json!({"apiUrl":api,"capabilities":{CORE_CAPABILITY:{"maxObjectsInGet":2,"maxCallsInRequest":1,"maxSizeRequest":10000},CAPABILITY:{}},"accounts":{"a":{"accountCapabilities":{CAPABILITY:{}}}}})).unwrap();
-        let client = Client::new(crate::Credentials {
+        let client = Client::new(crate::http::Credentials {
             user: "fixture".into(),
             secret: "fixture-only".into(),
         });
@@ -1236,7 +1240,7 @@ mod tests {
             }
         });
         let session: Session = serde_json::from_value(json!({"apiUrl":api,"capabilities":{CORE_CAPABILITY:{"maxObjectsInGet":2,"maxCallsInRequest":1,"maxSizeRequest":10000},CAPABILITY:{}},"accounts":{"a":{"accountCapabilities":{CAPABILITY:{}}}}})).unwrap();
-        let client = Client::new(crate::Credentials { user: "u".into(), secret: "test-only".into() });
+        let client = Client::new(crate::http::Credentials { user: "u".into(), secret: "test-only".into() });
         let result = thread(&client, &session, "a", "t").unwrap();
         let calls = server.join().unwrap();
         let chunks: Vec<&Value> = calls[1..].iter().map(|c| &c[1]["ids"]).collect();
@@ -1251,7 +1255,7 @@ mod tests {
     fn a_thread_nobody_can_see_is_not_found_and_fetches_nothing() {
         let (api, server) = serve(1, |_, _| json!({"accountId":"a","state":"ts","list":[],"notFound":["t"]}));
         let session: Session = serde_json::from_value(json!({"apiUrl":api,"capabilities":{CORE_CAPABILITY:{"maxObjectsInGet":2,"maxCallsInRequest":1,"maxSizeRequest":10000},CAPABILITY:{}},"accounts":{"a":{"accountCapabilities":{CAPABILITY:{}}}}})).unwrap();
-        let client = Client::new(crate::Credentials { user: "u".into(), secret: "test-only".into() });
+        let client = Client::new(crate::http::Credentials { user: "u".into(), secret: "test-only".into() });
         let result = thread(&client, &session, "a", "t").unwrap();
         assert_eq!(server.join().unwrap().len(), 1);
         assert_eq!(result["found"], false);
@@ -1315,7 +1319,7 @@ mod tests {
 
     fn sized_session(api: &str, max_size: usize) -> (Client, Session) {
         let session: Session = serde_json::from_value(json!({"apiUrl":api,"capabilities":{CORE_CAPABILITY:{"maxCallsInRequest":1,"maxObjectsInGet":2,"maxObjectsInSet":2,"maxSizeRequest":max_size},CAPABILITY:{}},"accounts":{"a":{"accountCapabilities":{CAPABILITY:{}}}}})).unwrap();
-        let client = Client::new(crate::Credentials { user: "u".into(), secret: "test-only".into() });
+        let client = Client::new(crate::http::Credentials { user: "u".into(), secret: "test-only".into() });
         (client, session)
     }
 

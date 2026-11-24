@@ -1,6 +1,11 @@
 //! Opt-in, loopback-only interop test. Removes only the book/card it creates.
-use axismundi_jmap_core::contacts::{self, CAPABILITY, Store};
-use axismundi_jmap_core::{CORE_CAPABILITY, Client, Credentials, Session};
+use axismundi_client_core::{
+    http::{Client, Credentials},
+    jmap::{
+        CORE_CAPABILITY, Session,
+        contacts::{self, CAPABILITY, Store},
+    },
+};
 use serde_json::{Value, json};
 
 fn call(client: &Client, session: &Session, name: &str, args: Value) -> Value {

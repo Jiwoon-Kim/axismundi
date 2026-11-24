@@ -1,8 +1,10 @@
 use std::sync::{Arc, Mutex};
 
-use axismundi_jmap_core::{
-    ActingActor, Client, Credentials, Error,
+use axismundi_client_core::{
+    Error,
+    activitypub::pre_fep::session::ActingActor,
     discovery::{AP_SESSION_ROUTE, Discovery, DiscoveryOptions, Probe, discover_selected},
+    http::{Client, Credentials},
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -696,7 +698,7 @@ fn connect(
                         })
                         .collect(),
                 );
-                if session.capabilities.contains_key(axismundi_jmap_core::mail::CAPABILITY) {
+                if session.capabilities.contains_key(axismundi_client_core::jmap::mail::CAPABILITY) {
                     match data_dir.as_deref() {
                         Some(dir) => match crate::mail::Mail::open(dir, session, &username) {
                             Ok(opened) => mail = Some(opened),
@@ -763,7 +765,7 @@ pub(crate) fn failure(service: &str, error: &Error) -> String {
 mod tests {
     use super::*;
     use crate::saved::Secrets;
-    use axismundi_jmap_core::discovery::{Jmap, WordPress, discover};
+    use axismundi_client_core::discovery::{Jmap, WordPress, discover};
 
     #[test]
     #[ignore = "requires a local Axismundi instance and a temporary Application Password"]
@@ -1073,7 +1075,7 @@ mod tests {
             }),
             jmap: Probe::Skipped,
             activitypub: Probe::Skipped,
-            activitypub_session: Probe::Found(axismundi_jmap_core::discovery::ActivityPubSession {
+            activitypub_session: Probe::Found(axismundi_client_core::discovery::ActivityPubSession {
                 session_url: "https://blog.test/wp-json/axismundi/activitypub/session".into(),
             }),
         };

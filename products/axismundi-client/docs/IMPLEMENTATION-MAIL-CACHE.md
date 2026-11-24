@@ -1,6 +1,6 @@
 # Mail Partial Cache and Delta
 
-2026-11-19. `core/src/mail/cache.rs`의 첫 Mail 영속화 구현 기록이다.
+2026-11-19. `core/src/jmap/mail/cache.rs`(당시 `core/src/mail/cache.rs`)의 첫 Mail 영속화 구현 기록이다.
 전체 범위는 [메서드 대응표](MATRIX-JMAP-MAIL.md), 단계는 [계획](PLAN-JMAP-MAIL.md)을 따른다.
 Mail RFC 전체 구현이나 모든 메일의 offline replica 완료를 뜻하지 않는다.
 
@@ -93,7 +93,7 @@ Mailbox/changes의 updatedProperties 처리와 Email/queryChanges는 아직 미�
 
 ```powershell
 # Supply AXJ_SESSION_URL, AXJ_USER, AXJ_SECRET for the local development server.
-cargo test -p axismundi-jmap-core --test mail_cache_stalwart -- --ignored --nocapture
+cargo test -p axismundi-client-core --test mail_cache_stalwart -- --ignored --nocapture
 ```
 
 Stalwart에서 격리된 Mailbox/Email을 만들고 snapshot·본문 저장·offline reopen·외부 keywords

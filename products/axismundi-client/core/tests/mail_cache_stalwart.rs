@@ -1,7 +1,10 @@
 //! Profile-local Mail cache and external delta interop. Only destroys its own fixtures.
-use axismundi_jmap_core::{
-    CORE_CAPABILITY, Client, Credentials, Session,
-    mail::{self, Rows, cache},
+use axismundi_client_core::{
+    http::{Client, Credentials},
+    jmap::{
+        CORE_CAPABILITY, Session,
+        mail::{self, Rows, cache},
+    },
 };
 use serde_json::{Value, json};
 
@@ -260,7 +263,7 @@ fn mail_cache_move_to_trash_and_back() {
         let refused = client
             .request(
                 &session,
-                &[axismundi_jmap_core::CORE_CAPABILITY, mail::CAPABILITY],
+                &[axismundi_client_core::jmap::CORE_CAPABILITY, mail::CAPABILITY],
                 vec![("Email/set", json!({"accountId":account,"update":{&id:{"mailboxIds":{}}}}), "fixture")],
             )
             .unwrap();

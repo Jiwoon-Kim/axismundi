@@ -29,13 +29,13 @@ checksum = "f2032f911046de80f0a198e0901378627c33f59ea0ac00e363d481118bd70a53"
 name = "axismundi"
 version = "0.1.0"
 dependencies = [
- "axismundi-jmap-core",
+ "axismundi-client-core",
  "serde_json",
  "url",
 ]
 
 [[package]]
-name = "axismundi-jmap-core"
+name = "axismundi-client-core"
 version = "0.1.0"
 dependencies = [
  "base64",

@@ -43,7 +43,7 @@ fixture는 테스트 종료 후 삭제하지 않고 보존했다. 기존 송수�
 ```powershell
 # AXJ_SESSION_URL, AXJ_USER, AXJ_SECRET, AXJ_ALICE_USER, AXJ_ALICE_SECRET
 $env:AXJ_SEED_MAIL_PROBE = '1'
-cargo run -p axismundi-jmap-core --example seed_mail_probe
+cargo run -p axismundi-client-core --example seed_mail_probe
 ```
 
 실행 파일은 loopback Session·동일 오리진 API·별도 인증 계정·예상된 로컬 발신 Identity를

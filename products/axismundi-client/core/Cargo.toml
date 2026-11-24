@@ -1,5 +1,5 @@
 [package]
-name = "axismundi-jmap-core"
+name = "axismundi-client-core"
 version = "0.1.0"
 edition.workspace = true
 rust-version.workspace = true

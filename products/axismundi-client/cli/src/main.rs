@@ -6,8 +6,12 @@
 
 use std::process::ExitCode;
 
-use axismundi_jmap_core::discovery::{Probe, DiscoveryOptions, discover_selected};
-use axismundi_jmap_core::{CORE_CAPABILITY as CORE, Client, Credentials, Error, Session};
+use axismundi_client_core::discovery::{Probe, DiscoveryOptions, discover_selected};
+use axismundi_client_core::{
+    Error,
+    http::{Client, Credentials},
+    jmap::{CORE_CAPABILITY as CORE, Session},
+};
 use serde_json::{Value, json};
 
 mod todo_set;
@@ -39,8 +43,8 @@ struct Options {
 
 /// `--rows` takes a value rather than being a bare switch, because the offline parser reads its
 /// arguments strictly in pairs.
-fn rows(value: Option<&str>) -> Result<axismundi_jmap_core::mail::Rows, String> {
-    use axismundi_jmap_core::mail::Rows;
+fn rows(value: Option<&str>) -> Result<axismundi_client_core::jmap::mail::Rows, String> {
+    use axismundi_client_core::jmap::mail::Rows;
     match value {
         None | Some("messages") => Ok(Rows::Messages),
         Some("threads") => Ok(Rows::Threads),
@@ -233,7 +237,7 @@ fn choose(session: &Session, capability: &str, requested: Option<&str>) -> Resul
 }
 
 /// Report a batch, treating a method-level error as a failure even on HTTP 200.
-fn report(batch: &axismundi_jmap_core::Batch) -> bool {
+fn report(batch: &axismundi_client_core::jmap::Batch) -> bool {
     if let Some(state) = &batch.session_state {
         println!("sessionState  {state}");
     }
@@ -341,7 +345,7 @@ fn run() -> Result<bool, String> {
             {
                 return Err("--id reads one message; it takes no --mailbox or --rows".into());
             }
-            let store = axismundi_jmap_core::mail::cache::Store::open(path, get("--profile")?)
+            let store = axismundi_client_core::jmap::mail::cache::Store::open(path, get("--profile")?)
                 .map_err(|e| e.to_string())?;
             let account = get("--account")?;
             let result = if let Some(id) = flags.get("--id") {
@@ -352,7 +356,7 @@ fn run() -> Result<bool, String> {
             println!("{}", serde_json::to_string_pretty(&result).map_err(|e| e.to_string())?);
             return Ok(true);
         }
-        let store = axismundi_jmap_core::contacts::Store::open(path, get("--profile")?)
+        let store = axismundi_client_core::jmap::contacts::Store::open(path, get("--profile")?)
             .map_err(|e| e.to_string())?;
         let account = get("--account")?;
         println!(
@@ -411,7 +415,7 @@ fn run() -> Result<bool, String> {
         .map(|()| true);
     }
     if command == "mail-sync" || command == "mail-more" || (matches!(command.as_str(), "mail-read" | "mail-thread") && options.db.is_some()) {
-        use axismundi_jmap_core::mail::{self, cache};
+        use axismundi_client_core::jmap::mail::{self, cache};
         let account = mail::choose_account(&session, options.account.as_deref()).map_err(explain)?;
         let path = options.db.as_deref().ok_or("--db is required")?;
         let profile = options.profile.as_deref().ok_or("--profile is required")?;
@@ -433,7 +437,7 @@ fn run() -> Result<bool, String> {
         return Ok(true);
     }
     if matches!(command.as_str(), "mailboxes" | "mail-inbox" | "mail-read" | "mail-thread") {
-        use axismundi_jmap_core::mail;
+        use axismundi_client_core::jmap::mail;
         let account = mail::choose_account(&session, options.account.as_deref()).map_err(explain)?;
         let result = match command.as_str() {
             "mailboxes" => mail::mailboxes(&client, &session, &account),
@@ -448,15 +452,15 @@ fn run() -> Result<bool, String> {
         let db = options.db.as_deref().ok_or("--db is required")?;
         let profile = options.profile.as_deref().ok_or("--profile is required")?;
         let account =
-            axismundi_jmap_core::contacts::choose_account(&session, options.account.as_deref())
+            axismundi_client_core::jmap::contacts::choose_account(&session, options.account.as_deref())
                 .map_err(|e| e.to_string())?;
         let mut store =
-            axismundi_jmap_core::contacts::Store::open(db, profile).map_err(|e| e.to_string())?;
+            axismundi_client_core::jmap::contacts::Store::open(db, profile).map_err(|e| e.to_string())?;
         store
             .remember_session(&client, &session, &session_document)
             .map_err(|e| e.to_string())?;
         for kind in ["AddressBook", "ContactCard"] {
-            axismundi_jmap_core::contacts::sync_type(&client, &session, &mut store, &account, kind)
+            axismundi_client_core::jmap::contacts::sync_type(&client, &session, &mut store, &account, kind)
                 .map_err(|e| e.to_string())?;
         }
         println!(
@@ -610,7 +614,7 @@ struct Watch<'a> {
 /// Keeps one mailbox listing current: sync, then sync again whenever the server pushes a change to
 /// Email or Mailbox in this account.
 fn watch(client: &Client, session: &Session, options: Watch<'_>) -> Result<(), String> {
-    use axismundi_jmap_core::mail::{self, cache};
+    use axismundi_client_core::jmap::mail::{self, cache};
     use std::time::Duration;
     let account = mail::choose_account(session, options.account).map_err(explain)?;
     let path = options.db.ok_or("--db is required")?;
@@ -639,16 +643,16 @@ fn watch(client: &Client, session: &Session, options: Watch<'_>) -> Result<(), S
 
 /// What `watch_loop` needs from a push connection; the real one is the WebSocket channel.
 trait Push {
-    fn next(&mut self) -> Result<axismundi_jmap_core::websocket::Event, Error>;
+    fn next(&mut self) -> Result<axismundi_client_core::jmap::websocket::Event, Error>;
     fn close(self);
 }
 
-impl Push for axismundi_jmap_core::websocket::PushChannel {
-    fn next(&mut self) -> Result<axismundi_jmap_core::websocket::Event, Error> {
-        axismundi_jmap_core::websocket::PushChannel::next(self)
+impl Push for axismundi_client_core::jmap::websocket::PushChannel {
+    fn next(&mut self) -> Result<axismundi_client_core::jmap::websocket::Event, Error> {
+        axismundi_client_core::jmap::websocket::PushChannel::next(self)
     }
     fn close(self) {
-        axismundi_jmap_core::websocket::PushChannel::close(self)
+        axismundi_client_core::jmap::websocket::PushChannel::close(self)
     }
 }
 
@@ -671,7 +675,7 @@ fn watch_loop<C: Push>(
     mut sync: impl FnMut(&str) -> Result<(), String>,
     mut wait: impl FnMut(std::time::Duration),
 ) -> Result<(), String> {
-    use axismundi_jmap_core::websocket::Event;
+    use axismundi_client_core::jmap::websocket::Event;
     use std::time::Duration;
     sync("initial")?;
     let mut push_state: Option<String> = None;
@@ -730,7 +734,7 @@ fn watch_loop<C: Push>(
 #[cfg(test)]
 mod watch_tests {
     use super::*;
-    use axismundi_jmap_core::websocket::Event;
+    use axismundi_client_core::jmap::websocket::Event;
     use std::{cell::RefCell, collections::{BTreeMap, VecDeque}, rc::Rc};
 
     type Log = Rc<RefCell<Vec<String>>>;
@@ -832,7 +836,7 @@ fn number(value: Option<&str>, flag: &str) -> Result<Option<u64>, String> {
 /// The blob commands. The account is the Session's Mail account unless one is named, since mail
 /// attachments are what these exist for first.
 fn blob_command(client: &Client, session: &Session, command: &str, flags: BlobFlags<'_>) -> Result<(), String> {
-    use axismundi_jmap_core::{blob::Source, mail};
+    use axismundi_client_core::jmap::{blob::Source, mail};
     let account = mail::choose_account(session, flags.account).map_err(explain)?;
     let id = || flags.id.ok_or("--id is required");
     let media_type = flags.media_type.unwrap_or("application/octet-stream");

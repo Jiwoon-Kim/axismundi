@@ -1,5 +1,8 @@
 //! Explicit local-server Submission interop, not a product compose implementation.
-use axismundi_jmap_core::{CORE_CAPABILITY, Client, Credentials, Session, mail};
+use axismundi_client_core::{
+    http::{Client, Credentials},
+    jmap::{CORE_CAPABILITY, Session, mail},
+};
 use serde_json::{Value, json};
 use std::{thread, time::Duration};
 

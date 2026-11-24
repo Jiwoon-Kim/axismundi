@@ -7,7 +7,7 @@ use super::{
 
 /// v2 keys a listing by its query, not its mailbox.
 const SCHEMA_VERSION: &str = "2";
-use crate::{Client, Session};
+use crate::{http::Client, jmap::Session};
 use rusqlite::{Connection, OptionalExtension, Transaction, TransactionBehavior, params};
 use serde_json::{Value, json};
 use std::{collections::BTreeSet, path::Path};
@@ -1095,7 +1095,10 @@ pub fn sync(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{CORE_CAPABILITY, Credentials, mail::CAPABILITY};
+    use crate::{
+        http::Credentials,
+        jmap::{CORE_CAPABILITY, mail::CAPABILITY},
+    };
 
     fn session(api: &str) -> Session {
         serde_json::from_value(json!({"apiUrl":api,"capabilities":{CORE_CAPABILITY:{"maxCallsInRequest":1,"maxObjectsInGet":2,"maxSizeRequest":100000},CAPABILITY:{}},"accounts":{"a":{"accountCapabilities":{CAPABILITY:{}}}}})).unwrap()
@@ -1129,7 +1132,7 @@ mod tests {
     fn contacts_coexistence_reopen_profile_binding_and_unknown_version() {
         let path = temp();
         {
-            let _contacts = crate::contacts::Store::open(&path, "p").unwrap();
+            let _contacts = crate::jmap::contacts::Store::open(&path, "p").unwrap();
             let raw = Connection::open(&path).unwrap();
             raw.execute(
                 "INSERT INTO records VALUES('a','ContactCard','c','{\"id\":\"c\"}','C')",
@@ -1162,7 +1165,7 @@ mod tests {
             assert!(Store::open(&path, "other").is_err());
         }
         {
-            let contacts = crate::contacts::Store::open(&path, "p").unwrap();
+            let contacts = crate::jmap::contacts::Store::open(&path, "p").unwrap();
             assert_eq!(contacts.list("a", "ContactCard").unwrap().len(), 1);
             assert_eq!(contacts.pending_count("a").unwrap(), 1);
             let store = Store::open(&path, "p").unwrap();
@@ -1875,7 +1878,7 @@ mod tests {
 
     #[test]
     fn a_query_delta_proves_only_the_prefix_it_reaches() {
-        use crate::mail::QueryDelta;
+        use crate::jmap::mail::QueryDelta;
         let held: Vec<String> = ["a", "b", "c", "d"].map(String::from).to_vec();
         let delta = |removed: &[&str], added: &[(&str, usize)]| QueryDelta {
             new_state: "n".into(),

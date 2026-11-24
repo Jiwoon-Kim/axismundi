@@ -1,5 +1,8 @@
 //! Profile-isolated Contacts cache. JSON is authoritative; SQL fields are indexes.
-use crate::{CORE_CAPABILITY, Client, Session};
+use crate::{
+    http::Client,
+    jmap::{CORE_CAPABILITY, Session},
+};
 use rusqlite::{Connection, OptionalExtension, params};
 use serde_json::{Value, json};
 use std::{collections::BTreeSet, path::Path};
@@ -530,7 +533,7 @@ mod tests {
         store.bind(&client, &session).unwrap();
         assert_eq!(choose_account(&session, None).unwrap(), "a");
         assert!(choose_account(&session, Some("unknown")).is_err());
-        let other = Client::without_redirects(crate::Credentials {
+        let other = Client::without_redirects(crate::http::Credentials {
             user: "other".into(),
             secret: "different".into(),
         });
@@ -627,7 +630,7 @@ mod tests {
             calls
         });
         (
-            Client::without_redirects(crate::Credentials {
+            Client::without_redirects(crate::http::Credentials {
                 user: "u".into(),
                 secret: "secret".into(),
             }),

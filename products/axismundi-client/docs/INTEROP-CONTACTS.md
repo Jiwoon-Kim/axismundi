@@ -1,6 +1,6 @@
 # Contacts Storage and Stalwart E2E
 
-2026-11-18. Implemented in `core/src/contacts.rs`; the WordPress Contacts server
+2026-11-18. Implemented in `core/src/jmap/contacts.rs` (then `core/src/contacts.rs`); the WordPress Contacts server
 was not changed. Stalwart runs in `axismundi-jmap-interop` on loopback port 18880.
 
 ## Storage Boundary
@@ -57,7 +57,7 @@ merge UI, create/delete queue or push connection is implemented yet.
 ```powershell
 cargo test --workspace
 # Explicit opt-in: supply loopback AXJ_SESSION_URL, AXJ_USER, AXJ_SECRET in the environment.
-cargo test -p axismundi-jmap-core --test contacts_stalwart -- --ignored --nocapture
+cargo test -p axismundi-client-core --test contacts_stalwart -- --ignored --nocapture
 ```
 
 The Stalwart test creates its own marked AddressBook and ContactCard. It verifies

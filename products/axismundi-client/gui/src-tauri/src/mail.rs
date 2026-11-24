@@ -1,11 +1,14 @@
-//! Mail commands: thin wrappers over `axismundi_jmap_core::mail::cache`. The GUI names an
+//! Mail commands: thin wrappers over `axismundi_client_core::jmap::mail::cache`. The GUI names an
 //! Account, a mailbox or an Email; it never builds a JMAP request or sees SQL.
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
-use axismundi_jmap_core::{
-    Error, Session,
-    mail::{Rows, cache},
+use axismundi_client_core::{
+    Error,
+    jmap::{
+        Session,
+        mail::{Rows, cache},
+    },
 };
 use serde::Serialize;
 use serde_json::{Value, json};
@@ -466,8 +469,8 @@ pub struct UpdateView {
     read_back_complete: bool,
 }
 
-fn update_view(results: axismundi_jmap_core::mail::UpdateResults) -> UpdateView {
-    use axismundi_jmap_core::mail::UpdateOutcome as Outcome;
+fn update_view(results: axismundi_client_core::jmap::mail::UpdateResults) -> UpdateView {
+    use axismundi_client_core::jmap::mail::UpdateOutcome as Outcome;
     let read_back_complete = results.not_read_back.is_empty();
     let results = results
         .outcomes
@@ -510,8 +513,8 @@ pub async fn mail_set_keywords(
     state: tauri::State<'_, Connection>,
 ) -> Result<UpdateView, String> {
     let keyword = match keyword.as_str() {
-        "seen" => axismundi_jmap_core::mail::Keyword::Seen,
-        "flagged" => axismundi_jmap_core::mail::Keyword::Flagged,
+        "seen" => axismundi_client_core::jmap::mail::Keyword::Seen,
+        "flagged" => axismundi_client_core::jmap::mail::Keyword::Flagged,
         _ => return Err("keyword takes seen or flagged".into()),
     };
     with_mail(&state, connection_id, move |active, mail, store| {
@@ -657,7 +660,7 @@ mod tests {
     /// output is the file the GUI spec reads (`mail-updates.fixture.json`).
     #[test]
     fn update_results_serialize_to_the_shape_the_gui_reads() {
-        use axismundi_jmap_core::mail::{UpdateOutcome as Outcome, UpdateResults};
+        use axismundi_client_core::jmap::mail::{UpdateOutcome as Outcome, UpdateResults};
         let results = UpdateResults {
             outcomes: vec![
                 ("m1".into(), Outcome::Confirmed),

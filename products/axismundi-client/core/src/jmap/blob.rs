@@ -7,7 +7,11 @@ use std::collections::BTreeMap;
 
 use serde_json::{Value, json};
 
-use crate::{Batch, CORE_CAPABILITY, Client, Error, Session};
+use crate::{
+    Error,
+    http::Client,
+    jmap::{Batch, CORE_CAPABILITY, Session},
+};
 
 pub const CAPABILITY: &str = "urn:ietf:params:jmap:blob";
 
@@ -239,7 +243,7 @@ impl Client {
                     .get("location")
                     .and_then(|v| v.to_str().ok())
                     .ok_or_else(|| Error::Shape("redirect has no valid Location".into()))?;
-                current = crate::authenticated_redirect(&current, location)?;
+                current = crate::http::authenticated_redirect(&current, location)?;
                 continue;
             }
             if !(200..300).contains(&status) {
@@ -356,7 +360,7 @@ impl Client {
         let batch = self.blob_call(session, &[], "Blob/get", args)?;
         let result = arguments(&batch, "Blob/get", account)?;
         let ids: Vec<String> = ids.iter().map(|s| (*s).to_owned()).collect();
-        crate::mail::validate_get(&result, &ids)?;
+        crate::jmap::mail::validate_get(&result, &ids)?;
         Ok(result)
     }
 
@@ -501,7 +505,7 @@ mod tests {
     }
 
     fn client() -> Client {
-        Client::new(crate::Credentials { user: "u".into(), secret: "test-only".into() })
+        Client::new(crate::http::Credentials { user: "u".into(), secret: "test-only".into() })
     }
 
     fn json_reply(value: Value) -> Answer {

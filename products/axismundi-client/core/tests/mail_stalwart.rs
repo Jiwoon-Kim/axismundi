@@ -1,5 +1,8 @@
 //! Loopback-only Mail interop. Creates and removes one synthetic Email, never submits it.
-use axismundi_jmap_core::{CORE_CAPABILITY, Client, Credentials, Session, mail};
+use axismundi_client_core::{
+    http::{Client, Credentials},
+    jmap::{CORE_CAPABILITY, Session, mail},
+};
 use serde_json::{Value, json};
 
 fn call(client: &Client, session: &Session, args: Value) -> Value {

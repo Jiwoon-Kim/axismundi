@@ -17,7 +17,7 @@ use tungstenite::{
     stream::MaybeTlsStream,
 };
 
-use crate::{Client, Error, Session};
+use crate::{Error, http::Client, jmap::Session};
 
 pub const CAPABILITY: &str = "urn:ietf:params:jmap:websocket";
 const SUBPROTOCOL: &str = "jmap";
@@ -291,7 +291,7 @@ impl PushChannel {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Credentials;
+    use crate::http::Credentials;
     use std::net::TcpListener;
     use tungstenite::handshake::server::{ErrorResponse, Request, Response};
 

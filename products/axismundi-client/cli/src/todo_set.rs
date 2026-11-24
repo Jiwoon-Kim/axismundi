@@ -1,6 +1,9 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use axismundi_jmap_core::{Client, Invocation, Session, SetOutcome};
+use axismundi_client_core::{
+    http::Client,
+    jmap::{Invocation, Session, SetOutcome},
+};
 use serde_json::{Value, json};
 use url::{Host, Origin, Url};
 

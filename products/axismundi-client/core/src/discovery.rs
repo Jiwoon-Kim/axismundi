@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use url::Url;
 
-use crate::CORE_CAPABILITY;
+use crate::jmap::CORE_CAPABILITY;
 
 pub const AP_SESSION_ROUTE: &str = "/axismundi/v1/users/me";
 
@@ -94,7 +94,7 @@ pub fn discover_selected(input: &str, options: DiscoveryOptions) -> Result<Disco
     let origin = site.origin().ascii_serialization();
     let agent: ureq::Agent = ureq::Agent::config_builder()
         .http_status_as_error(false)
-        .tls_config(crate::platform_tls())
+        .tls_config(crate::http::platform_tls())
         .max_redirects(0)
         .timeout_global(Some(Duration::from_secs(20)))
         .user_agent("axismundi-discovery/0.1")

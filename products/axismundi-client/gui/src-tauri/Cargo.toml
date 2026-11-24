@@ -19,7 +19,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-axismundi-jmap-core = { path = "../../core" }
+axismundi-client-core = { path = "../../core" }
 url = "2"
 # Tauri default features minus common-controls-v6.  That feature makes muda link
 # comctl32 v6, which needs the side-by-side manifest tauri-build puts on the app

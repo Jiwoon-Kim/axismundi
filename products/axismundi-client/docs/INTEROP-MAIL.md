@@ -42,7 +42,7 @@ id `a`~`e` 가 두 계정에서 같지만 카운트가 다르다 — id 는 계�
 ```powershell
 # Supply AXJ_SESSION_URL, AXJ_USER, AXJ_SECRET,
 # AXJ_ALICE_USER and AXJ_ALICE_SECRET in the current process.
-cargo test -p axismundi-jmap-core --test mail_submission_stalwart -- --ignored --nocapture
+cargo test -p axismundi-client-core --test mail_submission_stalwart -- --ignored --nocapture
 ```
 
 테스트는 loopback 및 동일 오리진 API를 요구하고 admin@example.org와 alice@example.org
@@ -72,8 +72,8 @@ Session에서 계정을 선택한다. 해당 문자열이나 메일함 ID를 제
 ```powershell
 $env:AXJ_SESSION_URL = 'https://localhost:18881/.well-known/jmap'
 # Supply AXJ_USER and AXJ_SECRET securely in the current process.
-cargo test -p axismundi-jmap-core --test mail_stalwart -- --ignored --nocapture
-cargo test -p axismundi-jmap-core --test contacts_stalwart -- --ignored --nocapture
+cargo test -p axismundi-client-core --test mail_stalwart -- --ignored --nocapture
+cargo test -p axismundi-client-core --test contacts_stalwart -- --ignored --nocapture
 cargo run -p axismundi -- mailboxes --session-url $env:AXJ_SESSION_URL
 cargo run -p axismundi -- mail-inbox --session-url $env:AXJ_SESSION_URL
 ```

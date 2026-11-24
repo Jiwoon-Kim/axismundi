@@ -10,6 +10,17 @@
 @use 'appearance-contrast-magenta' as magenta;
 @use 'appearance-contrast-cyan' as cyan;
 
+.mail-search-docked {
+  @include mat.dialog-overrides((
+    container-shape: 9999px,
+    container-color: var(--mat-sys-surface-container-high),
+    container-elevation-shadow: var(--mat-sys-level3),
+  ));
+}
+.mail-search-fullscreen {
+  @include mat.dialog-overrides((container-shape: 0));
+}
+
 html {
   height: 100%;
   color-scheme: light dark;

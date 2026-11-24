@@ -10,7 +10,7 @@ import { ConnectionService } from "../connection.service";
 import { MailActions } from "./mail-actions";
 import { DetailView, addressList, bodyNotice, markReadOnOpen, maySetSeen } from "./mail-detail";
 import { MailMoveMenuComponent } from "./mail-move-menu.component";
-import type { MoveOptions } from "./mail-moves";
+import { exclusiveMove, type MoveOptions } from "./mail-moves";
 import type { MailboxRow } from "./mail-rows";
 import { rowLabel } from "./mail-rows";
 import { ThreadView } from "./mail-thread";
@@ -46,7 +46,7 @@ export class MailDetailComponent {
   /** Moves the open message; once the server confirms it left this listing, back to the list. */
   protected async moveTo(id: string, to: MailboxRow | null): Promise<void> {
     const from = this.listedIn();
-    if (!to || !from) return;
+    if (!to || (!from && !exclusiveMove(to))) return;
     const accountId = this.accountId();
     const connectionId = this.connection.connected()?.id;
     const result = await this.actions.move(accountId, [id], from, to);
@@ -54,7 +54,7 @@ export class MailDetailComponent {
     // connections, so an answer from an earlier login must not close the new one's pane.
     const still = this.connection.connected()?.id === connectionId && this.emailId() === id
       && this.accountId() === accountId && this.listedIn() === from;
-    if (still && result?.settled?.confirmed.includes(id)) {
+    if (still && from !== null && result?.settled?.confirmed.includes(id)) {
       void this.router.navigate(["/mail"], {queryParams: {mailbox: this.mailbox()}});
     }
   }

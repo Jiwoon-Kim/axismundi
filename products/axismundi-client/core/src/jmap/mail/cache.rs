@@ -404,6 +404,20 @@ pub fn move_emails(
     update(client, session, store, account, ids, super::Change::OnlyIn { to, out_of: &out_of })
 }
 
+/// A search result has no source mailbox. Only the current Trash may be used this way.
+pub fn trash_search_results(
+    client: &Client, session: &Session, store: &mut Store, account: &str, ids: &[String], to: &str,
+) -> Result<super::UpdateResults> {
+    choose_account(session, Some(account))?;
+    store.bind(client, session)?;
+    mailbox_changes(client, session, store, account)?;
+    let trash = store.mailbox(account, to)?.ok_or("This account has no Trash mailbox you can use.")?;
+    if trash["role"] != "trash" || trash.pointer("/myRights/mayAddItems") == Some(&Value::Bool(false)) {
+        return Err("You cannot add messages to Trash in this account.".into());
+    }
+    move_emails(client, session, store, account, ids, "", to, true)
+}
+
 /// Applies a change on the server, then keeps what the server shows afterwards.
 ///
 /// Only the read-back (see `mail::update`) reaches the cache, never the request itself, so nothing

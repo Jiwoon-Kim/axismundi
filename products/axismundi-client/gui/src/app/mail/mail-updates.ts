@@ -15,7 +15,7 @@ export type Aspect = Keyword | "mailboxes";
  */
 export type Change =
   | {kind: "keyword"; keyword: Keyword; on: boolean}
-  | {kind: "move"; from: string; to: string; exclusive: boolean};
+  | {kind: "move"; from: string | null; to: string; exclusive: boolean};
 
 export function aspectOf(change: Change): Aspect {
   return change.kind === "keyword" ? change.keyword : "mailboxes";
@@ -192,7 +192,7 @@ export class MailWriter {
           // it is not a complete membership. The reload `changed` triggers learns the rest.
           this.keep(target, id, aspect, change.kind === "keyword"
             ? change.on
-            : {in: new Set([change.to]), out: new Set([change.from]), complete: false});
+            : {in: new Set([change.to]), out: new Set(change.from === null ? [] : [change.from]), complete: false});
         }
       } catch (error) {
         writeError = error ?? "failed";

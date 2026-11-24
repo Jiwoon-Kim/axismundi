@@ -7,7 +7,7 @@ import { MatIcon } from "@angular/material/icon";
 import { MatMenu, MatMenuItem, MatMenuTrigger } from "@angular/material/menu";
 import { MatBadge } from "@angular/material/badge";
 import { MatCheckbox } from "@angular/material/checkbox";
-import { MatDialog } from "@angular/material/dialog";
+import { MatDialog, MatDialogRef } from "@angular/material/dialog";
 import { MatProgressSpinner } from "@angular/material/progress-spinner";
 import { MatSnackBar } from "@angular/material/snack-bar";
 import { MatSidenav, MatSidenavContainer, MatSidenavContent } from "@angular/material/sidenav";
@@ -17,10 +17,12 @@ import { Router, RouterLink } from "@angular/router";
 import { map } from "rxjs";
 import { invoke } from "@tauri-apps/api/core";
 import { ConnectionService } from "../connection.service";
+import { SearchDialogComponent, type SearchDialogData } from "./search-dialog.component";
 import { MailDetailComponent } from "./mail-detail.component";
+import { MailSearchBarComponent } from "./mail-search-bar.component";
 import { MailActions, type Aspect, type Keyword } from "./mail-actions";
 import { MailMoveMenuComponent } from "./mail-move-menu.component";
-import { mailboxIcon, moveOptions } from "./mail-moves";
+import { exclusiveMove, mailboxIcon, moveOptions } from "./mail-moves";
 import { type MailboxNode, ancestorsOf, mailboxTree } from "./mail-tree";
 import { ListView, type MailboxRow, rowLabel } from "./mail-rows";
 import type { WriteResult } from "./mail-updates";
@@ -28,6 +30,7 @@ import { indicatorDelay, isRefreshShortcut, manualRefreshAction, pullProgress, r
 import { MailboxDialogComponent, type MailboxDialogData } from "./mailbox-dialog.component";
 import { allowsMailboxAction, mailboxParents, parentAllowed, type MailboxChange, type MailboxResult } from "./mailbox-management";
 import { acceptsPage, canRequestPage, reachedPageEnd } from "./mail-paging";
+import { appendSearchPage, searchLabels, snippetParts } from "./mail-search";
 
 /**
  * M3 window size classes (Material 3, Layout › Breakpoints). CDK's `Breakpoints` are the older
@@ -44,7 +47,7 @@ const EXPANDED = "(min-width: 840px)";
  */
 @Component({
   selector: "app-mail-page",
-  imports: [MailDetailComponent, MailMoveMenuComponent, MatBadge, MatIcon, MatIconAnchor, MatIconButton, MatSidenav,
+  imports: [MailDetailComponent, MailMoveMenuComponent, MailSearchBarComponent, MatBadge, MatIcon, MatIconAnchor, MatIconButton, MatSidenav,
     MatSidenavContainer, MatSidenavContent, MatTooltip, MatCheckbox, MatMenu, MatMenuItem, MatMenuTrigger, MatTree, MatTreeNode,
     MatTreeNodeDef, MatTreeNodeToggle, RouterLink, MatButton, MatProgressSpinner, CdkContextMenuTrigger, CdkMenu, CdkMenuItem],
   host: {"(window:keydown)": "refreshShortcut($event)"},
@@ -77,6 +80,16 @@ export class MailPageComponent {
   /** ≥840: list beside detail. Below that, one pane at a time. */
   protected readonly twoPanes = computed(() => this.window()[EXPANDED]);
   protected readonly drawerOpen = signal(false);
+  private readonly searchRequest = signal<{owner: string; text: string} | null>(null);
+  private readonly searchOwner = computed(() => JSON.stringify([this.connection.connected()?.id, this.connection.accountId()]));
+  protected readonly searchText = computed(() => {
+    const request = this.searchRequest();
+    return request?.owner === this.searchOwner() ? request.text : null;
+  });
+  private readonly searchRetained = signal(0);
+  private readonly beforeSearch = signal<{scope: string; listing: ListView | null; scroll: number} | null>(null);
+  private readonly restoreTop = signal<number | null>(null);
+  private resultScroll: {scope: string; top: number} | null = null;
 
   protected readonly view = resource({
     params: () => {
@@ -84,20 +97,98 @@ export class MailPageComponent {
       const accountId = this.connection.accountId();
       return connectionId === undefined || !accountId
         ? undefined
-        : {connectionId, accountId, mailboxId: this.mailbox() ?? null, rows: "messages"};
+        : {connectionId, accountId, mailboxId: this.mailbox() ?? null, rows: "messages", text: this.searchText()};
     },
-    loader: async ({params}) => {
+    loader: async ({params, abortSignal}) => {
       const from = this.actions.mark();
-      const view = await invoke<ListView>("mail_sync", params);
-      this.loadedFrom.set(from);
+      const {text, ...mailbox} = params;
+      const view = text
+        ? await invoke<ListView>("mail_search", {
+          connectionId: params.connectionId, accountId: params.accountId, text, retained: untracked(this.searchRetained),
+        })
+        : await invoke<ListView>("mail_sync", mailbox);
+      if (!abortSignal.aborted) {
+        this.loadedFrom.set(from);
+        if (text) this.searchRetained.set(Math.max(this.searchRetained(), view.rows.length));
+        else this.beforeSearch.set(null);
+      }
       return view;
     },
   });
   protected readonly listing = linkedSignal<{scope: string; value: ListView | null}, ListView | null>({
     source: () => ({scope: this.scope(), value: this.view.hasValue() ? this.view.value() : null}),
-    computation: (next, previous) =>
-      next.value ?? (previous?.source.scope === next.scope ? previous.value : null),
+    computation: (next, previous) => next.value ?? (previous?.source.scope === next.scope
+      ? previous.value
+      : this.beforeSearch()?.scope === next.scope ? this.beforeSearch()?.listing ?? null : null),
   });
+
+  private submitSearch(text: string): void {
+    if (!this.connection.account()) return;
+    const previous = this.searchText();
+    if (previous === text) {
+      this.refresh();
+      return;
+    }
+    if (!previous) {
+      this.beforeSearch.set({scope: this.scope(), listing: this.listing(), scroll: this.listRoot()?.nativeElement.scrollTop ?? 0});
+    }
+    this.searchRetained.set(0);
+    this.resultScroll = null;
+    this.searchRequest.set({owner: this.searchOwner(), text});
+    if (previous) {
+      this.shownAt.set(null);
+      this.manual.set({scope: this.scope(), started: performance.now()});
+    }
+    this.restoreTop.set(0);
+    if (this.email()) void this.backToList();
+  }
+
+  private searchDialog?: MatDialogRef<SearchDialogComponent, string>;
+
+  protected openSearch(bar: HTMLElement): void {
+    if (this.searchDialog || !this.connection.account()) return;
+    const owner = this.searchOwner();
+    const compact = !this.window()[EXPANDED];
+    const rect = bar.getBoundingClientRect();
+    const width = compact ? "100vw" : `${rect.width}px`;
+    const dialog = this.dialogs.open<SearchDialogComponent, SearchDialogData, string>(SearchDialogComponent, {
+      data: {text: this.searchText() ?? "", compact},
+      ariaLabel: "Search mail", ariaModal: true, autoFocus: "input",
+      width, maxWidth: width,
+      height: compact ? "100dvh" : undefined, maxHeight: compact ? "100dvh" : undefined,
+      position: compact ? {top: "0", left: "0"} : {top: `${rect.top}px`, left: `${rect.left}px`},
+      panelClass: compact ? "mail-search-fullscreen" : "mail-search-docked",
+      backdropClass: compact ? "cdk-overlay-transparent-backdrop" : undefined,
+    });
+    this.searchDialog = dialog;
+    if (!compact) dialog.afterOpened().subscribe(() => {
+      const anchor = bar.getBoundingClientRect();
+      dialog.updateSize(`${anchor.width}px`).updatePosition({top: `${anchor.top}px`, left: `${anchor.left}px`});
+    });
+    dialog.afterClosed().subscribe(text => {
+      this.searchDialog = undefined;
+      if (text && this.alive && this.searchOwner() === owner) this.submitSearch(text);
+    });
+  }
+
+  protected clearSearch(restoreList = true): void {
+    if (!this.searchText()) return;
+    this.searchRequest.set(null);
+    this.resultScroll = null;
+    this.restoreTop.set(restoreList ? this.beforeSearch()?.scroll ?? 0 : 0);
+    if (restoreList && this.email()) void this.backToList();
+  }
+
+  private backToList(): Promise<boolean> {
+    return this.router.navigate(["/mail"], {queryParams: {mailbox: this.mailbox() ?? null}});
+  }
+
+  protected openResult(id: string): void {
+    if (this.selecting()) this.select(id);
+    else if (this.searchText() && !this.twoPanes()) {
+      this.resultScroll = {scope: this.scope(), top: this.listRoot()?.nativeElement.scrollTop ?? 0};
+    }
+  }
   private readonly listRoot = viewChild("messageList", {read: ElementRef<HTMLElement>});
   private readonly pageSentinel = viewChild("pageSentinel", {read: ElementRef<HTMLElement>});
   private readonly page = linkedSignal<string, object | null>({source: () => this.scope(), computation: () => null});
@@ -109,7 +200,8 @@ export class MailPageComponent {
   protected readonly canPage = computed(() => {
     const current = this.listing();
     return !!current && this.view.hasValue() &&
-      canRequestPage(current, !!this.page() || this.view.isLoading() || this.refreshing(), this.exhaustedListing() === current);
+      canRequestPage(current, !!this.page() || this.view.isLoading() || this.refreshing() || this.initialVisible(),
+        this.exhaustedListing() === current);
   });
 
   protected async loadNextPage(retry = false): Promise<void> {
@@ -130,16 +222,24 @@ export class MailPageComponent {
     }, indicatorDelay(false, 0));
     let failed = false;
     try {
-      const next = await invoke<ListView>("mail_more", {
-        connectionId, accountId: current.accountId, mailboxId: current.mailboxId, rows: "messages",
-      });
+      const text = this.searchText();
+      const response = text && current.search
+        ? await invoke<ListView>("mail_search", {
+          connectionId, accountId: current.accountId, text, retained: current.rows.length,
+          position: current.rows.length, queryState: current.search.state,
+        })
+        : await invoke<ListView>("mail_more", {
+          connectionId, accountId: current.accountId, mailboxId: current.mailboxId, rows: "messages",
+        });
       if (!applicable()) return;
+      const next = text ? appendSearchPage(current, response) : response;
       if (next.accountId !== current.accountId || next.mailboxId !== current.mailboxId) {
         failed = true;
       } else {
         // The cache returned the entire extended prefix. Reuse the resource so the next
         // sync and selection pruning both see the same authoritative listing.
         this.view.set(next);
+        if (text) this.searchRetained.set(Math.max(this.searchRetained(), next.rows.length));
         this.exhaustedListing.set(reachedPageEnd(current.rows.length, next) ? next : null);
         failed = next.hasMore === true && next.rows.length <= current.rows.length;
       }
@@ -381,14 +481,16 @@ export class MailPageComponent {
 
   protected openMailbox(id: string): void {
     this.drawerOpen.set(false);
+    const wasSearching = !!this.searchText();
+    if (wasSearching) this.clearSearch(false);
     // The open mailbox again: stay put (no reload, selection kept) — unless a message is open, which
     // goes back to the list as Gmail does.
-    if ((id === this.selectedMailbox() || id === this.mailbox()) && !this.email()) return;
+    if (!wasSearching && (id === this.selectedMailbox() || id === this.mailbox()) && !this.email()) return;
     void this.router.navigate(["/mail"], {queryParams: {mailbox: id}});
   }
-  protected readonly selectedMailbox = computed(() => this.listing()?.mailboxId ?? null);
+  protected readonly selectedMailbox = computed(() => this.searchText() ? null : this.listing()?.mailboxId ?? null);
   protected readonly mailboxName = computed(
-    () => this.mailboxes().find(box => box.id === this.selectedMailbox())?.name ?? "Mail");
+    () => this.searchText() ? "Search results" : this.mailboxes().find(box => box.id === this.selectedMailbox())?.name ?? "Mail");
   /**
    * The listing's rows, less any message the server confirmed has left this mailbox since the rows
    * loaded: a confirmed move shows at once, and the reload it triggers then takes over.
@@ -398,11 +500,29 @@ export class MailPageComponent {
     if (!listing) return [];
     const {accountId, mailboxId, rows} = listing;
     return rows
-      .filter(row => row.kind !== "message" || this.actions.shownIn(accountId, row.id, mailboxId, true, this.loadedFrom()))
+      .filter(row => this.searchText() || row.kind !== "message" || this.actions.shownIn(accountId, row.id, mailboxId, true, this.loadedFrom()))
       .map(rowLabel);
   });
+  protected readonly resultPresentation = computed(() => {
+    const result = this.listing();
+    if (!this.searchText() || !result?.search) return null;
+    const ordered: MailboxRow[] = [];
+    const visit = (nodes: MailboxNode[]) => nodes.forEach(node => { ordered.push(node.box); visit(node.children); });
+    visit(this.mailboxNodes());
+    return new Map(result.rows.flatMap(row => {
+      if (row.kind !== "message") return [];
+      const label = rowLabel(row);
+      if (label.kind !== "message") return [];
+      const snippet = result.search?.snippets[row.id];
+      return [[row.id, {
+        subject: snippetParts(snippet?.subject, label.subject),
+        preview: snippet?.preview || label.preview ? snippetParts(snippet?.preview, label.preview) : [],
+        labels: searchLabels(row.mailboxIds, ordered),
+      }] as const];
+    }));
+  });
   /** Move to Trash and Move to… as this listing offers them (see `moveOptions`). */
-  protected readonly moves = computed(() => moveOptions(this.mailboxes(), this.selectedMailbox()));
+  protected readonly moves = computed(() => moveOptions(this.mailboxes(), this.selectedMailbox(), !!this.searchText()));
   /**
    * Selected message ids. Selection is local to this list: it empties when the connection, Account
    * or mailbox changes, and an id whose row is gone from the listing drops out. It never decides
@@ -459,17 +579,17 @@ export class MailPageComponent {
 
   protected moveSelection(accountId: string, to: MailboxRow | null): Promise<void> {
     const from = this.selectedMailbox();
-    if (!to || !from) return Promise.resolve();
-    return this.forSelection(ids => this.actions.move(accountId, ids, from, to), true);
+    if (!to || (!from && !exclusiveMove(to))) return Promise.resolve();
+    return this.forSelection(ids => this.actions.move(accountId, ids, from, to), !this.searchText());
   }
 
   /** One message from its row: out of the mailbox this list shows. */
   protected async moveRow(accountId: string, id: string, to: MailboxRow | null): Promise<void> {
     const from = this.selectedMailbox();
-    if (!to || !from) return;
+    if (!to || (!from && !exclusiveMove(to))) return;
     const scope = this.scope();
     const result = await this.actions.move(accountId, [id], from, to);
-    if (this.scope() === scope) this.leaveIfMoved(result);
+    if (this.scope() === scope && !this.searchText()) this.leaveIfMoved(result);
   }
 
   /**
@@ -477,7 +597,7 @@ export class MailPageComponent {
    * belongs to a screen that is gone: it must not close the reading pane or touch the selection here.
    */
   private scope(): string {
-    return JSON.stringify([this.connection.connected()?.id, this.connection.accountId(), this.mailbox() ?? null]);
+    return JSON.stringify([this.searchOwner(), this.mailbox() ?? null, this.searchText()]);
   }
 
   /** The open message moved out of this listing: back to the list, as Gmail does. Moves only. */
@@ -523,7 +643,36 @@ export class MailPageComponent {
 
   constructor() {
     inject(DestroyRef).onDestroy(() => this.mailboxPressEnd());
-    inject(DestroyRef).onDestroy(() => { this.alive = false; });
+    inject(DestroyRef).onDestroy(() => { this.alive = false; this.searchDialog?.close(); });
+    effect(() => {
+      this.searchOwner();
+      this.window()[EXPANDED];
+      this.searchDialog?.close();
+    });
+    effect(() => {
+      const owner = this.searchOwner();
+      const request = this.searchRequest();
+      if (request && request.owner !== owner) {
+        this.searchRequest.set(null);
+        this.beforeSearch.set(null);
+        this.searchRetained.set(0);
+        this.resultScroll = null;
+        this.restoreTop.set(null);
+      }
+    });
+    let lastList: HTMLElement | undefined;
+    afterRenderEffect({write: () => {
+      const root = this.listRoot()?.nativeElement;
+      const remounted = root !== lastList;
+      lastList = root;
+      const saved = this.resultScroll;
+      const top = this.restoreTop() ?? (remounted && saved?.scope === this.scope() ? saved.top : null);
+      if (!root || top === null || !this.listing()) return;
+      if (this.searchText() && this.email() && !this.twoPanes()) return;
+      root.scrollTop = top;
+      this.resultScroll = null;
+      this.restoreTop.set(null);
+    }});
     afterRenderEffect(onCleanup => {
       const root = this.listRoot()?.nativeElement;
       const sentinel = this.pageSentinel()?.nativeElement;
@@ -601,6 +750,7 @@ export class MailPageComponent {
       this.connection.connected();
       this.connection.accountId();
       this.mailbox();
+      this.searchText();
       untracked(() => {
         this.pullEnd();
         this.selecting.set(false);

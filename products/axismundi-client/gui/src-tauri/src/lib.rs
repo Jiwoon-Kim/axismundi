@@ -25,6 +25,7 @@ pub fn configure<R: tauri::Runtime>(builder: tauri::Builder<R>) -> tauri::Builde
             connection::object_by_id,
             mail::mail_sync,
             mail::mail_more,
+            mail::mail_search,
             mail::mail_view,
             mail::mail_read,
             mail::mail_thread,

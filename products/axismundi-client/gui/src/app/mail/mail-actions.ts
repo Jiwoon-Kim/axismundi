@@ -99,7 +99,8 @@ export class MailActions {
    * Moves messages from the mailbox they are listed in to `to` (see `cache::move_emails` in Rust).
    * Into Trash or Junk it is exclusive (see `exclusiveMove`).
    */
-  move(accountId: string, emailIds: readonly string[], from: string, to: MailboxRow): Promise<WriteResult | null> {
+  move(accountId: string, emailIds: readonly string[], from: string | null, to: MailboxRow): Promise<WriteResult | null> {
+    if (from === null && !exclusiveMove(to)) return Promise.resolve(null);
     const change = {kind: "move", from, to: to.id, exclusive: exclusiveMove(to)} as const;
     return this.apply(accountId, emailIds, change, moveActionName(to));
   }

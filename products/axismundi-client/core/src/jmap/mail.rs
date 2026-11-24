@@ -8,6 +8,7 @@ use serde_json::{Value, json};
 
 pub mod cache;
 pub mod mailbox;
+pub mod search;
 
 const LIST_PROPERTIES: &[&str] = &[
     "id",
@@ -1316,6 +1317,48 @@ mod tests {
 
     fn keyword_session(api: &str) -> (Client, Session) {
         sized_session(api, 10000)
+    }
+
+    #[test]
+    fn search_sends_account_text_and_exclusions_with_a_snippet_back_reference() {
+        let (api, server) = recorded(vec![
+            Some(json!({"methodResponses":[["Mailbox/get",{"accountId":"a","list":[
+                {"id":"t","role":"trash"},{"id":"j","role":"junk"},{"id":"i","role":"inbox"}
+            ]},"mail"]]})),
+            Some(json!({"methodResponses":[
+                ["Email/query",{"accountId":"a","ids":["e"],"queryState":"q","position":0,"total":1},"query"],
+                ["SearchSnippet/get",{"accountId":"a","list":[{"emailId":"e","subject":"<mark>probe</mark>"}]},"snippet"]
+            ]})),
+            Some(json!({"methodResponses":[["Email/get",{"accountId":"a","list":[{"id":"e"}],"notFound":[]},"mail"]]})),
+        ]);
+        let (client, mut session) = keyword_session(&api);
+        session.capabilities.get_mut(CORE_CAPABILITY).unwrap()["maxCallsInRequest"] = json!(2);
+        let result = search::search(&client, &session, "a", "  probe  ", 0, None).unwrap();
+        let calls = server.join().unwrap();
+        let filter = json!({"operator":"AND","conditions":[{"text":"probe"},{"inMailboxOtherThan":["t","j"]}]});
+        assert_eq!(calls[1][0][1]["filter"], filter);
+        assert_eq!(calls[1][1][1]["filter"], filter);
+        assert_eq!(calls[1][1][1]["#emailIds"], json!({"resultOf":"query","name":"Email/query","path":"/ids"}));
+        assert_eq!(result["emails"][0]["id"], "e");
+        assert_eq!(result["search"]["snippets"]["e"]["subject"], "<mark>probe</mark>");
+        assert_eq!(result["hasMore"], false);
+    }
+
+    #[test]
+    fn search_never_appends_a_page_from_a_different_query_state() {
+        let (api, server) = recorded(vec![
+            Some(json!({"methodResponses":[["Mailbox/get",{"accountId":"a","list":[]},"mail"]]})),
+            Some(json!({"methodResponses":[["Email/query",{"accountId":"a","ids":[],"queryState":"new","position":0,"total":0},"query"]]})),
+            Some(json!({"methodResponses":[["Email/query",{"accountId":"a","ids":[],"queryState":"new","position":0,"total":0},"query"]]})),
+        ]);
+        let (client, mut session) = keyword_session(&api);
+        session.capabilities.get_mut(CORE_CAPABILITY).unwrap()["maxCallsInRequest"] = json!(2);
+        let result = search::search(&client, &session, "a", "probe", 2, Some(search::Cursor {state: "old", position: 2})).unwrap();
+        let calls = server.join().unwrap();
+        assert_eq!(calls[1][0][1]["position"], 2);
+        assert_eq!(calls[2][0][1]["position"], 0);
+        assert_eq!(result["search"]["position"], 0);
+        assert_eq!(result["search"]["state"], "new");
     }
 
     #[test]

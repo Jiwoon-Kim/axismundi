@@ -66,5 +66,19 @@ serializes a real core response and compares it with a fixture file under `gui/s
 one of the two tests fails. Regenerate with `AXISMUNDI_UPDATE_FIXTURES=1 cargo test ...`.
 Node 24 runs the spec with no test framework; `*.spec.ts` stays out of the app build.
 
+### The dev window — always with the debug port
+
+```powershell
+$env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = '--remote-debugging-port=9222'; npm --prefix gui run tauri dev
+```
+
+Start every dev window this way, and close it when you finish. Only one dev window can run at a
+time: a second launch with different WebView2 arguments fails with `0x8007139F` while the first
+one holds the profile. A window opened without the port is a window that the next reviewer
+cannot inspect, and they have to ask the owner to close it before they can verify anything. With
+the port open, `http://127.0.0.1:9222/json` lists the page and the Chrome DevTools Protocol drives
+it (`Runtime.evaluate`, `Input.dispatch*Event`, `Page.captureScreenshot`). The measuring recipes
+are in [DESIGN-MAIL-GUI.md](../docs/DESIGN-MAIL-GUI.md), "메일함 트리".
+
 Run from `products/axismundi-client`. Code comments are English; design notes may be Korean,
 as everywhere in this repository.

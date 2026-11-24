@@ -7,7 +7,7 @@ use axismundi_client_core::{
     Error,
     jmap::{
         Session,
-        mail::{Rows, cache, mailbox},
+        mail::{Rows, cache, mailbox, search},
     },
 };
 use serde::{Deserialize, Serialize};
@@ -62,6 +62,21 @@ pub struct ListView {
     may_create_top_level_mailbox: Option<bool>,
     max_mailbox_depth: Option<u64>,
     max_size_mailbox_name: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    search: Option<SearchPage>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+struct SearchPage {
+    state: String,
+    position: usize,
+    snippets: std::collections::BTreeMap<String, SearchSnippet>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+struct SearchSnippet {
+    subject: Option<String>,
+    preview: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -189,6 +204,8 @@ fn list_view(view: &Value) -> Result<ListView, String> {
         may_create_top_level_mailbox: None,
         max_mailbox_depth: None,
         max_size_mailbox_name: None,
+        search: view.get("search").map(|page| serde_json::from_value(page.clone()))
+            .transpose().map_err(|_| "Invalid search result")?,
     })
 }
 
@@ -483,6 +500,34 @@ pub async fn mail_sync(
     .await
 }
 
+/// Searches one Account without saving the query or its listing in the cache.
+#[tauri::command]
+pub async fn mail_search(
+    connection_id: u32,
+    account_id: String,
+    text: String,
+    retained: usize,
+    position: Option<usize>,
+    query_state: Option<String>,
+    state: tauri::State<'_, Connection>,
+) -> Result<ListView, String> {
+    let cursor = match (position, query_state) {
+        (Some(position), Some(state)) => Some((position, state)),
+        (None, None) => None,
+        _ => return Err("Search paging requires a position and query state.".into()),
+    };
+    with_mail(&state, connection_id, move |active, mail, _| {
+        let cursor = cursor.as_ref().map(|(position, state)| search::Cursor { position: *position, state });
+        let view = search::search(&active.client, &mail.session, &account_id, &text, retained, cursor)
+            .map_err(|error| match error {
+                Error::Shape(kind) if kind == "unsupportedFilter" => "This server does not support this search filter.",
+                Error::Shape(kind) if kind == "Search changed while paging" => "Search results changed. Try again.",
+                _ => "Could not search messages.",
+            })?;
+        account_list_view(&view, &mail.session, &account_id)
+    }).await
+}
+
 /// Extends the cached listing by the next window.
 #[tauri::command]
 pub async fn mail_more(
@@ -621,17 +666,23 @@ pub async fn mail_move(
     connection_id: u32,
     account_id: String,
     email_ids: Vec<String>,
-    from: String,
+    from: Option<String>,
     to: String,
     exclusive: bool,
     state: tauri::State<'_, Connection>,
 ) -> Result<UpdateView, String> {
-    if from == to {
+    if !exclusive && from.as_deref().is_none_or(str::is_empty) {
+        return Err("Move: open the source mailbox first.".into());
+    }
+    if from.as_deref() == Some(to.as_str()) {
         return Err("Move: the message is already in that mailbox.".into());
     }
     with_mail(&state, connection_id, move |active, mail, store| {
-        let results = cache::move_emails(&active.client, &mail.session, store, &account_id, &email_ids, &from, &to, exclusive)
-            .map_err(explain)?;
+        let results = if let Some(from) = from {
+            cache::move_emails(&active.client, &mail.session, store, &account_id, &email_ids, &from, &to, exclusive)
+        } else {
+            cache::trash_search_results(&active.client, &mail.session, store, &account_id, &email_ids, &to)
+        }.map_err(explain)?;
         Ok(update_view(results))
     })
     .await

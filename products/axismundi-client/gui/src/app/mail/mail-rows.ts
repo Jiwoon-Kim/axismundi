@@ -53,6 +53,11 @@ export interface ListView {
   mayCreateTopLevelMailbox: boolean | null;
   maxMailboxDepth: number | null;
   maxSizeMailboxName: number | null;
+  search?: {
+    state: string;
+    position: number;
+    snippets: Record<string, {subject: string | null; preview: string | null}>;
+  };
 }
 
 export type RowLabel =

@@ -28,6 +28,80 @@ fn call(client: &Client, session: &Session, method: &str, args: Value) -> Value 
 }
 
 #[test]
+#[ignore = "requires explicit loopback Stalwart credentials; creates and removes a search fixture"]
+fn account_search_and_snippets_stalwart() {
+    use mail::search::{Cursor, search};
+    let url = std::env::var("AXJ_SESSION_URL").unwrap();
+    let source = url::Url::parse(&url).unwrap();
+    assert!(matches!(source.host_str(), Some("localhost" | "127.0.0.1" | "[::1]")));
+    let client = Client::new(Credentials {
+        user: std::env::var("AXJ_USER").unwrap(),
+        secret: std::env::var("AXJ_SECRET").unwrap(),
+    });
+    let session = client.session(&url).unwrap();
+    assert_eq!(url::Url::parse(&session.api_url).unwrap().origin(), source.origin());
+    let account = mail::choose_account(&session, None).unwrap();
+    let nonce = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos();
+    let term = format!("axsearch{nonce}");
+    let folder = call(&client, &session, "Mailbox/set", json!({"accountId":account,"create":{"m":{"name":&term}}}));
+    let folder = folder["created"]["m"]["id"].as_str().unwrap();
+    let boxes = mail::mailboxes(&client, &session, &account).unwrap();
+    let trash = boxes["list"].as_array().unwrap().iter().find(|row| row["role"] == "trash").unwrap()["id"].as_str().unwrap();
+    let window = session.capabilities[CORE_CAPABILITY]["maxObjectsInGet"].as_u64().unwrap().min(50) as usize;
+    let mut ids = Vec::new();
+    let mut create = |from: usize, count: usize, memberships: Value| {
+        let create: serde_json::Map<_, _> = (from..from+count).map(|i| (format!("e{i}"), json!({
+            "mailboxIds":memberships, "subject":format!("<b> {term} {i}"), "from":[{"email":"fixture@example.invalid"}],
+            "textBody":[{"partId":"t","type":"text/plain"}],"bodyValues":{"t":{"value":"Search fixture body"}}
+        }))).collect();
+        let answer = call(&client, &session, "Email/set", json!({"accountId":account,"create":create}));
+        let created: Vec<String> = answer["created"].as_object().unwrap().values()
+            .map(|row| row["id"].as_str().unwrap().to_owned()).collect();
+        ids.extend(created.iter().cloned());
+        created
+    };
+    let indexed = |expected: usize, retained: usize| {
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(15);
+        loop {
+            let view = search(&client, &session, &account, &term, retained, None).unwrap();
+            if view["total"] == json!(expected) || std::time::Instant::now() >= deadline { break view; }
+            std::thread::sleep(std::time::Duration::from_millis(300));
+        }
+    };
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        for start in (0..window).step_by(10) {
+            create(start, 10.min(window - start), json!({folder:true}));
+        }
+        let mixed = create(window, 1, json!({folder:true,trash:true})).pop().unwrap();
+        let excluded = create(window + 1, 1, json!({trash:true})).pop().unwrap();
+        let first = indexed(window + 1, 0);
+        assert_eq!(first["total"], json!(window + 1));
+        assert_eq!(first["emails"].as_array().unwrap().len(), window);
+        assert!(first["search"]["snippets"].as_object().unwrap().values().any(|snippet| {
+            let subject = snippet["subject"].as_str().unwrap_or_default();
+            subject.contains("&lt;b&gt;") && subject.contains("<mark>")
+        }));
+        let cursor = Cursor {position: window, state: first["search"]["state"].as_str().unwrap()};
+        let next = search(&client, &session, &account, &term, window, Some(cursor)).unwrap();
+        assert_eq!(next["search"]["position"], window);
+        assert_eq!(next["emails"].as_array().unwrap().len(), 1);
+        let combined: Vec<_> = first["emails"].as_array().unwrap().iter()
+            .chain(next["emails"].as_array().unwrap()).map(|row| row["id"].as_str().unwrap()).collect();
+        assert!(combined.contains(&mixed.as_str()));
+        assert!(!combined.contains(&excluded.as_str()));
+        create(window + 2, 1, json!({folder:true}));
+        let refreshed = indexed(window + 2, window + 1);
+        assert_eq!(refreshed["total"], json!(window + 2));
+        assert_eq!(refreshed["emails"].as_array().unwrap().len(), window + 1);
+    }));
+    for batch in ids.chunks(10) {
+        call(&client, &session, "Email/set", json!({"accountId":account,"destroy":batch}));
+    }
+    call(&client, &session, "Mailbox/set", json!({"accountId":account,"destroy":[folder],"onDestroyRemoveEmails":false}));
+    if let Err(panic) = result { std::panic::resume_unwind(panic); }
+}
+
+#[test]
 #[ignore = "requires explicit loopback Stalwart credentials; writes and removes only its own fixtures"]
 fn mailbox_management_stalwart() {
     use mail::mailbox::{Change, Outcome, write};

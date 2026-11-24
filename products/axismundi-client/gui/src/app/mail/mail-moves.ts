@@ -20,7 +20,7 @@ export interface MoveOptions {
  * share its Trash has no Trash to move to, and the app never falls back to destroying the message.
  * A right the server did not state (`null`) is not treated as missing; the server still decides.
  */
-export function moveOptions(mailboxes: readonly MailboxRow[], from: string | null): MoveOptions {
+export function moveOptions(mailboxes: readonly MailboxRow[], from: string | null, searching = false): MoveOptions {
   const source = mailboxes.find(box => box.id === from) ?? null;
   const cannotRemove = source?.mayRemoveItems === false ? "You cannot remove messages from this mailbox." : null;
   const trash = mailboxes.find(box => box.role === "trash") ?? null;
@@ -32,7 +32,8 @@ export function moveOptions(mailboxes: readonly MailboxRow[], from: string | nul
       ?? (!trash ? "This account has no Trash mailbox you can use."
         : trash.mayAddItems === false ? "You cannot add messages to Trash in this account." : null),
     targets,
-    moveBlocked: cannotRemove ?? (targets.length ? null : "There is no other mailbox you can move messages to."),
+    moveBlocked: searching ? "Open the message's mailbox to move it."
+      : cannotRemove ?? (targets.length ? null : "There is no other mailbox you can move messages to."),
   };
 }
 

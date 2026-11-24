@@ -84,6 +84,8 @@
           <section #messageList class="list" aria-labelledby="mailbox-title" [class.selecting]="selecting()"
                    (keydown.escape)="endSelection()" (touchstart)="pullStart($event)"
                    (touchmove)="pullMove($event)" (touchend)="pullEnd(true)" (touchcancel)="pullEnd()">
+            <div class="list-header">
+              <app-mail-search-bar [text]="searchText()" (activate)="openSearch($event)" (exit)="clearSearch()" />
             <!-- Checkboxes exist only in selection mode (iCloud Mail's Select): the list stays a list. -->
             <div class="list-head" [class.selecting-head]="selecting()">
               @if (selecting()) {
@@ -160,9 +162,13 @@
                 }
                 <h1 id="mailbox-title">{{ mailboxName() }}</h1>
                 @if (listing(); as current) {
-                  <span class="summary">
-                    {{ current.rows.length }}{{ current.total !== null ? " of " + current.total : "" }}
-                    @if (current.queryStale) { · may be out of date }
+                  <span class="summary" [attr.aria-live]="searchText() ? 'polite' : null">
+                    @if (searchText()) {
+                      @if (current.total !== null) { {{ current.total }} {{ current.total === 1 ? "result" : "results" }} }
+                    } @else {
+                      {{ current.rows.length }}{{ current.total !== null ? " of " + current.total : "" }}
+                      @if (current.queryStale) { · may be out of date }
+                    }
                   </span>
                 }
                 <button matIconButton type="button" matTooltip="Refresh" aria-label="Refresh"
@@ -180,6 +186,7 @@
                   }
                 </div>
               }
+            </div>
             </div>
             @if (initialVisible()) {
               <div class="initial-indicator">
@@ -214,12 +221,31 @@
                       </button>
                       <!-- In selection mode a row click selects instead of opening (routerLink null = no navigation). -->
                       <a [routerLink]="selecting() ? null : '/mail'" [queryParams]="{mailbox: mailbox() ?? null, email: row.id}"
-                         (click)="selecting() && select(row.id)" [attr.aria-pressed]="selecting() ? isSelected : null"
+                         (click)="openResult(row.id)" [attr.aria-pressed]="selecting() ? isSelected : null"
                          [class.active]="row.id === email()" [attr.aria-current]="row.id === email() ? 'true' : null">
                         <span class="from">{{ row.sender }}</span>
                         <span class="text">
-                          <span class="subject">{{ row.subject }}@if (isUnread) {<span class="visually-hidden"> (unread)</span>}</span>
-                          @if (row.preview) { <span class="preview">{{ row.preview }}</span> }
+                          @if (resultPresentation()?.get(row.id); as hit) {
+                            <span class="subject">@for (part of hit.subject; track $index) {
+                              @if (part.marked) { <mark>{{ part.text }}</mark> } @else { <ng-container>{{ part.text }}</ng-container> }
+                            }@if (isUnread) {<span class="visually-hidden"> (unread)</span>}</span>
+                            @if (hit.preview.length || hit.labels.display) {
+                              <span class="result-preview">
+                                @if (hit.preview.length) {
+                                  <span class="preview">@for (part of hit.preview; track $index) {
+                                    @if (part.marked) { <mark>{{ part.text }}</mark> } @else { <ng-container>{{ part.text }}</ng-container> }
+                                  }</span>
+                                }
+                                @if (hit.labels.display) {
+                                  <span class="result-mailboxes" [matTooltip]="hit.labels.full"
+                                        [attr.aria-label]="hit.labels.full">{{ hit.labels.display }}</span>
+                                }
+                              </span>
+                            }
+                          } @else {
+                            <span class="subject">{{ row.subject }}@if (isUnread) {<span class="visually-hidden"> (unread)</span>}</span>
+                            @if (row.preview) { <span class="preview">{{ row.preview }}</span> }
+                          }
                           @if (starCheck || seenCheck || moveCheck) {
                             <span class="row-result" matTooltip="The last change could not be confirmed.">
                               <mat-icon aria-hidden="true">sync_problem</mat-icon> Status unknown
@@ -255,7 +281,7 @@
                     <li class="unavailable">Message not in the cache ({{ row.reason }})</li>
                   }
                 } @empty {
-                  <li class="none">No messages in this mailbox.</li>
+                  <li class="none">{{ searchText() ? "No messages match" : "No messages in this mailbox." }}</li>
                 }
               </ul>
               @if (pageFailed()) {

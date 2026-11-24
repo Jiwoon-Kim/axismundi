@@ -88,6 +88,8 @@ mat-sidenav-container { block-size: 100%; background: transparent; }
   pointer-events: none;
 }
 .initial-indicator { inset-block-start: 50%; translate: -50% -50%; }
+.page-footer { display: flex; align-items: center; justify-content: center; gap: 8px; min-block-size: 44px; }
+.page-sentinel { block-size: 1px; }
 .refresh-indicator {
   inset-block-start: 100%;
   translate: -50% var(--indicator-offset, 8px);

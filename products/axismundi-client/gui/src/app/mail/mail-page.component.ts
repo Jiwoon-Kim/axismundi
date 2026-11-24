@@ -2,7 +2,7 @@ import { Component, DestroyRef, ElementRef, afterRenderEffect, computed, effect,
 import { toSignal } from "@angular/core/rxjs-interop";
 import { BreakpointObserver } from "@angular/cdk/layout";
 import { CdkContextMenuTrigger, CdkMenu, CdkMenuItem } from "@angular/cdk/menu";
-import { MatIconButton, MatIconAnchor } from "@angular/material/button";
+import { MatButton, MatIconButton, MatIconAnchor } from "@angular/material/button";
 import { MatIcon } from "@angular/material/icon";
 import { MatMenu, MatMenuItem, MatMenuTrigger } from "@angular/material/menu";
 import { MatBadge } from "@angular/material/badge";
@@ -27,6 +27,7 @@ import type { WriteResult } from "./mail-updates";
 import { indicatorDelay, isRefreshShortcut, manualRefreshAction, pullProgress, reloadRevision } from "./mail-refresh";
 import { MailboxDialogComponent, type MailboxDialogData } from "./mailbox-dialog.component";
 import { allowsMailboxAction, mailboxParents, parentAllowed, type MailboxChange, type MailboxResult } from "./mailbox-management";
+import { acceptsPage, canRequestPage, reachedPageEnd } from "./mail-paging";
 
 /**
  * M3 window size classes (Material 3, Layout › Breakpoints). CDK's `Breakpoints` are the older
@@ -45,7 +46,7 @@ const EXPANDED = "(min-width: 840px)";
   selector: "app-mail-page",
   imports: [MailDetailComponent, MailMoveMenuComponent, MatBadge, MatIcon, MatIconAnchor, MatIconButton, MatSidenav,
     MatSidenavContainer, MatSidenavContent, MatTooltip, MatCheckbox, MatMenu, MatMenuItem, MatMenuTrigger, MatTree, MatTreeNode,
-    MatTreeNodeDef, MatTreeNodeToggle, RouterLink, MatProgressSpinner, CdkContextMenuTrigger, CdkMenu, CdkMenuItem],
+    MatTreeNodeDef, MatTreeNodeToggle, RouterLink, MatButton, MatProgressSpinner, CdkContextMenuTrigger, CdkMenu, CdkMenuItem],
   host: {"(window:keydown)": "refreshShortcut($event)"},
   templateUrl: "./mail-page.component.html",
   styleUrl: "./mail-page.component.css",
@@ -97,6 +98,72 @@ export class MailPageComponent {
     computation: (next, previous) =>
       next.value ?? (previous?.source.scope === next.scope ? previous.value : null),
   });
+  private readonly listRoot = viewChild("messageList", {read: ElementRef<HTMLElement>});
+  private readonly pageSentinel = viewChild("pageSentinel", {read: ElementRef<HTMLElement>});
+  private readonly page = linkedSignal<string, object | null>({source: () => this.scope(), computation: () => null});
+  protected readonly pageSpinner = linkedSignal<string, boolean>({source: () => this.scope(), computation: () => false});
+  protected readonly pageFailed = linkedSignal<string, boolean>({source: () => this.scope(), computation: () => false});
+  private readonly exhaustedListing = linkedSignal<string, ListView | null>({source: () => this.scope(), computation: () => null});
+  private readonly queuedRefresh = linkedSignal<string, boolean>({source: () => this.scope(), computation: () => false});
+  private alive = true;
+  protected readonly canPage = computed(() => {
+    const current = this.listing();
+    return !!current && this.view.hasValue() &&
+      canRequestPage(current, !!this.page() || this.view.isLoading() || this.refreshing(), this.exhaustedListing() === current);
+  });
+
+  protected async loadNextPage(retry = false): Promise<void> {
+    if (!this.canPage() || (this.pageFailed() && !retry)) return;
+    const current = this.listing();
+    const connectionId = this.connection.connected()?.id;
+    if (!current || connectionId === undefined) return;
+    const scope = this.scope();
+    const request = {};
+    const applicable = () => this.alive && acceptsPage(this.page(), request, this.scope(), scope);
+    this.page.set(request);
+    this.pageFailed.set(false);
+    let shownAt: number | null = null;
+    const timer = setTimeout(() => {
+      if (!applicable()) return;
+      shownAt = performance.now();
+      this.pageSpinner.set(true);
+    }, indicatorDelay(false, 0));
+    let failed = false;
+    try {
+      const next = await invoke<ListView>("mail_more", {
+        connectionId, accountId: current.accountId, mailboxId: current.mailboxId, rows: "messages",
+      });
+      if (!applicable()) return;
+      if (next.accountId !== current.accountId || next.mailboxId !== current.mailboxId) {
+        failed = true;
+      } else {
+        // The cache returned the entire extended prefix. Reuse the resource so the next
+        // sync and selection pruning both see the same authoritative listing.
+        this.view.set(next);
+        this.exhaustedListing.set(reachedPageEnd(current.rows.length, next) ? next : null);
+        failed = next.hasMore === true && next.rows.length <= current.rows.length;
+      }
+    } catch {
+      failed = true;
+    } finally {
+      clearTimeout(timer);
+      if (applicable()) {
+        if (shownAt !== null) {
+          const remaining = indicatorDelay(true, performance.now() - shownAt);
+          if (remaining) await new Promise<void>(resolve => setTimeout(resolve, remaining));
+        }
+        if (applicable()) {
+          this.pageSpinner.set(false);
+          this.pageFailed.set(failed);
+          this.page.set(null);
+          if (this.queuedRefresh()) {
+            this.queuedRefresh.set(false);
+            this.refresh();
+          }
+        }
+      }
+    }
+  }
   private readonly manual = signal<{scope: string; started: number} | null>(null);
   private readonly shownAt = signal<number | null>(null);
   protected readonly refreshing = computed(() => this.manual()?.scope === this.scope());
@@ -109,9 +176,14 @@ export class MailPageComponent {
 
   protected refresh(): void {
     if (!this.connection.account()) return;
+    if (this.page()) {
+      this.queuedRefresh.set(true);
+      return;
+    }
     const action = manualRefreshAction(this.refreshing(), this.view.isLoading());
     if (action === "skip" || (action === "reload" && !this.view.reload())) return;
     this.shownAt.set(null);
+    this.pageFailed.set(false);
     this.manual.set({scope: this.scope(), started: performance.now()});
   }
 
@@ -451,6 +523,17 @@ export class MailPageComponent {
 
   constructor() {
     inject(DestroyRef).onDestroy(() => this.mailboxPressEnd());
+    inject(DestroyRef).onDestroy(() => { this.alive = false; });
+    afterRenderEffect(onCleanup => {
+      const root = this.listRoot()?.nativeElement;
+      const sentinel = this.pageSentinel()?.nativeElement;
+      if (!root || !sentinel || !this.canPage() || this.pageFailed()) return;
+      const observer = new IntersectionObserver(entries => {
+        if (sentinel.isConnected && entries.some(entry => entry.isIntersecting)) void this.loadNextPage();
+      }, {root, rootMargin: `0px 0px ${root.clientHeight}px 0px`});
+      observer.observe(sentinel);
+      onCleanup(() => observer.disconnect());
+    });
     afterRenderEffect({write: () => {
       const id = this.mailboxFocus();
       if (id === null) return;
@@ -539,7 +622,7 @@ export class MailPageComponent {
     let seen = this.actions.changed();
     effect(() => {
       const requested = this.actions.changed();
-      const count = reloadRevision(seen, requested, requested !== seen && this.view.isLoading());
+      const count = reloadRevision(seen, requested, requested !== seen && (this.view.isLoading() || !!this.page()));
       if (count !== seen) {
         seen = count;
         untracked(() => this.view.reload());

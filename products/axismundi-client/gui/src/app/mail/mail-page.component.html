@@ -81,7 +81,7 @@
     <mat-sidenav-content>
       <div class="panes" [class.single]="!twoPanes()">
         @if (twoPanes() || !email()) {
-          <section class="list" aria-labelledby="mailbox-title" [class.selecting]="selecting()"
+          <section #messageList class="list" aria-labelledby="mailbox-title" [class.selecting]="selecting()"
                    (keydown.escape)="endSelection()" (touchstart)="pullStart($event)"
                    (touchmove)="pullMove($event)" (touchend)="pullEnd(true)" (touchcancel)="pullEnd()">
             <!-- Checkboxes exist only in selection mode (iCloud Mail's Select): the list stays a list. -->
@@ -258,6 +258,17 @@
                   <li class="none">No messages in this mailbox.</li>
                 }
               </ul>
+              @if (pageFailed()) {
+                <div class="page-footer">
+                  <span role="status">Couldn’t load more</span>
+                  <button matButton type="button" [disabled]="!canPage()" (click)="loadNextPage(true)">Retry</button>
+                </div>
+              } @else if (pageSpinner()) {
+                <div class="page-footer">
+                  <mat-progress-spinner mode="indeterminate" [diameter]="20" aria-label="Loading more messages" />
+                </div>
+              }
+              <div #pageSentinel class="page-sentinel" aria-hidden="true"></div>
             }
           </section>
         }

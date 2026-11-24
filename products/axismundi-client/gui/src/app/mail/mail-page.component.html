@@ -35,7 +35,8 @@
       <div class="panes" [class.single]="!twoPanes()">
         @if (twoPanes() || !email()) {
           <section class="list" aria-labelledby="mailbox-title" [class.selecting]="selecting()"
-                   (keydown.escape)="endSelection()">
+                   (keydown.escape)="endSelection()" (touchstart)="pullStart($event)"
+                   (touchmove)="pullMove($event)" (touchend)="pullEnd(true)" (touchcancel)="pullEnd()">
             <!-- Checkboxes exist only in selection mode (iCloud Mail's Select): the list stays a list. -->
             <div class="list-head" [class.selecting-head]="selecting()">
               @if (selecting()) {
@@ -111,19 +112,35 @@
                   <button matIconButton type="button" aria-label="Mailboxes" (click)="drawerOpen.set(true)"><mat-icon>menu</mat-icon></button>
                 }
                 <h1 id="mailbox-title">{{ mailboxName() }}</h1>
-                @if (view.hasValue()) {
+                @if (listing(); as current) {
                   <span class="summary">
-                    {{ view.value().rows.length }}{{ view.value().total !== null ? " of " + view.value().total : "" }}
-                    @if (view.value().queryStale) { · may be out of date }
+                    {{ current.rows.length }}{{ current.total !== null ? " of " + current.total : "" }}
+                    @if (current.queryStale) { · may be out of date }
                   </span>
                 }
+                <button matIconButton type="button" matTooltip="Refresh" aria-label="Refresh"
+                        [disabled]="refreshing()" (click)="refresh()"><mat-icon>refresh</mat-icon></button>
                 <button matIconButton type="button" matTooltip="Select messages" aria-label="Select messages"
                         [disabled]="!eligible().length" (click)="selecting.set(true)"><mat-icon>checklist</mat-icon></button>
               }
+              <span class="visually-hidden" role="status">{{ refreshVisible() ? "Refreshing…" : "" }}</span>
+              @if (refreshVisible() || pull() > 0) {
+                <div class="refresh-indicator" [style.--indicator-offset]="(refreshVisible() ? 8 : -40 + pull() * 48) + 'px'">
+                  @if (refreshVisible()) {
+                    <mat-progress-spinner mode="indeterminate" [diameter]="24" aria-label="Refreshing mail" />
+                  } @else {
+                    <mat-progress-spinner mode="determinate" [value]="pull() * 100" [diameter]="24" aria-hidden="true" />
+                  }
+                </div>
+              }
             </div>
-            @if (view.isLoading()) { <p class="status" role="status">Loading…</p> }
+            @if (initialVisible()) {
+              <div class="initial-indicator">
+                <mat-progress-spinner mode="indeterminate" [diameter]="24" aria-label="Loading mail" />
+              </div>
+            }
             @if (view.error(); as error) { <p class="status error" role="alert">{{ error.cause ?? error.message }}</p> }
-            @if (view.hasValue()) {
+            @if (listing()) {
               <ul>
                 @for (row of rows(); track row.id) {
                   @if (row.kind === "message") {

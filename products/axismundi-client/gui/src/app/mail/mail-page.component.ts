@@ -6,6 +6,8 @@ import { MatIcon } from "@angular/material/icon";
 import { MatMenu, MatMenuItem, MatMenuTrigger } from "@angular/material/menu";
 import { MatBadge } from "@angular/material/badge";
 import { MatCheckbox } from "@angular/material/checkbox";
+import { MatProgressSpinner } from "@angular/material/progress-spinner";
+import { MatSnackBar } from "@angular/material/snack-bar";
 import { MatSidenav, MatSidenavContainer, MatSidenavContent } from "@angular/material/sidenav";
 import { MatTooltip } from "@angular/material/tooltip";
 import { MatTree, MatTreeNode, MatTreeNodeDef, MatTreeNodeToggle } from "@angular/material/tree";
@@ -20,7 +22,7 @@ import { mailboxIcon, moveOptions } from "./mail-moves";
 import { type MailboxNode, ancestorsOf, mailboxTree } from "./mail-tree";
 import { ListView, type MailboxRow, rowLabel } from "./mail-rows";
 import type { WriteResult } from "./mail-updates";
-import { reloadRevision } from "./mail-refresh";
+import { indicatorDelay, isRefreshShortcut, manualRefreshAction, pullProgress, reloadRevision } from "./mail-refresh";
 
 /**
  * M3 window size classes (Material 3, Layout › Breakpoints). CDK's `Breakpoints` are the older
@@ -39,7 +41,8 @@ const EXPANDED = "(min-width: 840px)";
   selector: "app-mail-page",
   imports: [MailDetailComponent, MailMoveMenuComponent, MatBadge, MatIcon, MatIconAnchor, MatIconButton, MatSidenav,
     MatSidenavContainer, MatSidenavContent, MatTooltip, MatCheckbox, MatMenu, MatMenuItem, MatMenuTrigger, MatTree, MatTreeNode,
-    MatTreeNodeDef, MatTreeNodeToggle, RouterLink],
+    MatTreeNodeDef, MatTreeNodeToggle, RouterLink, MatProgressSpinner],
+  host: {"(window:keydown)": "refreshShortcut($event)"},
   templateUrl: "./mail-page.component.html",
   styleUrl: "./mail-page.component.css",
 })
@@ -47,6 +50,7 @@ export class MailPageComponent {
   protected readonly connection = inject(ConnectionService);
   protected readonly actions = inject(MailActions);
   private readonly router = inject(Router);
+  private readonly snackBar = inject(MatSnackBar);
 
   /** Query parameters, bound by the router. */
   readonly mailbox = input<string>();
@@ -77,6 +81,66 @@ export class MailPageComponent {
       return view;
     },
   });
+  protected readonly listing = linkedSignal<{scope: string; value: ListView | null}, ListView | null>({
+    source: () => ({scope: this.scope(), value: this.view.hasValue() ? this.view.value() : null}),
+    computation: (next, previous) =>
+      next.value ?? (previous?.source.scope === next.scope ? previous.value : null),
+  });
+  private readonly manual = signal<{scope: string; started: number} | null>(null);
+  private readonly shownAt = signal<number | null>(null);
+  protected readonly refreshing = computed(() => this.manual()?.scope === this.scope());
+  protected readonly refreshVisible = computed(() => this.refreshing() && this.shownAt() !== null);
+  protected readonly initialLoading = computed(() => this.view.isLoading() && !this.listing() && !this.refreshing());
+  private readonly initialShown = signal<{scope: string; at: number} | null>(null);
+  protected readonly initialVisible = computed(() => this.initialShown()?.scope === this.scope() && !this.refreshing());
+  protected readonly pull = signal(0);
+  private touch: {id: number; x: number; y: number; scope: string} | null = null;
+
+  protected refresh(): void {
+    if (!this.connection.account()) return;
+    const action = manualRefreshAction(this.refreshing(), this.view.isLoading());
+    if (action === "skip" || (action === "reload" && !this.view.reload())) return;
+    this.shownAt.set(null);
+    this.manual.set({scope: this.scope(), started: performance.now()});
+  }
+
+  protected refreshShortcut(event: KeyboardEvent): void {
+    if (!isRefreshShortcut(event)) return;
+    event.preventDefault();
+    if (!event.repeat) this.refresh();
+  }
+
+  protected pullStart(event: TouchEvent): void {
+    this.pullEnd();
+    const list = event.currentTarget as HTMLElement;
+    if (event.touches.length !== 1 || list.scrollTop > 0 || !this.listing() || this.view.isLoading() || this.refreshing()) return;
+    const touch = event.touches[0];
+    this.touch = {id: touch.identifier, x: touch.clientX, y: touch.clientY, scope: this.scope()};
+  }
+
+  protected pullMove(event: TouchEvent): void {
+    const start = this.touch;
+    if (!start) return;
+    const touch = event.touches[0];
+    if (event.touches.length !== 1 || touch.identifier !== start.id || start.scope !== this.scope() ||
+        (event.currentTarget as HTMLElement).scrollTop > 0 || !event.cancelable) {
+      this.pullEnd();
+      return;
+    }
+    const dx = touch.clientX - start.x;
+    const dy = touch.clientY - start.y;
+    const progress = pullProgress(dx, dy);
+    if (progress > 0) event.preventDefault();
+    else if (Math.max(Math.abs(dx), Math.abs(dy)) > 8) this.pullEnd();
+    this.pull.set(progress);
+  }
+
+  protected pullEnd(commit = false): void {
+    const trigger = commit && this.touch?.scope === this.scope() && this.pull() === 1;
+    this.touch = null;
+    this.pull.set(0);
+    if (trigger) this.refresh();
+  }
   /** When the rows on screen started loading; values the server confirmed after that show instead. */
   private readonly loadedFrom = signal(0);
 
@@ -125,9 +189,12 @@ export class MailPageComponent {
 
   protected openMailbox(id: string): void {
     this.drawerOpen.set(false);
+    // The open mailbox again: stay put (no reload, selection kept) — unless a message is open, which
+    // goes back to the list as Gmail does.
+    if ((id === this.selectedMailbox() || id === this.mailbox()) && !this.email()) return;
     void this.router.navigate(["/mail"], {queryParams: {mailbox: id}});
   }
-  protected readonly selectedMailbox = computed(() => this.view.hasValue() ? this.view.value().mailboxId : null);
+  protected readonly selectedMailbox = computed(() => this.listing()?.mailboxId ?? null);
   protected readonly mailboxName = computed(
     () => this.mailboxes().find(box => box.id === this.selectedMailbox())?.name ?? "Mail");
   /**
@@ -135,8 +202,9 @@ export class MailPageComponent {
    * loaded: a confirmed move shows at once, and the reload it triggers then takes over.
    */
   protected readonly rows = computed(() => {
-    if (!this.view.hasValue()) return [];
-    const {accountId, mailboxId, rows} = this.view.value();
+    const listing = this.listing();
+    if (!listing) return [];
+    const {accountId, mailboxId, rows} = listing;
     return rows
       .filter(row => row.kind !== "message" || this.actions.shownIn(accountId, row.id, mailboxId, true, this.loadedFrom()))
       .map(rowLabel);
@@ -217,7 +285,7 @@ export class MailPageComponent {
    * belongs to a screen that is gone: it must not close the reading pane or touch the selection here.
    */
   private scope(): string {
-    return JSON.stringify([this.connection.connected()?.id, this.connection.accountId(), this.selectedMailbox()]);
+    return JSON.stringify([this.connection.connected()?.id, this.connection.accountId(), this.mailbox() ?? null]);
   }
 
   /** The open message moved out of this listing: back to the list, as Gmail does. Moves only. */
@@ -262,6 +330,41 @@ export class MailPageComponent {
   }
 
   constructor() {
+    effect(onCleanup => {
+      const scope = this.scope();
+      const loading = this.initialLoading();
+      const shown = this.initialShown();
+      const current = shown?.scope === scope ? shown : null;
+      if (loading === !!current) return;
+      const timer = setTimeout(() => {
+        if (this.scope() !== scope || this.initialLoading() !== loading) return;
+        this.initialShown.set(loading ? {scope, at: performance.now()} : null);
+      }, current ? indicatorDelay(true, performance.now() - current.at) : indicatorDelay(false, 0));
+      onCleanup(() => clearTimeout(timer));
+    });
+    effect(onCleanup => {
+      const request = this.manual();
+      if (!request) return;
+      if (request.scope !== this.scope()) {
+        this.manual.set(null);
+        return;
+      }
+      const loading = this.view.isLoading();
+      const shown = this.shownAt();
+      if (loading && shown !== null) return;
+      const delay = loading
+        ? indicatorDelay(false, performance.now() - request.started)
+        : shown === null ? 0 : indicatorDelay(true, performance.now() - shown);
+      const timer = setTimeout(() => {
+        if (this.manual() !== request || request.scope !== this.scope() || this.view.isLoading() !== loading) return;
+        if (loading) this.shownAt.set(performance.now());
+        else {
+          this.manual.set(null);
+          if (this.view.error()) this.snackBar.open("Could not refresh mail", "Dismiss", {duration: 5000});
+        }
+      }, delay);
+      onCleanup(() => clearTimeout(timer));
+    });
     // The open mailbox is never left hidden inside a collapsed parent.
     effect(() => {
       const tree = this.treeRef();
@@ -284,6 +387,7 @@ export class MailPageComponent {
       this.connection.accountId();
       this.mailbox();
       untracked(() => {
+        this.pullEnd();
         this.selecting.set(false);
         this.selected.set(new Set());
         this.refused.set(new Set());

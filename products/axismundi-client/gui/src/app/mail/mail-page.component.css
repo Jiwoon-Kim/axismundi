@@ -33,7 +33,9 @@ mat-sidenav-container { block-size: 100%; background: transparent; }
 
 .list {
   container: list / inline-size;
+  position: relative;
   overflow-y: auto;
+  overscroll-behavior-y: contain;
   border-inline-end: 1px solid var(--mat-sys-outline-variant);
 }
 .panes.single .list { border-inline-end: 0; }
@@ -52,6 +54,22 @@ mat-sidenav-container { block-size: 100%; background: transparent; }
 .summary { color: var(--mat-sys-on-surface-variant); font: var(--mat-sys-body-small); }
 .status { padding: 8px 16px; }
 .error { color: var(--mat-sys-error); }
+.refresh-indicator, .initial-indicator {
+  position: absolute;
+  inset-inline-start: 50%;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+.initial-indicator { inset-block-start: 50%; translate: -50% -50%; }
+.refresh-indicator {
+  inset-block-start: 100%;
+  translate: -50% var(--indicator-offset, 8px);
+  inline-size: 40px;
+  block-size: 40px;
+  border-radius: 50%;
+  background: var(--mat-sys-surface-container-high);
+}
 
 ul { list-style: none; margin: 0; padding: 0; }
 li { border-block-end: 1px solid var(--mat-sys-outline-variant); }

@@ -81,9 +81,8 @@
     <mat-sidenav-content>
       <div class="panes" [class.single]="!twoPanes()">
         @if (twoPanes() || !email()) {
-          <section #messageList class="list" aria-labelledby="mailbox-title" [class.selecting]="selecting()"
-                   (keydown.escape)="endSelection()" (touchstart)="pullStart($event)"
-                   (touchmove)="pullMove($event)" (touchend)="pullEnd(true)" (touchcancel)="pullEnd()">
+          <section class="list" aria-labelledby="mailbox-title" [class.selecting]="selecting()"
+                   (keydown.escape)="endSelection()">
             <div class="list-header">
               <app-mail-search-bar [text]="searchText()" (activate)="openSearch($event)" (exit)="clearSearch()" />
             <!-- Checkboxes exist only in selection mode (iCloud Mail's Select): the list stays a list. -->
@@ -177,6 +176,9 @@
                         [disabled]="!eligible().length" (click)="selecting.set(true)"><mat-icon>checklist</mat-icon></button>
               }
               <span class="visually-hidden" role="status">{{ refreshVisible() ? "Refreshing…" : "" }}</span>
+            </div>
+            </div>
+            <div class="list-body">
               @if (refreshVisible() || pull() > 0) {
                 <div class="refresh-indicator" [style.--indicator-offset]="(refreshVisible() ? 8 : -40 + pull() * 48) + 'px'">
                   @if (refreshVisible()) {
@@ -186,13 +188,13 @@
                   }
                 </div>
               }
-            </div>
-            </div>
             @if (initialVisible()) {
               <div class="initial-indicator">
                 <mat-progress-spinner mode="indeterminate" [diameter]="24" aria-label="Loading mail" />
               </div>
             }
+            <div #messageList class="message-scroll" (touchstart)="pullStart($event)"
+                 (touchmove)="pullMove($event)" (touchend)="pullEnd(true)" (touchcancel)="pullEnd()">
             @if (view.error(); as error) { <p class="status error" role="alert">{{ error.cause ?? error.message }}</p> }
             @if (listing()) {
               <ul>
@@ -296,6 +298,8 @@
               }
               <div #pageSentinel class="page-sentinel" aria-hidden="true"></div>
             }
+            </div>
+            </div>
           </section>
         }
         @if (twoPanes() || email()) {

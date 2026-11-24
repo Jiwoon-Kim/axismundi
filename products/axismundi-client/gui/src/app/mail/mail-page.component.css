@@ -59,28 +59,24 @@ mat-sidenav-container { block-size: 100%; background: transparent; }
 
 .list {
   container: list / inline-size;
-  position: relative;
-  overflow-y: auto;
-  overscroll-behavior-y: contain;
+  display: flex;
+  flex-direction: column;
   border-inline-end: 1px solid var(--mat-sys-outline-variant);
 }
 .panes.single .list { border-inline-end: 0; }
 
 .list-header {
-  position: sticky;
-  inset-block-start: 0;
-  z-index: 1;
+  flex: none;
   padding-block-start: 8px;
-  background: var(--mat-sys-surface);
 }
 .list-head {
-  position: relative;
   display: flex;
   align-items: center;
   gap: 4px;
   padding: 8px 12px 8px 4px;
-  background: var(--mat-sys-surface);
 }
+.list-body { flex: 1; min-block-size: 0; position: relative; overflow: clip; }
+.message-scroll { block-size: 100%; overflow-y: auto; overscroll-behavior-y: contain; }
 .list-head h1 { flex: 1; min-inline-size: 0; margin: 0 0 0 8px; font: var(--mat-sys-title-medium); }
 .summary { color: var(--mat-sys-on-surface-variant); font: var(--mat-sys-body-small); }
 .result-preview { display: flex; align-items: baseline; gap: 4px; min-inline-size: 0; }
@@ -99,6 +95,7 @@ mark { background: var(--mat-sys-tertiary-container); color: var(--mat-sys-on-te
 .error { color: var(--mat-sys-error); }
 .refresh-indicator, .initial-indicator {
   position: absolute;
+  z-index: 1;
   inset-inline-start: 50%;
   display: grid;
   place-items: center;
@@ -108,7 +105,7 @@ mark { background: var(--mat-sys-tertiary-container); color: var(--mat-sys-on-te
 .page-footer { display: flex; align-items: center; justify-content: center; gap: 8px; min-block-size: 44px; }
 .page-sentinel { block-size: 1px; }
 .refresh-indicator {
-  inset-block-start: 100%;
+  inset-block-start: 0;
   translate: -50% var(--indicator-offset, 8px);
   inline-size: 40px;
   block-size: 40px;

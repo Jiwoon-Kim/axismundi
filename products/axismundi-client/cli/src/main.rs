@@ -615,6 +615,7 @@ struct Watch<'a> {
 /// Email or Mailbox in this account.
 fn watch(client: &Client, session: &Session, options: Watch<'_>) -> Result<(), String> {
     use axismundi_client_core::jmap::mail::{self, cache};
+    use axismundi_client_core::jmap::websocket::{Wake, WatchStatus, watch_loop};
     use std::time::Duration;
     let account = mail::choose_account(session, options.account).map_err(explain)?;
     let path = options.db.ok_or("--db is required")?;
@@ -626,190 +627,31 @@ fn watch(client: &Client, session: &Session, options: Watch<'_>) -> Result<(), S
     let listing = rows(options.rows)?;
     let mut store = cache::Store::open(path, profile).map_err(|e| e.to_string())?;
     watch_loop(
-        &account,
+        &[&account],
         limit,
         |push_state| {
             client.push_channel(session, Some(&["Email", "Mailbox"]), push_state, Duration::from_secs(30))
         },
         |why| {
+            let why = match why {
+                Wake::Initial => "initial".to_owned(),
+                Wake::CatchUp => "catch-up".to_owned(),
+                Wake::Push(changed) => format!("push {}", changed[&account].join("+")),
+            };
             let view = cache::sync(client, session, &mut store, &account, options.mailbox, listing)
                 .map_err(|e| e.to_string())?;
             println!("{why}: {}", summary(&view));
             Ok(())
         },
         std::thread::sleep,
+        || false,
+        |status| match status {
+            WatchStatus::ConnectFailed(error, backoff) => eprintln!("push connect failed ({error}); retrying in {}s", backoff.as_secs()),
+            WatchStatus::Connected => eprintln!("push connected"),
+            WatchStatus::Dropped(error) => eprintln!("push dropped ({error}); reconnecting"),
+        },
+        explain,
     )
-}
-
-/// What `watch_loop` needs from a push connection; the real one is the WebSocket channel.
-trait Push {
-    fn next(&mut self) -> Result<axismundi_client_core::jmap::websocket::Event, Error>;
-    fn close(self);
-}
-
-impl Push for axismundi_client_core::jmap::websocket::PushChannel {
-    fn next(&mut self) -> Result<axismundi_client_core::jmap::websocket::Event, Error> {
-        axismundi_client_core::jmap::websocket::PushChannel::next(self)
-    }
-    fn close(self) {
-        axismundi_client_core::jmap::websocket::PushChannel::close(self)
-    }
-}
-
-/// The order that keeps a push-driven listing from missing a change: subscribe first, then catch up.
-///
-/// A push only reports changes made after the subscription exists. So every connection — the first
-/// and every reconnect — is opened before the sync that catches up, never after it: a change that
-/// lands between the two is either already in the catch-up or arrives as a push. Syncing first and
-/// subscribing second leaves a gap that only the next unrelated push would close, and a run of failed
-/// connection attempts makes that gap as long as the outage. The sync before the first connection is
-/// only there to show the cached listing at once; it is not relied on.
-///
-/// `push_state` from the last connection is offered on reconnect, but the catch-up sync does not
-/// depend on the server honouring it. Only transport failures are retried; a server that refuses the
-/// upgrade, the subprotocol or the push request will refuse it again, and that ends the loop.
-fn watch_loop<C: Push>(
-    account: &str,
-    limit: Option<usize>,
-    mut connect: impl FnMut(Option<&str>) -> Result<C, Error>,
-    mut sync: impl FnMut(&str) -> Result<(), String>,
-    mut wait: impl FnMut(std::time::Duration),
-) -> Result<(), String> {
-    use axismundi_client_core::jmap::websocket::Event;
-    use std::time::Duration;
-    sync("initial")?;
-    let mut push_state: Option<String> = None;
-    let mut synced = 0usize;
-    let mut backoff = Duration::from_secs(1);
-    loop {
-        if limit.is_some_and(|n| synced >= n) {
-            return Ok(());
-        }
-        let mut channel = match connect(push_state.as_deref()) {
-            Ok(channel) => channel,
-            Err(Error::Transport(e)) => {
-                eprintln!("push connect failed ({e}); retrying in {}s", backoff.as_secs());
-                wait(backoff);
-                backoff = (backoff * 2).min(Duration::from_secs(60));
-                continue;
-            }
-            Err(e) => return Err(explain(e)),
-        };
-        eprintln!("push connected");
-        backoff = Duration::from_secs(1);
-        sync("catch-up")?;
-        loop {
-            match channel.next() {
-                Ok(Event::Idle) => continue,
-                Ok(Event::StateChange { changed, push_state: state }) => {
-                    if state.is_some() {
-                        push_state = state;
-                    }
-                    let Some(types) = changed.get(account) else { continue };
-                    let named: Vec<&str> = types
-                        .keys()
-                        .map(String::as_str)
-                        .filter(|t| matches!(*t, "Email" | "Mailbox"))
-                        .collect();
-                    if named.is_empty() {
-                        continue;
-                    }
-                    sync(&format!("push {}", named.join("+")))?;
-                    synced += 1;
-                    if limit.is_some_and(|n| synced >= n) {
-                        channel.close();
-                        return Ok(());
-                    }
-                }
-                Err(Error::Transport(e)) => {
-                    eprintln!("push dropped ({e}); reconnecting");
-                    break;
-                }
-                Err(e) => return Err(explain(e)),
-            }
-        }
-    }
-}
-
-#[cfg(test)]
-mod watch_tests {
-    use super::*;
-    use axismundi_client_core::jmap::websocket::Event;
-    use std::{cell::RefCell, collections::{BTreeMap, VecDeque}, rc::Rc};
-
-    type Log = Rc<RefCell<Vec<String>>>;
-
-    struct Script {
-        events: VecDeque<Result<Event, Error>>,
-    }
-
-    impl Push for Script {
-        fn next(&mut self) -> Result<Event, Error> {
-            self.events.pop_front().unwrap_or(Err(Error::Transport("script ended".into())))
-        }
-        fn close(self) {}
-    }
-
-    fn change(state: &str) -> Result<Event, Error> {
-        let mut changed = BTreeMap::new();
-        changed.insert("b".to_owned(), BTreeMap::from([("Email".to_owned(), state.to_owned())]));
-        Ok(Event::StateChange { changed, push_state: Some(state.to_owned()) })
-    }
-
-    /// Mail that arrives while the connection is down — here, during two failed attempts and a
-    /// drop — reaches the listing through a sync that runs after the next subscription is open.
-    #[test]
-    fn every_connection_is_opened_before_the_sync_that_catches_up() {
-        let log: Log = Rc::default();
-        let mut attempts: VecDeque<Result<Script, Error>> = VecDeque::from([
-            Err(Error::Transport("refused".into())),
-            Err(Error::Transport("refused".into())),
-            Ok(Script { events: VecDeque::from([Ok(Event::Idle), change("p1"), Err(Error::Transport("dropped".into()))]) }),
-            Ok(Script { events: VecDeque::from([change("p2")]) }),
-        ]);
-        let offered: Rc<RefCell<Vec<Option<String>>>> = Rc::default();
-        let (l1, l2, l3, o) = (log.clone(), log.clone(), log.clone(), offered.clone());
-        watch_loop(
-            "b",
-            Some(2),
-            move |state| {
-                o.borrow_mut().push(state.map(str::to_owned));
-                let attempt = attempts.pop_front().unwrap();
-                l1.borrow_mut().push(if attempt.is_ok() { "connect" } else { "connect failed" }.into());
-                attempt
-            },
-            move |why| {
-                l2.borrow_mut().push(format!("sync {why}"));
-                Ok(())
-            },
-            move |_| l3.borrow_mut().push("wait".into()),
-        )
-        .unwrap();
-        assert_eq!(
-            *log.borrow(),
-            [
-                "sync initial",
-                "connect failed", "wait",
-                "connect failed", "wait",
-                "connect", "sync catch-up", "sync push Email",
-                "connect", "sync catch-up", "sync push Email",
-            ]
-        );
-        // The reconnect offers the pushState the dropped connection last delivered.
-        assert_eq!(*offered.borrow(), [None, None, None, Some("p1".to_owned())]);
-    }
-
-    #[test]
-    fn a_refusal_that_will_repeat_ends_the_loop_instead_of_retrying() {
-        let result = watch_loop::<Script>(
-            "b",
-            None,
-            |_| Err(Error::Shape("WebSocket server did not accept the jmap subprotocol".into())),
-            |_| Ok(()),
-            |_| panic!("must not wait to retry a refusal"),
-        );
-        assert!(result.is_err());
-    }
 }
 
 /// The flags the blob commands read.

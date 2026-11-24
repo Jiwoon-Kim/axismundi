@@ -20,6 +20,7 @@ import { mailboxIcon, moveOptions } from "./mail-moves";
 import { type MailboxNode, ancestorsOf, mailboxTree } from "./mail-tree";
 import { ListView, type MailboxRow, rowLabel } from "./mail-rows";
 import type { WriteResult } from "./mail-updates";
+import { reloadRevision } from "./mail-refresh";
 
 /**
  * M3 window size classes (Material 3, Layout › Breakpoints). CDK's `Breakpoints` are the older
@@ -301,7 +302,8 @@ export class MailPageComponent {
     // the rows on screen while it runs.
     let seen = this.actions.changed();
     effect(() => {
-      const count = this.actions.changed();
+      const requested = this.actions.changed();
+      const count = reloadRevision(seen, requested, requested !== seen && this.view.isLoading());
       if (count !== seen) {
         seen = count;
         untracked(() => this.view.reload());

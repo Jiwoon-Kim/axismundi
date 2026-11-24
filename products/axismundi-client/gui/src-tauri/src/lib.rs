@@ -1,6 +1,8 @@
 mod connection;
 mod mail;
+mod mail_push;
 mod saved;
+use tauri::Manager;
 
 /// The application's wiring, kept apart from `run` so a test can build the same
 /// thing against a mock runtime. A test that registered its own handler would
@@ -29,14 +31,20 @@ pub fn configure<R: tauri::Runtime>(builder: tauri::Builder<R>) -> tauri::Builde
             mail::mail_set_keywords,
             mail::mail_move,
             mail::mail_check,
+            mail_push::mail_watch,
         ])
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     configure(tauri::Builder::default())
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|app, event| {
+            if matches!(event, tauri::RunEvent::Exit) {
+                let _ = app.state::<connection::Connection>().watch_mail(app.clone(), None);
+            }
+        });
 }
 
 #[cfg(test)]

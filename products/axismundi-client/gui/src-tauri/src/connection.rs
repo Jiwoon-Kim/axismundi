@@ -26,9 +26,23 @@ struct ConnectionState {
     epoch: u64,
     plan: Option<LoginPlan>,
     connections: std::collections::BTreeMap<u32, Arc<Active>>,
+    mail_watch: Option<(u32, crate::mail_push::Worker)>,
 }
 
 impl Connection {
+    pub(crate) fn watch_mail<R: tauri::Runtime>(&self, app: tauri::AppHandle<R>, id: Option<u32>) -> Result<(), String> {
+        let mut state = self.lock()?;
+        if state.mail_watch.as_ref().map(|(id, _)| *id) == id { return Ok(()); }
+        state.mail_watch = None;
+        if let Some(id) = id {
+            let active = state.connections.get(&id).ok_or("This connection has ended")?;
+            if let Some(worker) = crate::mail_push::Worker::start(app, id, Arc::clone(active))? {
+                state.mail_watch = Some((id, worker));
+            }
+        }
+        Ok(())
+    }
+
     /// The connection `connection_id` names, while it is still signed in.
     pub(crate) fn current(&self, connection_id: u32) -> Result<Arc<Active>, String> {
         self.lock()?
@@ -425,6 +439,9 @@ pub fn forget_connection<R: tauri::Runtime>(
 fn sign_out_one(state: &Connection, connection_id: u32, dir: Option<&std::path::Path>, secrets: &dyn crate::saved::Secrets) -> Result<SignedOut, String> {
     let mut state = state.lock()?;
     let ended = state.connections.remove(&connection_id);
+    if state.mail_watch.as_ref().is_some_and(|(id, _)| *id == connection_id) {
+        state.mail_watch = None;
+    }
     let mut result = SignedOut::default();
     if let Some(key) = ended.and_then(|active| active.saved.clone()) {
         match dir {
@@ -443,6 +460,7 @@ fn sign_out_all(state: &Connection, dir: Option<&std::path::Path>, secrets: &dyn
     let mut state = state.lock()?;
     state.epoch += 1;
     state.connections.clear();
+    state.mail_watch = None;
     state.plan = None;
     let mut result = SignedOut::default();
     if let Some(dir) = dir {

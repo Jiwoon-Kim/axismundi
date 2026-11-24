@@ -1,9 +1,11 @@
-import { Service, inject, signal } from "@angular/core";
+import { DestroyRef, Service, effect, inject, signal } from "@angular/core";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { ConnectionService } from "../connection.service";
 import { exclusiveMove } from "./mail-moves";
 import type { MailboxRow } from "./mail-rows";
 import { type Aspect, type Change, type Keyword, MailWriter, type WriteResult } from "./mail-updates";
+import { matchesMailPush, type MailChanged } from "./mail-refresh";
 
 export type { Aspect, Keyword } from "./mail-updates";
 
@@ -27,6 +29,29 @@ export class MailActions {
   private readonly inFlight = signal<ReadonlySet<string>>(new Set());
   /** Moves whenever the writer's blocks or kept values may have changed, so readers re-read. */
   private readonly blocks = signal(0);
+
+  constructor() {
+    if (!this.connection.native) return;
+    const destroy = inject(DestroyRef);
+    const listener = listen<MailChanged>("mail-changed", ({payload}) => {
+      if (matchesMailPush(payload, this.connection.connected()?.id, this.connection.accountId())) {
+        this.changed.update(count => count + 1);
+      }
+    });
+    void listener.catch(() => undefined);
+    destroy.onDestroy(() => { void listener.then(unlisten => unlisten(), () => undefined); });
+
+    // Serialize requests so a slow IPC cannot put an older connection back in charge.
+    let requests = Promise.resolve();
+    effect(() => {
+      const id = this.connection.connected()?.id ?? null;
+      requests = requests.then(async () => {
+        await listener;
+        if (destroy.destroyed || (this.connection.connected()?.id ?? null) !== id) return;
+        await invoke("mail_watch", {connectionId: id});
+      }).catch(() => undefined);
+    });
+  }
 
   busy(emailId: string, aspect: Aspect): boolean {
     return this.inFlight().has(`${emailId} ${aspect}`);

@@ -14,6 +14,7 @@ import type { MoveOptions } from "./mail-moves";
 import type { MailboxRow } from "./mail-rows";
 import { rowLabel } from "./mail-rows";
 import { ThreadView } from "./mail-thread";
+import { reloadRevision } from "./mail-refresh";
 
 /**
  * The reading pane: the selected message's headers and plain-text body, inside its conversation.
@@ -144,7 +145,9 @@ export class MailDetailComponent {
     // A confirmed change reads the message and its conversation again.
     let seen = this.actions.changed();
     effect(() => {
-      const count = this.actions.changed();
+      const requested = this.actions.changed();
+      const count = reloadRevision(seen, requested,
+        requested !== seen && (this.detail.isLoading() || this.thread.isLoading()));
       if (count !== seen) {
         seen = count;
         untracked(() => {

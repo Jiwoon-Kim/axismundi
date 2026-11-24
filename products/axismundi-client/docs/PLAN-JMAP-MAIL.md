@@ -211,6 +211,8 @@ Stalwart 는 `position: 0` 을 돌려준다. 보유 prefix 는 total 을 넘을 
 
 ## RFC 8887 푸시 (2026-11-20)
 
+CLI와 Tauri는 코어 `jmap::websocket::watch_loop`를 공유한다.
+
 `websocket` 모듈과 CLI `mail-watch`. 소켓은 "무엇이 바뀌었나"만 알리고 내용은 나르지 않는다.
 StateChange 를 받으면 기존 `/changes`·`/queryChanges` 흐름(sync)을 돌린다 — 푸시는 그 흐름을 일찍 깨울 뿐
 대체하지 않는다(M5 의 원칙). 이번 범위는 푸시만이고 **요청은 계속 HTTP** 로 보낸다. WebSocket 위의 요청은

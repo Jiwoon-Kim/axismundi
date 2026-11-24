@@ -19,6 +19,9 @@ use tungstenite::{
 
 use crate::{Error, http::Client, jmap::Session};
 
+mod watch;
+pub use watch::{Push, Wake, WatchStatus, watch_loop};
+
 pub const CAPABILITY: &str = "urn:ietf:params:jmap:websocket";
 const SUBPROTOCOL: &str = "jmap";
 
@@ -102,7 +105,7 @@ impl Client {
             .ok_or_else(|| Error::Shape("WebSocket url has no port".into()))?;
         let stream = connect(host, port)?;
         stream
-            .set_read_timeout(Some(idle))
+            .set_read_timeout(Some(Duration::from_secs(30)))
             .map_err(|e| Error::Transport(e.to_string()))?;
         let uri = url
             .as_str()
@@ -146,6 +149,13 @@ impl Client {
         if agreed != Some(SUBPROTOCOL) {
             return Err(Error::Shape("WebSocket server did not accept the jmap subprotocol".into()));
         }
+        // A short idle poll must not limit the TLS or WebSocket handshake.
+        let stream = match socket.get_ref() {
+            MaybeTlsStream::Plain(stream) => stream,
+            MaybeTlsStream::Rustls(stream) => &stream.sock,
+            _ => return Err(Error::Shape("unexpected WebSocket transport".into())),
+        };
+        stream.set_read_timeout(Some(idle)).map_err(|e| Error::Transport(e.to_string()))?;
         let mut channel = PushChannel { socket };
         let mut enable = json!({"@type":"WebSocketPushEnable","dataTypes":data_types});
         if let Some(state) = push_state {
@@ -346,6 +356,26 @@ mod tests {
             .headers_mut()
             .insert("sec-websocket-protocol", "jmap".parse().unwrap());
         Ok(response)
+    }
+
+    #[test]
+    fn a_slow_upgrade_does_not_use_the_idle_timeout() {
+        let (release, wait) = std::sync::mpsc::channel::<()>();
+        let (host, server) = serve(
+            |request: &Request, response| {
+                std::thread::sleep(Duration::from_millis(1200));
+                accept_jmap(request, response)
+            },
+            move |mut socket| {
+                socket.read().unwrap();
+                let _ = wait.recv();
+            },
+        );
+        let session = session(&format!("http://{host}/jmap"), &format!("ws://{host}/ws"), true);
+        let mut channel = client().push_channel(&session, None, None, Duration::from_secs(1)).unwrap();
+        assert_eq!(channel.next().unwrap(), Event::Idle);
+        release.send(()).unwrap();
+        server.join().unwrap();
     }
 
     #[test]

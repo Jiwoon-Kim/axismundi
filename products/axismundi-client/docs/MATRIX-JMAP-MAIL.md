@@ -18,7 +18,7 @@ Contacts/Calendar 모델·원본 MIME·로컬 편집·서버 Email을 한 record
 | Mailbox | Mail mailbox 연산, mail_mailboxes | role·권한·계층·서버 count. 이름으로 정체성을 추론하지 않음 |
 | Email | Mail email 연산, mail_emails | 부분 JSON·확보 속성·본문 truncation·서버 Email 상태 |
 | 소속 | mail_email_mailboxes | account 안의 Email↔Mailbox N:M. query 이탈과 파괴를 구분 |
-| Thread | 후속 thread 연산, mail_threads | 서버 threadId/Email 순서를 사용. subject로 스레드를 발명하지 않음 |
+| Thread | 후속 thread 연산, mail_threads | 서버 threadId/Email 순서를 사용. subject로 스레드를 발명하지 않음. 읽기 창의 같은 대화 보기는 구현(Thread/get). **접힌 스레드 목록은 보류**(2026-11-24): 선택·읽음·삭제 범위 미정 — 예: Inbox 답장 한 통만 보이는 대화를 휴지통으로 보낼 때 그 한 통인지 Sent 의 나머지까지인지. Thread/changes 는 스레드 소속 로컬 저장 방식에 따라 필요해지는 수단이지 시작 조건이 아님 |
 | Identity | 후속 identity 연산, mail_identities | 발신 설정. ContactCard·AP Actor·Session과 별개 |
 | Submission | 후속 submission 연산, mail_submissions | 생성·대기·배달 결과·취소. Email과 별도 state/수명주기 |
 | 로컬 Draft | 후속 compose 연산, mail_drafts | 미전송 편집과 서버 $draft Email의 분리·명시적 연결 |
@@ -44,7 +44,7 @@ Account 의 변경을 그 사용자 소켓에 보내지 않아 그 화면은 새
 | Thread/changes | Thread 전용 checkpoint와 캐시 무효화 | 후속 |
 | Email/get | projection·null/누락·unknown·body part/truncation, notFound | 읽기 CLI·부분 캐시·오프라인 |
 | Email/changes | Email 전용 state, hasMoreChanges, 파괴/dirty, 만료 복구 | 부분 캐시 구현·mock/실서버 검증. updated 는 가변 속성(keywords·mailboxIds)만 무효화하고 그 둘만 재요청(2026-11-21) |
-| Email/query | account/filter/sort/collapseThreads 및 queryState, 서버 순서 | 고정 조건(`inMailbox`)의 첫 창·result reference·캐시. 메시지·접힌 스레드 목록이 **쿼리별 키**로 공존(스키마 v2). 페이지 이어 받기(`mail-more`, 같은 queryState 필수)·calculateTotal·hasMore(2026-11-21) — **GUI 는 아직 `mail_more` 를 부르지 않음**(무한 스크롤 후속). **검색 filter(text·from·날짜 등)는 후속** |
+| Email/query | account/filter/sort/collapseThreads 및 queryState, 서버 순서 | 고정 조건(`inMailbox`)의 첫 창·result reference·캐시. 메시지·접힌 스레드 목록이 **쿼리별 키**로 공존(스키마 v2). 페이지 이어 받기(`mail-more`, 같은 queryState 필수)·calculateTotal·hasMore(2026-11-21) — GUI 무한 스크롤이 `mail_more` 사용(2026-11-24, 45c23c4). 정렬은 receivedAt 내림차순 고정(선택 정렬은 검색과 묶지 않음). **text 검색은 다음 작업**(BRIEF-MAIL-SEARCH: Account 전체, Trash·Junk 전용 제외), from·날짜 등 조건 검색은 후속 |
 | Email/queryChanges | 객체 changes와 분리, same-query 적용, 계산 불가 시 창 재조회 | **구현**(2026-11-20): 캐시된 창이 canCalculateChanges=true·같은 인자면 델타 적용, 창이 줄면 그 구간만 position 으로 보충(같은 queryState 여야 함), 커버리지 없는 멤버만 get. 계산 불가·tooManyChanges·불일치는 창 재조회. Stalwart 외부 생성·삭제 후 캐시 = 새 query |
 | Email/set | 서버 Draft 생성·keywords/mailboxIds 변경·파괴. 로컬 의도 별도 보존 | **제품 구현(일부, 2026-11-23·24)**: keywords 패치(`$seen`·`$flagged`, 단건·일괄), mailboxIds 이동(Move·OnlyIn — Trash/Junk 는 보이는 소속 전부 빼고 넣기). 결과 판정·분할(maxObjectsInSet·maxSizeRequest)·응답 유실 시 재전송 없이 되읽기·결과 모름 잠금. **생성(서버 Draft)·파괴는 후속** |
 | Email/copy | source/target account 구별, 부분 성공·후속 원본 파괴 결과 분리 | 후속 |
@@ -70,6 +70,8 @@ Account 의 변경을 그 사용자 소켓에 보내지 않아 그 화면은 새
 4. Mailbox delta·queryChanges·Thread·페이지 창 확장.
 5. Identity·로컬 Draft·서버 Draft·Blob/import/parse·수정/copy·Submission.
 6. SearchSnippet·VacationResponse를 포함한 남은 메서드와 실패 경로.
+
+GUI 다음 순서(2026-11-24): **검색 → 작성·발송 → 스레드 목록**. 목록은 메시지 단위, 읽기 창은 같은 대화를 함께 보여 준다.
 
 M2/M3의 현재 데이터 구조가 후속 상태를 담을 수 있어도 해당 메서드 구현 증거는 아니다.
 Thread/Identity/Submission state는 Email state를 재사용하지 않는다. 모든 메서드의

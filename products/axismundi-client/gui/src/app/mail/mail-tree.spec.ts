@@ -10,6 +10,7 @@ const view: ListView = JSON.parse(readFileSync(new URL("./mail-list.fixture.json
 const box = (id: string, parentId: string | null, name = id, role: string | null = null, sortOrder = 0): MailboxRow => ({
   id, name, role, parentId, sortOrder, totalEmails: null, unreadEmails: null,
   mayAddItems: null, mayRemoveItems: null, maySetSeen: null,
+  mayCreateChild: null, mayRename: null, mayDelete: null,
 });
 const names = (nodes: MailboxNode[]): unknown[] =>
   nodes.map(node => node.children.length ? [node.box.name, names(node.children)] : node.box.name);

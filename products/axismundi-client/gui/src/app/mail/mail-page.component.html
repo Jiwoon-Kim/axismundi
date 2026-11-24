@@ -5,14 +5,31 @@
       <!-- Mailbox tree (CDK tree pattern: one tab stop, arrow keys move, Right/Left expand). A node is a
            mailbox in its own right: click or Enter opens it; the trailing arrow only expands, and stays
            out of the tab order so the treeitem holds the one focus. -->
-      <nav class="mailbox-nav">
+      <nav class="mailbox-nav" (contextmenu)="$event.preventDefault()">
+        <div class="mailbox-heading">
+          <span>Mailboxes</span>
+          @if (canCreateMailbox()) {
+            <button #mailboxNew matIconButton type="button" aria-label="New mailbox" matTooltip="New mailbox"
+                    (click)="mailboxDialog('create')"><mat-icon>add</mat-icon></button>
+          }
+        </div>
+        <div class="mailbox-tree-surface" [cdkContextMenuTriggerFor]="emptyMailboxMenu"
+             [cdkContextMenuDisabled]="!canCreateMailbox()">
         <mat-tree #tree class="mailbox-tree" aria-label="Mailboxes" [dataSource]="mailboxNodes()"
                   [childrenAccessor]="childrenOf" [expansionKey]="keyOf" [trackBy]="trackById">
           <mat-tree-node *matTreeNodeDef="let node; let level = level" [style.padding-inline-start.px]="16 + level * 20"
+                         #mailboxRow
+                         [attr.data-mailbox-id]="node.box.id"
                          [isExpandable]="node.children.length > 0"
                          [class.active]="node.box.id === selectedMailbox()"
                          [attr.aria-current]="node.box.id === selectedMailbox() ? 'page' : null"
-                         (click)="openMailbox(node.box.id)" (activation)="openMailbox(node.box.id)">
+                         aria-haspopup="menu" [cdkContextMenuTriggerFor]="mailboxMenu"
+                         [cdkContextMenuTriggerData]="{box: node.box}"
+                         (cdkContextMenuClosed)="restoreMailboxMenuFocus(mailboxRow)"
+                         (keydown)="mailboxContextKey($event, mailboxRow)"
+                         (pointerdown)="mailboxPressStart($event, mailboxRow)" (pointermove)="mailboxPressMove($event)"
+                         (pointerup)="mailboxPressEnd()" (pointercancel)="mailboxPressEnd()" (contextmenu)="mailboxPressEnd()"
+                         (click)="mailboxRowClick($event, node.box.id)" (activation)="openMailbox(node.box.id)">
             <!-- M3 large badge on the item's icon. The badge is hidden from assistive tech, so the
                  treeitem's name carries the count as text. -->
             <span class="box-icon" [matBadge]="badgeLabel(node.box.unreadEmails)" [matBadgeHidden]="!node.box.unreadEmails"
@@ -28,7 +45,37 @@
             }
           </mat-tree-node>
         </mat-tree>
+        </div>
       </nav>
+      <ng-template #emptyMailboxMenu>
+        <div cdkMenu class="mailbox-context" aria-label="Mailboxes">
+          <button cdkMenuItem type="button" (cdkMenuItemTriggered)="mailboxDialog('create')">
+            <mat-icon>add</mat-icon><span>New mailbox</span>
+          </button>
+        </div>
+      </ng-template>
+      <ng-template #mailboxMenu let-box="box">
+        <div cdkMenu class="mailbox-context" [attr.aria-label]="box.name">
+          <button cdkMenuItem type="button" [cdkMenuItemDisabled]="box.mayCreateChild === false"
+                  (cdkMenuItemTriggered)="mailboxDialog('create', undefined, box.id)">
+            <mat-icon>create_new_folder</mat-icon><span>New child mailbox
+              @if (box.mayCreateChild === false) { <small>No permission to create a mailbox here</small> }
+            </span>
+          </button>
+          <button cdkMenuItem type="button" [cdkMenuItemDisabled]="box.mayRename === false"
+                  (cdkMenuItemTriggered)="mailboxDialog('rename', box)">
+            <mat-icon>edit</mat-icon><span>Rename
+              @if (box.mayRename === false) { <small>No permission to rename</small> }
+            </span>
+          </button>
+          <button cdkMenuItem type="button" [cdkMenuItemDisabled]="box.mayDelete === false"
+                  (cdkMenuItemTriggered)="mailboxDialog('destroy', box)">
+            <mat-icon>delete</mat-icon><span>Delete
+              @if (box.mayDelete === false) { <small>No permission to delete</small> }
+            </span>
+          </button>
+        </div>
+      </ng-template>
     </mat-sidenav>
 
     <mat-sidenav-content>
@@ -109,7 +156,7 @@
                 <h1 id="mailbox-title" class="visually-hidden">{{ mailboxName() }}</h1>
               } @else {
                 @if (!large()) {
-                  <button matIconButton type="button" aria-label="Mailboxes" (click)="drawerOpen.set(true)"><mat-icon>menu</mat-icon></button>
+                  <button #drawerToggle matIconButton type="button" aria-label="Mailboxes" (click)="drawerOpen.set(true)"><mat-icon>menu</mat-icon></button>
                 }
                 <h1 id="mailbox-title">{{ mailboxName() }}</h1>
                 @if (listing(); as current) {

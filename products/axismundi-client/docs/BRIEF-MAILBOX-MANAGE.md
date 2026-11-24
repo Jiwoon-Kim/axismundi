@@ -43,6 +43,22 @@ role 변경 보호            Inbox·Trash·Junk 의 role 은 바꿀 수 없다 
 
 ## 지시
 
+### 구현 중 Stalwart 재실측
+
+- Alice 소유 Account: 최상위·하위 생성, 이름 변경, 빈 메일함 삭제 성공. 메일이 있는 메일함은
+  `mailboxHasEmail`, 하위가 있는 메일함은 `mailboxHasChild`로 거부했다.
+- 중복 `inbox`, `all`, `flagged` 생성은 모두 `invalidProperties`와 `properties: ["role"]`로 거부했다.
+  비어 있던 `archive` 역할은 테스트 메일함 생성·삭제 모두 성공했다.
+- Alice가 공유받은 Account `b`는 최상위 생성 가능으로 광고했지만, 실제 요청은 `forbidden`이었다.
+- 기존 Inbox·Trash·Junk의 `mayDelete`는 모두 true였다. 이 세 메일함은 삭제하지 않았다.
+- 이어서 (Opus, 2026-11-24) 이 셋에 실제로 `destroy`(`onDestroyRemoveEmails: false`)를 보냈다 — Stalwart 소스가 먼저
+  막는 것(`destroy.rs` `CannotDestroy`, `[INBOX_ID, TRASH_ID, JUNK_ID]`)을 확인했고, Inbox 엔 메일이 있어 그 검사를 지나도
+  `mailboxHasEmail` 로 멈춘다. 결과: 셋 다 **HTTP 200**, `notDestroyed` → **`forbidden`**("not allowed to delete Inbox,
+  Junk or Trash"), 비어 있는 Junk·Trash 도 같다. 셋 다 남아 있다. 그래서 `forbidden` 은 권한 부족과 서버 정책을 함께
+  덮는다 — 문구는 "The server does not allow this change." 로 하고, 거부 문구 끝에 SetError type 을 붙인다
+  (읽음·별표 결과와 같은 형식, type 이 영숫자 토큰일 때만). HTTP 상태는 SetError 를 가르지 못한다(항상 200).
+  테스트가 만든 메일과 메일함은 정리했다.
+
 ### 1. 코어 (`jmap::mail` 아래, 예: `jmap/mail/mailbox.rs`)
 
 - `create(parent, name, role)` · `rename(id, name)` · `destroy(id)` — 각각 `Mailbox/set` 하나.

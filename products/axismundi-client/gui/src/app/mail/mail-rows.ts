@@ -16,6 +16,9 @@ export interface MailboxRow {
   mayRemoveItems: boolean | null;
   /** myRights.maySetSeen: $seen may change on a message here (in every mailbox it is in). */
   maySetSeen: boolean | null;
+  mayCreateChild: boolean | null;
+  mayRename: boolean | null;
+  mayDelete: boolean | null;
 }
 
 export type MailRow =
@@ -47,6 +50,9 @@ export interface ListView {
   hasMore: boolean | null;
   queryStale: boolean;
   partialCache: boolean;
+  mayCreateTopLevelMailbox: boolean | null;
+  maxMailboxDepth: number | null;
+  maxSizeMailboxName: number | null;
 }
 
 export type RowLabel =

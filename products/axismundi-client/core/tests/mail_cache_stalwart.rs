@@ -28,6 +28,92 @@ fn call(client: &Client, session: &Session, method: &str, args: Value) -> Value 
 }
 
 #[test]
+#[ignore = "requires explicit loopback Stalwart credentials; writes and removes only its own fixtures"]
+fn mailbox_management_stalwart() {
+    use mail::mailbox::{Change, Outcome, write};
+    let url = std::env::var("AXJ_SESSION_URL").unwrap();
+    let source = url::Url::parse(&url).unwrap();
+    assert!(matches!(source.host_str(), Some("localhost" | "127.0.0.1" | "[::1]")));
+    let client = Client::new(Credentials {
+        user: std::env::var("AXJ_USER").unwrap(),
+        secret: std::env::var("AXJ_SECRET").unwrap(),
+    });
+    let session = client.session(&url).unwrap();
+    assert_eq!(url::Url::parse(&session.api_url).unwrap().origin(), source.origin());
+    let account = mail::choose_account(&session, None).unwrap();
+    let nonce = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos();
+    let name = format!("ax mailbox e2e {nonce}");
+    let set = |change: Change<'_>| write(&client, &session, &account, change).unwrap();
+    let mut boxes: Vec<(String, String)> = vec![];
+    let mut email = None;
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let confirmed = |outcome| match outcome {
+            Outcome::Confirmed(id) => id,
+            other => panic!("expected confirmation: {other:?}"),
+        };
+        let parent = confirmed(set(Change::Create { parent: None, name: &name, role: None }));
+        boxes.push((account.clone(), parent.clone()));
+        let child = confirmed(set(Change::Create { parent: Some(&parent), name: "Child", role: None }));
+        boxes.push((account.clone(), child.clone()));
+        assert_eq!(confirmed(set(Change::Rename { id: &child, name: "Renamed" })), child);
+        assert!(matches!(set(Change::Destroy { id: &parent }), Outcome::Refused { kind, .. } if kind == "mailboxHasChild"));
+        let created = call(&client, &session, "Email/set", json!({"accountId":account,"create":{"email":{
+            "mailboxIds":{&child:true},"keywords":{},"from":[{"email":"fixture@example.invalid"}],"subject":&name,
+            "textBody":[{"partId":"t","type":"text/plain"}],"bodyValues":{"t":{"value":"Mailbox E2E fixture"}}
+        }}}));
+        email = Some(created["created"]["email"]["id"].as_str().unwrap().to_owned());
+        assert!(matches!(set(Change::Destroy { id: &child }), Outcome::Refused { kind, .. } if kind == "mailboxHasEmail"));
+        call(&client, &session, "Email/set", json!({"accountId":account,"destroy":[email.as_ref().unwrap()]}));
+        email = None;
+        assert_eq!(confirmed(set(Change::Destroy { id: &child })), child);
+        boxes.pop();
+        assert_eq!(confirmed(set(Change::Destroy { id: &parent })), parent);
+        boxes.pop();
+
+        let existing = mail::mailboxes(&client, &session, &account).unwrap();
+        for mailbox in existing["list"].as_array().unwrap() {
+            if matches!(mailbox["role"].as_str(), Some("inbox" | "trash" | "junk")) {
+                println!("{} mayDelete={}", mailbox["role"], mailbox["myRights"]["mayDelete"]);
+            }
+        }
+        for role in ["inbox", "all", "flagged", "archive"] {
+            if role == "archive" && existing["list"].as_array().unwrap().iter().any(|item| item["role"] == role) { continue; }
+            let role_name = format!("{name} {role}");
+            let outcome = set(Change::Create { parent: None, name: &role_name, role: Some(role) });
+            println!("role {role}: {outcome:?}");
+            if let Outcome::Confirmed(id) = &outcome {
+                boxes.push((account.clone(), id.clone()));
+            }
+            if role == "inbox" {
+                assert!(matches!(outcome, Outcome::Refused { .. }));
+            } else if role == "archive" {
+                if let Outcome::Confirmed(id) = outcome {
+                    assert_eq!(confirmed(set(Change::Destroy { id: &id })), id);
+                    boxes.pop();
+                }
+            }
+        }
+        if let Some(shared) = session.accounts.get("b").filter(|_| account != "b")
+            && shared.account_capabilities.contains_key(mail::CAPABILITY)
+        {
+            let outcome = write(&client, &session, "b", Change::Create { parent: None, name: &name, role: None }).unwrap();
+            println!("shared b top-level create: {outcome:?}");
+            if let Outcome::Confirmed(id) = outcome {
+                boxes.push(("b".into(), id));
+            }
+        }
+    }));
+    if let Some(id) = email {
+        call(&client, &session, "Email/set", json!({"accountId":account,"destroy":[id]}));
+    }
+    for (account, id) in boxes.into_iter().rev() {
+        let cleanup = write(&client, &session, &account, Change::Destroy { id: &id });
+        assert!(matches!(cleanup, Ok(Outcome::Confirmed(_))), "fixture cleanup: {cleanup:?}");
+    }
+    if let Err(panic) = result { std::panic::resume_unwind(panic); }
+}
+
+#[test]
 #[ignore = "requires explicit local Stalwart credentials; creates an isolated Mailbox and Email"]
 fn mail_cache_external_delta_offline_and_destruction() {
     let url = std::env::var("AXJ_SESSION_URL").unwrap();

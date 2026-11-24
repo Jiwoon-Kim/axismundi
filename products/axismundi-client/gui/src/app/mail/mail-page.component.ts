@@ -1,11 +1,13 @@
-import { Component, computed, effect, inject, input, linkedSignal, resource, signal, untracked, viewChild } from "@angular/core";
+import { Component, DestroyRef, ElementRef, afterRenderEffect, computed, effect, inject, input, linkedSignal, resource, signal, untracked, viewChild, viewChildren } from "@angular/core";
 import { toSignal } from "@angular/core/rxjs-interop";
 import { BreakpointObserver } from "@angular/cdk/layout";
+import { CdkContextMenuTrigger, CdkMenu, CdkMenuItem } from "@angular/cdk/menu";
 import { MatIconButton, MatIconAnchor } from "@angular/material/button";
 import { MatIcon } from "@angular/material/icon";
 import { MatMenu, MatMenuItem, MatMenuTrigger } from "@angular/material/menu";
 import { MatBadge } from "@angular/material/badge";
 import { MatCheckbox } from "@angular/material/checkbox";
+import { MatDialog } from "@angular/material/dialog";
 import { MatProgressSpinner } from "@angular/material/progress-spinner";
 import { MatSnackBar } from "@angular/material/snack-bar";
 import { MatSidenav, MatSidenavContainer, MatSidenavContent } from "@angular/material/sidenav";
@@ -23,6 +25,8 @@ import { type MailboxNode, ancestorsOf, mailboxTree } from "./mail-tree";
 import { ListView, type MailboxRow, rowLabel } from "./mail-rows";
 import type { WriteResult } from "./mail-updates";
 import { indicatorDelay, isRefreshShortcut, manualRefreshAction, pullProgress, reloadRevision } from "./mail-refresh";
+import { MailboxDialogComponent, type MailboxDialogData } from "./mailbox-dialog.component";
+import { allowsMailboxAction, mailboxParents, parentAllowed, type MailboxChange, type MailboxResult } from "./mailbox-management";
 
 /**
  * M3 window size classes (Material 3, Layout › Breakpoints). CDK's `Breakpoints` are the older
@@ -41,7 +45,7 @@ const EXPANDED = "(min-width: 840px)";
   selector: "app-mail-page",
   imports: [MailDetailComponent, MailMoveMenuComponent, MatBadge, MatIcon, MatIconAnchor, MatIconButton, MatSidenav,
     MatSidenavContainer, MatSidenavContent, MatTooltip, MatCheckbox, MatMenu, MatMenuItem, MatMenuTrigger, MatTree, MatTreeNode,
-    MatTreeNodeDef, MatTreeNodeToggle, RouterLink, MatProgressSpinner],
+    MatTreeNodeDef, MatTreeNodeToggle, RouterLink, MatProgressSpinner, CdkContextMenuTrigger, CdkMenu, CdkMenuItem],
   host: {"(window:keydown)": "refreshShortcut($event)"},
   templateUrl: "./mail-page.component.html",
   styleUrl: "./mail-page.component.css",
@@ -51,6 +55,13 @@ export class MailPageComponent {
   protected readonly actions = inject(MailActions);
   private readonly router = inject(Router);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly dialogs = inject(MatDialog);
+  private readonly mailboxRows = viewChildren("mailboxRow", {read: ElementRef<HTMLElement>});
+  private readonly drawerToggle = viewChild("drawerToggle", {read: ElementRef<HTMLButtonElement>});
+  private readonly mailboxNew = viewChild("mailboxNew", {read: ElementRef<HTMLButtonElement>});
+  private readonly mailboxFocus = signal<string | null>(null);
+  private mailboxPress: {id: number; x: number; y: number; timer: ReturnType<typeof setTimeout>} | null = null;
+  private mailboxPressOpened = false;
 
   /** Query parameters, bound by the router. */
   readonly mailbox = input<string>();
@@ -168,6 +179,115 @@ export class MailPageComponent {
   });
   /** The mailboxes nested by parentId (see `mailboxTree`). */
   protected readonly mailboxNodes = computed(() => mailboxTree(this.mailboxes()));
+  protected readonly parentOptions = computed(() => mailboxParents(this.mailboxNodes()));
+  protected readonly topLevelAllowed = computed(() => allowsMailboxAction(this.listing()?.mayCreateTopLevelMailbox));
+  protected readonly canCreateMailbox = computed(() => {
+    if (!this.listing()) return false;
+    const max = this.listing()?.maxMailboxDepth ?? null;
+    const top = this.topLevelAllowed();
+    return parentAllowed(undefined, top, max) || this.parentOptions().some(parent => parentAllowed(parent, top, max));
+  });
+
+  protected mailboxDialog(kind: MailboxChange["kind"], target?: MailboxRow, parent?: string): void {
+    const connectionId = this.connection.connected()?.id;
+    const accountId = this.connection.accountId();
+    if (connectionId === undefined || !accountId) return;
+    const active = () => this.connection.connected()?.id === connectionId && this.connection.accountId() === accountId;
+    const listing = this.listing();
+    const origin = this.scope();
+    this.dialogs.open<MailboxDialogComponent, MailboxDialogData, MailboxResult>(
+      MailboxDialogComponent, {
+        width: "440px",
+        maxWidth: "calc(100vw - 32px)",
+        autoFocus: kind === "destroy" ? "first-tabbable" : "input",
+        data: {
+          kind, target, parent, parents: this.parentOptions(), topLevel: this.topLevelAllowed(),
+          usedRoles: new Set(this.mailboxes().flatMap(box => box.role ? [box.role] : [])),
+          maxDepth: listing?.maxMailboxDepth ?? null, maxName: listing?.maxSizeMailboxName ?? null,
+          write: change => active()
+            ? invoke<MailboxResult>("mail_write_mailbox", {connectionId, accountId, change})
+            : Promise.reject(),
+        },
+      },
+    ).afterClosed().subscribe(result => {
+      if (!active()) return;
+      if (target && this.scope() === origin) this.mailboxFocus.set(target.id);
+      if (!result) return;
+      if (result.status === "unknown") {
+        this.snackBar.open("Mailbox change could not be verified. Check the list before trying again.", "Dismiss", {duration: 6500});
+      }
+      if (result.status === "confirmed" && this.scope() === origin) {
+        if (kind === "create") {
+          this.mailboxFocus.set(result.id);
+          this.openMailbox(result.id);
+        }
+        if (kind === "destroy") {
+          const survivors = this.mailboxes().filter(box => box.id !== result.id);
+          const inbox = survivors.find(box => box.role === "inbox");
+          const destination = this.selectedMailbox() === result.id ? (inbox ?? survivors[0])?.id : this.selectedMailbox();
+          this.mailboxFocus.set(destination ?? "");
+          if (this.selectedMailbox() === result.id) {
+            void this.router.navigate(["/mail"], {queryParams: {mailbox: inbox ? null : destination}});
+          }
+        }
+      }
+      this.actions.changed.update(count => count + 1);
+    });
+  }
+
+  protected mailboxContextKey(event: KeyboardEvent, row: HTMLElement): void {
+    if (!(event.key === "ContextMenu" || (event.shiftKey && event.key === "F10"))) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const rect = row.getBoundingClientRect();
+    this.openMailboxContext(row, rect.left + 16, rect.bottom);
+  }
+
+  private openMailboxContext(row: HTMLElement, clientX: number, clientY: number): void {
+    row.dispatchEvent(new MouseEvent("contextmenu", {bubbles: true, cancelable: true, clientX, clientY}));
+  }
+
+  protected mailboxPressStart(event: PointerEvent, row: HTMLElement): void {
+    this.mailboxPressEnd();
+    this.mailboxPressOpened = false;
+    if (event.pointerType !== "touch" || !event.isPrimary) return;
+    const {pointerId: id, clientX: x, clientY: y} = event;
+    const timer = setTimeout(() => {
+      this.mailboxPress = null;
+      if (!row.isConnected) return;
+      this.mailboxPressOpened = true;
+      this.openMailboxContext(row, x, y);
+    }, 500);
+    this.mailboxPress = {id, x, y, timer};
+  }
+
+  protected mailboxPressMove(event: PointerEvent): void {
+    const press = this.mailboxPress;
+    if (press && event.pointerId === press.id && Math.hypot(event.clientX - press.x, event.clientY - press.y) > 8) {
+      this.mailboxPressEnd();
+    }
+  }
+
+  protected mailboxPressEnd(): void {
+    if (this.mailboxPress) clearTimeout(this.mailboxPress.timer);
+    this.mailboxPress = null;
+  }
+
+  protected mailboxRowClick(event: MouseEvent, id: string): void {
+    if (this.mailboxPressOpened) {
+      this.mailboxPressOpened = false;
+      event.preventDefault();
+      return;
+    }
+    this.openMailbox(id);
+  }
+
+  protected restoreMailboxMenuFocus(row: HTMLElement): void {
+    queueMicrotask(() => {
+      if (row.isConnected && !this.dialogs.openDialogs.length &&
+          (document.activeElement === document.body || row.matches(":focus-within"))) row.focus();
+    });
+  }
   protected readonly childrenOf = (node: MailboxNode) => node.children;
   /**
    * Expansion is kept by connection, Account and mailbox id, so it survives every reload that rebuilds
@@ -330,6 +450,18 @@ export class MailPageComponent {
   }
 
   constructor() {
+    inject(DestroyRef).onDestroy(() => this.mailboxPressEnd());
+    afterRenderEffect({write: () => {
+      const id = this.mailboxFocus();
+      if (id === null) return;
+      const row = this.mailboxRows().find(ref => ref.nativeElement.dataset["mailboxId"] === id)?.nativeElement;
+      const target = this.large() || this.drawerOpen()
+        ? id ? row : this.mailboxNew()?.nativeElement
+        : this.drawerToggle()?.nativeElement;
+      if (!target) return;
+      target.focus();
+      this.mailboxFocus.set(null);
+    }});
     effect(onCleanup => {
       const scope = this.scope();
       const loading = this.initialLoading();

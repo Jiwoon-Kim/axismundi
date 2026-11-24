@@ -30,6 +30,7 @@ pub fn configure<R: tauri::Runtime>(builder: tauri::Builder<R>) -> tauri::Builde
             mail::mail_thread,
             mail::mail_set_keywords,
             mail::mail_move,
+            mail::mail_write_mailbox,
             mail::mail_check,
             mail_push::mail_watch,
         ])

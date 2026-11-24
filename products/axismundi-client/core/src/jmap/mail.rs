@@ -7,6 +7,7 @@ use crate::{
 use serde_json::{Value, json};
 
 pub mod cache;
+pub mod mailbox;
 
 const LIST_PROPERTIES: &[&str] = &[
     "id",
@@ -1315,6 +1316,62 @@ mod tests {
 
     fn keyword_session(api: &str) -> (Client, Session) {
         sized_session(api, 10000)
+    }
+
+    #[test]
+    fn mailbox_lost_create_is_not_retried_or_claimed() {
+        let (api, server) = recorded(vec![None]);
+        let (client, session) = keyword_session(&api);
+        let result = mailbox::write(&client, &session, "a", mailbox::Change::Create {
+            parent: Some("parent"), name: "Project", role: None,
+        }).unwrap();
+        assert!(matches!(result, mailbox::Outcome::Unknown));
+        assert_eq!(server.join().unwrap(), [json!([["Mailbox/set", {
+            "accountId":"a","create":{"new":{"parentId":"parent","name":"Project","role":null}}
+        },"mail"]])]);
+    }
+
+    #[test]
+    fn mailbox_lost_rename_reads_back_and_lost_delete_checks_not_found() {
+        for (change, read, expected) in [
+            (mailbox::Change::Rename { id: "a1", name: "New" },
+             json!({"list":[{"id":"a1","name":"New"}],"notFound":[]}), true),
+            (mailbox::Change::Rename { id: "a1", name: "New" },
+             json!({"list":[{"id":"a1","name":"Old"}],"notFound":[]}), false),
+            (mailbox::Change::Destroy { id: "a1" }, json!({"list":[],"notFound":["a1"]}), true),
+            (mailbox::Change::Destroy { id: "a1" }, json!({"list":[{"id":"a1"}],"notFound":[]}), false),
+        ] {
+            let mut read = read;
+            read["accountId"] = json!("a");
+            let (api, server) = recorded(vec![None, Some(json!({"methodResponses":[["Mailbox/get",read,"mail"]]}))]);
+            let (client, session) = keyword_session(&api);
+            let result = mailbox::write(&client, &session, "a", change).unwrap();
+            if expected { assert!(matches!(result, mailbox::Outcome::Confirmed(id) if id == "a1")); }
+            else { assert!(matches!(result, mailbox::Outcome::Unchanged)); }
+            let recorded = server.join().unwrap();
+            assert_eq!(recorded[0][0][0], "Mailbox/set");
+            if recorded[0][0][1].get("destroy").is_some() {
+                assert_eq!(recorded[0][0][1]["onDestroyRemoveEmails"], false);
+            }
+            assert_eq!(recorded[1][0][0], "Mailbox/get");
+            assert_eq!(recorded[1][0][1]["ids"], json!(["a1"]));
+        }
+    }
+
+    #[test]
+    fn mailbox_refusal_keeps_only_the_type_and_fields() {
+        let reply = json!({"methodResponses":[["Mailbox/set",{
+            "accountId":"a","newState":"same","notCreated":{"new":{
+                "type":"invalidProperties","properties":["role"],"description":"remote detail"
+            }}
+        },"mail"]]});
+        let (api, server) = scripted(vec![Some(reply)]);
+        let (client, session) = keyword_session(&api);
+        let result = mailbox::write(&client, &session, "a", mailbox::Change::Create {
+            parent: None, name: "Other Inbox", role: Some("inbox"),
+        }).unwrap();
+        assert!(matches!(result, mailbox::Outcome::Refused {kind, properties} if kind == "invalidProperties" && properties == ["role"]));
+        assert_eq!(server.join().unwrap(), [vec!["Mailbox/set".to_owned()]]);
     }
 
     fn sized_session(api: &str, max_size: usize) -> (Client, Session) {

@@ -6,7 +6,10 @@
     {
       "id": "a",
       "mayAddItems": true,
+      "mayCreateChild": true,
+      "mayDelete": true,
       "mayRemoveItems": true,
+      "mayRename": true,
       "maySetSeen": true,
       "name": "Inbox",
       "parentId": null,
@@ -18,7 +21,10 @@
     {
       "id": "b",
       "mayAddItems": true,
+      "mayCreateChild": true,
+      "mayDelete": true,
       "mayRemoveItems": true,
+      "mayRename": true,
       "maySetSeen": true,
       "name": "Deleted Items",
       "parentId": null,
@@ -30,7 +36,10 @@
     {
       "id": "c",
       "mayAddItems": true,
+      "mayCreateChild": true,
+      "mayDelete": true,
       "mayRemoveItems": true,
+      "mayRename": true,
       "maySetSeen": true,
       "name": "Junk Mail",
       "parentId": null,
@@ -42,7 +51,10 @@
     {
       "id": "d",
       "mayAddItems": true,
+      "mayCreateChild": true,
+      "mayDelete": true,
       "mayRemoveItems": true,
+      "mayRename": true,
       "maySetSeen": true,
       "name": "Drafts",
       "parentId": null,
@@ -54,7 +66,10 @@
     {
       "id": "e",
       "mayAddItems": true,
+      "mayCreateChild": true,
+      "mayDelete": true,
       "mayRemoveItems": true,
+      "mayRename": true,
       "maySetSeen": true,
       "name": "Sent Items",
       "parentId": null,
@@ -66,7 +81,10 @@
     {
       "id": "h",
       "mayAddItems": true,
+      "mayCreateChild": true,
+      "mayDelete": true,
       "mayRemoveItems": true,
+      "mayRename": true,
       "maySetSeen": true,
       "name": "Axismundi Probe",
       "parentId": null,
@@ -76,6 +94,9 @@
       "unreadEmails": 1
     }
   ],
+  "maxMailboxDepth": null,
+  "maxSizeMailboxName": null,
+  "mayCreateTopLevelMailbox": null,
   "partialCache": true,
   "queryStale": false,
   "rows": [

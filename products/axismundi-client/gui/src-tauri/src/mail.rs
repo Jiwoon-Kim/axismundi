@@ -7,10 +7,10 @@ use axismundi_client_core::{
     Error,
     jmap::{
         Session,
-        mail::{Rows, cache},
+        mail::{Rows, cache, mailbox},
     },
 };
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 use crate::connection::{Active, Connection, failure};
@@ -59,6 +59,9 @@ pub struct ListView {
     has_more: Option<bool>,
     query_stale: bool,
     partial_cache: bool,
+    may_create_top_level_mailbox: Option<bool>,
+    max_mailbox_depth: Option<u64>,
+    max_size_mailbox_name: Option<u64>,
 }
 
 #[derive(Debug, Serialize)]
@@ -78,6 +81,9 @@ pub struct MailboxRow {
     /// `myRights.maySetSeen`: `$seen` may change on a message here. A message in several mailboxes
     /// needs it in all of them (RFC 8621 §2).
     may_set_seen: Option<bool>,
+    may_create_child: Option<bool>,
+    may_rename: Option<bool>,
+    may_delete: Option<bool>,
 }
 
 #[derive(Debug, Serialize)]
@@ -162,6 +168,9 @@ fn mailbox_row(mailbox: &Value) -> Result<MailboxRow, String> {
         may_add_items: mailbox.pointer("/myRights/mayAddItems").and_then(Value::as_bool),
         may_remove_items: mailbox.pointer("/myRights/mayRemoveItems").and_then(Value::as_bool),
         may_set_seen: mailbox.pointer("/myRights/maySetSeen").and_then(Value::as_bool),
+        may_create_child: mailbox.pointer("/myRights/mayCreateChild").and_then(Value::as_bool),
+        may_rename: mailbox.pointer("/myRights/mayRename").and_then(Value::as_bool),
+        may_delete: mailbox.pointer("/myRights/mayDelete").and_then(Value::as_bool),
     })
 }
 
@@ -177,7 +186,86 @@ fn list_view(view: &Value) -> Result<ListView, String> {
         has_more: view["hasMore"].as_bool(),
         query_stale: view["queryStale"].as_bool().unwrap_or(true),
         partial_cache: view["partialCache"].as_bool().unwrap_or(true),
+        may_create_top_level_mailbox: None,
+        max_mailbox_depth: None,
+        max_size_mailbox_name: None,
     })
+}
+
+fn account_list_view(view: &Value, session: &Session, account: &str) -> Result<ListView, String> {
+    let mut view = list_view(view)?;
+    if let Some(mail) = session.accounts.get(account).and_then(|a| a.account_capabilities.get(axismundi_client_core::jmap::mail::CAPABILITY)) {
+        view.may_create_top_level_mailbox = mail["mayCreateTopLevelMailbox"].as_bool();
+        view.max_mailbox_depth = mail["maxMailboxDepth"].as_u64();
+        view.max_size_mailbox_name = mail["maxSizeMailboxName"].as_u64();
+    }
+    Ok(view)
+}
+
+#[derive(Deserialize)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum MailboxWrite {
+    Create { parent: Option<String>, name: String, role: Option<String> },
+    Rename { id: String, name: String },
+    Destroy { id: String },
+}
+
+#[derive(Serialize)]
+#[serde(tag = "status", rename_all = "camelCase")]
+pub enum MailboxWriteResult {
+    Confirmed { id: String },
+    /// Our wording, ending with the SetError type the server sent (as the keyword results do). The
+    /// server's own description never reaches the webview.
+    Refused { message: String, properties: Vec<&'static str> },
+    Unchanged,
+    Unknown,
+}
+
+fn mailbox_write_result(result: mailbox::Outcome) -> MailboxWriteResult {
+    match result {
+        mailbox::Outcome::Confirmed(id) => MailboxWriteResult::Confirmed { id },
+        mailbox::Outcome::Unknown => MailboxWriteResult::Unknown,
+        mailbox::Outcome::Unchanged => MailboxWriteResult::Unchanged,
+        mailbox::Outcome::Refused { kind, properties } => {
+            let properties: Vec<_> = ["name", "parentId", "role"].into_iter()
+                .filter(|field| properties.iter().any(|name| name == field)).collect();
+            let message = match (kind.as_str(), properties.as_slice()) {
+                ("mailboxHasEmail", _) => "Move the messages out before deleting this mailbox.",
+                ("mailboxHasChild", _) => "Remove the child mailboxes before deleting this mailbox.",
+                // forbidden covers both missing rights and server policy: Stalwart refuses to delete
+                // Inbox, Trash and Junk with forbidden while reporting mayDelete true for them (measured
+                // 2026-11-24, HTTP 200, notDestroyed). So the wording must fit both.
+                ("forbidden" | "accountReadOnly", _) => "The server does not allow this change.",
+                ("invalidProperties", p) if p.contains(&"role") => "This role is already in use or is not supported by the server.",
+                ("invalidProperties", p) if p.contains(&"name") => "The server did not accept this mailbox name.",
+                ("invalidProperties", p) if p.contains(&"parentId") => "The server did not accept this parent mailbox.",
+                _ => "The server refused the mailbox change.",
+            };
+            // The type is server-sent too: show it only when it looks like a SetError name.
+            let token = kind.len() <= 40 && !kind.is_empty() && kind.chars().all(|c| c.is_ascii_alphanumeric());
+            let message = if token { format!("{message} ({kind})") } else { message.to_owned() };
+            MailboxWriteResult::Refused { message, properties }
+        }
+    }
+}
+
+#[tauri::command]
+pub async fn mail_write_mailbox(
+    connection_id: u32,
+    account_id: String,
+    change: MailboxWrite,
+    state: tauri::State<'_, Connection>,
+) -> Result<MailboxWriteResult, String> {
+    with_mail(&state, connection_id, move |active, mail, _| {
+        let change = match &change {
+            MailboxWrite::Create { parent, name, role } =>
+                mailbox::Change::Create { parent: parent.as_deref(), name, role: role.as_deref() },
+            MailboxWrite::Rename { id, name } => mailbox::Change::Rename { id, name },
+            MailboxWrite::Destroy { id } => mailbox::Change::Destroy { id },
+        };
+        mailbox::write(&active.client, &mail.session, &account_id, change)
+            .map(mailbox_write_result).map_err(|_| "Could not change the mailbox.".into())
+    }).await
 }
 
 /// What mail_read returns: one message for the reading pane.
@@ -390,7 +478,7 @@ pub async fn mail_sync(
     with_mail(&state, connection_id, move |active, mail, store| {
         let view = cache::sync(&active.client, &mail.session, store, &account_id, mailbox_id.as_deref(), rows)
             .map_err(explain)?;
-        list_view(&view)
+        account_list_view(&view, &mail.session, &account_id)
     })
     .await
 }
@@ -408,7 +496,7 @@ pub async fn mail_more(
     with_mail(&state, connection_id, move |active, mail, store| {
         let view = cache::more(&active.client, &mail.session, store, &account_id, mailbox_id.as_deref(), rows)
             .map_err(explain)?;
-        list_view(&view)
+        account_list_view(&view, &mail.session, &account_id)
     })
     .await
 }
@@ -423,11 +511,11 @@ pub async fn mail_view(
     state: tauri::State<'_, Connection>,
 ) -> Result<ListView, String> {
     let rows = self::rows(&rows)?;
-    with_mail(&state, connection_id, move |_, _, store| {
+    with_mail(&state, connection_id, move |_, mail, store| {
         let view = store
             .view(&account_id, mailbox_id.as_deref(), rows)
             .map_err(explain)?;
-        list_view(&view)
+        account_list_view(&view, &mail.session, &account_id)
     })
     .await
 }
@@ -630,6 +718,38 @@ mod tests {
         assert!(rows[0]["mailboxIds"].as_array().is_some_and(|boxes| !boxes.is_empty()), "moves need memberships");
         let trash = actual["mailboxes"].as_array().unwrap().iter().find(|b| b["role"] == "trash").unwrap();
         assert_eq!((trash["mayAddItems"].clone(), trash["mayRemoveItems"].clone()), (json!(true), json!(true)));
+        assert_eq!(trash["mayCreateChild"], true);
+        assert_eq!(trash["mayDelete"], true);
+        assert_eq!(trash["mayRename"], true);
+    }
+
+    #[test]
+    fn mailbox_management_limits_are_account_specific_and_refusals_are_local() {
+        let view: Value = serde_json::from_str(CORE_VIEW).unwrap();
+        let session: Session = serde_json::from_value(json!({"apiUrl":"https://example.org/jmap","accounts":{
+            "b":{"accountCapabilities":{"urn:ietf:params:jmap:mail":{
+                "mayCreateTopLevelMailbox":false,"maxMailboxDepth":10,"maxSizeMailboxName":255
+            }}}
+        }})).unwrap();
+        let listing = account_list_view(&view, &session, "b").unwrap();
+        assert_eq!((listing.may_create_top_level_mailbox, listing.max_mailbox_depth, listing.max_size_mailbox_name),
+                   (Some(false), Some(10), Some(255)));
+        let listing = account_list_view(&view, &session, "other").unwrap();
+        assert_eq!(listing.may_create_top_level_mailbox, None);
+        let result = mailbox_write_result(mailbox::Outcome::Refused {
+            kind: "invalidProperties".into(), properties: vec!["role".into(), "remote text".into()],
+        });
+        let result = serde_json::to_value(result).unwrap();
+        assert_eq!(result["properties"], json!(["role"]));
+        assert_eq!(result["message"], "This role is already in use or is not supported by the server. (invalidProperties)");
+        let forbidden = serde_json::to_value(mailbox_write_result(mailbox::Outcome::Refused {
+            kind: "forbidden".into(), properties: vec![],
+        })).unwrap();
+        assert_eq!(forbidden["message"], "The server does not allow this change. (forbidden)");
+        let odd = serde_json::to_value(mailbox_write_result(mailbox::Outcome::Refused {
+            kind: "<b>click here</b>".into(), properties: vec![],
+        })).unwrap();
+        assert_eq!(odd["message"], "The server refused the mailbox change.", "a type that is not a name is not shown");
     }
 
     /// A real `mail-read` response (2026-11-21) and three edits of it: HTML-only parts, a

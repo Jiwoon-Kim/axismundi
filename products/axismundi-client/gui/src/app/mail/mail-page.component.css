@@ -3,7 +3,33 @@ mat-sidenav-container { block-size: 100%; background: transparent; }
 
 /* Mailboxes: a side pane in large windows, an overlay drawer below that. */
 .mailboxes { inline-size: 240px; border-inline-end: 1px solid var(--mat-sys-outline-variant); }
-.mailbox-nav { padding: 12px; }
+.mailbox-nav { display: flex; flex-direction: column; padding: 12px; min-block-size: 100%; box-sizing: border-box; }
+.mailbox-tree-surface { flex: 1; }
+.mailbox-heading { display: flex; align-items: center; justify-content: space-between; padding-inline-start: 16px; min-block-size: 40px; font: var(--mat-sys-title-small); }
+.mailbox-context {
+  min-inline-size: 196px;
+  max-inline-size: calc(100vw - 24px);
+  padding-block: 8px;
+  border-radius: 8px;
+  background: var(--mat-sys-surface-container);
+  box-shadow: var(--mat-sys-level2);
+}
+.mailbox-context button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  inline-size: 100%;
+  min-block-size: 40px;
+  padding: 6px 12px;
+  border: 0;
+  background: transparent;
+  color: var(--mat-sys-on-surface);
+  text-align: start;
+  font: var(--mat-sys-label-large);
+}
+.mailbox-context button:not([aria-disabled=true]):is(:hover, :focus-visible) { background: var(--mat-sys-secondary-container); }
+.mailbox-context button[aria-disabled=true] { color: var(--mat-sys-on-surface-variant); }
+.mailbox-context small { display: block; font: var(--mat-sys-body-small); }
 /* M3 navigation drawer item: full-pill, 40px rows (density), secondary container when current. */
 .mailbox-tree { --mat-tree-node-min-height: 40px; background: transparent; }
 .mailbox-tree mat-tree-node {

@@ -1,0 +1,50 @@
+<h2 mat-dialog-title>{{ title }}</h2>
+<form (submit)="submit($event)">
+  <mat-dialog-content>
+    @if (data.kind === "destroy") {
+      <p>Delete <strong>{{ data.target?.name }}</strong>? Only empty mailboxes without child mailboxes can be deleted.</p>
+    } @else {
+      <mat-form-field>
+        <mat-label>Name</mat-label>
+        <input matInput [formField]="fields.name" />
+      </mat-form-field>
+      @if (nameError(); as message) {
+        @if (fields.name().touched()) { <p role="alert">{{ message }}</p> }
+      }
+      @if (error()?.properties?.includes("name")) { <p role="alert">{{ error()?.message }}</p> }
+      @if (data.kind === "create") {
+        <mat-form-field>
+          <mat-label>Parent mailbox</mat-label>
+          <mat-select [value]="parent()" (selectionChange)="parent.set($event.value)" [disabled]="busy()">
+            @if (data.topLevel) { <mat-option value="">None (top level)</mat-option> }
+            @for (option of parents; track option.id) {
+              <mat-option [value]="option.id" [disabled]="parentDisabled(option)">{{ option.path }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        @if (error()?.properties?.includes("parentId")) { <p role="alert">{{ error()?.message }}</p> }
+        <details [open]="error()?.properties?.includes('role') || null">
+          <summary>Advanced</summary>
+          <mat-form-field>
+            <mat-label>Role</mat-label>
+            <mat-select [value]="role()" (selectionChange)="role.set($event.value)" [disabled]="busy()">
+              <mat-option value="">None</mat-option>
+              @for (option of roles; track option) {
+                <mat-option [value]="option">{{ option }}{{ data.usedRoles.has(option) ? " (in use)" : "" }}</mat-option>
+              }
+            </mat-select>
+            <mat-hint>Available roles depend on the server.</mat-hint>
+          </mat-form-field>
+          @if (error()?.properties?.includes("role")) { <p role="alert">{{ error()?.message }}</p> }
+        </details>
+      }
+    }
+    @if (error(); as failure) {
+      @if (!failure.properties.length || data.kind === "destroy") { <p role="alert">{{ failure.message }}</p> }
+    }
+  </mat-dialog-content>
+  <mat-dialog-actions align="end">
+    <button matButton type="button" [disabled]="busy()" (click)="cancel()">Cancel</button>
+    <button matButton="filled" type="submit" [disabled]="busy() || (data.kind !== 'destroy' && !!nameError()) || (data.kind === 'create' && !validParent())">{{ action }}</button>
+  </mat-dialog-actions>
+</form>

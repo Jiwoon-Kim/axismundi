@@ -3,13 +3,10 @@
 
 export interface Address {name: string | null; email: string | null}
 
-export type Body =
-  | {kind: "text"; text: string; truncated: boolean; encodingProblem: boolean}
-  | {kind: "htmlOnly"}
-  | {kind: "notFetched"}
-  | {kind: "empty"};
+export interface BodyPart {kind: "text" | "html"; partId: string; value: string; truncated: boolean; encodingProblem: boolean}
+export interface Body {parts: BodyPart[]; notFetched: boolean}
 
-export interface Attachment {partId: string | null; name: string | null; type: string | null; size: number | null}
+export interface Attachment {partId: string | null; name: string | null; type: string | null; size: number | null; cid: string | null}
 
 export type DetailView =
   | {
@@ -64,13 +61,9 @@ export function addressList(addresses: Address[]): string {
   return addresses.map(addressLabel).join(", ");
 }
 
-/** What the reading pane says instead of a body it cannot or will not show. */
-export function bodyNotice(body: Body): string | null {
-  switch (body.kind) {
-    case "text":
-      return body.truncated ? "This message is longer than what was downloaded." : null;
-    case "htmlOnly": return "This message has only an HTML body, which is not shown yet.";
-    case "notFetched": return "The body has not been downloaded.";
-    case "empty": return "This message has no text body.";
-  }
+export function chooseBodyParts(body: Body, usableHtml: (value: string) => boolean): BodyPart[] {
+  const text = body.parts.filter(part => part.kind === "text");
+  const html = body.parts.filter(part => part.kind === "html");
+  if (html.length && html.every(part => usableHtml(part.value)) && (!text.length || !html.some(part => part.truncated))) return html;
+  return text;
 }

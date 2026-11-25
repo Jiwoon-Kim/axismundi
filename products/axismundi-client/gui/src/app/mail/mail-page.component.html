@@ -312,20 +312,12 @@
         }
         @if (twoPanes() || email()) {
           <div class="reader">
-            @if (!twoPanes() || email()) {
+            @if (!twoPanes()) {
               <div class="back-bar">
                 @if (!twoPanes()) {
                 <a class="back" matIconButton routerLink="/mail" [queryParams]="{mailbox: mailbox() ?? null}" aria-label="Back to the message list">
                   <mat-icon>arrow_back</mat-icon>
                 </a>
-                }
-                @if (email(); as messageId) {
-                  <button matIconButton aria-label="Reply" matTooltip="Reply" [disabled]="!canCompose() || composeOpening()"
-                          (click)="openCompose('reply', messageId)"><mat-icon>reply</mat-icon></button>
-                  <button matIconButton aria-label="Reply all" matTooltip="Reply all" [disabled]="!canCompose() || composeOpening()"
-                          (click)="openCompose('replyAll', messageId)"><mat-icon>reply_all</mat-icon></button>
-                  <button matIconButton aria-label="Forward" matTooltip="Forward" [disabled]="!canCompose() || composeOpening()"
-                          (click)="openCompose('forward', messageId)"><mat-icon>forward</mat-icon></button>
                 }
               </div>
             } @else { <div></div> }
@@ -333,7 +325,9 @@
               <p class="reader-selection">{{ selected().size }} {{ selected().size === 1 ? "message" : "messages" }} selected</p>
             } @else {
               <app-mail-detail [accountId]="account.id" [emailId]="email() ?? null" [mailbox]="mailbox() ?? null"
-                               [listedIn]="selectedMailbox()" [moves]="moves()" [mailboxes]="mailboxes()" />
+                               [listedIn]="selectedMailbox()" [moves]="moves()" [mailboxes]="mailboxes()"
+                               [composeDisabled]="!canCompose() || composeOpening()"
+                               (composeRequested)="openCompose($event, email() ?? undefined)" />
             }
           </div>
         }

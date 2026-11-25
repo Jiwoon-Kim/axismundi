@@ -13,6 +13,13 @@
     <mat-radio-button [value]="mode"><span class="option-label">{{ mode }}</span></mat-radio-button>
   }
 </mat-radio-group>
+<h2 id="mail-body-theme-label">HTML mail theme</h2>
+<mat-radio-group aria-labelledby="mail-body-theme-label" [value]="appearance().mailBodyTheme"
+                 (change)="change('mailBodyTheme', $event.value)">
+  <mat-radio-button value="app">Follow app theme</mat-radio-button>
+  <mat-radio-button value="light">Light</mat-radio-button>
+  <mat-radio-button value="dark">Dark</mat-radio-button>
+</mat-radio-group>
 <h2 id="accent-label">Colors</h2>
 <mat-radio-group aria-labelledby="accent-label" [value]="appearance().accent"
                  (change)="change('accent', $event.value)">

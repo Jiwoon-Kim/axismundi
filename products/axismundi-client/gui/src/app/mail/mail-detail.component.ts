@@ -1,5 +1,5 @@
-import { Component, computed, effect, inject, input, linkedSignal, resource, signal, untracked } from "@angular/core";
-import { MatButton } from "@angular/material/button";
+import { Component, computed, effect, ElementRef, inject, input, linkedSignal, output, resource, signal, untracked } from "@angular/core";
+import { MatButton, MatIconButton } from "@angular/material/button";
 import { MatMenuTrigger } from "@angular/material/menu";
 import { MatTooltip } from "@angular/material/tooltip";
 import { MatIcon } from "@angular/material/icon";
@@ -7,8 +7,10 @@ import { NgTemplateOutlet } from "@angular/common";
 import { Router, RouterLink } from "@angular/router";
 import { invoke } from "@tauri-apps/api/core";
 import { ConnectionService } from "../connection.service";
+import { MailBodyTheme, type BodyScheme } from "../settings/mail-body-theme";
 import { MailActions } from "./mail-actions";
-import { DetailView, addressList, bodyNotice, markReadOnOpen, maySetSeen } from "./mail-detail";
+import { DetailView, addressList, markReadOnOpen, maySetSeen, type Body } from "./mail-detail";
+import { MailBodyComponent } from "./mail-body.component";
 import { MailMoveMenuComponent } from "./mail-move-menu.component";
 import { exclusiveMove, type MoveOptions } from "./mail-moves";
 import type { MailboxRow } from "./mail-rows";
@@ -22,7 +24,7 @@ import { reloadRevision } from "./mail-refresh";
  */
 @Component({
   selector: "app-mail-detail",
-  imports: [MailMoveMenuComponent, MatButton, MatIcon, MatMenuTrigger, MatTooltip, NgTemplateOutlet, RouterLink],
+  imports: [MailBodyComponent, MailMoveMenuComponent, MatButton, MatIconButton, MatIcon, MatMenuTrigger, MatTooltip, NgTemplateOutlet, RouterLink],
   templateUrl: "./mail-detail.component.html",
   styleUrl: "./mail-detail.component.css",
 })
@@ -30,6 +32,14 @@ export class MailDetailComponent {
   private readonly connection = inject(ConnectionService);
   protected readonly actions = inject(MailActions);
   readonly accountId = input.required<string>();
+  readonly composeDisabled = input(false);
+  readonly composeRequested = output<"reply" | "replyAll" | "forward">();
+  private readonly pane = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
+  private readonly resetScroll = effect(() => {
+    this.emailId();
+    this.accountId();
+    this.pane.scrollTop = 0;
+  });
   readonly emailId = input<string | null>(null);
   /** Kept on member links so the list beside the pane stays on the same mailbox. */
   readonly mailbox = input<string | null>(null);
@@ -165,5 +175,18 @@ export class MailDetailComponent {
   }
 
   protected readonly addressList = addressList;
-  protected readonly bodyNotice = bodyNotice;
+  protected readonly bodyConnectionId = computed(() => this.connection.connected()?.id);
+  private readonly bodyTheme = inject(MailBodyTheme);
+  private readonly schemeOverride = linkedSignal({
+    source: () => [this.bodyConnectionId(), this.accountId(), this.emailId()],
+    computation: (): BodyScheme | null => null,
+  });
+  protected readonly bodyScheme = computed(() => this.schemeOverride() ?? this.bodyTheme.scheme());
+  protected hasHtml(body: Body): boolean {
+    return body.parts.some(part => part.kind === "html");
+  }
+
+  protected toggleBodyScheme(): void {
+    this.schemeOverride.set(this.bodyScheme() === "dark" ? "light" : "dark");
+  }
 }

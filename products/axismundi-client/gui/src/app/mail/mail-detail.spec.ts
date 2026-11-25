@@ -2,7 +2,8 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
-import { type DetailView, addressList, bodyNotice, markReadOnOpen, maySetSeen } from "./mail-detail.ts";
+import { type DetailView, addressList, chooseBodyParts, markReadOnOpen, maySetSeen } from "./mail-detail.ts";
+import { cidReference, contentId, externalLink, remoteImage } from "./mail-html.ts";
 
 // Written by the Rust test `detail_serializes_to_the_shape_the_gui_reads` from a real mail-read
 // response and three edits of it.
@@ -14,26 +15,40 @@ test("a text message shows its body, sender and recipients", () => {
   if (real.kind !== "message") return;
   assert.equal(addressList(real.from), "admin@example.org");
   assert.equal(addressList(real.to), "alice@example.org");
-  assert.equal(real.body.kind, "text");
-  assert.ok(real.body.kind === "text" && real.body.text.startsWith("Probe conversation, message 3 of 4."));
-  assert.equal(bodyNotice(real.body), null);
+  assert.equal(real.body.parts[0].kind, "text");
+  assert.ok(real.body.parts[0].value.startsWith("Probe conversation, message 3 of 4."));
+  assert.equal(real.body.parts[0].truncated, false);
   assert.equal(real.unread, true);
   assert.equal(real.flagged, false);
 });
 
-test("an HTML-only message carries no markup and says why nothing is shown", () => {
+test("HTML is tagged separately and falls back to text when truncated or unusable", () => {
   assert.ok(htmlOnly.kind === "message");
   if (htmlOnly.kind !== "message") return;
-  assert.deepEqual(htmlOnly.body, {kind: "htmlOnly"});
-  assert.ok(!JSON.stringify(htmlOnly).includes("<p>"));
-  assert.match(bodyNotice(htmlOnly.body) ?? "", /HTML/);
+  assert.deepEqual(htmlOnly.body.parts.map(part => [part.kind, part.value]), [["html", "<p>Probe</p>"]]);
+  const html = htmlOnly.body.parts[0];
+  const text = {...html, kind: "text" as const, partId: "plain"};
+  assert.deepEqual(chooseBodyParts({parts: [text, html], notFetched: false}, () => true), [html]);
+  assert.deepEqual(chooseBodyParts({parts: [text, {...html, truncated: true}], notFetched: false}, () => true), [text]);
+  assert.deepEqual(chooseBodyParts({parts: [text, html], notFetched: false}, () => false), [text]);
+  assert.deepEqual(chooseBodyParts({parts: [{...html, truncated: true}], notFetched: false}, () => true), [{...html, truncated: true}]);
 });
 
 test("a truncated body says so, and attachments are listed", () => {
   assert.ok(truncated.kind === "message");
   if (truncated.kind !== "message") return;
-  assert.match(bodyNotice(truncated.body) ?? "", /longer/);
+  assert.equal(truncated.body.parts[0].truncated, true);
   assert.equal(truncated.attachments[0].name, "probe.txt");
+});
+
+test("CID decoding preserves identifier case, and external URLs use only approved schemes", () => {
+  assert.equal(cidReference("CID:Logo%40example.org"), contentId("<Logo@example.org>"));
+  assert.notEqual(cidReference("cid:logo@example.org"), contentId("<Logo@example.org>"));
+  assert.equal(cidReference("cid:%"), null);
+  assert.equal(remoteImage("http://example.org/image.png"), null);
+  assert.equal(remoteImage("https://example.org/image.png"), "https://example.org/image.png");
+  assert.equal(externalLink("mailto:a@example.org"), "mailto:a@example.org");
+  assert.equal(externalLink("file:///image.png"), null);
 });
 
 test("an unavailable message is its own state", () => {

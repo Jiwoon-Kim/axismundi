@@ -28,6 +28,7 @@ pub fn configure<R: tauri::Runtime>(builder: tauri::Builder<R>) -> tauri::Builde
             mail::mail_search,
             mail::mail_view,
             mail::mail_read,
+            mail::mail_part_bytes,
             mail::mail_identities,
             mail::mail_compose_source,
             mail::mail_compose_save,

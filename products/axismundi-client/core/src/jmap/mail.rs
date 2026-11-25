@@ -66,7 +66,7 @@ pub(crate) const MUTABLE_PROPERTIES: &[&str] = &["keywords", "mailboxIds"];
 /// The body size a detail read asks for. The cache records this same value as the coverage of the
 /// bodyValues it stored, so the two must never be written as separate literals: if the request
 /// changed and the record did not, the cache would claim bytes it never fetched.
-pub(crate) const MAX_BODY_VALUE_BYTES: u64 = 65536;
+pub(crate) const MAX_BODY_VALUE_BYTES: u64 = 1_048_576;
 
 pub fn choose_account(session: &Session, requested: Option<&str>) -> Result<String, Error> {
     if !session.capabilities.contains_key(CORE_CAPABILITY)

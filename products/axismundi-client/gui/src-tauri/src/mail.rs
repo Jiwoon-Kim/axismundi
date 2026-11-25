@@ -324,16 +324,21 @@ pub struct Address {
     email: Option<String>,
 }
 
-/// Plain text first: HTML is never handed to the webview until it has its own policy.
 #[derive(Debug, Serialize)]
-#[serde(tag = "kind", rename_all = "camelCase", rename_all_fields = "camelCase")]
-pub enum Body {
-    Text { text: String, truncated: bool, encoding_problem: bool },
-    /// The message offers no text/plain part; its HTML is not shown yet.
-    HtmlOnly,
-    /// A text part exists but its value was not fetched.
-    NotFetched,
-    Empty,
+#[serde(rename_all = "camelCase")]
+pub struct Body {
+    parts: Vec<BodyPart>,
+    not_fetched: bool,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BodyPart {
+    kind: &'static str,
+    part_id: String,
+    value: String,
+    truncated: bool,
+    encoding_problem: bool,
 }
 
 #[derive(Debug, Serialize)]
@@ -343,6 +348,7 @@ pub struct Attachment {
     name: Option<String>,
     r#type: Option<String>,
     size: Option<u64>,
+    cid: Option<String>,
 }
 
 fn addresses(document: &Value, key: &str) -> Vec<Address> {
@@ -360,29 +366,20 @@ fn addresses(document: &Value, key: &str) -> Vec<Address> {
 }
 
 fn body(document: &Value) -> Body {
-    let parts = document["textBody"].as_array().map(Vec::as_slice).unwrap_or_default();
-    if parts.is_empty() {
-        return Body::Empty;
+    let mut body = Body { parts: Vec::new(), not_fetched: false };
+    for (field, mime, kind) in [("textBody", "text/plain", "text"), ("htmlBody", "text/html", "html")] {
+        for part in document[field].as_array().into_iter().flatten() {
+            if !part["type"].as_str().is_some_and(|value| value.eq_ignore_ascii_case(mime)) { continue; }
+            let Some(id) = part["partId"].as_str() else { body.not_fetched = true; continue };
+            let value = &document["bodyValues"][id];
+            let Some(content) = value["value"].as_str() else { body.not_fetched = true; continue };
+            body.parts.push(BodyPart {
+                kind, part_id: id.into(), value: content.into(),
+                truncated: value["isTruncated"] == true, encoding_problem: value["isEncodingProblem"] == true,
+            });
+        }
     }
-    let plain: Vec<&Value> = parts
-        .iter()
-        .filter(|part| part["type"].as_str().is_some_and(|kind| kind.eq_ignore_ascii_case("text/plain")))
-        .collect();
-    if plain.is_empty() {
-        return Body::HtmlOnly;
-    }
-    let mut texts = Vec::new();
-    let (mut truncated, mut encoding_problem) = (false, false);
-    for part in plain {
-        let Some(value) = part["partId"].as_str().and_then(|id| document["bodyValues"].get(id)) else {
-            return Body::NotFetched;
-        };
-        let Some(text) = value["value"].as_str() else { return Body::NotFetched };
-        texts.push(text);
-        truncated |= value["isTruncated"] == Value::Bool(true);
-        encoding_problem |= value["isEncodingProblem"] == Value::Bool(true);
-    }
-    Body::Text { text: texts.join("\n\n"), truncated, encoding_problem }
+    body
 }
 
 /// `Store::email` after a detail fetch → the reading pane.
@@ -415,6 +412,7 @@ fn detail_view(entry: &Value) -> Result<DetailView, String> {
                         name: text(part, "/name"),
                         r#type: text(part, "/type"),
                         size: part["size"].as_u64(),
+                        cid: text(part, "/cid"),
                     })
                     .collect()
             })
@@ -736,6 +734,37 @@ pub async fn mail_read(
     .await
 }
 
+const INLINE_IMAGE_LIMIT: u64 = 2 * 1024 * 1024;
+
+#[tauri::command]
+pub async fn mail_part_bytes(
+    connection_id: u32,
+    account_id: String,
+    email_id: String,
+    part_id: String,
+    state: tauri::State<'_, Connection>,
+) -> Result<tauri::ipc::Response, String> {
+    with_mail(&state, connection_id, move |active, mail, store| {
+        let entry = store.email(&account_id, &email_id).map_err(explain)?;
+        let mut parts = entry["document"]["attachments"].as_array().into_iter().flatten()
+            .filter(|part| part["partId"] == part_id);
+        let part = parts.next().ok_or("Inline image is unavailable.")?;
+        if parts.next().is_some() || !part["cid"].as_str().is_some_and(|cid| !cid.is_empty()) {
+            return Err("Inline image is unavailable.".into());
+        }
+        let mime = part["type"].as_str().ok_or("Inline image has no media type.")?;
+        if !matches!(mime, "image/png" | "image/jpeg" | "image/gif" | "image/webp" | "image/avif" | "image/bmp")
+            || part["size"].as_u64().is_none_or(|size| size > INLINE_IMAGE_LIMIT)
+        {
+            return Err("Inline image type or size is not supported.".into());
+        }
+        let blob = part["blobId"].as_str().ok_or("Inline image has no blob id.")?;
+        active.client.download(&mail.session, &account_id, blob, mime, "inline-image", INLINE_IMAGE_LIMIT)
+            .map(tauri::ipc::Response::new)
+            .map_err(|error| failure("Inline image", &error))
+    }).await
+}
+
 /// How one message came out of a change (keyword or move), as the GUI acts on it. Core's five outcomes fold
 /// into three because the GUI's choice is three-way: done; known not applied, so it may be tried
 /// again; or not known, so it has to be read before anything is sent again.
@@ -973,13 +1002,23 @@ mod tests {
         }
         let expected: Value = serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
         assert_eq!(actual, expected, "GUI fixture is stale; rerun with AXISMUNDI_UPDATE_FIXTURES=1");
-        assert_eq!(actual[0]["body"]["kind"], "text");
-        assert!(actual[0]["body"]["text"].as_str().unwrap().starts_with("Probe conversation, message 3 of 4."));
+        assert_eq!(actual[0]["body"]["parts"][0]["kind"], "text");
+        assert!(actual[0]["body"]["parts"][0]["value"].as_str().unwrap().starts_with("Probe conversation, message 3 of 4."));
         assert_eq!(actual[0]["from"], json!([{"name": null, "email": "admin@example.org"}]));
-        assert_eq!(actual[1]["body"], json!({"kind": "htmlOnly"}), "HTML is never handed to the webview");
-        assert_eq!(actual[2]["body"]["truncated"], true);
+        assert_eq!(actual[1]["body"]["parts"][0]["kind"], "html");
+        assert_eq!(actual[1]["body"]["parts"][0]["value"], "<p>Probe</p>", "untrusted markup is explicitly typed for the isolated renderer");
+        assert_eq!(actual[2]["body"]["parts"][0]["truncated"], true);
         assert_eq!(actual[2]["attachments"][0]["name"], "probe.txt");
         assert_eq!(actual[3]["kind"], "unavailable");
+    }
+
+    #[test]
+    fn detail_keeps_text_parts_separate() {
+        let body = body(&json!({
+            "textBody":[{"type":"text/plain","partId":"first"},{"type":"text/plain","partId":"second"}],
+            "bodyValues":{"first":{"value":"One"},"second":{"value":"Two"}}
+        }));
+        assert_eq!(body.parts.iter().map(|part| part.value.as_str()).collect::<Vec<_>>(), ["One", "Two"]);
     }
 
     /// Every core outcome, as `update` can return them, folded into the three the GUI acts on. The

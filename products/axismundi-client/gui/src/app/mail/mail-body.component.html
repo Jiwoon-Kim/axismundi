@@ -1,0 +1,46 @@
+@if (visibleAttachments(); as items) {
+  @if (items.length) {
+    <section class="attachment-section" aria-label="Attachments">
+      <h3>
+        <mat-icon aria-hidden="true">attach_file</mat-icon>
+        {{ items.length }} {{ items.length === 1 ? "attachment" : "attachments" }}
+        @if (attachmentTotal(); as size) { <span>· {{ size }}</span> }
+      </h3>
+      <ul class="attachments">
+        @for (attachment of items; track $index) {
+          <li class="attachment-card">
+            <mat-icon class="attachment-type" aria-hidden="true">{{ attachmentIcon(attachment.type) }}</mat-icon>
+            <div class="attachment-meta">
+              <span class="attachment-name" [title]="attachment.name || '(unnamed)'">{{ attachment.name || "(unnamed)" }}</span>
+              @if (attachment.size !== null) { <span class="attachment-size">{{ formatSize(attachment.size) }}</span> }
+            </div>
+          </li>
+        }
+      </ul>
+    </section>
+  }
+}
+@if (hasRemote() && !allowRemote()) {
+  <div class="remote-banner">
+    <mat-icon>image</mat-icon>
+    <div>
+      <strong>Remote images are blocked</strong>
+      @if (canShowRemote) {
+        <button matButton="outlined" type="button" (click)="allowRemote.set(true)">Show remote images</button>
+      }
+    </div>
+  </div>
+}
+@if (linkFailed()) { <p role="alert">Could not open the link.</p> }
+@for (part of parts(); track part.partId) {
+  @if (part.truncated) { <p class="notice" role="note">This body part is longer than what was downloaded.</p> }
+  @if (part.encodingProblem) { <p class="notice" role="note">Some characters could not be decoded.</p> }
+  @if (part.kind === "html") {
+    <app-safe-html-frame [html]="part.value" [resolveResource]="resolveResource()" [allowRemote]="allowRemote()"
+                         [openLink]="openLink" [scheme]="scheme()" />
+  } @else {
+    <div class="body">{{ part.value }}</div>
+  }
+} @empty {
+  <p class="notice" role="note">{{ body().notFetched ? "Some body parts were not downloaded." : "No displayable message body." }}</p>
+}

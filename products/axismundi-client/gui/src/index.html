@@ -8,7 +8,7 @@
     <script>
       try {
         const appearance = JSON.parse(localStorage.getItem("axismundi.appearance"));
-        for (const key of ["brightness", "contrast", "accent"]) {
+        for (const key of ["brightness", "contrast", "accent", "mailBodyTheme"]) {
           if (typeof appearance?.[key] === "string") {
             document.documentElement.dataset[key] = appearance[key];
           }

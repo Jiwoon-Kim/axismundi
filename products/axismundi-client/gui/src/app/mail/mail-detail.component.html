@@ -1,22 +1,29 @@
 <ng-template #opened let-message>
-  <dl class="headers">
-    <dt>From</dt><dd>{{ addressList(message.from) || "(no sender)" }}</dd>
-    @if (message.to.length) { <dt>To</dt><dd>{{ addressList(message.to) }}</dd> }
-    @if (message.cc.length) { <dt>Cc</dt><dd>{{ addressList(message.cc) }}</dd> }
-    @if (message.receivedAt) { <dt>Received</dt><dd><time [attr.datetime]="message.receivedAt">{{ when(message.receivedAt) }}</time></dd> }
-  </dl>
-  @if (bodyNotice(message.body); as notice) { <p class="notice" role="note">{{ notice }}</p> }
-  @if (message.body.kind === "text") {
-    @if (message.body.encodingProblem) { <p class="notice" role="note">Some characters could not be decoded.</p> }
-    <div class="body">{{ message.body.text }}</div>
-  }
-  @if (message.attachments.length) {
-    <h3>Attachments</h3>
-    <ul class="attachments">
-      @for (attachment of message.attachments; track $index) {
-        <li>{{ attachment.name || "(unnamed)" }}{{ attachment.size !== null ? " · " + attachment.size + " bytes" : "" }}</li>
-      }
-    </ul>
+  @let sender = message.from[0];
+  <section class="sender-header" aria-label="Message headers">
+    <span class="sender-avatar" aria-hidden="true">{{ (sender?.name || sender?.email || "?").slice(0, 2).toUpperCase() }}</span>
+    <div class="sender-summary">
+      <div class="sender-line">
+        <strong>{{ sender?.name || sender?.email || "(no sender)" }}</strong>
+        @if (sender?.name && sender?.email) { <span>&lt;{{ sender.email }}&gt;</span> }
+        @if (message.receivedAt) { <time [attr.datetime]="message.receivedAt">{{ when(message.receivedAt) }}</time> }
+      </div>
+      <details>
+        <summary>To: {{ addressList(message.to) || "(no recipient)" }} <span>Details</span></summary>
+        <dl class="headers">
+          <dt>From</dt><dd>{{ addressList(message.from) || "(no sender)" }}</dd>
+          @if (message.to.length) { <dt>To</dt><dd>{{ addressList(message.to) }}</dd> }
+          @if (message.cc.length) { <dt>Cc</dt><dd>{{ addressList(message.cc) }}</dd> }
+          @if (message.sentAt) { <dt>Sent</dt><dd>{{ when(message.sentAt) }}</dd> }
+          @if (message.receivedAt) { <dt>Received</dt><dd>{{ when(message.receivedAt) }}</dd> }
+          @if (message.threadId) { <dt>Thread ID</dt><dd>{{ message.threadId }}</dd> }
+        </dl>
+      </details>
+    </div>
+  </section>
+  @if (bodyConnectionId(); as connectionId) {
+    <app-mail-body [connectionId]="connectionId" [accountId]="accountId()" [emailId]="message.id"
+                   [body]="message.body" [attachments]="message.attachments" [scheme]="bodyScheme()" />
   }
 </ng-template>
 
@@ -30,13 +37,20 @@
     @let message = detail.value();
     @if (message.kind === "message") {
       <article aria-labelledby="message-subject">
-        <h2 id="message-subject">{{ message.subject || "(no subject)" }}</h2>
         @let isUnread = unread(message.id, message.unread);
         @let isStarred = starred(message.id, message.flagged);
         @let seenCheck = actions.unverified(accountId(), message.id, "seen");
         @let starCheck = actions.unverified(accountId(), message.id, "flagged");
         @let moveCheck = actions.unverified(accountId(), message.id, "mailboxes");
-        <div class="message-actions" role="toolbar" aria-label="Message actions">
+        <header class="reader-heading">
+        <div class="message-actions" role="group" aria-label="Message actions">
+          <button matIconButton type="button" aria-label="Reply" matTooltip="Reply" [disabled]="composeDisabled()"
+                  (click)="composeRequested.emit('reply')"><mat-icon>reply</mat-icon></button>
+          <button matIconButton type="button" aria-label="Reply all" matTooltip="Reply all" [disabled]="composeDisabled()"
+                  (click)="composeRequested.emit('replyAll')"><mat-icon>reply_all</mat-icon></button>
+          <button matIconButton type="button" aria-label="Forward" matTooltip="Forward" [disabled]="composeDisabled()"
+                  (click)="composeRequested.emit('forward')"><mat-icon>forward</mat-icon></button>
+          <span class="action-spacer"></span>
           <button matButton type="button" [class.check]="seenCheck" [disabled]="actions.busy(message.id, 'seen')"
                   (click)="actions.setKeyword(accountId(), message.id, 'seen', isUnread)">
             <mat-icon>{{ seenCheck ? "sync_problem" : isUnread ? "mark_email_read" : "mark_email_unread" }}</mat-icon>
@@ -66,7 +80,15 @@
             </button>
             <app-mail-move-menu #moveMenu="moveMenu" [targets]="moves.targets" (chosen)="moveTo(message.id, $event)" />
           }
+          @if (hasHtml(message.body)) {
+            @let themeLabel = bodyScheme() === "dark" ? "View light body" : "View dark body";
+            <button matIconButton type="button" [attr.aria-label]="themeLabel" [matTooltip]="themeLabel" (click)="toggleBodyScheme()">
+              <mat-icon>{{ bodyScheme() === "dark" ? "light_mode" : "dark_mode" }}</mat-icon>
+            </button>
+          }
         </div>
+        <h2 id="message-subject">{{ message.subject || "(no subject)" }}</h2>
+        </header>
         @if (members().length > 1) {
           <p class="thread-count">{{ members().length }} messages in this conversation</p>
           @for (member of members(); track member.id) {

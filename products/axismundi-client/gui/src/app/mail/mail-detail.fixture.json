@@ -2,10 +2,16 @@
   {
     "attachments": [],
     "body": {
-      "encodingProblem": false,
-      "kind": "text",
-      "text": "Probe conversation, message 3 of 4.\n\nThis is local test mail between admin and Alice.\nUse it to inspect Inbox/Sent threading and reply references.",
-      "truncated": false
+      "notFetched": false,
+      "parts": [
+        {
+          "encodingProblem": false,
+          "kind": "text",
+          "partId": "0",
+          "truncated": false,
+          "value": "Probe conversation, message 3 of 4.\n\nThis is local test mail between admin and Alice.\nUse it to inspect Inbox/Sent threading and reply references."
+        }
+      ]
     },
     "cc": [],
     "flagged": false,
@@ -35,7 +41,16 @@
   {
     "attachments": [],
     "body": {
-      "kind": "htmlOnly"
+      "notFetched": false,
+      "parts": [
+        {
+          "encodingProblem": false,
+          "kind": "html",
+          "partId": "0",
+          "truncated": false,
+          "value": "<p>Probe</p>"
+        }
+      ]
     },
     "cc": [],
     "flagged": false,
@@ -65,6 +80,7 @@
   {
     "attachments": [
       {
+        "cid": null,
         "name": "probe.txt",
         "partId": "2",
         "size": 12,
@@ -72,10 +88,16 @@
       }
     ],
     "body": {
-      "encodingProblem": false,
-      "kind": "text",
-      "text": "Probe conversation, message 3 of 4.\n\nThis is local test mail between admin and Alice.\nUse it to inspect Inbox/Sent threading and reply references.",
-      "truncated": true
+      "notFetched": false,
+      "parts": [
+        {
+          "encodingProblem": false,
+          "kind": "text",
+          "partId": "0",
+          "truncated": true,
+          "value": "Probe conversation, message 3 of 4.\n\nThis is local test mail between admin and Alice.\nUse it to inspect Inbox/Sent threading and reply references."
+        }
+      ]
     },
     "cc": [],
     "flagged": false,

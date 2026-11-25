@@ -1,4 +1,5 @@
-//! Explicit local-server Submission interop, not a product compose implementation.
+//! Explicit local-server interop for the product composer.
+use axismundi_client_core::jmap::mail::compose::{self, Draft, Write};
 use axismundi_client_core::{
     http::{Client, Credentials},
     jmap::{CORE_CAPABILITY, Session, mail},
@@ -90,26 +91,46 @@ fn send(
     let draft = role(client, session, account, "drafts");
     let sent = role(client, session, account, "sent");
     let inbox = role(other, other_session, other_account, "inbox");
-    let created = call(
+    let identity = serde_json::from_value(identity.clone()).unwrap();
+    let mut fields: Draft = serde_json::from_value(json!({
+        "identityId":identities["list"].as_array().unwrap().iter()
+            .find(|i| i["email"] == from).unwrap()["id"],
+        "to":[{"email":to}],"cc":[],"bcc":[],"subject":subject,
+        "body":"Axismundi local Submission interop. No external recipients.",
+        "inReplyTo":[],"references":[]
+    }))
+    .unwrap();
+    let Write::Applied(first) =
+        compose::save_draft(client, session, account, &identity, &draft, &fields, &[])
+    else {
+        panic!("first draft was not saved")
+    };
+    fields.body.push_str(" Second save.");
+    let Write::Applied(saved) = compose::save_draft(
         client,
         session,
-        "Email/set",
-        json!({"accountId":account,"create":{"message":{
-            "mailboxIds":{&draft:true},"keywords":{"$draft":true},"from":[{"email":from}],"to":[{"email":to}],
-            "subject":subject,"textBody":[{"partId":"text","type":"text/plain"}],
-            "bodyValues":{"text":{"value":"Axismundi local Submission interop. No external recipients."}}
-        }}}),
+        account,
+        &identity,
+        &draft,
+        &fields,
+        &[first.id.clone()],
+    ) else {
+        panic!("replacement draft was not saved")
+    };
+    assert!(saved.pending_cleanup.is_empty());
+    assert_eq!(
+        compose::submit(
+            client,
+            session,
+            account,
+            &identity,
+            &draft,
+            Some(&sent),
+            &saved
+        ),
+        Write::Applied(())
     );
-    let email = created["created"]["message"]["id"].as_str().unwrap();
-    let submitted = call(
-        client,
-        session,
-        "EmailSubmission/set",
-        json!({"accountId":account,"create":{"submission":{
-            "emailId":email,"identityId":identity["id"],"envelope":{"mailFrom":{"email":from},"rcptTo":[{"email":to}]}
-        }}}),
-    );
-    let submission = submitted["created"]["submission"]["id"].as_str().unwrap();
+    let email = &saved.id;
     let mut received = None;
     for _ in 0..30 {
         let query = call(
@@ -142,29 +163,34 @@ fn send(
         thread::sleep(Duration::from_millis(500));
     }
     let received = received.expect("recipient Inbox delivery within 15 seconds");
-    call(
+    let filed = call(
         client,
         session,
-        "Email/set",
-        json!({"accountId":account,"update":{email:{"mailboxIds":{&sent:true},"keywords/$draft":null}}}),
+        "Email/get",
+        json!({"accountId":account,"ids":[email,&first.id],"properties":["id","mailboxIds","keywords"]}),
     );
-    let status = call(
+    assert_eq!(filed["notFound"], json!([first.id]));
+    assert_eq!(filed["list"][0]["mailboxIds"], json!({&sent:true}));
+    assert!(filed["list"][0]["keywords"].get("$draft").is_none());
+    let submissions = call(
         client,
         session,
-        "EmailSubmission/get",
-        json!({"accountId":account,"ids":[submission]}),
+        "EmailSubmission/query",
+        json!({"accountId":account,"filter":{"emailIds":[email]}}),
     );
-    println!(
-        "{from} -> {to}: sender Email={email}, recipient Email={received}, Submission={submission}, status={}",
-        status["list"][0]["deliveryStatus"]
-    );
+    println!("{from} -> {to}: sender Email={email}, recipient Email={received}");
     if std::env::var("AXJ_KEEP_MAIL_FIXTURES").as_deref() != Ok("1") {
-        call(
-            client,
-            session,
-            "EmailSubmission/set",
-            json!({"accountId":account,"destroy":[submission]}),
-        );
+        if submissions["ids"]
+            .as_array()
+            .is_some_and(|ids| !ids.is_empty())
+        {
+            call(
+                client,
+                session,
+                "EmailSubmission/set",
+                json!({"accountId":account,"destroy":submissions["ids"]}),
+            );
+        }
         call(
             client,
             session,

@@ -21,6 +21,32 @@
   @include mat.dialog-overrides((container-shape: 0));
 }
 
+.cdk-overlay-pane.mail-compose-dialog {
+  @include mat.dialog-overrides((
+    container-min-width: 0,
+    container-max-width: none,
+    container-small-max-width: none,
+  ));
+  width: min(680px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+
+  @media (width < 840px) {
+    @include mat.dialog-overrides((container-shape: 0));
+    width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+  }
+}
+.list-compose {
+  @include mat.fab-overrides((
+    extended-container-elevation-shadow: var(--mat-sys-level3),
+    extended-label-text-font: var(--mat-sys-title-medium-font),
+    extended-label-text-size: var(--mat-sys-title-medium-size),
+    extended-label-text-weight: var(--mat-sys-title-medium-weight),
+    extended-label-text-tracking: var(--mat-sys-title-medium-tracking),
+  ));
+}
+
 html {
   height: 100%;
   color-scheme: light dark;

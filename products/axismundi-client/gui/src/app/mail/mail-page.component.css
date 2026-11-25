@@ -58,6 +58,10 @@ mat-sidenav-container { block-size: 100%; background: transparent; }
 .panes > * { min-block-size: 0; min-inline-size: 0; }
 
 .list {
+  position: relative;
+  --compose-inset: 16px;
+  --compose-height: 56px;
+  --compose-clearance: calc(var(--compose-height) + 2 * var(--compose-inset));
   container: list / inline-size;
   display: flex;
   flex-direction: column;
@@ -77,6 +81,13 @@ mat-sidenav-container { block-size: 100%; background: transparent; }
 }
 .list-body { flex: 1; min-block-size: 0; position: relative; overflow: clip; }
 .message-scroll { block-size: 100%; overflow-y: auto; overscroll-behavior-y: contain; }
+.list:not(.selecting) .message-scroll {
+  box-sizing: border-box;
+  padding-block-end: var(--compose-clearance);
+  scroll-padding-block-end: var(--compose-clearance);
+}
+.list-compose { position: absolute; inset-inline-end: var(--compose-inset); inset-block-end: var(--compose-inset); z-index: 2; }
+.list-compose button { padding-inline: 16px; }
 .list-head h1 { flex: 1; min-inline-size: 0; margin: 0 0 0 8px; font: var(--mat-sys-title-medium); }
 .summary { color: var(--mat-sys-on-surface-variant); font: var(--mat-sys-body-small); }
 .result-preview { display: flex; align-items: baseline; gap: 4px; min-inline-size: 0; }

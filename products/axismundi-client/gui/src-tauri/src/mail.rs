@@ -1,5 +1,6 @@
 //! Mail commands: thin wrappers over `axismundi_client_core::jmap::mail::cache`. The GUI names an
 //! Account, a mailbox or an Email; it never builds a JMAP request or sees SQL.
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
@@ -7,7 +8,7 @@ use axismundi_client_core::{
     Error,
     jmap::{
         Session,
-        mail::{Rows, cache, mailbox, search},
+        mail::{Rows, cache, compose, mailbox, search},
     },
 };
 use serde::{Deserialize, Serialize};
@@ -19,6 +20,13 @@ use crate::connection::{Active, Connection, failure};
 pub struct Mail {
     pub session: Session,
     store: Mutex<cache::Store>,
+    compose: Mutex<ComposeState>,
+}
+
+#[derive(Default)]
+struct ComposeState {
+    identities: HashMap<String, (String, Vec<compose::Identity>)>,
+    uncertain: HashSet<(String, String)>,
 }
 
 impl Mail {
@@ -33,6 +41,7 @@ impl Mail {
         Ok(Self {
             session,
             store: Mutex::new(store),
+            compose: Mutex::default(),
         })
     }
 }
@@ -480,6 +489,152 @@ where
     .map_err(|_| "Mail request did not complete")??;
     state.current(connection_id)?;
     Ok(value)
+}
+
+#[derive(Serialize)]
+pub struct ComposeIdentity {
+    id: String,
+    name: String,
+    email: String,
+}
+
+#[tauri::command]
+pub async fn mail_identities(
+    connection_id: u32,
+    account_id: String,
+    state: tauri::State<'_, Connection>,
+) -> Result<Vec<ComposeIdentity>, String> {
+    with_mail(&state, connection_id, move |active, mail, _| {
+        let (identity_state, identities) = compose::identities(&active.client, &mail.session, &account_id)
+            .map_err(|error| failure("Mail identities", &error))?;
+        let choices = identities.iter().map(|identity| ComposeIdentity {
+            id: identity.id.clone(), name: identity.name.clone(), email: identity.email.clone(),
+        }).collect();
+        mail.compose.lock().map_err(|_| "Compose state is unavailable")?
+            .identities.insert(account_id, (identity_state, identities));
+        Ok(choices)
+    }).await
+}
+
+#[tauri::command]
+pub async fn mail_compose_source(
+    connection_id: u32,
+    account_id: String,
+    email_id: String,
+    state: tauri::State<'_, Connection>,
+) -> Result<compose::ComposeSource, String> {
+    with_mail(&state, connection_id, move |active, mail, _| {
+        compose::source(&active.client, &mail.session, &account_id, &email_id)
+            .map_err(|error| match error {
+                compose::SourceError::UnsupportedDraft => "unsupportedDraft".into(),
+                compose::SourceError::Request(error) => failure("Mail source", &error),
+            })
+    }).await
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ComposeResult {
+    outcome: &'static str,
+    draft_id: Option<String>,
+    pending_cleanup: Vec<String>,
+    reason: Option<&'static str>,
+}
+
+fn compose_reason(kind: &str) -> &'static str {
+    match kind {
+        "forbiddenFrom" => "The selected identity cannot send from this address.",
+        "noRecipients" => "Add at least one recipient.",
+        "invalidRecipients" => "The server rejected a recipient address.",
+        "tooManyRecipients" => "The server allows fewer recipients.",
+        "overQuota" => "The account is over quota.",
+        _ => "The server did not allow this change.",
+    }
+}
+
+#[tauri::command]
+pub async fn mail_compose_discard(
+    connection_id: u32,
+    account_id: String,
+    ids: Vec<String>,
+    state: tauri::State<'_, Connection>,
+) -> Result<bool, String> {
+    with_mail(&state, connection_id, move |active, mail, store| {
+        let compose_state = mail.compose.lock().map_err(|_| "Compose state is unavailable")?;
+        if ids.iter().any(|id| compose_state.uncertain.contains(&(account_id.clone(), format!("draft:{id}")))) {
+            return Err("Cannot discard a draft whose send could not be confirmed.".into());
+        }
+        let view = store.view(&account_id, None, Rows::Messages).map_err(explain)?;
+        let drafts = view["mailboxes"].as_array().into_iter().flatten()
+            .find(|row| row["role"] == "drafts").and_then(|row| row["id"].as_str())
+            .ok_or("The account has no Drafts mailbox.")?;
+        Ok(compose::discard_drafts(&active.client, &mail.session, &account_id, drafts, ids))
+    }).await
+}
+
+#[tauri::command]
+pub async fn mail_compose_save(
+    connection_id: u32,
+    account_id: String,
+    compose_id: String,
+    draft: compose::Draft,
+    previous: Vec<String>,
+    send: bool,
+    state: tauri::State<'_, Connection>,
+) -> Result<ComposeResult, String> {
+    with_mail(&state, connection_id, move |active, mail, store| {
+        let mut compose_state = mail.compose.lock().map_err(|_| "Compose state is unavailable")?;
+        if compose_state.uncertain.contains(&(account_id.clone(), compose_id.clone()))
+            || previous.iter().any(|id| compose_state.uncertain.contains(&(account_id.clone(), format!("draft:{id}"))))
+        {
+            return Err("This draft may already have been sent. Check Sent before trying again.".into());
+        }
+        let identity = compose_state.identities.get(&account_id)
+            .and_then(|(_, list)| list.iter().find(|i| i.id == draft.identity_id))
+            .ok_or("Refresh the sending identities.")?;
+        let view = store.view(&account_id, None, Rows::Messages).map_err(explain)?;
+        let boxes = view["mailboxes"].as_array().ok_or("Mailboxes are unavailable.")?;
+        let role = |role: &str| boxes.iter().find(|box_| box_["role"] == role)
+            .and_then(|box_| box_["id"].as_str());
+        let drafts = role("drafts").ok_or("The account has no Drafts mailbox.")?;
+        let mut result = ComposeResult {outcome: "saveUnknown", draft_id: None, pending_cleanup: previous,
+            reason: None};
+        match compose::save_draft(&active.client, &mail.session, &account_id, identity, drafts, &draft, &result.pending_cleanup) {
+            compose::Write::Rejected(kind) => {
+                result.outcome = "saveRejected";
+                result.reason = Some(compose_reason(&kind));
+            }
+            compose::Write::Unknown => {}
+            compose::Write::Applied(saved) => {
+                let submission = send.then(|| compose::submit(&active.client, &mail.session, &account_id,
+                    identity, drafts, role("sent"), &saved));
+                result.draft_id = Some(saved.id);
+                result.pending_cleanup = saved.pending_cleanup;
+                match submission {
+                    None => result.outcome = "saved",
+                    Some(compose::Write::Applied(())) => {
+                        // Submission can succeed even if the implicit filing update fails.
+                        if let Some(id) = &result.draft_id {
+                            compose_state.uncertain.insert((account_id, format!("draft:{id}")));
+                        }
+                        result.outcome = "sent";
+                    }
+                    Some(compose::Write::Rejected(kind)) => {
+                        result.outcome = "sendRejected";
+                        result.reason = Some(compose_reason(&kind));
+                    }
+                    Some(compose::Write::Unknown) => {
+                        compose_state.uncertain.insert((account_id.clone(), compose_id));
+                        if let Some(id) = &result.draft_id {
+                            compose_state.uncertain.insert((account_id, format!("draft:{id}")));
+                        }
+                        result.outcome = "sendUnknown";
+                    }
+                }
+            }
+        }
+        Ok(result)
+    }).await
 }
 
 /// Fetches deltas and the mailbox's first window, then answers from the cache.

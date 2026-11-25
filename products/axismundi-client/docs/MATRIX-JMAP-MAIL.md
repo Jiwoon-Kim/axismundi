@@ -46,19 +46,19 @@ Account 의 변경을 그 사용자 소켓에 보내지 않아 그 화면은 새
 | Email/changes | Email 전용 state, hasMoreChanges, 파괴/dirty, 만료 복구 | 부분 캐시 구현·mock/실서버 검증. updated 는 가변 속성(keywords·mailboxIds)만 무효화하고 그 둘만 재요청(2026-11-21) |
 | Email/query | account/filter/sort/collapseThreads 및 queryState, 서버 순서 | 메일함 조건(`inMailbox`)의 첫 창·result reference·캐시, GUI 무한 스크롤(`mail_more`, 같은 queryState 필수). 메시지·접힌 스레드 목록이 디스크에서 **쿼리별 키**로 공존(스키마 v2). 현재 Account의 text 검색(Trash·Junk에만 속한 메일 제외)은 **메모리 목록**으로 구현. 정렬은 receivedAt 내림차순 고정. from·날짜 등 조건 검색은 후속 |
 | Email/queryChanges | 객체 changes와 분리, same-query 적용, 계산 불가 시 창 재조회 | **구현**(2026-11-20): 캐시된 창이 canCalculateChanges=true·같은 인자면 델타 적용, 창이 줄면 그 구간만 position 으로 보충(같은 queryState 여야 함), 커버리지 없는 멤버만 get. 계산 불가·tooManyChanges·불일치는 창 재조회. Stalwart 외부 생성·삭제 후 캐시 = 새 query |
-| Email/set | 서버 Draft 생성·keywords/mailboxIds 변경·파괴. 로컬 의도 별도 보존 | **제품 구현(일부, 2026-11-23·24)**: keywords 패치(`$seen`·`$flagged`, 단건·일괄), mailboxIds 이동(Move·OnlyIn — Trash/Junk 는 보이는 소속 전부 빼고 넣기). 결과 판정·분할(maxObjectsInSet·maxSizeRequest)·응답 유실 시 재전송 없이 되읽기·결과 모름 잠금. **생성(서버 Draft)·파괴는 후속** |
+| Email/set | 서버 Draft 생성·keywords/mailboxIds 변경·파괴. 로컬 의도 별도 보존 | **제품 구현(일부, 2026-11-23·24)**: keywords 패치(`$seen`·`$flagged`, 단건·일괄), mailboxIds 이동(Move·OnlyIn — Trash/Junk 는 보이는 소속 전부 빼고 넣기). 결과 판정·분할(maxObjectsInSet·maxSizeRequest)·응답 유실 시 재전송 없이 되읽기·결과 모름 잠금. 서버 Draft 생성·파괴(2026-11-25, BRIEF-MAIL-COMPOSE): 새 초안 생성 확인 뒤에만 이전 초안 파괴(RFC 8620 §5.3 원자 단위가 개별 작업이라 한 요청에 묶지 않음), 텍스트 본문만 |
 | Email/copy | source/target account 구별, 부분 성공·후속 원본 파괴 결과 분리 | 후속 |
 | Email/import | 업로드한 원문 Blob→서버 Email, 항목별 성공/실패와 생성 ID | 후속 |
 | Email/parse | Blob 파싱 결과, 저장된 Email 생성/동기화와 다름 | 후속 |
 | SearchSnippet/get | filter·emailIds에 종속된 강조/문맥, 렌더링 시 안전 처리 | 텍스트 검색 첫 결과와 각 페이지에서 사용. `<mark>`만 요소로 렌더하고 다른 내용은 텍스트로 표시 |
-| Identity/get | 서버가 허용한 발신 identity와 signature·권한 | Submission 테스트에서만 사용 |
+| Identity/get | 서버가 허용한 발신 identity와 signature·권한 | **제품 구현**(2026-11-25): 작성 창 From 목록. From 은 고른 Identity 에서 구성(RFC 8621 §6 MUST, 와일드카드는 도메인 검사), Sender·Message-ID 는 보내지 않음 |
 | Identity/changes | Identity 전용 state·생성/변경/파괴 반영 | 후속 |
 | Identity/set | 서버 허용 범위, mayDelete·항목별 거부·로컬 편집 보존 | 후속 |
-| EmailSubmission/get | envelope·deliveryStatus·undoStatus, 완료/실패 구분 | Submission 테스트에서만 사용 |
+| EmailSubmission/get | envelope·deliveryStatus·undoStatus, 완료/실패 구분 | 발송 응답 유실 판정에만 사용(내부). 배달 상태 표시는 후속 |
 | EmailSubmission/changes | Submission 전용 state와 결과 관찰 | 후속 |
 | EmailSubmission/query | 계정별 제출 기록 query 창, Email 목록과 별개 | 후속 |
 | EmailSubmission/queryChanges | 제출 view의 queryState·순서 변경 | 후속 |
-| EmailSubmission/set | Identity·Email·수신자 검증, undo/후속 Email 변경, 모호한 응답 재조정 | 로컬 양방향 테스트만, 제품 후속 |
+| EmailSubmission/set | Identity·Email·수신자 검증, undo/후속 Email 변경, 모호한 응답 재조정 | **제품 구현**(2026-11-25): 초안 저장 확인 → 제출 + onSuccessUpdateEmail(Drafts→Sent, $draft 제거). 응답 유실은 재전송 없이 초안·제출 기록 되읽기, 모르면 잠금. 보내기 취소·예약 발송(HOLDFOR 실측됨)은 후속 |
 | VacationResponse/get | account별 singleton과 활성화/기간/본문 | 후속 |
 | VacationResponse/set | singleton 변경, 유효성·권한·오류, 자동응답 루프 경계 | 후속 |
 

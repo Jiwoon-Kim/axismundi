@@ -7,6 +7,7 @@ use crate::{
 use serde_json::{Value, json};
 
 pub mod cache;
+pub mod compose;
 pub mod mailbox;
 pub mod search;
 

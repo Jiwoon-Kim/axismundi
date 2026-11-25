@@ -1,0 +1,44 @@
+<h2 mat-dialog-title>{{ title }}</h2>
+<mat-dialog-content>
+  <fieldset [disabled]="locked() || busy() || confirmDiscard() || confirmClose()">
+    @if (data.identities.length > 1) {
+      <mat-form-field>
+        <mat-label>From</mat-label>
+        <mat-select [value]="identity()" [disabled]="locked() || busy() || confirmDiscard() || confirmClose()" (selectionChange)="choose($event.value)">
+          @for (choice of data.identities; track choice.id) {
+            <mat-option [value]="choice">{{ choice.name ? choice.name + " · " : "" }}{{ choice.email }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    } @else {
+      <p>From: {{ identity().name }} {{ identity().email }}</p>
+    }
+    @if (identity().email.startsWith("*@")) {
+      <mat-form-field><mat-label>From address</mat-label><input matInput [formField]="fields.wildcard" (input)="queue()" /></mat-form-field>
+    }
+    <mat-form-field><mat-label>To</mat-label><input matInput [formField]="fields.to" (input)="queue()" /></mat-form-field>
+    <details>
+      <summary>Cc / Bcc</summary>
+      <mat-form-field><mat-label>Cc</mat-label><input matInput [formField]="fields.cc" (input)="queue()" /></mat-form-field>
+      <mat-form-field><mat-label>Bcc</mat-label><input matInput [formField]="fields.bcc" (input)="queue()" /></mat-form-field>
+    </details>
+    <mat-form-field><mat-label>Subject</mat-label><input matInput [formField]="fields.subject" (input)="queue()" /></mat-form-field>
+    <mat-form-field><mat-label>Message</mat-label><textarea matInput rows="8" [formField]="fields.body" (input)="queue()"></textarea></mat-form-field>
+  </fieldset>
+  @if (notice()) { <p role="alert">{{ notice() }}</p> }
+  @if (confirmClose()) { <p>Some changes are not saved.</p> }
+  @if (confirmDiscard()) { <p>Discard this draft?</p> }
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  @if (confirmDiscard()) {
+    <button matButton [disabled]="busy()" (click)="keepWriting()">Keep writing</button>
+    <button matButton [disabled]="busy()" (click)="discard()">Discard draft</button>
+  } @else if (confirmClose()) {
+    <button matButton (click)="keepWriting()">Keep writing</button>
+    <button matButton (click)="closeAnyway()">Close anyway</button>
+  } @else {
+    <button matButton [disabled]="busy() || locked()" (click)="askDiscard()">Discard</button>
+    <button matButton [disabled]="busy()" (click)="close()">Close</button>
+    <button matButton="filled" [disabled]="busy() || locked()" (click)="persist(true)">Send</button>
+  }
+</mat-dialog-actions>

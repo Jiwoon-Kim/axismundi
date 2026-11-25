@@ -222,7 +222,9 @@
                         <mat-icon>{{ starCheck ? "sync_problem" : "star" }}</mat-icon>
                       </button>
                       <!-- In selection mode a row click selects instead of opening (routerLink null = no navigation). -->
-                      <a [routerLink]="selecting() ? null : '/mail'" [queryParams]="{mailbox: mailbox() ?? null, email: row.id}"
+                      <a [routerLink]="selecting() || inDrafts() ? null : '/mail'" [queryParams]="{mailbox: mailbox() ?? null, email: row.id}"
+                         [attr.role]="inDrafts() ? 'button' : null" [attr.tabindex]="inDrafts() ? 0 : null"
+                         (keydown.enter)="inDrafts() ? openResult(row.id) : null"
                          (click)="openResult(row.id)" [attr.aria-pressed]="selecting() ? isSelected : null"
                          [class.active]="row.id === email()" [attr.aria-current]="row.id === email() ? 'true' : null">
                         <span class="from">{{ row.sender }}</span>
@@ -300,15 +302,31 @@
             }
             </div>
             </div>
+            @if (!selecting()) {
+              <div class="list-compose" [matTooltip]="canCompose() ? '' : 'This account does not support sending'">
+                <button matFab extended type="button" [disabled]="!canCompose() || composeOpening()"
+                        (click)="openCompose()"><mat-icon>edit</mat-icon>Compose</button>
+              </div>
+            }
           </section>
         }
         @if (twoPanes() || email()) {
           <div class="reader">
-            @if (!twoPanes()) {
+            @if (!twoPanes() || email()) {
               <div class="back-bar">
+                @if (!twoPanes()) {
                 <a class="back" matIconButton routerLink="/mail" [queryParams]="{mailbox: mailbox() ?? null}" aria-label="Back to the message list">
                   <mat-icon>arrow_back</mat-icon>
                 </a>
+                }
+                @if (email(); as messageId) {
+                  <button matIconButton aria-label="Reply" matTooltip="Reply" [disabled]="!canCompose() || composeOpening()"
+                          (click)="openCompose('reply', messageId)"><mat-icon>reply</mat-icon></button>
+                  <button matIconButton aria-label="Reply all" matTooltip="Reply all" [disabled]="!canCompose() || composeOpening()"
+                          (click)="openCompose('replyAll', messageId)"><mat-icon>reply_all</mat-icon></button>
+                  <button matIconButton aria-label="Forward" matTooltip="Forward" [disabled]="!canCompose() || composeOpening()"
+                          (click)="openCompose('forward', messageId)"><mat-icon>forward</mat-icon></button>
+                }
               </div>
             } @else { <div></div> }
             @if (!email() && selecting() && selected().size) {

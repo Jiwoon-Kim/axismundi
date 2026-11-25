@@ -120,6 +120,11 @@ compact <600     medium 과 같고 rail 도 drawer 안으로
 
 - `:profile` 은 인증 프로필. 캐시 경계가 (인증 프로필, 서비스, accountId)라서 URL 도 같은 키를 든다.
   `Account.name` 은 라벨이라 URL 에 쓰지 않는다.
+- 현재 GUI 의 `/mail?mailbox=<id>&email=<id>` 는 선택된 연결과 JMAP Account 를 전제로 하는 내부 경로다.
+  별도 창이나 앱 재시작 뒤에도 같은 메일을 열어야 한다면, 링크에 **저장된 인증 프로필 키 + JMAP accountId + Email id** 를
+  명시한다. 실행 중에만 유효한 연결 번호, 로그인 문자열, 발신 Identity 는 이 키를 대신하지 않는다.
+- `mailbox` 는 돌아갈 목록의 문맥이지 메일의 식별자가 아니다. 여러 메일함에 속한 메일은 어느 목록에서 열든 같은
+  메일이고, 검색 결과에서 열면 메일함 문맥 자체가 없을 수 있다. 위 상세 경로의 모양은 별도 창을 구현할 때 확정한다.
 - 한 칸 모드의 뒤로 가기는 라우터 history 로 detail → list. 선택 상태를 URL 밖에 두지 않는다.
 
 ## 먼저 필요한 것 — Tauri 명령

@@ -2,7 +2,7 @@ import { Component, DestroyRef, ElementRef, afterRenderEffect, computed, effect,
 import { toSignal } from "@angular/core/rxjs-interop";
 import { BreakpointObserver } from "@angular/cdk/layout";
 import { CdkContextMenuTrigger, CdkMenu, CdkMenuItem } from "@angular/cdk/menu";
-import { MatButton, MatIconButton, MatIconAnchor } from "@angular/material/button";
+import { MatButton, MatFabButton, MatIconButton, MatIconAnchor } from "@angular/material/button";
 import { MatIcon } from "@angular/material/icon";
 import { MatMenu, MatMenuItem, MatMenuTrigger } from "@angular/material/menu";
 import { MatBadge } from "@angular/material/badge";
@@ -18,6 +18,7 @@ import { map } from "rxjs";
 import { invoke } from "@tauri-apps/api/core";
 import { ConnectionService } from "../connection.service";
 import { SearchDialogComponent, type SearchDialogData } from "./search-dialog.component";
+import { ComposeDialogComponent, type ComposeData, type ComposeIdentity, type ComposeMode, type ComposeResult, type ComposeSource } from "./compose-dialog.component";
 import { MailDetailComponent } from "./mail-detail.component";
 import { MailSearchBarComponent } from "./mail-search-bar.component";
 import { MailActions, type Aspect, type Keyword } from "./mail-actions";
@@ -49,7 +50,7 @@ const EXPANDED = "(min-width: 840px)";
   selector: "app-mail-page",
   imports: [MailDetailComponent, MailMoveMenuComponent, MailSearchBarComponent, MatBadge, MatIcon, MatIconAnchor, MatIconButton, MatSidenav,
     MatSidenavContainer, MatSidenavContent, MatTooltip, MatCheckbox, MatMenu, MatMenuItem, MatMenuTrigger, MatTree, MatTreeNode,
-    MatTreeNodeDef, MatTreeNodeToggle, RouterLink, MatButton, MatProgressSpinner, CdkContextMenuTrigger, CdkMenu, CdkMenuItem],
+    MatTreeNodeDef, MatTreeNodeToggle, RouterLink, MatButton, MatFabButton, MatProgressSpinner, CdkContextMenuTrigger, CdkMenu, CdkMenuItem],
   host: {"(window:keydown)": "refreshShortcut($event)"},
   templateUrl: "./mail-page.component.html",
   styleUrl: "./mail-page.component.css",
@@ -144,6 +145,65 @@ export class MailPageComponent {
   }
 
   private searchDialog?: MatDialogRef<SearchDialogComponent, string>;
+  private composeDialog?: MatDialogRef<ComposeDialogComponent, boolean>;
+  protected readonly composeOpening = signal(false);
+  protected readonly canCompose = computed(() => this.connection.account()?.capabilities.includes("urn:ietf:params:jmap:submission") ?? false);
+
+  protected readonly inDrafts = computed(() => this.mailboxes().some(box => box.id === this.selectedMailbox() && box.role === "drafts"));
+
+  protected async openCompose(mode: ComposeMode = "new", emailId?: string): Promise<void> {
+    const connectionId = this.connection.connected()?.id;
+    const accountId = this.connection.accountId();
+    if (connectionId === undefined || !accountId || !this.canCompose() || this.composeOpening() || this.composeDialog) return;
+    const owner = this.searchOwner();
+    this.composeOpening.set(true);
+    try {
+      const identities = await invoke<ComposeIdentity[]>("mail_identities", {connectionId, accountId});
+      const source = emailId ? await invoke<ComposeSource>("mail_compose_source", {connectionId, accountId, emailId}) : undefined;
+      if (!this.alive || this.searchOwner() !== owner) return;
+      if (mode === "draft" && !source?.isDraft) {
+        this.snackBar.open("This message is no longer a draft.", "Dismiss", {duration: 5000});
+        return;
+      }
+      if (!identities.length) {
+        this.snackBar.open("No sending identity is available.", "Dismiss", {duration: 5000});
+        return;
+      }
+      const composeId = crypto.randomUUID();
+      const data: ComposeData = {
+        identities, mode, source,
+        write: async (draft, previous, send) => {
+          if (!this.alive || this.searchOwner() !== owner) throw new Error("The account changed.");
+          const result = await invoke<ComposeResult>("mail_compose_save", {connectionId, accountId, composeId, draft, previous, send});
+          if (this.alive && this.searchOwner() === owner) this.actions.changed.update(count => count + 1);
+          return result;
+        },
+        discard: async ids => {
+          if (!this.alive || this.searchOwner() !== owner) throw new Error("The account changed.");
+          const result = await invoke<boolean>("mail_compose_discard", {connectionId, accountId, ids});
+          if (this.alive && this.searchOwner() === owner) this.actions.changed.update(count => count + 1);
+          return result;
+        },
+      };
+      const dialog = this.dialogs.open<ComposeDialogComponent, ComposeData, boolean>(ComposeDialogComponent, {
+        data, disableClose: true,
+        panelClass: "mail-compose-dialog",
+      });
+      this.composeDialog = dialog;
+      dialog.afterClosed().subscribe(sent => {
+        this.composeDialog = undefined;
+        if (sent && this.alive && this.searchOwner() === owner) this.snackBar.open("Sent", "Dismiss", {duration: 5000});
+      });
+    } catch (error) {
+      if (this.alive && this.searchOwner() === owner) {
+        this.snackBar.open(error === "unsupportedDraft" ? "This draft contains formatting or attachments and cannot be opened in the plain-text composer."
+          : emailId ? "Could not open this message in the plain-text composer."
+          : "Could not load sending identities.", "Dismiss", {duration: 5000});
+      }
+    } finally {
+      this.composeOpening.set(false);
+    }
+  }
 
   protected openSearch(bar: HTMLElement): void {
     if (this.searchDialog || !this.connection.account()) return;
@@ -185,6 +245,7 @@ export class MailPageComponent {
 
   protected openResult(id: string): void {
     if (this.selecting()) this.select(id);
+    else if (this.inDrafts()) void this.openCompose("draft", id);
     else if (this.searchText() && !this.twoPanes()) {
       this.resultScroll = {scope: this.scope(), top: this.listRoot()?.nativeElement.scrollTop ?? 0};
     }
@@ -643,7 +704,7 @@ export class MailPageComponent {
 
   constructor() {
     inject(DestroyRef).onDestroy(() => this.mailboxPressEnd());
-    inject(DestroyRef).onDestroy(() => { this.alive = false; this.searchDialog?.close(); });
+    inject(DestroyRef).onDestroy(() => { this.alive = false; this.searchDialog?.close(); this.composeDialog?.close(); });
     effect(() => {
       this.searchOwner();
       this.window()[EXPANDED];

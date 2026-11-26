@@ -5,6 +5,8 @@ mat-sidenav-container { block-size: 100%; background: transparent; }
 .mailboxes { inline-size: 240px; border-inline-end: 1px solid var(--mat-sys-outline-variant); }
 .mailbox-nav { display: flex; flex-direction: column; padding: 12px; min-block-size: 100%; box-sizing: border-box; }
 .mailbox-tree-surface { flex: 1; }
+/* Search app bar: Compose heads the mailbox panel, as the M3 navigation drawer's FAB slot. */
+.panel-compose { padding: 4px 4px 12px; }
 .mailbox-heading { display: flex; align-items: center; justify-content: space-between; padding-inline-start: 16px; min-block-size: 40px; font: var(--mat-sys-title-small); }
 .mailbox-context {
   min-inline-size: 196px;

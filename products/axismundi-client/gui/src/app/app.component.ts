@@ -1,4 +1,5 @@
 import { Component, computed, effect, inject, untracked } from "@angular/core";
+import { NgTemplateOutlet } from "@angular/common";
 import { MatSnackBar } from "@angular/material/snack-bar";
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from "@angular/router";
 import { MatIcon } from "@angular/material/icon";
@@ -9,23 +10,25 @@ import { MatProgressBar } from "@angular/material/progress-bar";
 import { MatToolbar } from "@angular/material/toolbar";
 import { MatTooltip } from "@angular/material/tooltip";
 import { ConnectionService, MAIL } from "./connection.service";
+import { Scaffold } from "./shell/scaffold";
 
 interface Destination {path: string; label: string; icon: string}
 
 /**
- * The thin app shell: app bar with the account menu, the destination rail and the
- * routed domain screen. It knows which domains a connection offers, never how a
+ * The thin app shell (M3 Scaffold): app bar with the account menu, the destination rail or app
+ * menu, and the routed domain screen. The interface layout setting picks between them. It knows which domains a connection offers, never how a
  * domain lays itself out.
  */
 @Component({
   selector: "app-root",
   imports: [MatDivider, MatIcon, MatIconButton, MatMenu, MatMenuItem, MatMenuTrigger, MatProgressBar, MatToolbar,
-    MatTooltip, RouterLink, RouterLinkActive, RouterOutlet],
+    MatTooltip, NgTemplateOutlet, RouterLink, RouterLinkActive, RouterOutlet],
   templateUrl: "./app.component.html",
   styleUrl: "./app.component.css",
 })
 export class AppComponent {
   protected readonly connection = inject(ConnectionService);
+  protected readonly scaffold = inject(Scaffold);
   private readonly router = inject(Router);
   private readonly snackBar = inject(MatSnackBar);
 

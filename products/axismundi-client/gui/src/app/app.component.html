@@ -1,17 +1,26 @@
-<mat-toolbar class="app-bar">
-  <span class="title">Axismundi</span>
-  <span class="spacer"></span>
-  @if (connection.connected()) {
-    <button matIconButton [matMenuTriggerFor]="accounts" aria-label="Accounts" matTooltip="Accounts">
-      <mat-icon>account_circle</mat-icon>
+<!-- M3 Scaffold: with the navigation rail there is no top app bar — the rail switches apps and holds
+     the account menu, and search belongs to the list pane. As a search app bar one bar spans the window
+     with the screen's leading button and search bar, and the app menu replaces the rail. -->
+@let layout = scaffold.layout();
+@if (layout.appBarScope === "window") {
+  <mat-toolbar class="app-bar">
+    @if (scaffold.appBar()?.leading; as leading) { <ng-container [ngTemplateOutlet]="leading" /> }
+    <span class="title">Axismundi</span>
+    <div class="app-bar-search">
+      @if (scaffold.appBar()?.search; as search) { <ng-container [ngTemplateOutlet]="search" /> }
+    </div>
+    <button matIconButton [matMenuTriggerFor]="apps" aria-label="Apps" matTooltip="Apps">
+      <mat-icon>apps</mat-icon>
     </button>
-  }
-</mat-toolbar>
-<div class="progress">
-  @if (connection.busy()) { <mat-progress-bar mode="indeterminate" aria-label="Connection request in progress" /> }
-</div>
+    @if (connection.connected()) {
+      <button matIconButton [matMenuTriggerFor]="accounts" aria-label="Accounts" matTooltip="Accounts">
+        <mat-icon>account_circle</mat-icon>
+      </button>
+    }
+  </mat-toolbar>
+}
 
-<mat-menu #accounts="matMenu" xPosition="before" class="account-menu">
+<mat-menu #accounts="matMenu" [xPosition]="layout.navigation === 'rail' ? 'after' : 'before'" class="account-menu">
   <!-- Two sessions sharing one sign-in: each list keeps its own selection. -->
   @if (connection.actors().length) {
     <div class="menu-heading" role="presentation">ActivityPub actors</div>
@@ -48,7 +57,25 @@
   <button mat-menu-item (click)="connection.disconnectAll()"><mat-icon>logout</mat-icon><span>Sign out of all connections</span></button>
 </mat-menu>
 
-<div class="body">
+<mat-menu #apps="matMenu" xPosition="before">
+  @for (destination of destinations(); track destination.path) {
+    <a mat-menu-item [routerLink]="destination.path" routerLinkActive="active" #link="routerLinkActive"
+       [attr.aria-current]="link.isActive ? 'page' : null">
+      <mat-icon>{{ destination.icon }}</mat-icon><span>{{ destination.label }}</span>
+    </a>
+  }
+  <a mat-menu-item routerLink="/settings" routerLinkActive="active" #settingsLink="routerLinkActive"
+     [attr.aria-current]="settingsLink.isActive ? 'page' : null">
+    <mat-icon>settings</mat-icon><span>Settings</span>
+  </a>
+</mat-menu>
+
+<div class="body" [class.no-rail]="layout.navigation !== 'rail'">
+  <!-- Over the top edge of the content, so it takes no row of its own with or without an app bar. -->
+  <div class="progress">
+    @if (connection.busy()) { <mat-progress-bar mode="indeterminate" aria-label="Connection request in progress" /> }
+  </div>
+  @if (layout.navigation === "rail") {
   <nav class="rail" aria-label="Destinations">
     @for (destination of destinations(); track destination.path) {
       <a class="destination" [routerLink]="destination.path" routerLinkActive="active" ariaCurrentWhenActive="page">
@@ -60,6 +87,13 @@
       <span class="indicator"><mat-icon>settings</mat-icon></span>
       <span class="label">Settings</span>
     </a>
+    @if (connection.connected()) {
+      <button type="button" class="destination account" [matMenuTriggerFor]="accounts" aria-label="Accounts">
+        <span class="indicator"><mat-icon>account_circle</mat-icon></span>
+        <span class="label">Account</span>
+      </button>
+    }
   </nav>
+  }
   <main><router-outlet /></main>
 </div>

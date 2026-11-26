@@ -1,6 +1,9 @@
 export const APPEARANCE_KEY = "axismundi.appearance";
 export const brightnessOptions = ["system", "light", "dark"] as const;
 export const contrastOptions = ["default", "high"] as const;
+/** M3 Scaffold arrangements; what each means is shell/scaffold-layout.ts. */
+export const interfaceLayouts = ["navigation-rail", "search-app-bar"] as const;
+export type InterfaceLayout = typeof interfaceLayouts[number];
 export const presets = [
   {id: "azure-blue", label: "Azure & Blue", colors: ["#0060ab", "#0047ff"]},
   {id: "rose-red", label: "Rose & Red", colors: ["#a10053", "#c00000"]},
@@ -13,6 +16,7 @@ export interface Appearance {
   contrast: typeof contrastOptions[number];
   accent: typeof presets[number]["id"];
   mailBodyTheme: "app" | "light" | "dark";
+  interfaceLayout: InterfaceLayout;
 }
 
 function option<T extends string>(value: unknown, options: readonly T[], fallback: T): T {
@@ -27,6 +31,7 @@ export function readAppearance(raw: string | null): Appearance {
     contrast: option(value?.contrast, contrastOptions, "default"),
     accent: option(value?.accent, presets.map(preset => preset.id), "azure-blue"),
     mailBodyTheme: option(value?.mailBodyTheme, ["app", "light", "dark"] as const, "app"),
+    interfaceLayout: option(value?.interfaceLayout, interfaceLayouts, "navigation-rail"),
   };
 }
 
@@ -36,5 +41,6 @@ export function appearanceAttributes(value: Appearance): Record<string, string> 
     contrast: value.contrast,
     accent: value.accent,
     mailBodyTheme: value.mailBodyTheme,
+    interfaceLayout: value.interfaceLayout,
   };
 }

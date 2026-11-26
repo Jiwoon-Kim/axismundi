@@ -1,4 +1,11 @@
 <h1>Appearance</h1>
+<h2 id="interface-layout-label">Interface layout</h2>
+<p class="hint">Where search, app switching and the toolbar sit. A narrow window looks the same either way.</p>
+<mat-radio-group aria-labelledby="interface-layout-label" [value]="appearance().interfaceLayout"
+                 (change)="change('interfaceLayout', $event.value)">
+  <mat-radio-button value="navigation-rail">Navigation rail</mat-radio-button>
+  <mat-radio-button value="search-app-bar">Search app bar</mat-radio-button>
+</mat-radio-group>
 <h2 id="brightness-label">Brightness</h2>
 <mat-radio-group aria-labelledby="brightness-label" [value]="appearance().brightness"
                  (change)="change('brightness', $event.value)">

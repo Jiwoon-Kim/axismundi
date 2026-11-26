@@ -1,4 +1,4 @@
-import { Component, DestroyRef, ElementRef, afterRenderEffect, computed, effect, inject, input, linkedSignal, resource, signal, untracked, viewChild, viewChildren } from "@angular/core";
+import { Component, DestroyRef, ElementRef, type TemplateRef, afterRenderEffect, computed, effect, inject, input, linkedSignal, resource, signal, untracked, viewChild, viewChildren } from "@angular/core";
 import { toSignal } from "@angular/core/rxjs-interop";
 import { BreakpointObserver } from "@angular/cdk/layout";
 import { CdkContextMenuTrigger, CdkMenu, CdkMenuItem } from "@angular/cdk/menu";
@@ -17,6 +17,7 @@ import { Router, RouterLink } from "@angular/router";
 import { map } from "rxjs";
 import { invoke } from "@tauri-apps/api/core";
 import { ConnectionService } from "../connection.service";
+import { Scaffold } from "../shell/scaffold";
 import { SearchDialogComponent, type SearchDialogData } from "./search-dialog.component";
 import { ComposeDialogComponent, type ComposeData, type ComposeIdentity, type ComposeMode, type ComposeResult, type ComposeSource } from "./compose-dialog.component";
 import type { PickedFile, UploadedFile } from "./compose-attachments";
@@ -79,9 +80,22 @@ export class MailPageComponent {
   );
   /** ≥1200: mailboxes, list and detail side by side. */
   protected readonly large = computed(() => this.window()[LARGE]);
-  /** ≥840: list beside detail. Below that, one pane at a time. */
-  protected readonly twoPanes = computed(() => this.window()[EXPANDED]);
+  private readonly scaffold = inject(Scaffold);
+  /** The interface layout setting at this window size (shell/scaffold-layout.ts). */
+  protected readonly layout = this.scaffold.layout;
+  /**
+   * List beside detail: ≥840 with the navigation rail. The search app bar opens a message in place of
+   * the list at every size, as a compact window does.
+   */
+  protected readonly twoPanes = computed(() => this.layout().reading === "side");
   protected readonly drawerOpen = signal(false);
+  /** The search app bar's leading button can fold the side mailbox panel away in a large window. */
+  private readonly mailboxesFolded = signal(false);
+  protected readonly mailboxesOpen = computed(() => this.large()
+    ? !(this.layout().appBarScope === "window" && this.mailboxesFolded())
+    : this.drawerOpen());
+  private readonly appBarLeading = viewChild<TemplateRef<unknown>>("appBarLeading");
+  private readonly appBarSearch = viewChild<TemplateRef<unknown>>("appBarSearch");
   private readonly searchRequest = signal<{owner: string; text: string} | null>(null);
   private readonly searchOwner = computed(() => JSON.stringify([this.connection.connected()?.id, this.connection.accountId()]));
   protected readonly searchText = computed(() => {
@@ -251,7 +265,7 @@ export class MailPageComponent {
   protected openResult(id: string): void {
     if (this.selecting()) this.select(id);
     else if (this.inDrafts()) void this.openCompose("draft", id);
-    else if (this.searchText() && !this.twoPanes()) {
+    else if (!this.twoPanes()) {
       this.resultScroll = {scope: this.scope(), top: this.listRoot()?.nativeElement.scrollTop ?? 0};
     }
   }
@@ -707,12 +721,21 @@ export class MailPageComponent {
     return date.toDateString() === new Date().toDateString() ? this.time.format(date) : this.day.format(date);
   }
 
+  protected toggleMailboxes(): void {
+    if (this.large()) this.mailboxesFolded.update(folded => !folded);
+    else this.drawerOpen.update(open => !open);
+  }
+
   constructor() {
     inject(DestroyRef).onDestroy(() => this.mailboxPressEnd());
+    // One search bar: the shell draws these only while its bar spans the window.
+    effect(() => this.scaffold.appBar.set({leading: this.appBarLeading() ?? null, search: this.appBarSearch() ?? null}));
+    inject(DestroyRef).onDestroy(() => this.scaffold.appBar.set(null));
     inject(DestroyRef).onDestroy(() => { this.alive = false; this.searchDialog?.close(); this.composeDialog?.close(); });
     effect(() => {
       this.searchOwner();
       this.window()[EXPANDED];
+      this.layout().appBarScope;
       this.searchDialog?.close();
     });
     effect(() => {
@@ -753,7 +776,7 @@ export class MailPageComponent {
       const id = this.mailboxFocus();
       if (id === null) return;
       const row = this.mailboxRows().find(ref => ref.nativeElement.dataset["mailboxId"] === id)?.nativeElement;
-      const target = this.large() || this.drawerOpen()
+      const target = this.mailboxesOpen()
         ? id ? row : this.mailboxNew()?.nativeElement
         : this.drawerToggle()?.nativeElement;
       if (!target) return;

@@ -6,6 +6,7 @@ import { MatTooltip } from "@angular/material/tooltip";
 @Component({
   selector: "app-mail-search-bar",
   imports: [MatIcon, MatIconButton, MatTooltip],
+  host: {"[class.in-app-bar]": "placement() === 'app-bar'"},
   template: `
     @if (text()) {
       <button matIconButton type="button" aria-label="Exit search" matTooltip="Exit search"
@@ -34,6 +35,8 @@ import { MatTooltip } from "@angular/material/tooltip";
       /* NON-STANDARD: The resting bar is flat within the pane; the docked view uses level3. */
       background: var(--mat-sys-surface-container-high);
     }
+    /* In the window-wide search app bar the bar fills the free width, up to a readable measure. */
+    :host(.in-app-bar) { flex: 1; max-inline-size: 720px; margin: 0; }
     .mail-search-trigger {
       display: flex;
       align-items: center;
@@ -63,6 +66,8 @@ import { MatTooltip } from "@angular/material/tooltip";
 export class MailSearchBarComponent {
   protected readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
   readonly text = input<string | null>(null);
+  /** Above the list pane, or in the window-wide search app bar. */
+  readonly placement = input<"pane" | "app-bar">("pane");
   readonly activate = output<HTMLElement>();
   readonly exit = output<void>();
 

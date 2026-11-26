@@ -1,11 +1,26 @@
+<!-- Handed to the shell's search app bar (Scaffold); drawn there only while that bar spans the window. -->
+<ng-template #appBarLeading>
+  <button #drawerToggle matIconButton type="button" aria-label="Mailboxes" matTooltip="Mailboxes"
+          [attr.aria-expanded]="mailboxesOpen()" (click)="toggleMailboxes()"><mat-icon>menu</mat-icon></button>
+</ng-template>
+<ng-template #appBarSearch>
+  <app-mail-search-bar placement="app-bar" [text]="searchText()" (activate)="openSearch($event)" (exit)="clearSearch()" />
+</ng-template>
+
 @if (connection.account(); as account) {
   <mat-sidenav-container>
-    <mat-sidenav class="mailboxes" [mode]="large() ? 'side' : 'over'" [opened]="large() || drawerOpen()"
+    <mat-sidenav class="mailboxes" [mode]="large() ? 'side' : 'over'" [opened]="mailboxesOpen()"
                  (closedStart)="drawerOpen.set(false)" [disableClose]="large()">
       <!-- Mailbox tree (CDK tree pattern: one tab stop, arrow keys move, Right/Left expand). A node is a
            mailbox in its own right: click or Enter opens it; the trailing arrow only expands, and stays
            out of the tab order so the treeitem holds the one focus. -->
       <nav class="mailbox-nav" (contextmenu)="$event.preventDefault()">
+        @if (layout().compose === "panel") {
+          <div class="panel-compose" [matTooltip]="canCompose() ? '' : 'This account does not support sending'">
+            <button matFab extended type="button" [disabled]="!canCompose() || composeOpening()"
+                    (click)="openCompose()"><mat-icon>edit</mat-icon>Compose</button>
+          </div>
+        }
         <div class="mailbox-heading">
           <span>Mailboxes</span>
           @if (canCreateMailbox()) {
@@ -84,7 +99,9 @@
           <section class="list" aria-labelledby="mailbox-title" [class.selecting]="selecting()"
                    (keydown.escape)="endSelection()">
             <div class="list-header">
-              <app-mail-search-bar [text]="searchText()" (activate)="openSearch($event)" (exit)="clearSearch()" />
+              @if (layout().appBarScope === "pane") {
+                <app-mail-search-bar [text]="searchText()" (activate)="openSearch($event)" (exit)="clearSearch()" />
+              }
             <!-- Checkboxes exist only in selection mode (iCloud Mail's Select): the list stays a list. -->
             <div class="list-head" [class.selecting-head]="selecting()">
               @if (selecting()) {
@@ -156,7 +173,7 @@
                 </div>
                 <h1 id="mailbox-title" class="visually-hidden">{{ mailboxName() }}</h1>
               } @else {
-                @if (!large()) {
+                @if (!large() && layout().appBarScope === "pane") {
                   <button #drawerToggle matIconButton type="button" aria-label="Mailboxes" (click)="drawerOpen.set(true)"><mat-icon>menu</mat-icon></button>
                 }
                 <h1 id="mailbox-title">{{ mailboxName() }}</h1>
@@ -302,7 +319,7 @@
             }
             </div>
             </div>
-            @if (!selecting()) {
+            @if (!selecting() && layout().compose === "fab") {
               <div class="list-compose" [matTooltip]="canCompose() ? '' : 'This account does not support sending'">
                 <button matFab extended type="button" [disabled]="!canCompose() || composeOpening()"
                         (click)="openCompose()"><mat-icon>edit</mat-icon>Compose</button>

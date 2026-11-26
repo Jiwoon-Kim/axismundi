@@ -1,20 +1,29 @@
 :host {
-  display: grid;
-  grid-template-rows: auto 4px minmax(0, 1fr);
+  display: flex;
+  flex-direction: column;
   block-size: 100%;
 }
 
 .app-bar { background: var(--mat-sys-surface-container); }
 .title { font: var(--mat-sys-title-large); }
-.spacer { flex: 1; }
 
 .body {
+  position: relative;
+  flex: 1;
   display: grid;
   grid-template-columns: 80px minmax(0, 1fr);
   min-block-size: 0;
 }
 
+.progress { position: absolute; inset: 0 0 auto; z-index: 1; block-size: 4px; }
+
+.body.no-rail { grid-template-columns: minmax(0, 1fr); }
+
 main { overflow: auto; }
+
+/* M3 search app bar: 64px, leading button, title, then the search bar takes the free width. */
+.app-bar { flex: none; block-size: 64px; gap: 4px; }
+.app-bar-search { flex: 1; display: flex; justify-content: center; min-inline-size: 0; padding-inline: 16px; }
 
 /* Navigation rail: Material has no rail component, so only the item is drawn here. */
 .rail {
@@ -29,6 +38,10 @@ main { overflow: auto; }
 
 .destination {
   display: grid;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
   justify-items: center;
   gap: 4px;
   inline-size: 80px;

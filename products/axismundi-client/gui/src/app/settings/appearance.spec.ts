@@ -3,15 +3,15 @@ import test from "node:test";
 import { appearanceAttributes, readAppearance } from "./appearance.ts";
 
 test("missing, malformed and unknown values fall back to the default appearance", () => {
-  const expected = {brightness: "system", contrast: "default", accent: "azure-blue", mailBodyTheme: "app"};
+  const expected = {brightness: "system", contrast: "default", accent: "azure-blue", mailBodyTheme: "app", interfaceLayout: "navigation-rail"};
   for (const stored of [null, "{", "42", '{"brightness":"night","contrast":false,"accent":"unknown"}', '{"contrast":"system"}', '{"contrast":"standard"}']) {
     assert.deepEqual(readAppearance(stored), expected);
   }
 });
 
 test("stored choices map to independent root attributes regardless of JSON key order", () => {
-  const stored = '{"accent":"cyan-orange","contrast":"high","brightness":"dark","mailBodyTheme":"light"}';
+  const stored = '{"accent":"cyan-orange","contrast":"high","brightness":"dark","mailBodyTheme":"light","interfaceLayout":"search-app-bar"}';
   assert.deepEqual(appearanceAttributes(readAppearance(stored)), {
-    brightness: "dark", contrast: "high", accent: "cyan-orange", mailBodyTheme: "light",
+    brightness: "dark", contrast: "high", accent: "cyan-orange", mailBodyTheme: "light", interfaceLayout: "search-app-bar",
   });
 });

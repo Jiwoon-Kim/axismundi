@@ -70,13 +70,27 @@ anniversaries           date 에 "@type": "PartialDate" 추가(무해)
    id 를 받은 뒤에만 목록에 넣는다). `addressBookIds` 는 고른 주소록(기본 = `isDefault`). `version` 은 `"2.0"`, `uid` 는
    `urn:uuid:` 를 클라이언트가 만든다(RFC 9982 — uid 를 지어내면 안 되는 건 **변환** 때 이야기, 새 Card 는 우리가 만든다 —
    WP `docs/REFERENCE-JSCONTACT-UID.md` 확인 후 어긋나면 보고).
-3. **GUI — Contacts 목적지**: 연결이 `urn:ietf:params:jmap:contacts` 를 지원할 때만 레일(·앱 메뉴)에 나온다. 화면은 메일과
-   같은 Scaffold list-detail: 주소록 패널(구독 안 한 주소록은 접힌 "기타"로) / 카드 목록 / 상세. 두 인터페이스 레이아웃
-   모두에서 메일과 같게 동작(Search app bar 면 검색은 창 위 바, 상세는 목록 자리).
-4. **상세**: 데이터 확인 표면이라 `dl > dt + dd`(WP Contacts dl 경계 결정과 같은 결). 첫 버전에 보이는 것 — name(full,
-   없으면 components 조립), emails, phones, addresses, organizations·titles, onlineServices, links, anniversaries, notes,
-   keywords. media 는 아바타 하나(원격 이미지는 메일처럼 기본 차단·보이기 선택). localizations 는 "다른 언어" 로 접어서
-   언어 태그별 원문 값만(패치 적용 렌더링은 다음). HTML 로 그리지 않는다.
+3. **GUI — Contacts 목적지와 배치**(소유자 결정 2026-11-27): 연결이 `urn:ietf:params:jmap:contacts` 를 지원할 때만 레일
+   (·앱 메뉴)에 나온다. 공용 Scaffold·두 인터페이스 레이아웃은 그대로 쓰고, 콘텐츠 배치만 Contacts 것으로 — **Bulwark 의
+   "검색창은 위" 메일 구조**: 왼쪽 주소록 패널(맨 위 "연락처 추가", 구독 안 한 주소록은 접힌 "기타"), 가운데 한 영역을
+   목록 표와 상세가 **번갈아** 쓴다. 두 pane 을 동시에 띄우지 않고, 벤토 여백·drag handle 도 없다(M3 panes 의 fixed-and-
+   flexible + handle 은 검토했지만 밀도 때문에 안 씀).
+   - **목록 표**: `mat-table`. 첫 열 = 고정 크기 아바타 + 이름(한 셀), `mat-sort-header` 는 이 이름 열에만. 나머지 열은
+     대표 이메일·전화·회사. 정렬은 캐시에서(Stalwart 는 name/surname 정렬 거부): `name.sortAs` → components → full 순,
+     `Intl.Collator`(앱 locale).
+   - **아바타**: 카드에 명시된 `media`(kind photo, pref 순) 하나. 없거나 로드 실패면 같은 크기 이니셜 — 행 높이가 움직이지
+     않게. `onlineServices` 등에서 사진을 추측해 가져오지 않는다. 원격 URL 은 사용자가 자기 주소록에 넣은 값이라 목록에서
+     바로 요청하되 `referrerpolicy="no-referrer"`. 메일 원격 이미지 차단과 다른 결정이다(소유자 확정 2026-11-27):
+     주소록은 사용자가 직접 쓰거나 가져온 데이터이고, Bulwark 도 그대로 띄운다. 메일 본문 차단 정책은 그대로 둔다.
+   - **전환**(Bulwark `components/mail/mail-app.tsx` 의 focus 레이아웃 확인): 행을 누르면 목록 pane 이 DOM 에 남은 채
+     폭 0·불투명도 0·`overflow: hidden` 으로 200ms ease-out 접히고 `inert`, 상세 pane(flex 1)이 그 자리를 차지한다. 뒤로(←)는
+     상세를 숨기고 접힘을 푼다 — 목록을 다시 그리지 않으므로 검색어·정렬·스크롤·아바타가 그대로다. `prefers-reduced-motion`
+     이면 전환 없음. 선택은 URL(`/contacts?book=…&card=…`, 메일과 같은 결).
+   - **좁은 창**: 같은 전환. 표는 container query 로 전화·회사 열부터 숨기고 아바타·이름·대표 이메일은 남긴다.
+4. **상세**: 목록 자리를 다 쓰는 읽기 화면. 위에 ← 와 큰 아바타·이름·직함/조직 한 줄, 그 아래 데이터 확인 표면이라
+   `dl > dt + dd`(WP Contacts dl 경계 결정과 같은 결). 첫 버전에 보이는 것 — emails, phones, addresses, organizations·titles,
+   onlineServices, links, anniversaries, notes, keywords. localizations 는 "다른 언어" 로 접어서 언어 태그별 원문 값만(패치
+   적용 렌더링은 다음). HTML 로 그리지 않는다.
 5. **검색**: 목록 pane 위 search bar 를 메일과 같은 컴포넌트 결로(메일 search bar 를 도메인 중립으로 꺼낼 수 있으면 꺼내고,
    어려우면 보고). 결과는 주소록 경계를 넘는 하나의 목록. 검색어는 디스크·URL 에 남기지 않는다(메일과 같음).
 6. **수정 폼**: 첫 버전 편집 대상은 name(full·given·surname), emails, phones, organizations 이름, notes. 나머지 속성은 화면에
@@ -97,7 +111,7 @@ npm --prefix gui run build
 ```
 
 창에서(CDP), **크롬의 Bulwark 연락처 화면과 나란히**: 시드 카드 g 목록·상세, 검색("지운"·"kimjiwoon75"·"gmail.com"),
-새 카드 만들기(이름 + 이메일) → Bulwark 에서 보이는지, Bulwark 에서 고친 것이 우리 쪽 증분 동기화로 들어오는지, 우리가 이름
+상세 → ← 로 돌아왔을 때 검색어·정렬·스크롤이 그대로이고 **방금 연 행에 키보드 포커스가 돌아오는지**, 새 카드 만들기(이름 + 이메일) → Bulwark 에서 보이는지, Bulwark 에서 고친 것이 우리 쪽 증분 동기화로 들어오는지, 우리가 이름
 하나 고쳤을 때 g 의 나머지 속성(특히 localizations·notes·media)이 패치 전과 같은지(ContactCard/get 전후 비교). 만든 테스트
 카드는 검증 뒤 지우되 g 와 기존 데이터는 건드리지 않는다.
 

@@ -6,7 +6,7 @@ use serde_json::Value;
 
 use crate::{Error, http::Client};
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct Account {
     #[serde(default)]
     pub name: String,
@@ -18,7 +18,7 @@ pub struct Account {
     pub account_capabilities: BTreeMap<String, Value>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct Session {
     #[serde(default)]
     pub username: String,

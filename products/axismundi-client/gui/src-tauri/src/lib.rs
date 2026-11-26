@@ -1,4 +1,5 @@
 mod compose_files;
+mod contacts;
 mod connection;
 mod mail;
 mod mail_push;
@@ -27,6 +28,13 @@ pub fn configure<R: tauri::Runtime>(builder: tauri::Builder<R>) -> tauri::Builde
             }
         })
         .invoke_handler(tauri::generate_handler![
+            contacts::contacts_books,
+            contacts::contacts_list,
+            contacts::contacts_card,
+            contacts::contacts_sync,
+            contacts::contacts_search,
+            contacts::contacts_create,
+            contacts::contacts_update,
             connection::discover_server,
             connection::connect_server,
             connection::disconnect_server,

@@ -70,7 +70,7 @@ impl Mail {
 }
 
 /// Hex keeps the file name reversible and free of the URL's separators.
-fn cache_file(dir: &Path, profile: &str) -> PathBuf {
+pub(crate) fn cache_file(dir: &Path, profile: &str) -> PathBuf {
     let name: String = profile.bytes().map(|byte| format!("{byte:02x}")).collect();
     dir.join(format!("{name}.sqlite"))
 }

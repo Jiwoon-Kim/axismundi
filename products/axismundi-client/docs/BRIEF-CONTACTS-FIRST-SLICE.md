@@ -70,9 +70,14 @@ anniversaries           date 에 "@type": "PartialDate" 추가(무해)
    검색(서버 `ContactCard/query` filter `text`, 결과 id → 캐시에서 행), 생성, 수정 제출. 캐시 파일 위치·바인딩은 메일 캐시가
    정하는 방식에 맞춘다(먼저 확인해서 보고).
 2. **생성**: 코어에 생성 큐가 없으므로 첫 버전은 온라인에서 `ContactCard/set create` 직접(메일 초안 생성과 같은 결: 응답의
-   id 를 받은 뒤에만 목록에 넣는다). `addressBookIds` 는 고른 주소록(기본 = `isDefault`). `version` 은 `"2.0"`, `uid` 는
-   `urn:uuid:` 를 클라이언트가 만든다(RFC 9982 — uid 를 지어내면 안 되는 건 **변환** 때 이야기, 새 Card 는 우리가 만든다 —
-   WP `docs/REFERENCE-JSCONTACT-UID.md` 확인 후 어긋나면 보고).
+   id 를 받은 뒤에만 목록에 넣는다). `addressBookIds` 는 고른 주소록(기본 = `isDefault`). `version` 은 `"2.0"`. `uid` 는 **없을 때만** 클라이언트가
+   `urn:uuid:`(v4)로 만들고, 넘겨받은 uid 는 보존한다(소유자 결정 2026-11-27). 근거: 그룹 `members` 는 uid 로만 참조하고,
+   Stalwart 는 uid 없는 카드를 uid 없이 저장한다(1.0 인데도) — Bulwark 도 같은 이유로 클라이언트에서 만든다
+   (`lib/jmap/client.ts:9146`, Bulwark #644). JMAP `id` 는 조회용, `uid` 는 members 참조용. Bulwark 의 uid 없을 때 id 로
+   맞추는 폴백은 가져오지 않는다.
+   - 구현 상태(2026-11-27): 지시 0–2 는 Codex 구현 + uid 보존 수정까지 완료. GUI 첫 단계에서 고칠 것 — 패치 경로가
+     배열 안(예: `name/components/0/value`)을 가리키면 거부(RFC 8620 §5.3, 캐시 Card 로 경로 확인), 목록 행에 `phone`·
+     `organization`·`sortKey` 추가, `Edit` 입력 형태를 fixture 에.
 3. **GUI — Contacts 목적지와 배치**(소유자 결정 2026-11-27): 연결이 `urn:ietf:params:jmap:contacts` 를 지원할 때만 레일
    (·앱 메뉴)에 나온다. 공용 Scaffold·두 인터페이스 레이아웃은 그대로 쓰고, 콘텐츠 배치만 Contacts 것으로 — **Bulwark 의
    "검색창은 위" 메일 구조**: 왼쪽 주소록 패널(맨 위 "연락처 추가", 구독 안 한 주소록은 접힌 "기타"), 가운데 한 영역을
@@ -128,7 +133,8 @@ node --test "gui/src/**/*.spec.ts"     표시 이름 조립, 행 변환, 패치 
 npm --prefix gui run build
 ```
 
-창에서(CDP), **크롬의 Bulwark 연락처 화면과 나란히**: 시드 카드 g 목록·상세, 검색("지운"·"kimjiwoon75"·"gmail.com"),
+창에서(CDP), **크롬의 Bulwark 연락처 화면과 나란히**: Bulwark 로 만든 검증용 `j`(연락처)·`k`(`kind: "group"`, members=g·j)는 두고, 첫 화면에서 `k` 가
+일반 연락처 행으로 섞이지 않는지 본다(그룹 편집은 다음 범위). 시드 카드 g 목록·상세, 검색("지운"·"kimjiwoon75"·"gmail.com"),
 상세 → ← 로 돌아왔을 때 검색어·정렬·스크롤이 그대로이고 **방금 연 행에 키보드 포커스가 돌아오는지**, 새 카드 만들기(이름 + 이메일) → Bulwark 에서 보이는지, Bulwark 에서 고친 것이 우리 쪽 증분 동기화로 들어오는지, 우리가 이름
 하나 고쳤을 때 g 의 나머지 속성(특히 localizations·notes·media)이 패치 전과 같은지(ContactCard/get 전후 비교). 만든 테스트
 카드는 검증 뒤 지우되 g 와 기존 데이터는 건드리지 않는다.

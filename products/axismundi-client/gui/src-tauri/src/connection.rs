@@ -69,6 +69,7 @@ pub(crate) struct Active {
     pub(crate) client: Client,
     /// The JMAP Session and Mail cache, when the connection signed in to a Mail server.
     pub(crate) mail: Option<crate::mail::Mail>,
+    pub(crate) contacts: Option<crate::contacts::Contacts>,
     actors_url: Option<Url>,
     actor_ids: Vec<String>,
     outboxes: Mutex<std::collections::BTreeMap<String, String>>,
@@ -671,6 +672,7 @@ fn connect(
     let server = plan.origin();
     let client = Client::new(credentials);
     let mut mail = None;
+    let mut contacts = None;
     let mut connected = Connected {
         username: username.clone(),
         server,
@@ -722,6 +724,15 @@ fn connect(
                         })
                         .collect(),
                 );
+                if session.capabilities.contains_key(axismundi_client_core::jmap::contacts::CAPABILITY) {
+                    match data_dir.as_deref() {
+                        Some(dir) => match crate::contacts::Contacts::open(dir, session.clone(), &username) {
+                            Ok(opened) => contacts = Some(opened),
+                            Err(error) => connected.errors.push(error),
+                        },
+                        None => connected.errors.push("Contacts cache: no app data folder.".into()),
+                    }
+                }
                 if session.capabilities.contains_key(axismundi_client_core::jmap::mail::CAPABILITY) {
                     match data_dir.as_deref() {
                         Some(dir) => match crate::mail::Mail::open(dir, session, &username) {
@@ -767,6 +778,7 @@ fn connect(
             saved: None,
             client,
             mail,
+            contacts,
             actors_url,
             actor_ids,
             outboxes: Mutex::new(Default::default()),
@@ -884,6 +896,7 @@ mod tests {
             saved: None,
             client: Client::without_redirects(Credentials { user: user.into(), secret: "secret".into() }),
             mail: None,
+            contacts: None,
             actors_url: None,
             actor_ids: vec![],
             outboxes: Mutex::new(Default::default()),
@@ -1045,6 +1058,7 @@ mod tests {
                 secret: "secret".into(),
             }),
             mail: None,
+            contacts: None,
             actors_url: Some(root),
             actor_ids: vec![id.into()],
             outboxes: Mutex::new(Default::default()),

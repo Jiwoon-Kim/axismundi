@@ -10,8 +10,222 @@ use std::{collections::BTreeSet, path::Path};
 pub const CAPABILITY: &str = "urn:ietf:params:jmap:contacts";
 pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
+pub fn search(
+    client: &Client,
+    session: &Session,
+    account: &str,
+    text: &str,
+) -> Result<Vec<String>> {
+    validate_account(session, account)?;
+    let result = call(
+        client,
+        session,
+        "ContactCard/query",
+        json!({"accountId":account,"filter":{"text":text}}),
+    )?;
+    if string(&result, "accountId")? != account {
+        return Err("Contacts query account mismatch".into());
+    }
+    ids(&result, "ids")
+}
+
+/// A random (v4) UUID as a `urn:uuid:` URI, the form RFC 9553 recommends for uid.
+fn new_uid() -> Result<String> {
+    use ring::rand::SecureRandom;
+    let mut bytes = [0u8; 16];
+    ring::rand::SystemRandom::new()
+        .fill(&mut bytes)
+        .map_err(|_| "could not generate contact UID")?;
+    bytes[6] = (bytes[6] & 15) | 64;
+    bytes[8] = (bytes[8] & 63) | 128;
+    let hex = bytes.iter().map(|b| format!("{b:02x}")).collect::<String>();
+    Ok(format!("urn:uuid:{}-{}-{}-{}-{}", &hex[..8], &hex[8..12], &hex[12..16], &hex[16..20], &hex[20..]))
+}
+
+pub fn create(
+    client: &Client,
+    session: &Session,
+    account: &str,
+    book: &str,
+    mut card: Value,
+) -> Result<String> {
+    validate_account(session, account)?;
+    limit(session, "maxObjectsInSet")?;
+    if session.accounts[account].is_read_only {
+        return Err("account is read-only".into());
+    }
+    let object = card.as_object_mut().ok_or("contact must be an object")?;
+    for key in ["id", "blobId", "size"] {
+        object.remove(key);
+    }
+    object.insert("@type".into(), json!("Card"));
+    object.insert("version".into(), json!("2.0"));
+    // A uid the caller brought (an import, a card written elsewhere) names that card and is kept.
+    // Otherwise the author mints one: a group's `members` can only reference a card by uid, and a
+    // server need not mint it (Stalwart stores the card without one).
+    if !object.get("uid").and_then(Value::as_str).is_some_and(|uid| !uid.is_empty()) {
+        object.insert("uid".into(), json!(new_uid()?));
+    }
+    object.insert("addressBookIds".into(), json!({book:true}));
+    let response = call(
+        client,
+        session,
+        "ContactCard/set",
+        json!({"accountId":account,"create":{"card":card}}),
+    )?;
+    if string(&response, "accountId")? != account {
+        return Err("Contacts create account mismatch".into());
+    }
+    if let Some(kind) = response["notCreated"]["card"]["type"].as_str() {
+        return Err(format!("ContactCard/set rejected create: {kind}").into());
+    }
+    Ok(string(&response["created"]["card"], "id")?.to_owned())
+}
+
+/// Convert explicit path segments to JMAP patch keys without diffing a partial form.
+pub fn edit_patch(edits: Vec<(Vec<String>, Value)>) -> Result<Value> {
+    let mut patch = serde_json::Map::new();
+    for (path, value) in edits {
+        let root = path.first().ok_or("missing contact edit path")?;
+        if matches!(
+            root.as_str(),
+            "" | "version" | "id" | "@type" | "uid" | "blobId" | "size"
+        ) {
+            return Err("contact property is not editable".into());
+        }
+        let key = path
+            .iter()
+            .map(|part| part.replace('~', "~0").replace('/', "~1"))
+            .collect::<Vec<_>>()
+            .join("/");
+        if patch.insert(key, value).is_some() {
+            return Err("duplicate contact edit path".into());
+        }
+    }
+    if patch.is_empty()
+        || patch.keys().any(|key| {
+            patch.keys().any(|parent| {
+                key.strip_prefix(parent.as_str())
+                    .is_some_and(|tail| tail.starts_with('/'))
+            })
+        })
+    {
+        return Err("empty or overlapping contact edits".into());
+    }
+    Ok(Value::Object(patch))
+}
+
 pub struct Store {
     db: Connection,
+}
+
+#[cfg(test)]
+#[test]
+fn minted_uids_are_random_v4_urns() {
+    let (a, b) = (new_uid().unwrap(), new_uid().unwrap());
+    assert_ne!(a, b);
+    assert_eq!(a.len(), "urn:uuid:".len() + 36);
+    assert!(a.starts_with("urn:uuid:") && &a[23..24] == "4");
+}
+
+#[cfg(test)]
+#[test]
+fn explicit_contact_edits_preserve_unmentioned_fields_and_escape_keys() {
+    let path = |parts: &[&str]| parts.iter().map(|part| part.to_string()).collect();
+    assert_eq!(
+        edit_patch(vec![(path(&["phones", "a/b~c", "number"]), json!("123"))]).unwrap(),
+        json!({"phones/a~1b~0c/number":"123"})
+    );
+    assert!(edit_patch(vec![(path(&["version"]), json!("2.0"))]).is_err());
+    assert!(
+        edit_patch(vec![
+            (path(&["phones"]), Value::Null),
+            (path(&["phones", "p1"]), Value::Null)
+        ])
+        .is_err()
+    );
+}
+
+#[cfg(test)]
+#[test]
+#[ignore = "requires the local Stalwart interop instance"]
+fn stalwart_contact_create_update_and_search() -> Result<()> {
+    let client = Client::without_redirects(crate::http::Credentials {
+        user: "admin@example.org".into(),
+        secret: std::env::var("AXISMUNDI_CONTACTS_TEST_PASSWORD")?,
+    });
+    let session = client.session("https://localhost:18881/jmap/session")?;
+    if url::Url::parse(&session.api_url)?
+        .origin()
+        .ascii_serialization()
+        != "https://localhost:18881"
+    {
+        return Err("unexpected test API origin".into());
+    }
+    let account = choose_account(&session, None)?;
+    let mut store = Store::open(":memory:", "interop")?;
+    sync_type(&client, &session, &mut store, &account, "AddressBook")?;
+    let books = store.list(&account, "AddressBook")?;
+    let book = books
+        .iter()
+        .find(|book| book["isDefault"] == true)
+        .ok_or("no default address book")?;
+    let id = create(
+        &client,
+        &session,
+        &account,
+        string(book, "id")?,
+        json!({
+            "name":{"full":"Codex Contacts interop"},
+            "emails":{"e1":{"address":"contacts-test@example.org"}},
+            "phones":{"p1":{"number":"+12025550100"}}
+        }),
+    )?;
+    if id == "g" {
+        return Err("refusing to touch the seed card".into());
+    }
+    let checked = (|| -> Result<()> {
+        sync_type(&client, &session, &mut store, &account, "ContactCard")?;
+        let read = |store: &Store| -> Result<Value> {
+            store
+                .list(&account, "ContactCard")?
+                .into_iter()
+                .find(|card| card["id"] == id)
+                .ok_or_else(|| "test contact missing".into())
+        };
+        let before = read(&store)?;
+        let patch = edit_patch(vec![(
+            vec!["phones".into(), "p1".into(), "number".into()],
+            json!("+12025550101"),
+        )])?;
+        println!("patch: {patch}");
+        store.stage_update(&account, &id, &patch)?;
+        store.submit_update(&client, &session, &account, &id)?;
+        let after = read(&store)?;
+        if after["phones"]["p1"]["number"] != "+12025550101" {
+            return Err("updated phone is missing".into());
+        }
+        for field in ["name", "emails", "uid", "addressBookIds", "version"] {
+            if before[field] != after[field] {
+                return Err(format!("unexpected change to {field}").into());
+            }
+        }
+        if !search(&client, &session, &account, "Codex Contacts interop")?.contains(&id) {
+            return Err("server query did not find the test card".into());
+        }
+        println!("server version: {}", after["version"]);
+        Ok(())
+    })();
+    let removed = call(
+        &client,
+        &session,
+        "ContactCard/set",
+        json!({"accountId":account,"destroy":[id]}),
+    )?;
+    if !ids(&removed, "destroyed")?.contains(&id) {
+        return Err(format!("could not remove test card {id}").into());
+    }
+    checked
 }
 
 #[derive(Debug)]
@@ -242,7 +456,9 @@ impl Store {
 }
 
 pub fn choose_account(session: &Session, requested: Option<&str>) -> Result<String> {
-    if let Some(reason) = session.empty_account_diagnostic() { return Err(reason.into()); }
+    if let Some(reason) = session.empty_account_diagnostic() {
+        return Err(reason.into());
+    }
     if let Some(id) = requested {
         validate_account(session, id)?;
         return Ok(id.into());
@@ -258,7 +474,9 @@ pub fn choose_account(session: &Session, requested: Option<&str>) -> Result<Stri
 }
 
 fn validate_account(session: &Session, account: &str) -> Result<()> {
-    if let Some(reason) = session.empty_account_diagnostic() { return Err(reason.into()); }
+    if let Some(reason) = session.empty_account_diagnostic() {
+        return Err(reason.into());
+    }
     if !session.capabilities.contains_key(CAPABILITY)
         || !session.accounts_with(CAPABILITY).contains(&account)
     {

@@ -8,18 +8,54 @@
       </h3>
       <ul class="attachments">
         @for (attachment of items; track $index) {
-          <li class="attachment-card">
-            <mat-icon class="attachment-type" aria-hidden="true">{{ attachmentIcon(attachment.type) }}</mat-icon>
-            <div class="attachment-meta">
+          <li #card class="attachment-card">
+            @let thumbnail = attachment.partId ? thumbnails().get(attachment.partId) : undefined;
+            <ng-template #meta>
+              @if (thumbnail) {
+                <img class="attachment-thumb" [src]="thumbnail" alt="">
+              } @else {
+                <mat-icon class="attachment-type" aria-hidden="true">{{ attachmentIcon(attachment.type) }}</mat-icon>
+              }
+              <span class="attachment-meta">
               <span class="attachment-name" [title]="attachment.name || '(unnamed)'">{{ attachment.name || "(unnamed)" }}</span>
               @if (attachment.size !== null) { <span class="attachment-size">{{ formatSize(attachment.size) }}</span> }
-            </div>
+              @if (thumbnail === null) { <span class="attachment-size">Preview unavailable</span> }
+              </span>
+            </ng-template>
+            @if (thumbnail) {
+              <button class="attachment-main" type="button" (click)="preview(attachment, attachmentPreview)" aria-label="Preview {{ attachment.name || 'attachment' }}">
+                <ng-container [ngTemplateOutlet]="meta" />
+              </button>
+            } @else {
+              <div class="attachment-main"><ng-container [ngTemplateOutlet]="meta" /></div>
+            }
+            @if (attachment.partId; as id) {
+              @if (canOpen(attachment)) {
+                <button matIconButton type="button" aria-label="Open {{ attachment.name || 'attachment' }}" matTooltip="Open in system app"
+                        [disabled]="exporting().has(id)" (click)="exportPart(attachment, true)"><mat-icon>open_in_new</mat-icon></button>
+              }
+              <button matIconButton type="button" aria-label="Save {{ attachment.name || 'attachment' }}" matTooltip="Save to device"
+                      [disabled]="exporting().has(id)" (click)="exportPart(attachment, false)">
+                <mat-icon>{{ exporting().has(id) ? "hourglass_top" : "download" }}</mat-icon>
+              </button>
+            }
           </li>
         }
       </ul>
+      @if (exportStatus()) { <p role="status">{{ exportStatus() }}</p> }
     </section>
   }
 }
+<ng-template #attachmentPreview let-image>
+  <h2 mat-dialog-title>{{ image.name }}</h2>
+  <div mat-dialog-content>
+    <img [class.preview-image]="!actualSize()" [src]="image.url" [alt]="image.name">
+  </div>
+  <div mat-dialog-actions align="end">
+    <button matButton type="button" (click)="actualSize.update(value => !value)">{{ actualSize() ? "Fit to window" : "Actual size" }}</button>
+    <button matButton mat-dialog-close type="button">Close</button>
+  </div>
+</ng-template>
 @if (hasRemote() && !allowRemote()) {
   <div class="remote-banner">
     <mat-icon>image</mat-icon>

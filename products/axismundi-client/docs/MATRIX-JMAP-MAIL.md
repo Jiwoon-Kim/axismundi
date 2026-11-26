@@ -22,7 +22,7 @@ Contacts/Calendar 모델·원본 MIME·로컬 편집·서버 Email을 한 record
 | Identity | 후속 identity 연산, mail_identities | 발신 설정. ContactCard·AP Actor·Session과 별개 |
 | Submission | 후속 submission 연산, mail_submissions | 생성·대기·배달 결과·취소. Email과 별도 state/수명주기 |
 | 로컬 Draft | 후속 compose 연산, mail_drafts | 미전송 편집과 서버 $draft Email의 분리·명시적 연결 |
-| MIME/Blob | `jmap::blob`(코어 구현: RFC 8620 업로드·다운로드, RFC 9404 Blob/get·upload·lookup), GUI 미사용 | JSON으로 원문 바이트를 재구성했다고 간주하지 않음. 디스크 캐시는 DESIGN-MAIL-GUI.md "바이트 원장"(미구현) |
+| MIME/Blob | 읽기 창 HTML·CID·첨부 다운로드, `jmap::blob`(RFC 8620 업로드·다운로드, RFC 9404 Blob/get·upload·lookup) | 받은 첨부·CID는 바이트 원장 사용. 작성 첨부 업로드와 원본 MIME 보기는 후속 |
 | VacationResponse | 후속 계정별 단일 설정 | Identity·Draft에 섞지 않음. 별도 singleton 저장 형태는 구현 시 결정 |
 | SearchSnippet | 메일 텍스트 검색 결과 | 검색 조건에 종속된 메모리 표시. Email 본문이나 영구 정체성으로 취급하지 않음 |
 

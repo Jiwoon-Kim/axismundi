@@ -12,6 +12,7 @@ pub fn configure<R: tauri::Runtime>(builder: tauri::Builder<R>) -> tauri::Builde
     builder
         .plugin(tauri_plugin_opener::init())
         .manage(connection::Connection::default())
+        .manage(mail::OpenedAttachments::default())
         .invoke_handler(tauri::generate_handler![
             connection::discover_server,
             connection::connect_server,
@@ -29,6 +30,7 @@ pub fn configure<R: tauri::Runtime>(builder: tauri::Builder<R>) -> tauri::Builde
             mail::mail_view,
             mail::mail_read,
             mail::mail_part_bytes,
+            mail::mail_attachment_export,
             mail::mail_identities,
             mail::mail_compose_source,
             mail::mail_compose_save,

@@ -7,7 +7,7 @@ use std::sync::{Arc, Mutex};
 use axismundi_client_core::{
     Error,
     jmap::{
-        Session,
+        Session, blob, blob_ledger::{Access, Ledger, Reference},
         mail::{Rows, cache, compose, mailbox, search},
     },
 };
@@ -21,6 +21,9 @@ pub struct Mail {
     pub session: Session,
     store: Mutex<cache::Store>,
     compose: Mutex<ComposeState>,
+    ledger_root: PathBuf,
+    ledger_origin: String,
+    ledger_login: String,
 }
 
 #[derive(Default)]
@@ -38,11 +41,31 @@ impl Mail {
         std::fs::create_dir_all(&dir).map_err(|_| "Mail cache: the data folder is not writable.")?;
         let store = cache::Store::open(cache_file(&dir, &profile), &profile)
             .map_err(|error| format!("Mail cache: {error}"))?;
+        let ledger_origin = url::Url::parse(&session.api_url).map_err(|_| "Invalid Mail API URL.")?
+            .origin().ascii_serialization();
         Ok(Self {
             session,
             store: Mutex::new(store),
             compose: Mutex::default(),
+            ledger_root: data_dir.join("mail-blobs"),
+            ledger_origin,
+            ledger_login: profile,
         })
+    }
+
+    fn prune_attachment_refs(&self, store: &cache::Store) -> Result<(), String> {
+        let mut ledger = Ledger::open(&self.ledger_root, &self.ledger_origin, CACHE_LIMIT)?;
+        ledger.retain(&self.ledger_login, |account, email, blob| {
+            self.session.accounts.contains_key(account) && store.email(account, email).is_ok_and(|entry|
+                entry["available"] == true && entry["document"]["attachments"].as_array()
+                    .is_some_and(|parts| parts.iter().any(|part| part["blobId"] == blob)))
+        })
+    }
+
+    pub(crate) fn forget_attachment_refs(&self) -> Result<(), String> {
+        let _held = self.store.lock().map_err(|_| "Mail cache is unavailable.")?;
+        Ledger::open(&self.ledger_root, &self.ledger_origin, CACHE_LIMIT)?
+            .retain(&self.ledger_login, |_, _, _| false)
     }
 }
 
@@ -648,6 +671,7 @@ pub async fn mail_sync(
     with_mail(&state, connection_id, move |active, mail, store| {
         let view = cache::sync(&active.client, &mail.session, store, &account_id, mailbox_id.as_deref(), rows)
             .map_err(explain)?;
+        let _ = mail.prune_attachment_refs(store);
         account_list_view(&view, &mail.session, &account_id)
     })
     .await
@@ -735,6 +759,72 @@ pub async fn mail_read(
 }
 
 const INLINE_IMAGE_LIMIT: u64 = 2 * 1024 * 1024;
+const PREVIEW_LIMIT: u64 = 10_000_000;
+const EXPORT_LIMIT: u64 = 50 * 1024 * 1024;
+const CACHE_LIMIT: u64 = 1024 * 1024 * 1024;
+
+#[derive(Default)]
+pub struct OpenedAttachments(Mutex<Vec<tempfile::TempDir>>);
+
+fn raster(mime: &str) -> bool {
+    matches!(mime, "image/png" | "image/jpeg" | "image/gif" | "image/webp" | "image/avif" | "image/bmp")
+}
+
+fn attachment_part(store: &cache::Store, account: &str, email: &str, part_id: &str) -> Result<Value, String> {
+    let entry = store.email(account, email).map_err(explain)?;
+    let mut parts = entry["document"]["attachments"].as_array().into_iter().flatten()
+        .filter(|part| part["partId"] == part_id);
+    let part = parts.next().ok_or("Attachment is unavailable.")?;
+    if parts.next().is_some() { return Err("Attachment is ambiguous.".into()); }
+    Ok(part.clone())
+}
+
+fn attachment_bytes(active: &Active, mail: &Mail, account: &str, email: &str, part: &Value,
+    cap: u64, recheck: bool) -> Result<Vec<u8>, String> {
+    if part["size"].as_u64().is_some_and(|size| size > cap) {
+        return Err("Attachment exceeds the size limit.".into());
+    }
+    let id = part["blobId"].as_str().ok_or("Attachment has no blob id.")?;
+    let key = Reference { login: &mail.ledger_login, account, email, blob: id };
+    let mut ledger = Ledger::open(&mail.ledger_root, &mail.ledger_origin, CACHE_LIMIT)?;
+    ledger.get(&key, cap, recheck, || {
+        let account_info = mail.session.accounts.get(account).ok_or("Mail account is unavailable.")?;
+        if !account_info.account_capabilities.contains_key(blob::CAPABILITY) { return Ok(Access::Unsupported); }
+        let response = match active.client.blob_get(&mail.session, account, &[id], &["id", "digest:sha-256"], None, None) {
+            Ok(response) => response,
+            Err(Error::Status { status: 401 | 403 | 404, .. } | Error::Problem { status: 401 | 403 | 404, .. }) =>
+                return Ok(Access::Denied),
+            Err(error) => return Err(failure("Attachment access", &error)),
+        };
+        if let Some(item) = response["list"].as_array().and_then(|items| items.first()) {
+            return Ok(item["digest:sha-256"].as_str().map_or(Access::Unsupported, |hash| Access::Verified(hash.into())));
+        }
+        Ok(Access::Denied)
+    }, || active.client.download(&mail.session, account, id, "application/octet-stream", "attachment", cap)
+        .map_err(|error| failure("Attachment download", &error)))
+}
+
+fn attachment_name(raw: &str) -> String {
+    let name: String = raw.chars().map(|c| if c.is_control() || "\\/:*?\"<>|".contains(c) { '_' } else { c })
+        .take(100).collect();
+    let name = name.trim_matches([' ', '.']);
+    let stem = name.split('.').next().unwrap_or("").trim_end().to_ascii_uppercase();
+    let reserved = matches!(stem.as_str(), "CON" | "PRN" | "AUX" | "NUL" | "CONIN$" | "CONOUT$")
+        || ["COM", "LPT"].iter().any(|prefix| stem.strip_prefix(prefix)
+            .is_some_and(|n| matches!(n, "1"|"2"|"3"|"4"|"5"|"6"|"7"|"8"|"9"|"\u{b9}"|"\u{b2}"|"\u{b3}")));
+    if name.is_empty() { "attachment".into() }
+    else if reserved { format!("_{name}") }
+    else { name.into() }
+}
+
+fn may_open(mime: &str, name: &str) -> bool {
+    let ext = name.rsplit_once('.').map(|(_, ext)| ext.to_ascii_lowercase());
+    matches!((mime, ext.as_deref()),
+        ("application/pdf", Some("pdf")) | ("image/png", Some("png")) |
+        ("image/jpeg", Some("jpg" | "jpeg")) | ("image/gif", Some("gif")) |
+        ("image/webp", Some("webp")) | ("image/avif", Some("avif")) |
+        ("image/bmp", Some("bmp")) | ("text/plain", Some("txt")))
+}
 
 #[tauri::command]
 pub async fn mail_part_bytes(
@@ -742,27 +832,75 @@ pub async fn mail_part_bytes(
     account_id: String,
     email_id: String,
     part_id: String,
+    preview: Option<bool>,
     state: tauri::State<'_, Connection>,
 ) -> Result<tauri::ipc::Response, String> {
     with_mail(&state, connection_id, move |active, mail, store| {
-        let entry = store.email(&account_id, &email_id).map_err(explain)?;
-        let mut parts = entry["document"]["attachments"].as_array().into_iter().flatten()
-            .filter(|part| part["partId"] == part_id);
-        let part = parts.next().ok_or("Inline image is unavailable.")?;
-        if parts.next().is_some() || !part["cid"].as_str().is_some_and(|cid| !cid.is_empty()) {
+        let part = attachment_part(store, &account_id, &email_id, &part_id)?;
+        let preview = preview.unwrap_or_default();
+        if !preview && !part["cid"].as_str().is_some_and(|cid| !cid.is_empty()) {
             return Err("Inline image is unavailable.".into());
         }
         let mime = part["type"].as_str().ok_or("Inline image has no media type.")?;
-        if !matches!(mime, "image/png" | "image/jpeg" | "image/gif" | "image/webp" | "image/avif" | "image/bmp")
-            || part["size"].as_u64().is_none_or(|size| size > INLINE_IMAGE_LIMIT)
+        let cap = if preview { PREVIEW_LIMIT } else { INLINE_IMAGE_LIMIT };
+        if !raster(mime) || part["size"].as_u64().is_none_or(|size| size > cap)
         {
             return Err("Inline image type or size is not supported.".into());
         }
-        let blob = part["blobId"].as_str().ok_or("Inline image has no blob id.")?;
-        active.client.download(&mail.session, &account_id, blob, mime, "inline-image", INLINE_IMAGE_LIMIT)
+        attachment_bytes(active, mail, &account_id, &email_id, &part, cap, false)
             .map(tauri::ipc::Response::new)
-            .map_err(|error| failure("Inline image", &error))
     }).await
+}
+
+#[tauri::command]
+pub async fn mail_attachment_export<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>, connection_id: u32, account_id: String, email_id: String,
+    part_id: String, open: bool, state: tauri::State<'_, Connection>,
+    opened: tauri::State<'_, OpenedAttachments>,
+) -> Result<bool, String> {
+    use tauri::Manager;
+    use tauri_plugin_opener::OpenerExt;
+    let path = if open {
+        None
+    } else {
+        let (account, email, part) = (account_id.clone(), email_id.clone(), part_id.clone());
+        let name = with_mail(&state, connection_id, move |_, _, store| {
+            let part = attachment_part(store, &account, &email, &part)?;
+            Ok(attachment_name(part["name"].as_str().unwrap_or("attachment")))
+        }).await?;
+        let parent = app.get_webview_window("main");
+        let path = tauri::async_runtime::spawn_blocking(move || {
+            let dialog = rfd::FileDialog::new().set_file_name(name);
+            match parent {
+                Some(window) => dialog.set_parent(&window).save_file(),
+                None => dialog.save_file(),
+            }
+        }).await.map_err(|_| "Save dialog did not complete.")?;
+        let Some(path) = path else { return Ok(false); };
+        Some(path)
+    };
+    let (name, bytes) = with_mail(&state, connection_id, move |active, mail, store| {
+        let part = attachment_part(store, &account_id, &email_id, &part_id)?;
+        let name = attachment_name(part["name"].as_str().unwrap_or("attachment"));
+        if open && !may_open(part["type"].as_str().unwrap_or_default(), &name) {
+            return Err("This file type can only be saved.".into());
+        }
+        let bytes = attachment_bytes(active, mail, &account_id, &email_id, &part, EXPORT_LIMIT, true)?;
+        Ok((name, bytes))
+    }).await?;
+    if let Some(path) = path {
+        state.current(connection_id)?;
+        tauri::async_runtime::spawn_blocking(move || std::fs::write(path, bytes)).await
+            .map_err(|_| "Save did not complete.")?.map_err(|e| e.to_string())?;
+    } else {
+        let temp = tempfile::Builder::new().prefix("axismundi-attachment-").tempdir().map_err(|e| e.to_string())?;
+        let path = temp.path().join(name);
+        std::fs::write(&path, bytes).map_err(|e| e.to_string())?;
+        state.current(connection_id)?;
+        app.opener().open_path(path.to_string_lossy(), None::<&str>).map_err(|e| e.to_string())?;
+        opened.0.lock().map_err(|_| "Temporary attachments unavailable")?.push(temp);
+    }
+    Ok(true)
 }
 
 /// How one message came out of a change (keyword or move), as the GUI acts on it. Core's five outcomes fold

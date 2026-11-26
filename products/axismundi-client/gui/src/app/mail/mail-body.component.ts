@@ -1,5 +1,8 @@
-import { Component, computed, effect, input, linkedSignal, signal } from "@angular/core";
-import { MatButton } from "@angular/material/button";
+import { Component, ElementRef, TemplateRef, computed, effect, inject, input, linkedSignal, signal, viewChildren } from "@angular/core";
+import { NgTemplateOutlet } from "@angular/common";
+import { MatButton, MatIconButton } from "@angular/material/button";
+import { MatDialog, MatDialogActions, MatDialogClose, MatDialogContent, MatDialogTitle } from "@angular/material/dialog";
+import { MatTooltip } from "@angular/material/tooltip";
 import { MatIcon } from "@angular/material/icon";
 import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
@@ -13,7 +16,8 @@ const IMAGE_LIMIT = 2 * 1024 * 1024;
 
 @Component({
   selector: "app-mail-body",
-  imports: [SafeHtmlFrameComponent, MatButton, MatIcon],
+  imports: [SafeHtmlFrameComponent, MatButton, MatIconButton, MatIcon, MatTooltip, NgTemplateOutlet,
+    MatDialogActions, MatDialogClose, MatDialogContent, MatDialogTitle],
   templateUrl: "./mail-body.component.html",
   styles: [`
     :host { display: block; min-inline-size: 0; }
@@ -33,6 +37,11 @@ const IMAGE_LIMIT = 2 * 1024 * 1024;
       border-radius: var(--mat-sys-corner-small); background: var(--mat-sys-secondary-container); color: var(--mat-sys-on-secondary-container); }
     .attachment-meta { display: grid; min-inline-size: 0; gap: 2px; font: var(--mat-sys-body-medium); }
     .attachment-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .attachment-meta { flex: 1; }
+    .attachment-main { display: flex; align-items: center; flex: 1; min-inline-size: 0; gap: 8px; }
+    button.attachment-main { background: none; border: 0; padding: 0; text-align: start; color: inherit; cursor: pointer; }
+    .attachment-thumb { flex: none; inline-size: 40px; block-size: 40px; object-fit: cover; border-radius: var(--mat-sys-corner-small); }
+    .preview-image { display: block; max-width: 100%; max-height: 70vh; object-fit: contain; }
     .remote-banner { display: flex; align-items: flex-start; gap: 12px; margin: 0 -24px;
       padding: 12px 24px; border-block-end: 1px solid var(--mat-sys-outline-variant);
       background: var(--mat-sys-surface-container); font: var(--mat-sys-body-medium); }
@@ -49,9 +58,19 @@ export class MailBodyComponent {
   readonly attachments = input.required<Attachment[]>();
   readonly scheme = input.required<BodyScheme>();
   protected readonly canShowRemote = supportsCredentialless();
+  private readonly dialog = inject(MatDialog);
+  private readonly cards = viewChildren<ElementRef<HTMLElement>>("card");
   private readonly scope = computed(() => JSON.stringify([this.connectionId(), this.accountId(), this.emailId()]));
   protected readonly allowRemote = linkedSignal({source: this.scope, computation: () => false});
   protected readonly linkFailed = linkedSignal({source: this.scope, computation: () => false});
+  protected readonly thumbnails = linkedSignal({
+    source: this.scope, computation: () => new Map<string, string | null>(),
+  });
+  protected readonly exporting = linkedSignal({
+    source: this.scope, computation: () => new Set<string>(),
+  });
+  protected readonly exportStatus = linkedSignal({source: this.scope, computation: () => ""});
+  protected readonly actualSize = signal(false);
   private readonly downloaded = signal<{scope: string; data: Map<string, string>} | null>(null);
   private readonly cleaned = computed(() => new Map(this.body().parts.filter(part => part.kind === "html")
     .map(part => [part.value, cleanMarkup(part.value)])));
@@ -96,6 +115,46 @@ export class MailBodyComponent {
     return "draft";
   }
 
+  protected canPreview(part: Attachment): boolean {
+    return !!part.partId && !!part.type && RASTER.has(part.type) && part.size !== null && part.size <= 10_000_000;
+  }
+
+  protected canOpen(part: Attachment): boolean {
+    const ext = /\.([^.]+)$/.exec(part.name ?? "")?.[1].toLowerCase();
+    const allowed: Record<string, string[]> = {
+      "application/pdf": ["pdf"], "text/plain": ["txt"], "image/jpeg": ["jpg", "jpeg"], "image/png": ["png"],
+      "image/gif": ["gif"], "image/webp": ["webp"], "image/avif": ["avif"], "image/bmp": ["bmp"],
+    };
+    return !!part.partId && !!ext && !!part.type && !!allowed[part.type]?.includes(ext);
+  }
+
+  private partArgs(partId: string) {
+    return {connectionId: this.connectionId(), accountId: this.accountId(), emailId: this.emailId(), partId};
+  }
+
+  protected preview(part: Attachment, template: TemplateRef<unknown>): void {
+    const url = this.thumbnails().get(part.partId!);
+    if (!url) return;
+    this.actualSize.set(false);
+    this.dialog.open(template, {data: {url, name: part.name || "Attachment"}, maxWidth: "95vw"});
+  }
+
+  protected async exportPart(part: Attachment, open: boolean): Promise<void> {
+    const id = part.partId;
+    if (!id || this.exporting().has(id)) return;
+    const scope = this.scope();
+    this.exportStatus.set("");
+    this.exporting.update(busy => new Set(busy).add(id));
+    try {
+      const saved = await invoke<boolean>("mail_attachment_export", {...this.partArgs(id), open});
+      if (scope === this.scope() && saved) this.exportStatus.set(open ? "Attachment opened." : "Attachment saved.");
+    } catch (error) {
+      if (scope === this.scope()) this.exportStatus.set(String(error));
+    } finally {
+      if (scope === this.scope()) this.exporting.update(busy => new Set([...busy].filter(key => key !== id)));
+    }
+  }
+
   protected readonly resolveResource = computed(() => {
     const stored = this.downloaded(), allowed = this.allowRemote();
     const inline = stored?.scope === this.scope() ? stored.data : null;
@@ -111,6 +170,36 @@ export class MailBodyComponent {
   };
 
   constructor() {
+    effect(onCleanup => {
+      const scope = this.scope(), items = this.visibleAttachments(), cards = this.cards();
+      this.thumbnails.set(new Map());
+      const urls: string[] = [];
+      let canceled = false;
+      const observer = new IntersectionObserver(entries => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          observer.unobserve(entry.target);
+          const part = items[cards.findIndex(card => card.nativeElement === entry.target)];
+          if (!part || !this.canPreview(part)) continue;
+          const id = part.partId!;
+          void invoke<ArrayBuffer>("mail_part_bytes", {...this.partArgs(id), preview: true})
+            .then(bytes => {
+              if (canceled || scope !== this.scope()) return;
+              const url = URL.createObjectURL(new Blob([bytes], {type: part.type!}));
+              urls.push(url);
+              this.thumbnails.update(old => new Map(old).set(id, url));
+            }).catch(() => {
+              if (!canceled && scope === this.scope()) this.thumbnails.update(old => new Map(old).set(id, null));
+            });
+        }
+      });
+      cards.forEach(card => observer.observe(card.nativeElement));
+      onCleanup(() => {
+        canceled = true;
+        observer.disconnect();
+        urls.forEach(url => URL.revokeObjectURL(url));
+      });
+    });
     effect(onCleanup => {
       const scope = this.scope();
       const params = {connectionId: this.connectionId(), accountId: this.accountId(), emailId: this.emailId()};

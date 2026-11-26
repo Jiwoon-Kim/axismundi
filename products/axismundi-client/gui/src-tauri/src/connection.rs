@@ -443,6 +443,9 @@ fn sign_out_one(state: &Connection, connection_id: u32, dir: Option<&std::path::
         state.mail_watch = None;
     }
     let mut result = SignedOut::default();
+    if let Some(mail) = ended.as_ref().and_then(|active| active.mail.as_ref()) {
+        if let Err(error) = mail.forget_attachment_refs() { result.warnings.push(error); }
+    }
     if let Some(key) = ended.and_then(|active| active.saved.clone()) {
         match dir {
             Some(dir) => {
@@ -459,10 +462,13 @@ fn sign_out_one(state: &Connection, connection_id: u32, dir: Option<&std::path::
 fn sign_out_all(state: &Connection, dir: Option<&std::path::Path>, secrets: &dyn crate::saved::Secrets) -> Result<SignedOut, String> {
     let mut state = state.lock()?;
     state.epoch += 1;
-    state.connections.clear();
+    let ended = std::mem::take(&mut state.connections);
     state.mail_watch = None;
     state.plan = None;
     let mut result = SignedOut::default();
+    for mail in ended.values().filter_map(|active| active.mail.as_ref()) {
+        if let Err(error) = mail.forget_attachment_refs() { result.warnings.push(error); }
+    }
     if let Some(dir) = dir {
         match crate::saved::list(dir) {
             Ok(items) => {

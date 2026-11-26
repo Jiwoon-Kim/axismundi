@@ -61,7 +61,10 @@ anniversaries           date 에 "@type": "PartialDate" 추가(무해)
    - 수정은 **바뀐 경로만 PatchObject 로**(코어 `stage_update` 경로). Card 전체를 다시 보내지 않는다 — 전체 교체는 위 손실을
      한 번 더 일으키고, 우리가 모르는 속성(unknown members)도 지운다.
    - 저장 뒤 화면은 서버가 돌려준 값(다음 동기화 결과)을 보여 준다. 보낸 값으로 덮어 그리지 않는다.
-   - 손실 자체를 고치거나 사용자에게 경고하는 UI 는 이번 범위 밖 — INTEROP 문서에 기록만.
+   - **버전**(소유자 결정 2026-11-27): 새 Card 는 JSContact 2.0 으로 쓴다. 기존 Card 를 고칠 때는 서버가 돌려준 `version` 을
+     그대로 두고(Stalwart 면 1.0) 바뀐 경로만 패치한다 — 전화번호 하나 고치면서 버전을 바꾸지 않는다.
+   - 서버별 손실 추적·보정, 서버별 기능 끄기 옵션은 하지 않는다. 기본 생성·조회·수정이 되는지만 본다. localizations 등의
+     2.0 왕복 보존은 Axismundi WordPress 쪽 책임·테스트다.
 1. **Tauri 명령**(얇은 래퍼, 반환 형식은 Rust `Serialize` + 공용 fixture — 메일과 같은 규칙):
    주소록 목록, 주소록별 카드 목록(표시 이름·대표 이메일·아바타 URI 정도의 행), 카드 하나(JSON 그대로), 동기화(전체/증분),
    검색(서버 `ContactCard/query` filter `text`, 결과 id → 캐시에서 행), 생성, 수정 제출. 캐시 파일 위치·바인딩은 메일 캐시가
@@ -96,6 +99,21 @@ anniversaries           date 에 "@type": "PartialDate" 추가(무해)
 6. **수정 폼**: 첫 버전 편집 대상은 name(full·given·surname), emails, phones, organizations 이름, notes. 나머지 속성은 화면에
    보이되 편집하지 않고, 패치에 들어가지 않는다. 편집 중 서버 변경(ifInState 거절)은 코어처럼 pending 유지 + "서버에서
    바뀜, 다시 불러오기" 한 줄.
+   - 폼은 Card 전체가 아니라 편집 가능한 일부만 다룬다. GUI 는 **명시적으로 바꾸거나 지운 항목만** 넘기고 `PatchObject` 는
+     Rust 가 만든다(한 곳). 폼에 안 나온 `localizations`·`media` 를 삭제로 해석하지 않는다.
+   - 통과 기준: 복잡한 Card(g)를 열어 전화번호 하나를 고쳤을 때 실제 `ContactCard/set` 요청에 그 경로 하나만 들어간다.
+
+## RFC 9553 어휘 (수정 폼 전에 붙이는 다음 단계 — 이번 지시 0–2 범위 아님)
+
+```txt
+9610  Rust JMAP 계층(지금 contacts.rs). Card 는 wire·캐시에서 serde_json::Value 로 보존(모르는 필드 유지)
+9553  앱에 번들하는 어휘 + 버전별 규칙. IANA 레지스트리(jscontact.xml: 속성 이름·타입·context·Since/Until, context 별
+      enum)를 생성 재료로 쓰고 생성물은 커밋 + --check.  필수 필드·조건부 제약·2.0 차이(레지스트리 행은 전부 Since 1.0)처럼
+      레지스트리에 없는 규칙은 따로 손으로.  Rust 와 GUI 가 같은 자료를 읽는다 — 서버 응답에 없는 필드도 폼에서 "추가할
+      수 있는 필드"로 보일 수 있게
+폼    IANA 어휘를 그대로 JSON Forms 스키마로 쓰지 않는다. JSON Schema = 편집 가능한 입력 형태, UI Schema = 순서·그룹·
+      위젯(WP 편집기 IA 와 같은 결).  판단(표시 이름·정렬 키·validate·diff→PatchObject·localize)은 Rust 한 곳
+```
 
 ## 하지 않는 것
 

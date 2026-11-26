@@ -560,6 +560,8 @@ pub struct ComposeResult {
     draft_id: Option<String>,
     pending_cleanup: Vec<String>,
     reason: Option<&'static str>,
+    /// With outcome "missingBlobs": the attachment blobs the server no longer has.
+    missing: Vec<String>,
 }
 
 fn compose_reason(kind: &str) -> &'static str {
@@ -569,6 +571,7 @@ fn compose_reason(kind: &str) -> &'static str {
         "invalidRecipients" => "The server rejected a recipient address.",
         "tooManyRecipients" => "The server allows fewer recipients.",
         "overQuota" => "The account is over quota.",
+        "tooLarge" => "The attachments are larger than the server accepts for one message.",
         _ => "The server did not allow this change.",
     }
 }
@@ -619,11 +622,24 @@ pub async fn mail_compose_save(
             .and_then(|box_| box_["id"].as_str());
         let drafts = role("drafts").ok_or("The account has no Drafts mailbox.")?;
         let mut result = ComposeResult {outcome: "saveUnknown", draft_id: None, pending_cleanup: previous,
-            reason: None};
+            reason: None, missing: Vec::new()};
+        let total: u64 = draft.attachments.iter().filter_map(|a| a.size).sum();
+        let most = mail.session.accounts.get(&account_id)
+            .and_then(|a| a.account_capabilities.get(axismundi_client_core::jmap::mail::CAPABILITY))
+            .and_then(|caps| caps["maxSizeAttachmentsPerEmail"].as_u64());
+        if most.is_some_and(|most| total > most) {
+            result.outcome = "saveRejected";
+            result.reason = Some(compose_reason("tooLarge"));
+            return Ok(result);
+        }
         match compose::save_draft(&active.client, &mail.session, &account_id, identity, drafts, &draft, &result.pending_cleanup) {
             compose::Write::Rejected(kind) => {
                 result.outcome = "saveRejected";
                 result.reason = Some(compose_reason(&kind));
+            }
+            compose::Write::MissingBlobs(ids) => {
+                result.outcome = "missingBlobs";
+                result.missing = ids;
             }
             compose::Write::Unknown => {}
             compose::Write::Applied(saved) => {
@@ -643,6 +659,10 @@ pub async fn mail_compose_save(
                     Some(compose::Write::Rejected(kind)) => {
                         result.outcome = "sendRejected";
                         result.reason = Some(compose_reason(&kind));
+                    }
+                    Some(compose::Write::MissingBlobs(_)) => {
+                        result.outcome = "sendRejected";
+                        result.reason = Some(compose_reason("blobNotFound"));
                     }
                     Some(compose::Write::Unknown) => {
                         compose_state.uncertain.insert((account_id.clone(), compose_id));

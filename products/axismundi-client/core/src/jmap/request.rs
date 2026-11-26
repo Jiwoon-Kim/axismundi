@@ -42,6 +42,9 @@ pub struct SetError {
     pub kind: String,
     pub description: Option<String>,
     pub properties: Option<Vec<String>>,
+    /// blobNotFound (RFC 8621 §4.6): the blob ids the server could not find.
+    #[serde(default, rename = "notFound")]
+    pub not_found: Option<Vec<String>>,
 }
 
 #[derive(Debug, Deserialize)]

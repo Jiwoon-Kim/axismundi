@@ -3,3 +3,19 @@ mat-form-field { display: block; }
 details { margin-block-end: 12px; }
 summary { cursor: pointer; }
 [role=alert] { color: var(--mat-sys-error); }
+
+.compose-attachments { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.compose-attachment {
+  display: flex; align-items: center; gap: 8px; min-inline-size: 0; max-inline-size: 100%;
+  padding-inline: 12px 4px; border: 1px solid var(--mat-sys-outline-variant); border-radius: var(--mat-sys-corner-medium);
+  background: var(--mat-sys-surface-container-low);
+}
+.compose-attachment.failed { border-color: var(--mat-sys-error); }
+.compose-attachment > mat-icon { flex: none; color: var(--mat-sys-on-surface-variant); }
+.compose-attachment.failed > mat-icon { color: var(--mat-sys-error); }
+.attachment-meta { display: grid; min-inline-size: 0; padding-block: 6px; }
+.attachment-name { font: var(--mat-sys-body-medium); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.attachment-status { font: var(--mat-sys-body-small); color: var(--mat-sys-on-surface-variant); }
+.compose-attachment.failed .attachment-status { color: var(--mat-sys-error); }
+.compose-hint { font: var(--mat-sys-body-small); color: var(--mat-sys-on-surface-variant); }
+.attach { margin-inline-end: auto; }

@@ -1,4 +1,4 @@
-//! Plain-text drafts and submission. A lost write response is never replayed.
+//! Plain-text drafts with ordinary attachments, and submission. A lost write response is never replayed.
 use super::CAPABILITY;
 use crate::{
     Error,
@@ -38,12 +38,28 @@ pub struct Draft {
     pub body: String,
     pub in_reply_to: Vec<String>,
     pub references: Vec<String>,
+    /// Ordinary attachments, already uploaded; each references its blob, never its bytes.
+    #[serde(default)]
+    pub attachments: Vec<Attachment>,
+}
+
+/// An ordinary (non-inline) attachment of a draft: an uploaded blob and the name it is sent under.
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Attachment {
+    pub blob_id: String,
+    pub name: String,
+    #[serde(rename = "type")]
+    pub media_type: String,
+    pub size: Option<u64>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum Write<T> {
     Applied(T),
     Rejected(String),
+    /// The server did not find these attachment blobs (blobNotFound): upload them again or drop them.
+    MissingBlobs(Vec<String>),
     Unknown,
 }
 
@@ -92,6 +108,9 @@ pub struct ComposeSource {
     pub body: String,
     #[serde(default)]
     pub is_draft: bool,
+    /// A draft's ordinary attachments, restored so a reopened draft keeps them.
+    #[serde(skip_deserializing, default)]
+    pub attachments: Vec<Attachment>,
 }
 
 #[derive(Debug)]
@@ -133,8 +152,15 @@ fn decode_source(row: &Value) -> Result<ComposeSource, SourceError> {
         let invalid = || Error::Shape("missing draft body metadata".into());
         let html = row["htmlBody"].as_array().ok_or_else(invalid)?;
         let attachments = row["attachments"].as_array().ok_or_else(invalid)?;
-        // htmlBody can contain the same text/plain parts as textBody.
-        if !attachments.is_empty()
+        // htmlBody can contain the same text/plain parts as textBody. Inline parts (a cid, or an
+        // inline disposition) belong to rich text, which this composer does not edit.
+        let inline = |part: &Value| {
+            part["cid"].as_str().is_some_and(|cid| !cid.is_empty())
+                || part["disposition"]
+                    .as_str()
+                    .is_some_and(|kind| kind.eq_ignore_ascii_case("inline"))
+        };
+        if attachments.iter().any(inline)
             || html.iter().any(|part| {
                 !part["type"]
                     .as_str()
@@ -142,6 +168,15 @@ fn decode_source(row: &Value) -> Result<ComposeSource, SourceError> {
             })
         {
             return Err(SourceError::UnsupportedDraft);
+        }
+        for part in attachments {
+            let blob = part["blobId"].as_str().filter(|id| !id.is_empty()).ok_or_else(invalid)?;
+            source.attachments.push(Attachment {
+                blob_id: blob.to_owned(),
+                name: part["name"].as_str().unwrap_or("attachment").to_owned(),
+                media_type: part["type"].as_str().unwrap_or("application/octet-stream").to_owned(),
+                size: part["size"].as_u64(),
+            });
         }
     }
     let mut parts = Vec::new();
@@ -204,6 +239,18 @@ fn draft_email(draft: &Draft, identity: &Identity, mailbox: &str) -> Result<Valu
         "textBody": [{"partId": "text", "type": "text/plain"}],
         "bodyValues": {"text": {"value": draft.body}},
     });
+    if !draft.attachments.is_empty() {
+        // textBody cannot carry attachments; bodyStructure replaces it (RFC 8621 §4.6).
+        let mut parts = vec![json!({"partId": "text", "type": "text/plain"})];
+        for attachment in &draft.attachments {
+            parts.push(json!({
+                "blobId": attachment.blob_id, "type": attachment.media_type,
+                "name": attachment.name, "disposition": "attachment",
+            }));
+        }
+        email.as_object_mut().expect("object").remove("textBody");
+        email["bodyStructure"] = json!({"type": "multipart/mixed", "subParts": parts});
+    }
     if let Some(reply_to) = &identity.reply_to {
         email["replyTo"] = json!(reply_to);
     }
@@ -246,6 +293,9 @@ fn created(batch: Result<Batch, Error>, method: &str, account: &str, key: &str) 
             .as_str()
             .filter(|id| !id.is_empty())
             .map_or(Write::Unknown, |id| Write::Applied(id.to_owned())),
+        (None, Some(error)) if error.kind == "blobNotFound" => {
+            Write::MissingBlobs(error.not_found.clone().unwrap_or_default())
+        }
         (None, Some(error)) => Write::Rejected(error.kind.clone()),
         _ => Write::Unknown,
     }
@@ -270,6 +320,7 @@ fn save(
     ) {
         Write::Applied(id) => id,
         Write::Rejected(kind) => return Write::Rejected(kind),
+        Write::MissingBlobs(ids) => return Write::MissingBlobs(ids),
         Write::Unknown => return Write::Unknown,
     };
     let mut pending_cleanup: Vec<_> = previous.iter().filter(|old| **old != id).cloned().collect();
@@ -455,6 +506,8 @@ fn submit_once(
     match created(response, "EmailSubmission/set", account, "send") {
         Write::Applied(_) => return Write::Applied(()),
         Write::Rejected(kind) => return Write::Rejected(kind),
+        // A submission names one Email, not blobs; treat this answer as a refusal.
+        Write::MissingBlobs(_) => return Write::Rejected("blobNotFound".into()),
         Write::Unknown => {}
     }
     let mut read = |method, args, tag| -> Option<Value> {
@@ -524,11 +577,75 @@ mod tests {
             Err(SourceError::UnsupportedDraft)
         ));
         row["htmlBody"] = row["textBody"].clone();
-        row["attachments"] = json!([{"partId":"2","type":"application/pdf"}]);
+        row["attachments"] = json!([{"partId":"2","blobId":"b2","type":"application/pdf",
+            "name":"report.pdf","size":41,"disposition":"attachment"}]);
+        assert_eq!(
+            decode_source(&row).unwrap().attachments,
+            [Attachment {
+                blob_id: "b2".into(),
+                name: "report.pdf".into(),
+                media_type: "application/pdf".into(),
+                size: Some(41)
+            }]
+        );
+        row["attachments"] = json!([{"partId":"3","blobId":"b3","type":"image/png","cid":"img@x"}]);
         assert!(matches!(
             decode_source(&row),
             Err(SourceError::UnsupportedDraft)
         ));
+        row["attachments"] =
+            json!([{"partId":"3","blobId":"b3","type":"image/png","disposition":"inline"}]);
+        assert!(matches!(
+            decode_source(&row),
+            Err(SourceError::UnsupportedDraft)
+        ));
+    }
+
+    #[test]
+    fn attachments_go_into_a_mixed_body_structure() {
+        let identity: Identity =
+            serde_json::from_value(json!({"id": "i", "name": "", "email": "a@example.org"}))
+                .unwrap();
+        let mut draft: Draft = serde_json::from_value(json!({
+            "identityId": "i", "to": [], "cc": [], "bcc": [], "subject": "s", "body": "text",
+            "inReplyTo": [], "references": []
+        }))
+        .unwrap();
+        let plain = draft_email(&draft, &identity, "d").unwrap();
+        assert!(plain.get("bodyStructure").is_none());
+        assert_eq!(plain["textBody"][0]["partId"], "text");
+        draft.attachments = vec![Attachment {
+            blob_id: "b1".into(),
+            name: "a.txt".into(),
+            media_type: "text/plain".into(),
+            size: Some(3),
+        }];
+        let mixed = draft_email(&draft, &identity, "d").unwrap();
+        assert!(mixed.get("textBody").is_none());
+        assert_eq!(
+            mixed["bodyStructure"],
+            json!({"type":"multipart/mixed","subParts":[
+                {"partId":"text","type":"text/plain"},
+                {"blobId":"b1","type":"text/plain","name":"a.txt","disposition":"attachment"}
+            ]})
+        );
+        assert_eq!(mixed["bodyValues"]["text"]["value"], "text");
+    }
+
+    #[test]
+    fn a_missing_attachment_blob_is_reported_by_id_and_keeps_the_old_draft() {
+        let mut calls = 0;
+        let result = save("a", "d", json!({}), &["old".into()], |_, args, tag| {
+            calls += 1;
+            assert!(args.get("destroy").is_none());
+            Ok(response(
+                tag,
+                json!({"accountId":"a","newState":"s","notCreated":{"draft":
+                    {"type":"blobNotFound","notFound":["gone"]}}}),
+            ))
+        });
+        assert_eq!(result, Write::MissingBlobs(vec!["gone".into()]));
+        assert_eq!(calls, 1);
     }
 
     #[test]

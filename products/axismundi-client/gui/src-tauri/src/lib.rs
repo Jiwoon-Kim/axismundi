@@ -1,3 +1,4 @@
+mod compose_files;
 mod connection;
 mod mail;
 mod mail_push;
@@ -13,6 +14,18 @@ pub fn configure<R: tauri::Runtime>(builder: tauri::Builder<R>) -> tauri::Builde
         .plugin(tauri_plugin_opener::init())
         .manage(connection::Connection::default())
         .manage(mail::OpenedAttachments::default())
+        .manage(compose_files::ComposeFiles::default())
+        // A native file drop is the other trusted source of attachment files: register them here
+        // and hand the webview handles, never paths.
+        .on_window_event(|window, event| {
+            use tauri::Emitter;
+            if let tauri::WindowEvent::DragDrop(tauri::DragDropEvent::Drop { paths, .. }) = event {
+                let views = window.state::<compose_files::ComposeFiles>().register(paths.clone());
+                if !views.is_empty() {
+                    let _ = window.emit("compose-files-dropped", views);
+                }
+            }
+        })
         .invoke_handler(tauri::generate_handler![
             connection::discover_server,
             connection::connect_server,
@@ -35,6 +48,10 @@ pub fn configure<R: tauri::Runtime>(builder: tauri::Builder<R>) -> tauri::Builde
             mail::mail_compose_source,
             mail::mail_compose_save,
             mail::mail_compose_discard,
+            compose_files::mail_attachment_pick,
+            compose_files::mail_attachment_upload,
+            compose_files::mail_attachment_release,
+            compose_files::mail_attachment_limit,
             mail::mail_thread,
             mail::mail_set_keywords,
             mail::mail_move,

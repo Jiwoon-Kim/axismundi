@@ -19,6 +19,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { ConnectionService } from "../connection.service";
 import { SearchDialogComponent, type SearchDialogData } from "./search-dialog.component";
 import { ComposeDialogComponent, type ComposeData, type ComposeIdentity, type ComposeMode, type ComposeResult, type ComposeSource } from "./compose-dialog.component";
+import type { PickedFile, UploadedFile } from "./compose-attachments";
 import { MailDetailComponent } from "./mail-detail.component";
 import { MailSearchBarComponent } from "./mail-search-bar.component";
 import { MailActions, type Aspect, type Keyword } from "./mail-actions";
@@ -184,6 +185,10 @@ export class MailPageComponent {
           if (this.alive && this.searchOwner() === owner) this.actions.changed.update(count => count + 1);
           return result;
         },
+        pick: () => invoke<PickedFile[]>("mail_attachment_pick"),
+        upload: handle => invoke<UploadedFile>("mail_attachment_upload", {connectionId, accountId, handle}),
+        release: handles => invoke<void>("mail_attachment_release", {handles}),
+        totalLimit: () => invoke<number | null>("mail_attachment_limit", {connectionId, accountId}),
       };
       const dialog = this.dialogs.open<ComposeDialogComponent, ComposeData, boolean>(ComposeDialogComponent, {
         data, disableClose: true,

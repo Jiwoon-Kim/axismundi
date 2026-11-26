@@ -25,8 +25,36 @@
     <mat-form-field><mat-label>Subject</mat-label><input matInput [formField]="fields.subject" (input)="queue()" /></mat-form-field>
     <mat-form-field><mat-label>Message</mat-label><textarea matInput rows="8" [formField]="fields.body" (input)="queue()"></textarea></mat-form-field>
   </fieldset>
+  @if (attachments().length) {
+    <ul class="compose-attachments" aria-label="Attachments">
+      @for (item of attachments(); track item.key) {
+        <li class="compose-attachment" [class.failed]="item.state === 'failed'">
+          @if (item.state === "uploading") {
+            <mat-progress-spinner mode="indeterminate" [diameter]="20" aria-label="Uploading" />
+          } @else {
+            <mat-icon aria-hidden="true">{{ item.state === "failed" ? "error" : "attach_file" }}</mat-icon>
+          }
+          <span class="attachment-meta">
+            <span class="attachment-name" [title]="item.name">{{ item.name }}</span>
+            <span class="attachment-status">
+              {{ item.state === "failed" ? item.error : item.state === "uploading" ? "Uploading…" : formatSize(item.size) }}
+            </span>
+          </span>
+          @if (item.state === "failed" && item.handle) {
+            <button matIconButton type="button" matTooltip="Retry" [attr.aria-label]="'Retry ' + item.name"
+                    [disabled]="locked()" (click)="retry(item.key)"><mat-icon>refresh</mat-icon></button>
+          }
+          <button matIconButton type="button" matTooltip="Remove" [attr.aria-label]="'Remove ' + item.name"
+                  [disabled]="locked() || busy()" (click)="remove(item.key)"><mat-icon>close</mat-icon></button>
+        </li>
+      }
+    </ul>
+  }
+  @if (uploading()) { <p class="compose-hint">Attachments still uploading are added to the draft when they finish.</p> }
   @if (notice()) { <p role="alert">{{ notice() }}</p> }
-  @if (confirmClose()) { <p>Some changes are not saved.</p> }
+  @if (confirmClose()) {
+    <p>{{ unsaved() ? "Some attachments are not saved in the draft." : "Some changes are not saved." }}</p>
+  }
   @if (confirmDiscard()) { <p>Discard this draft?</p> }
 </mat-dialog-content>
 <mat-dialog-actions align="end">
@@ -37,8 +65,11 @@
     <button matButton (click)="keepWriting()">Keep writing</button>
     <button matButton (click)="closeAnyway()">Close anyway</button>
   } @else {
+    <button matIconButton type="button" class="attach" matTooltip="Attach files" aria-label="Attach files"
+            [disabled]="busy() || locked()" (click)="attach()"><mat-icon>attach_file</mat-icon></button>
     <button matButton [disabled]="busy() || locked()" (click)="askDiscard()">Discard</button>
     <button matButton [disabled]="busy()" (click)="close()">Close</button>
-    <button matButton="filled" [disabled]="busy() || locked()" (click)="persist(true)">Send</button>
+    <button matButton="filled" [disabled]="busy() || locked() || !!blocker()" [matTooltip]="blocker() ?? ''"
+            (click)="persist(true)">Send</button>
   }
 </mat-dialog-actions>

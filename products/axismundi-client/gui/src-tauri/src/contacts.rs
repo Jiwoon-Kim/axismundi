@@ -90,7 +90,6 @@ pub(crate) struct Row {
     avatar_uri: Option<String>,
     phone: Option<String>,
     organization: Option<String>,
-    sort_key: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -155,11 +154,6 @@ fn preferred(items: &Value, field: &str, photos: bool) -> Option<String> {
 }
 
 fn row(card: Value) -> Option<Row> {
-    let name = &card["name"];
-    let sort_key = ["surname", "given"].into_iter().filter_map(|kind| {
-        string(&name["sortAs"][kind]).or_else(|| name["components"].as_array()?.iter()
-            .find(|part| part["kind"] == kind).and_then(|part| string(&part["value"])))
-    }).collect::<Vec<_>>().join(" ");
     Some(Row {
         id: string(&card["id"])?,
         kind: string(&card["kind"]).unwrap_or_else(|| "individual".to_owned()),
@@ -176,7 +170,6 @@ fn row(card: Value) -> Option<Row> {
         avatar_uri: preferred(&card["media"], "uri", true),
         phone: preferred(&card["phones"], "number", false),
         organization: preferred(&card["organizations"], "name", false),
-        sort_key: if sort_key.is_empty() { string(&name["full"]) } else { Some(sort_key) },
     })
 }
 
@@ -219,33 +212,6 @@ pub(crate) async fn contacts_books(
             .filter_map(book_row)
             .collect())
     })
-    .await
-}
-
-#[tauri::command]
-pub(crate) async fn contacts_list(
-    state: tauri::State<'_, Connection>,
-    connection_id: u32,
-    account_id: Option<String>,
-    book_id: Option<String>,
-) -> Result<Vec<Row>, String> {
-    run(
-        state,
-        connection_id,
-        account_id,
-        move |_, _, store, account| {
-            Ok(store
-                .list(account, CARD)?
-                .into_iter()
-                .filter(|card| {
-                    book_id
-                        .as_ref()
-                        .is_none_or(|book| card["addressBookIds"][book] == true)
-                })
-                .filter_map(row)
-                .collect())
-        },
-    )
     .await
 }
 
@@ -338,22 +304,6 @@ pub(crate) async fn contacts_query(
 ) -> Result<Vec<Row>, String> {
     run(state, connection_id, account_id, move |active, session, store, account| {
         query_rows(active, session, store, account, filter.as_ref(), &sort.unwrap_or_default())
-    })
-    .await
-}
-
-/// Text search across every address book: `contacts_query` with `{text}` and no sort.
-/// Kept until the GUI calls `contacts_query` directly.
-#[tauri::command]
-pub(crate) async fn contacts_search(
-    state: tauri::State<'_, Connection>,
-    connection_id: u32,
-    account_id: Option<String>,
-    text: String,
-) -> Result<Vec<Row>, String> {
-    run(state, connection_id, account_id, move |active, session, store, account| {
-        let filter = core::Filter::Condition([("text".to_owned(), text)].into());
-        query_rows(active, session, store, account, Some(&filter), &[])
     })
     .await
 }

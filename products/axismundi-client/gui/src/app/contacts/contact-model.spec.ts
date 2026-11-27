@@ -11,7 +11,7 @@ test("the Rust fixture exposes the fields consumed by Contacts", () => {
   assert.equal(fixture.books[0].sortOrder, 10);
   assert.deepEqual(fixture.rows[0], {
     id: "test-card", kind: "individual", name: "Test Contact", email: "test@example.org",
-    avatarUri: "https://example.org/avatar.png", phone: null, organization: null, sortKey: "Test Contact",
+    avatarUri: "https://example.org/avatar.png", phone: null, organization: null,
   });
   assert.equal(fixture.rows[1].kind, "group");
   const card = {...fixture.detail.card, phones: {p1: {number: "000", label: "Work"}}};

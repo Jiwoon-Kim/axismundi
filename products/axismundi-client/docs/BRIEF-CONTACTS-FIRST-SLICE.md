@@ -120,6 +120,24 @@ anniversaries           date 에 "@type": "PartialDate" 추가(무해)
    - **정렬 UI**: `mat-sort-header` 는 표시된 열의 값이 곧 정렬 속성일 때만. 이름 열은 `name.full` 이라 comparator 가 아니므로
      정렬은 별도 메뉴(Outlook 결): 기준 = 이름(given)·성(surname)·두 번째 성(surname2)·만든 날·고친 날, 순서 = 오름/내림.
      서버가 거절하면 그 이유를 보이고 다른 정렬로 바꾸지 않는다.
+   - **결합 규칙**: 서로 다른 필드는 AND. 카드에 값이 하나뿐인 필드(`inAddressBook`·`kind`·`uid`)는 같은 필드끼리 OR
+     (`kind: group` AND `kind: org` 는 항상 빈 결과), 나머지 텍스트 필드는 같은 필드끼리도 AND. NOT 은 GUI 에 아직 없음.
+   - **필터 side sheet**(2026-11-27, 소유자 결정 — 아래 칩 종류 항목을 대체): 목록 app bar 오른쪽 필터 버튼이 M3 side sheet
+     를 연다(expanded 이상 standard — 목록이 줄어듦, compact 는 modal, 오른쪽 가장자리, 닫기 버튼). 안에는 단일 선택은 라디오
+     (정렬 기준·방향 — 정렬 메뉴 대신), OR 집합은 체크박스(주소록·kind), 날짜 4개는 datepicker. 바로 적용되고 목록 바 아래
+     칩으로 보인다(칩 ×로 하나씩 제거). 검색 다이얼로그에는 검색어와 직접 입력 조건(input chip)만 남는다. 서버가 정렬·필터를
+     거절하면 "This server cannot sort contacts by …" 로 보이고 쿼리를 바꾸지 않는다.
+   - **칩 종류(M3 chips)**: 고정 선택지는 filter chip — 주소록(여러 개 선택 → OR), `kind`(RFC 9553 enum 6개, 자유 입력 금지).
+     사용자가 입력하는 조건은 input chip — `mat-chip-grid` + `matChipInputFor`, Enter 로 `필드: 값` 칩 생성, × 로 하나만 제거.
+     날짜 4개(created/updated before·after)는 datepicker → UTCDate. `hasMember` 는 "이 uid 를 구성원으로 가진 카드" = **이 연락처가 속한
+     그룹 찾기**(연락처 상세에서 거는 조건, 다음 범위). 반대로 그룹 상세의 "구성원 보기"는 그 그룹 `members` 의 uid 들을
+     `uid` 조건 OR 로 조회한다(2026-11-27 정정 — 앞서 거꾸로 적었음). 맨 `<select>`·`mat-form-field` 밖 `matInput` 은 쓰지 않는다.
+   - **기본 정렬**: `created` 내림차순(MUST 기준이라 서버가 거절하지 않음, 최근 추가가 위). 정렬 메뉴는 기준·방향 모두
+     선택 표시(아이콘)를 보인다.
+   - **All contacts**: `inAddressBook` 조건이 없는 상태 = 전체 주소록. 내비게이션 맨 위에 주소록들과 구분해 "All contacts"
+     항목을 두고 기본 선택으로 한다(AddressBook 이 아니라 필터 없는 쿼리 — JMAP 에 그런 객체를 지어내지 않는다). 목록
+     app bar 제목도 "All contacts". 주소록을 고르면 `inAddressBook` 칩, 칩을 지우면 다시 All contacts. 새 연락처의 저장
+     주소록은 All 일 때 `isDefault` 주소록.
    - **칩**: 목록 바 아래엔 `inAddressBook` 과 지금 적용된 조건만. 나머지 18개는 검색 다이얼로그의 "필터 추가" 메뉴에서.
      여러 주소록은 `OR`, 나머지와는 `AND`. 전체 주소록이면 `inAddressBook` 을 보내지 않는다. 검색어·검색 조건은
      디스크·URL 에 저장하지 않는다.
@@ -146,6 +164,14 @@ anniversaries           date 에 "@type": "PartialDate" 추가(무해)
 폼    IANA 어휘를 그대로 JSON Forms 스키마로 쓰지 않는다. JSON Schema = 편집 가능한 입력 형태, UI Schema = 순서·그룹·
       위젯(WP 편집기 IA 와 같은 결).  판단(표시 이름·정렬 키·validate·diff→PatchObject·localize)은 Rust 한 곳
 ```
+
+## 다음으로 미룬 것 — 쿼리 페이지네이션 (2026-11-27 기록)
+
+지금 코어 `query()` 는 `ContactCard/query` 를 끝까지 읽어 id 를 모두 모으고, Tauri `contacts_query` 는 매번 카드 동기화를
+돌린 뒤 행 전체를 넘기며, GUI 는 그 행을 모두 그린다(무한 스크롤 없음). 큰 주소록에서 필터·정렬을 바꿀 때마다 비용이
+연락처 수에 비례한다 — 기능 결함이 아니라 성능 한계. 바꿀 때: 코어에 `position`/`limit` 한 페이지 query(ids·`queryState`·
+`total`), Tauri 는 페이지 단위 + 캐시에 없는 id 가 있을 때만 동기화, GUI 는 메일 `mail-paging.ts` 규칙(sentinel·
+`queryState` 바뀌면 이어 붙이지 않음·실패 시 재시도 줄)을 공용으로 꺼내 쓴다.
 
 ## 하지 않는 것
 

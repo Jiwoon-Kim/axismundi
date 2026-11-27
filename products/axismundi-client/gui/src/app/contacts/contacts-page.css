@@ -35,6 +35,28 @@ summary { cursor: pointer; padding: 8px; }
 .list-heading h1, .list-heading p { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .list-heading p { font: var(--mat-sys-label-medium); color: var(--mat-sys-on-surface-variant); }
 .list-header button { flex: none; }
+.applied-filters, .search-filters { padding: 8px 12px; }
+.search-filters { background: var(--mat-sys-surface-container-high); }
+.search-filters mat-form-field { display: flex; }
+/* M3 side sheet (products/styleguide/_data/surface.yml, sheet-side): 256dp wide; standard = surface,
+   level0, divider on the edge facing the page; modal = surface-container-low, level1, 16dp corners facing
+   the page. Headline and actions stay put; only the body scrolls, its scrollbar on the sheet's edge. */
+.filter-sheet { width: 256px; padding: 0; background: var(--mat-sys-surface); border-inline-end: 0;
+  border-inline-start: 1px solid var(--mat-sys-outline); }
+.filter-sheet.modal { background: var(--mat-sys-surface-container-low); box-shadow: var(--mat-sys-level1); border: 0;
+  border-start-start-radius: 16px; border-end-start-radius: 16px; }
+.sheet { display: flex; flex-direction: column; height: 100%; }
+.sheet-header { flex: none; display: flex; align-items: center; gap: 12px; padding: 12px 12px 12px 24px; }
+.sheet-header h2 { flex: 1; margin: 0; font: var(--mat-sys-title-large); color: var(--mat-sys-on-surface-variant); }
+.sheet-body { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 0 24px 16px; }
+.sheet-body section { padding-block: 8px; border-block-end: 1px solid var(--mat-sys-outline-variant); }
+.sheet-body section:last-child { border-block-end: 0; }
+.sheet-body h3 { margin: 8px 0 4px; font: var(--mat-sys-title-small); color: var(--mat-sys-on-surface-variant); }
+.sheet-body mat-radio-group, .sheet-body [role=group] { display: flex; flex-direction: column; }
+.sheet-body mat-form-field { display: block; margin-block: 8px; }
+.sheet-actions { flex: none; box-sizing: border-box; display: flex; align-items: center; justify-content: flex-start;
+  min-height: 72px; padding: 16px 24px 24px; border-block-start: 1px solid var(--mat-sys-outline); }
+.book-divider { width: 100%; border: 0; border-block-start: 1px solid var(--mat-sys-outline-variant); }
 .list-header .search-active { background: var(--mat-sys-secondary-container); color: var(--mat-sys-on-secondary-container); }
 mat-dialog-content mat-form-field { width: 100%; }
 .table-scroll { overflow: auto; flex: 1; min-height: 0; }

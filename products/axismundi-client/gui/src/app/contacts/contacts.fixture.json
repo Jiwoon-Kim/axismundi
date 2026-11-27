@@ -43,8 +43,7 @@
       "kind": "individual",
       "name": "Test Contact",
       "organization": null,
-      "phone": null,
-      "sortKey": "Test Contact"
+      "phone": null
     },
     "state": "cards-state"
   },
@@ -92,8 +91,7 @@
       "kind": "individual",
       "name": "Test Contact",
       "organization": null,
-      "phone": null,
-      "sortKey": "Test Contact"
+      "phone": null
     },
     {
       "avatarUri": null,
@@ -102,8 +100,7 @@
       "kind": "group",
       "name": "Test Group",
       "organization": null,
-      "phone": null,
-      "sortKey": "Test Group"
+      "phone": null
     }
   ],
   "synced": {

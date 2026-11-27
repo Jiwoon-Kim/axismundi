@@ -7,26 +7,31 @@
   </button>
 </ng-template>
 <ng-template #appBarSearch>
-  <app-mail-search-bar label="Search contacts" placement="app-bar" [text]="search()" (activate)="searchDialog(searchForm)"
+  <app-mail-search-bar label="Search contacts" placement="app-bar" [text]="search()" (activate)="searchDialog(searchForm, $event)"
     (exit)="applySearch('')" />
 </ng-template>
 <ng-template #searchForm>
-  <h2 mat-dialog-title>Search contacts</h2>
-  <form (submit)="$event.preventDefault(); closeSearch(); applySearch(query().trim())">
-    <mat-dialog-content>
-      <mat-form-field appearance="outline">
-        <mat-label>Search contacts</mat-label>
-        <input matInput type="search" [value]="query()" (input)="input($event)">
-      </mat-form-field>
-    </mat-dialog-content>
-    <mat-dialog-actions align="end">
-      @if (search()) {
-        <button matButton type="button" (click)="closeSearch(); applySearch('')">Clear search</button>
-      }
-      <button matButton type="button" (click)="closeSearch()">Cancel</button>
-      <button matButton="filled" type="submit">Search</button>
-    </mat-dialog-actions>
-  </form>
+  <div class="search-filters">
+  <button matButton [matMenuTriggerFor]="filterMenu"><mat-icon>filter_list</mat-icon>Filter field: {{ filterFields[filterKey()] }}</button>
+  <mat-menu #filterMenu="matMenu">
+    @for (key of filterKeys; track key) {
+      <button mat-menu-item (click)="filterKey.set(key)">{{ filterFields[key] }}</button>
+    }
+  </mat-menu>
+    <mat-form-field appearance="outline">
+      <mat-label>{{ filterFields[filterKey()] }}</mat-label>
+      <mat-chip-grid #filterGrid aria-label="Entered filters">
+        @for (chip of inputChips(); track chip) {
+          <mat-chip-row (removed)="removeDraft(chip)">
+            {{ filterFields[chip.key] }}: {{ chipValue(chip) }}
+            <button matChipRemove [attr.aria-label]="'Remove ' + filterFields[chip.key]"><mat-icon>cancel</mat-icon></button>
+          </mat-chip-row>
+        }
+      </mat-chip-grid>
+      <input [matChipInputFor]="filterGrid"
+        (matChipInputTokenEnd)="addFilter($event.value); $event.chipInput.clear()">
+    </mat-form-field>
+  </div>
 </ng-template>
 <mat-sidenav-container>
 <mat-sidenav aria-label="Address books" [mode]="expanded() ? 'side' : 'over'" [opened]="expanded() || drawer()"
@@ -35,9 +40,12 @@
     <mat-icon>person_add</mat-icon> Add contact
   </button>
   <nav aria-label="Filter by address book">
+    <button matButton [class.selected]="allContacts()" [attr.aria-current]="allContacts() ? 'true' : null"
+      [disabled]="saving()" (click)="chooseBook(null)">All contacts</button>
+    <hr class="book-divider">
     <h2>Address books</h2>
     @for (book of orderedBooks(); track book.id) {
-      <button matButton [class.selected]="bookId() === book.id" [attr.aria-current]="bookId() === book.id ? 'true' : null"
+      <button matButton [class.selected]="selectedBook()?.id === book.id" [attr.aria-current]="selectedBook()?.id === book.id ? 'true' : null"
         [disabled]="saving()" (click)="chooseBook(book.id)">
         <span class="book-label">
           <span>{{ book.name ?? "Address book" }}</span>
@@ -49,6 +57,60 @@
     }
   </nav>
 </mat-sidenav>
+<!-- M3 side sheet for the list's filters: standard beside the list in wide windows, modal in compact
+     ones. Single-choice settings are radio buttons, OR sets are checkboxes. -->
+<mat-sidenav id="contact-filter-sheet" class="filter-sheet" position="end" aria-labelledby="contact-filter-title"
+  [class.modal]="!expanded()" [mode]="expanded() ? 'side' : 'over'" [opened]="filtersOpen()" (openedChange)="filtersOpen.set($event)">
+  <div class="sheet">
+  <header class="sheet-header">
+    <h2 id="contact-filter-title">Filters</h2>
+    <button matIconButton type="button" aria-label="Close filters" (click)="filtersOpen.set(false)"><mat-icon>close</mat-icon></button>
+  </header>
+  <div class="sheet-body">
+    <section>
+      <h3 id="sort-by">Sort by</h3>
+      <mat-radio-group aria-labelledby="sort-by" [value]="sortKey()" (change)="sortKey.set($event.value)">
+        @for (key of sortKeys; track key) { <mat-radio-button [value]="key">{{ sortFields[key] }}</mat-radio-button> }
+      </mat-radio-group>
+      <h3 id="sort-order">Order</h3>
+      <mat-radio-group aria-labelledby="sort-order" [value]="ascending()" (change)="ascending.set($event.value)">
+        <mat-radio-button [value]="false">Descending</mat-radio-button>
+        <mat-radio-button [value]="true">Ascending</mat-radio-button>
+      </mat-radio-group>
+    </section>
+    <section>
+      <h3 id="filter-books">Address books</h3>
+      <div role="group" aria-labelledby="filter-books">
+        @for (book of orderedBooks(); track book.id) {
+          <mat-checkbox [checked]="has('inAddressBook', book.id)" (change)="toggle('inAddressBook', book.id, $event.checked)">{{ book.name ?? book.id }}</mat-checkbox>
+        }
+      </div>
+    </section>
+    <section>
+      <h3 id="filter-kinds">Kind</h3>
+      <div role="group" aria-labelledby="filter-kinds">
+        @for (kind of kinds; track kind) {
+          <mat-checkbox [checked]="has('kind', kind)" (change)="toggle('kind', kind, $event.checked)">{{ kindLabels[kind] }}</mat-checkbox>
+        }
+      </div>
+    </section>
+    <section>
+      <h3>Dates</h3>
+      @for (key of dateKeys; track key) {
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>{{ filterFields[key] }}</mat-label>
+          <input matInput [matDatepicker]="picker" [value]="dateOf(key)" (dateChange)="setDate(key, $event.value)">
+          <mat-datepicker-toggle matIconSuffix [for]="picker" />
+          <mat-datepicker #picker />
+        </mat-form-field>
+      }
+    </section>
+  </div>
+  <footer class="sheet-actions">
+    <button matButton type="button" [disabled]="!sheetFiltered()" (click)="clearSheet()">Clear filters</button>
+  </footer>
+  </div>
+</mat-sidenav>
 <mat-sidenav-content>
 <div class="panes">
   <section class="list" [class.collapsed]="paneOpen()" [inert]="paneOpen()" aria-label="Contacts list">
@@ -56,7 +118,7 @@
     <mat-toolbar class="list-header" [class.scrolled]="listScrolled()">
       @if (!expanded() && !windowSearch()) { <ng-container [ngTemplateOutlet]="drawerButton" /> }
       <div class="list-heading">
-        <h1 [title]="selectedBook()?.name ?? ''">{{ selectedBook()?.name ?? "Contacts" }}</h1>
+        <h1 [title]="selectedBook()?.name ?? ''">{{ selectedBook()?.name ?? (allContacts() ? "All contacts" : "Contacts") }}</h1>
         @if (selectedBook()?.description; as description) {
           <p [title]="description">{{ description }}</p>
         }
@@ -71,14 +133,32 @@
       <button type="button" matIconButton aria-label="Sync contacts" matTooltip="Sync contacts" (click)="refresh()">
         <mat-icon>refresh</mat-icon>
       </button>
+      <button type="button" matIconButton aria-label="Filters and sort" matTooltip="Filters and sort"
+        [attr.aria-expanded]="filtersOpen()" aria-controls="contact-filter-sheet" (click)="filtersOpen.set(!filtersOpen())">
+        <mat-icon>filter_list</mat-icon>
+      </button>
     </mat-toolbar>
+    @if (chips().length || search()) {
+      <mat-chip-set class="applied-filters" aria-label="Applied filters">
+        @if (search()) {
+          <mat-chip (removed)="applySearch('')">
+            {{ search() }} <button matChipRemove aria-label="Clear search"><mat-icon>cancel</mat-icon></button>
+          </mat-chip>
+        }
+        @for (chip of chips(); track chip) {
+          <mat-chip (removed)="removeChip(chip)">
+            {{ filterFields[chip.key] }}: {{ chipValue(chip) }}
+            <button matChipRemove [attr.aria-label]="'Remove ' + filterFields[chip.key]"><mat-icon>cancel</mat-icon></button>
+          </mat-chip>
+        }
+      </mat-chip-set>
+    }
     @if (cacheNotice()) { <p class="status" role="status">{{ cacheNotice() }}</p> }
     @if (error()) { <p class="status" role="alert">{{ error() }}</p> }
     <div #tableScroll class="table-scroll" [attr.aria-busy]="busy()" (scroll)="listScrolled.set(tableScroll.scrollTop > 0)">
-      <table mat-table [dataSource]="sorted()" matSort matSortActive="name" [matSortDirection]="direction()"
-        matSortDisableClear (matSortChange)="sort($event)" aria-label="Contacts">
+      <table mat-table [dataSource]="rows()" aria-label="Contacts">
         <ng-container matColumnDef="name">
-          <th mat-header-cell *matHeaderCellDef mat-sort-header>Name</th>
+          <th mat-header-cell *matHeaderCellDef>Name</th>
           <td mat-cell *matCellDef="let row">
             <a [id]="'contact-row-' + row.id" [routerLink]="[]" [queryParams]="{book: bookId(), card: row.id}"
               (click)="$event.stopPropagation()">
@@ -103,7 +183,7 @@
         <tr mat-row *matRowDef="let row; columns: columns" (click)="!$event.defaultPrevented && open(row.id)"></tr>
       </table>
       @if (!rows().length && !error()) {
-        <p class="status" role="status">{{ busy() ? "Loading contacts…" : search() ? "No matching contacts." : "No contacts." }}</p>
+        <p class="status" role="status">{{ busy() ? "Loading contacts…" : search() || chips().length ? "No matching contacts." : "No contacts." }}</p>
       }
     </div>
     </mat-card>

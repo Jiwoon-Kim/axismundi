@@ -1,23 +1,28 @@
-import { Component, inject, signal } from "@angular/core";
+import { Component, inject, signal, TemplateRef } from "@angular/core";
+import { NgTemplateOutlet } from "@angular/common";
 import { MatIconButton } from "@angular/material/button";
 import { MAT_DIALOG_DATA, MatDialogRef } from "@angular/material/dialog";
 import { MatIcon } from "@angular/material/icon";
 import { MatTooltip } from "@angular/material/tooltip";
 
-export interface SearchDialogData { text: string; compact: boolean }
+export interface SearchDialogData { text: string; compact: boolean; label?: string; filters?: TemplateRef<unknown> }
 
 @Component({
   selector: "app-search-dialog",
-  imports: [MatIcon, MatIconButton, MatTooltip],
+  imports: [MatIcon, MatIconButton, MatTooltip, NgTemplateOutlet],
   template: `
     <form class="search-form" [class.compact]="data.compact" role="search" (submit)="submit($event)">
       <button matIconButton type="button" matTooltip="Back" aria-label="Back" (click)="close()"><mat-icon>arrow_back</mat-icon></button>
       <input #query type="search" [value]="text()" (input)="text.set(query.value)"
              (keydown.enter)="submit($event)"
-             placeholder="Search mail" aria-label="Search mail" autocomplete="off" enterkeyhint="search" />
+             [placeholder]="data.label ?? 'Search mail'" [attr.aria-label]="data.label ?? 'Search mail'" autocomplete="off" enterkeyhint="search" />
       <button matIconButton type="button" matTooltip="Clear search" aria-label="Clear search" [disabled]="!text()"
               (click)="text.set(''); query.focus()"><mat-icon>close</mat-icon></button>
+      @if (data.filters) {
+        <button matIconButton type="submit" matTooltip="Apply search" aria-label="Apply search"><mat-icon>search</mat-icon></button>
+      }
     </form>
+    @if (data.filters) { <ng-container [ngTemplateOutlet]="data.filters" /> }
   `,
   styles: [`
     .search-form { display: flex; align-items: center; gap: 4px; padding-inline: 4px; block-size: 56px;
@@ -38,7 +43,7 @@ export class SearchDialogComponent {
     if (event instanceof KeyboardEvent && event.isComposing) return;
     event.preventDefault();
     const text = this.text().trim();
-    if (text) this.dialog.close(text);
+    if (text || this.data.filters) this.dialog.close(text);
   }
 
   protected close(): void { this.dialog.close(); }

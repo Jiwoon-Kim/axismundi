@@ -18,7 +18,7 @@ import { map } from "rxjs";
 import { invoke } from "@tauri-apps/api/core";
 import { ConnectionService } from "../connection.service";
 import { Scaffold } from "../shell/scaffold";
-import { SearchDialogComponent, type SearchDialogData } from "./search-dialog.component";
+import { SearchDialogComponent, type SearchDialogData } from "../shell/search-dialog.component";
 import { ComposeDialogComponent, type ComposeData, type ComposeIdentity, type ComposeMode, type ComposeResult, type ComposeSource } from "./compose-dialog.component";
 import type { PickedFile, UploadedFile } from "./compose-attachments";
 import { MailDetailComponent } from "./mail-detail.component";

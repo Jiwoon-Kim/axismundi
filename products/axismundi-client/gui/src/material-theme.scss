@@ -20,6 +20,13 @@
 .mail-search-fullscreen {
   @include mat.dialog-overrides((container-shape: 0));
 }
+.search-with-filters {
+  @include mat.dialog-overrides((
+    container-shape: 8px,
+    container-color: var(--mat-sys-surface-container-high),
+    container-elevation-shadow: var(--mat-sys-level3),
+  ));
+}
 
 .cdk-overlay-pane.mail-compose-dialog {
   @include mat.dialog-overrides((

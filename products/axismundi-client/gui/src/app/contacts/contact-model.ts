@@ -10,7 +10,7 @@ export function sortBooks(books: Book[], collator: Intl.Collator): Book[] {
 }
 export interface ContactRow {
   id: string; kind: string; name: string | null; email: string | null; avatarUri: string | null;
-  phone: string | null; organization: string | null; sortKey: string | null;
+  phone: string | null; organization: string | null;
 }
 export interface Edit { path: string[]; value: unknown }
 export interface Field { key: string; label: string; path: string[]; original: string }

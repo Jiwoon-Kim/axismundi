@@ -136,6 +136,19 @@ compact <600     medium 과 같고 rail 도 drawer 안으로
 
 ## 미결
 
+- **JMAP 쿼리를 GUI 에 투영**(2026-11-27, Contacts 와 같은 원칙 — 서버 지원 여부가 아니라 RFC 8621 기준). 코어 지원과 GUI
+  화면은 별개로 본다.
+  - `Email/query`: 목록의 고급 검색·정렬. §4.4.1 필터(`before`/`after`·`minSize`/`maxSize`·`hasKeyword`/`notKeyword`·스레드
+    키워드 3개·`hasAttachment`·`from`/`to`/`cc`/`bcc`/`subject`/`body`/`header` 등)와 §4.4.2 정렬(`receivedAt` MUST,
+    `size`·`from`·`to`·`subject`·`sentAt`·키워드 정렬). 서버 순서를 유지하고 로컬로 다시 정렬하지 않는다. **캐시 창과
+    `queryChanges` 는 필터+정렬 조합별로 구분**해야 한다(지금 목록 캐시는 `{inMailbox}` + `receivedAt` 내림차순 고정에
+    묶여 있음). `collapseThreads` 는 스레드 보기 결정과 함께.
+  - `Mailbox/query`: 기본 트리는 지금처럼 `Mailbox/get` 전체. 구독 여부·이름으로 메일함 찾기가 필요해질 때
+    `isSubscribed`·`name` 등으로.
+  - `EmailSubmission/query`: 메일 검색에 섞지 않는다. 예약·발송 대기(`undoStatus: pending`) 목록 화면이 생길 때 그 화면의 쿼리.
+  - 공용화 범위: 코어의 `Filter`·`FilterOperator`(AND/OR/NOT)·`Comparator` 와 GUI 검색 뷰·칩 부품만 공유하고, 필드 목록·
+    타입·칩 결합 규칙은 도메인별로 둔다(Contacts 의 주소록 다중 선택 OR 을 메일 다중 입력에 그대로 쓰지 않는다).
+  - 순서: Contacts 지시 5 마무리 → 쿼리 타입·칩 공용화(`jmap/query.rs`, `shell/`) → 메일 `Email/query` 조건 검색·정렬.
 - 계정 안 A(동시 트리)·통합 받은편지함 — 한 번에 하나(앱 바 팝오버)를 써 본 뒤.
 
 ## 쓰기 — 읽음·별표부터 (2026-11-22)

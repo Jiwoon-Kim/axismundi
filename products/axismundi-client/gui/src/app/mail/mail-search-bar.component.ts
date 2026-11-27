@@ -13,9 +13,9 @@ import { MatTooltip } from "@angular/material/tooltip";
               (click)="exitSearch(trigger)"><mat-icon>arrow_back</mat-icon></button>
     }
     <button type="button" #trigger class="mail-search-trigger" aria-haspopup="dialog" (click)="activate.emit(host)"
-            [attr.aria-label]="text() ? 'Edit mail search: ' + text() : 'Search mail'">
+            [attr.aria-label]="text() ? label() + ': ' + text() : label()">
       @if (!text()) { <mat-icon>search</mat-icon> }
-      <span>{{ text() || "Search mail" }}</span>
+      <span>{{ text() || label() }}</span>
     </button>
     @if (text()) {
       <button matIconButton type="button" aria-label="Clear search" matTooltip="Clear search"
@@ -66,6 +66,7 @@ import { MatTooltip } from "@angular/material/tooltip";
 export class MailSearchBarComponent {
   protected readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
   readonly text = input<string | null>(null);
+  readonly label = input("Search mail");
   /** Above the list pane, or in the window-wide search app bar. */
   readonly placement = input<"pane" | "app-bar">("pane");
   readonly activate = output<HTMLElement>();

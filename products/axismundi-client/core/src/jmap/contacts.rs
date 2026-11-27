@@ -391,7 +391,19 @@ impl Store {
         if !exists {
             return Err("contact is not cached".into());
         }
-        // Do not overwrite an unresolved operation with a different base state.
+        let existing: Option<(String, String)> = self.db.query_row(
+            "SELECT patch,status FROM pending_updates WHERE account=?1 AND id=?2",
+            params![account,id], |r| Ok((r.get(0)?, r.get(1)?)),
+        ).optional()?;
+        if let Some((saved, status)) = existing {
+            if status == "conflict" {
+                return Err("stateMismatch: reload the contact before retrying".into());
+            }
+            if serde_json::from_str::<Value>(&saved)? == *patch {
+                return Ok(());
+            }
+            return Err("An earlier save is unresolved. Retry the original changes before making new ones.".into());
+        }
         self.db.execute(
             "INSERT INTO pending_updates(account,id,base_state,patch) VALUES(?1,?2,?3,?4)",
             params![account, id, state, patch.to_string()],
@@ -406,6 +418,14 @@ impl Store {
             |r| r.get(0),
         )?;
         Ok(usize::try_from(count)?)
+    }
+
+    pub fn discard_conflict(&self, account: &str, id: &str) -> Result<()> {
+        self.db.execute(
+            "DELETE FROM pending_updates WHERE account=?1 AND id=?2 AND status='conflict'",
+            params![account, id],
+        )?;
+        Ok(())
     }
 
     pub fn submit_update(
@@ -426,6 +446,9 @@ impl Store {
             params![account, id],
             |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
         )?;
+        if status == "conflict" {
+            return Err("stateMismatch: contact changed on the server".into());
+        }
         if status == "pending" {
             let patch: Value = serde_json::from_str(&patch)?;
             let response = call(
@@ -433,13 +456,25 @@ impl Store {
                 session,
                 "ContactCard/set",
                 json!({"accountId":account,"ifInState":base,"update":{id:patch}}),
-            )?;
+            );
+            if response.as_ref().is_err_and(|error| error.downcast_ref::<MethodError>()
+                .is_some_and(|error| error.0 == "stateMismatch")) {
+                self.db.execute(
+                    "UPDATE pending_updates SET status='conflict' WHERE account=?1 AND id=?2",
+                    params![account, id],
+                )?;
+            }
+            let response = response?;
             if !response
                 .get("updated")
                 .and_then(Value::as_object)
                 .is_some_and(|v| v.contains_key(id))
             {
-                return Err("ContactCard/set rejected update; local edit retained".into());
+                if let Some(kind) = response["notUpdated"][id]["type"].as_str() {
+                    self.db.execute("DELETE FROM pending_updates WHERE account=?1 AND id=?2", params![account,id])?;
+                    return Err(format!("ContactCard/set rejected update: {kind}").into());
+                }
+                return Err("Could not confirm the contact update. Retry the same changes.".into());
             }
             self.db.execute(
                 "UPDATE pending_updates SET status='accepted' WHERE account=?1 AND id=?2",
@@ -784,6 +819,10 @@ mod tests {
         store
             .stage_update("a", "one", &json!({"name/full":"Edited"}))
             .unwrap();
+        store
+            .stage_update("a", "one", &json!({"name/full":"Edited"}))
+            .unwrap();
+        assert!(store.stage_update("a", "one", &json!({"name/full":"Different"})).is_err());
         assert_eq!(store.pending_count("a").unwrap(), 1);
         assert_eq!(
             store.list("a", "ContactCard").unwrap()[0]["name"]["full"],

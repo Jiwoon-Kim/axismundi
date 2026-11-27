@@ -80,12 +80,15 @@ anniversaries           date 에 "@type": "PartialDate" 추가(무해)
      `organization`·`sortKey` 추가, `Edit` 입력 형태를 fixture 에.
 3. **GUI — Contacts 목적지와 배치**(소유자 결정 2026-11-27): 연결이 `urn:ietf:params:jmap:contacts` 를 지원할 때만 레일
    (·앱 메뉴)에 나온다. 공용 Scaffold·두 인터페이스 레이아웃은 그대로 쓰고, 콘텐츠 배치만 Contacts 것으로 — **Bulwark 의
-   "검색창은 위" 메일 구조**: 왼쪽 주소록 패널(맨 위 "연락처 추가", 구독 안 한 주소록은 접힌 "기타"), 가운데 한 영역을
+   "검색창은 위" 메일 구조**: 왼쪽 주소록 패널(맨 위 "연락처 추가", 주소록은 구독 여부와 관계없이 한 목록에 표시), 가운데 한 영역을
    목록 표와 상세가 **번갈아** 쓴다. 두 pane 을 동시에 띄우지 않고, 벤토 여백·drag handle 도 없다(M3 panes 의 fixed-and-
    flexible + handle 은 검토했지만 밀도 때문에 안 씀).
    - **목록 표**: `mat-table`. 첫 열 = 고정 크기 아바타 + 이름(한 셀), `mat-sort-header` 는 이 이름 열에만. 나머지 열은
      대표 이메일·전화·회사. 정렬은 캐시에서(Stalwart 는 name/surname 정렬 거부): `name.sortAs` → components → full 순,
      `Intl.Collator`(앱 locale).
+     주소록 탐색에서 기본 주소록을 먼저 선택한다. 선택한 AddressBook의 모든 ContactCard를 `addressBookIds`로 골라
+     표시한다. `kind`와 `isSubscribed`는 GUI 분류가 아니라 카드와 주소록의 속성이다. 사진이 없으면 `kind`에 맞는
+     아이콘(개인은 이니셜)을 쓰고, 그룹 상세에는 구성원 수를 표시한다.
    - **아바타**: 카드에 명시된 `media`(kind photo, pref 순) 하나. 없거나 로드 실패면 같은 크기 이니셜 — 행 높이가 움직이지
      않게. `onlineServices` 등에서 사진을 추측해 가져오지 않는다. 원격 URL 은 사용자가 자기 주소록에 넣은 값이라 목록에서
      바로 요청하되 `referrerpolicy="no-referrer"`. 메일 원격 이미지 차단과 다른 결정이다(소유자 확정 2026-11-27):
@@ -99,14 +102,27 @@ anniversaries           date 에 "@type": "PartialDate" 추가(무해)
    `dl > dt + dd`(WP Contacts dl 경계 결정과 같은 결). 첫 버전에 보이는 것 — emails, phones, addresses, organizations·titles,
    onlineServices, links, anniversaries, notes, keywords. localizations 는 "다른 언어" 로 접어서 언어 태그별 원문 값만(패치
    적용 렌더링은 다음). HTML 로 그리지 않는다.
-5. **검색**: 목록 pane 위 search bar 를 메일과 같은 컴포넌트 결로(메일 search bar 를 도메인 중립으로 꺼낼 수 있으면 꺼내고,
-   어려우면 보고). 결과는 주소록 경계를 넘는 하나의 목록. 검색어는 디스크·URL 에 남기지 않는다(메일과 같음).
+5. **목록 필터와 검색**: 두 UI 모두 RFC 9610 §3.3.1의 `ContactCard/query` 필터를 사용한다.
+   - **목록**: 주소록 내비게이션에서 고른 주소록은 목록 app bar 아래 `inAddressBook` 칩으로 표시한다.
+     칩을 제거하면 전체 주소록 목록으로 전환한다.
+   - **검색**: 새 검색은 현재 선택한 주소록을 물려받지 않고 계정의 전체 주소록에서 시작한다.
+     메일의 focused 검색 뷰를 공용화하고, 검색어 아래에 조건 칩을 둔다. 이미 적용한 검색을 다시 열 때는 그 검색의 조건을 복원한다.
+     적용한 칩은 결과 목록의 app bar 아래에도 표시하고, 제거하면 해당 조건만 빼고 다시 조회한다.
+   - 첫 범위는 `text`, `inAddressBook`, `kind`. 여러 주소록은 `OR`로 묶고, 다른 조건과는 `AND`로 결합한다.
+     전체 주소록일 때는 `inAddressBook` 조건을 보내지 않는다. 검색어와 검색 전용 조건은 디스크·URL에 저장하지 않는다.
+   - 검색 명령은 Rust에서 JMAP 필터를 조립해 서버에 제출하고, 서버가 거절한 조건은 조용히 무시하지 않는다.
+     결과 ID는 캐시 행으로 표시하고 정렬은 지금처럼 클라이언트에서 한다.
 6. **수정 폼**: 첫 버전 편집 대상은 name(full·given·surname), emails, phones, organizations 이름, notes. 나머지 속성은 화면에
    보이되 편집하지 않고, 패치에 들어가지 않는다. 편집 중 서버 변경(ifInState 거절)은 코어처럼 pending 유지 + "서버에서
    바뀜, 다시 불러오기" 한 줄.
    - 폼은 Card 전체가 아니라 편집 가능한 일부만 다룬다. GUI 는 **명시적으로 바꾸거나 지운 항목만** 넘기고 `PatchObject` 는
      Rust 가 만든다(한 곳). 폼에 안 나온 `localizations`·`media` 를 삭제로 해석하지 않는다.
    - 통과 기준: 복잡한 Card(g)를 열어 전화번호 하나를 고쳤을 때 실제 `ContactCard/set` 요청에 그 경로 하나만 들어간다.
+   - **결과를 모르는 저장**(응답 유실 등): 같은 변경 재시도만 허용하는 지금 잠금은 유지하되, 출구가 있어야 한다 — 메일의
+     "결과 모름 = 쓰기 잠금·조회만" 처럼 "서버에서 다시 불러오기"(동기화 후 그 카드의 pending 정리)를 conflict 와 같은 자리에
+     둔다. 지금은 `discard_conflict` 가 conflict 상태만 지워서 이 상태를 빠져나갈 길이 없다.
+   - 상세 다듬기(같이 해도, 다음으로 넘겨도 됨): 전화는 `tel:` 를 떼고 표시, 항목의 `label`·`contexts` 표시,
+     anniversaries 는 `kind`(birth → Birthday) 함께.
 
 ## RFC 9553 어휘 (수정 폼 전에 붙이는 다음 단계 — 이번 지시 0–2 범위 아님)
 
@@ -122,7 +138,7 @@ anniversaries           date 에 "@type": "PartialDate" 추가(무해)
 
 ## 하지 않는 것
 
-삭제(JMAP Contacts 에 휴지통 없음 — 영구 삭제라 확인 UI 와 함께 다음), 그룹(`kind: "group"`·members), keywords 라벨 관리,
+삭제(JMAP Contacts 에 휴지통 없음 — 영구 삭제라 확인 UI 와 함께 다음), 그룹 생성·구성원 편집, keywords 라벨 관리,
 주소록 생성·공유, 생일 캘린더, vCard 가져오기·내보내기, 메일 받는 사람 자동완성, 로컬라이즈 패치 적용 렌더링, Stalwart 손실 보정.
 
 ## 검증
@@ -134,7 +150,7 @@ npm --prefix gui run build
 ```
 
 창에서(CDP), **크롬의 Bulwark 연락처 화면과 나란히**: Bulwark 로 만든 검증용 `j`(연락처)·`k`(`kind: "group"`, members=g·j)는 두고, 첫 화면에서 `k` 가
-일반 연락처 행으로 섞이지 않는지 본다(그룹 편집은 다음 범위). 시드 카드 g 목록·상세, 검색("지운"·"kimjiwoon75"·"gmail.com"),
+소속 주소록의 ContactCard 목록에 그룹으로 표시되는지 본다(그룹 편집은 다음 범위). 시드 카드 g 목록·상세, 검색("지운"·"kimjiwoon75"·"gmail.com"),
 상세 → ← 로 돌아왔을 때 검색어·정렬·스크롤이 그대로이고 **방금 연 행에 키보드 포커스가 돌아오는지**, 새 카드 만들기(이름 + 이메일) → Bulwark 에서 보이는지, Bulwark 에서 고친 것이 우리 쪽 증분 동기화로 들어오는지, 우리가 이름
 하나 고쳤을 때 g 의 나머지 속성(특히 localizations·notes·media)이 패치 전과 같은지(ContactCard/get 전후 비교). 만든 테스트
 카드는 검증 뒤 지우되 g 와 기존 데이터는 건드리지 않는다.

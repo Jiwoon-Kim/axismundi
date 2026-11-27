@@ -1,0 +1,190 @@
+<ng-template #appBarLeading>
+  @if (!expanded()) { <ng-container [ngTemplateOutlet]="drawerButton" /> }
+</ng-template>
+<ng-template #drawerButton>
+  <button matIconButton type="button" aria-label="Address books" [attr.aria-expanded]="drawer()" (click)="drawer.update(toggleDrawer)">
+    <mat-icon>menu</mat-icon>
+  </button>
+</ng-template>
+<ng-template #appBarSearch>
+  <app-mail-search-bar label="Search contacts" placement="app-bar" [text]="search()" (activate)="searchDialog(searchForm)"
+    (exit)="applySearch('')" />
+</ng-template>
+<ng-template #searchForm>
+  <h2 mat-dialog-title>Search contacts</h2>
+  <form (submit)="$event.preventDefault(); closeSearch(); applySearch(query().trim())">
+    <mat-dialog-content>
+      <mat-form-field appearance="outline">
+        <mat-label>Search contacts</mat-label>
+        <input matInput type="search" [value]="query()" (input)="input($event)">
+      </mat-form-field>
+    </mat-dialog-content>
+    <mat-dialog-actions align="end">
+      @if (search()) {
+        <button matButton type="button" (click)="closeSearch(); applySearch('')">Clear search</button>
+      }
+      <button matButton type="button" (click)="closeSearch()">Cancel</button>
+      <button matButton="filled" type="submit">Search</button>
+    </mat-dialog-actions>
+  </form>
+</ng-template>
+<mat-sidenav-container>
+<mat-sidenav aria-label="Address books" [mode]="expanded() ? 'side' : 'over'" [opened]="expanded() || drawer()"
+  (openedChange)="!expanded() && drawer.set($event)">
+  <button matFab extended id="contact-add" [disabled]="readOnly() || saving() || !books().length" (click)="drawer.set(false); edit('new')">
+    <mat-icon>person_add</mat-icon> Add contact
+  </button>
+  <nav aria-label="Filter by address book">
+    <h2>Address books</h2>
+    @for (book of orderedBooks(); track book.id) {
+      <button matButton [class.selected]="bookId() === book.id" [attr.aria-current]="bookId() === book.id ? 'true' : null"
+        [disabled]="saving()" (click)="chooseBook(book.id)">
+        <span class="book-label">
+          <span>{{ book.name ?? "Address book" }}</span>
+          @if (book.isDefault || book.isSubscribed === false) {
+            <small>{{ book.isDefault ? "Default" : "" }}{{ book.isDefault && book.isSubscribed === false ? " · " : "" }}{{ book.isSubscribed === false ? "Not subscribed" : "" }}</small>
+          }
+        </span>
+      </button>
+    }
+  </nav>
+</mat-sidenav>
+<mat-sidenav-content>
+<div class="panes">
+  <section class="list" [class.collapsed]="paneOpen()" [inert]="paneOpen()" aria-label="Contacts list">
+    <mat-card appearance="filled" class="pane-card list-card">
+    <mat-toolbar class="list-header" [class.scrolled]="listScrolled()">
+      @if (!expanded() && !windowSearch()) { <ng-container [ngTemplateOutlet]="drawerButton" /> }
+      <div class="list-heading">
+        <h1 [title]="selectedBook()?.name ?? ''">{{ selectedBook()?.name ?? "Contacts" }}</h1>
+        @if (selectedBook()?.description; as description) {
+          <p [title]="description">{{ description }}</p>
+        }
+      </div>
+      @if (!windowSearch()) {
+        <button type="button" matIconButton class="list-search" [class.search-active]="search()" aria-haspopup="dialog"
+          [attr.aria-label]="search() ? 'Search contacts: ' + search() : 'Search contacts'"
+          [matTooltip]="search() ? 'Search contacts: ' + search() : 'Search contacts'" (click)="searchDialog(searchForm)">
+          <mat-icon>search</mat-icon>
+        </button>
+      }
+      <button type="button" matIconButton aria-label="Sync contacts" matTooltip="Sync contacts" (click)="refresh()">
+        <mat-icon>refresh</mat-icon>
+      </button>
+    </mat-toolbar>
+    @if (cacheNotice()) { <p class="status" role="status">{{ cacheNotice() }}</p> }
+    @if (error()) { <p class="status" role="alert">{{ error() }}</p> }
+    <div #tableScroll class="table-scroll" [attr.aria-busy]="busy()" (scroll)="listScrolled.set(tableScroll.scrollTop > 0)">
+      <table mat-table [dataSource]="sorted()" matSort matSortActive="name" [matSortDirection]="direction()"
+        matSortDisableClear (matSortChange)="sort($event)" aria-label="Contacts">
+        <ng-container matColumnDef="name">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Name</th>
+          <td mat-cell *matCellDef="let row">
+            <a [id]="'contact-row-' + row.id" [routerLink]="[]" [queryParams]="{book: bookId(), card: row.id}"
+              (click)="$event.stopPropagation()">
+              <app-contact-avatar [name]="row.name ?? row.email ?? ''" [kind]="row.kind" [source]="row.avatarUri" />
+              <span>{{ row.name ?? row.email ?? "Unnamed contact" }}</span>
+            </a>
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="email">
+          <th mat-header-cell *matHeaderCellDef>Email</th>
+          <td mat-cell *matCellDef="let row">{{ row.email ?? "" }}</td>
+        </ng-container>
+        <ng-container matColumnDef="phone">
+          <th mat-header-cell *matHeaderCellDef>Phone</th>
+          <td mat-cell *matCellDef="let row">{{ row.phone ?? "" }}</td>
+        </ng-container>
+        <ng-container matColumnDef="organization">
+          <th mat-header-cell *matHeaderCellDef>Organization</th>
+          <td mat-cell *matCellDef="let row">{{ row.organization ?? "" }}</td>
+        </ng-container>
+        <tr mat-header-row *matHeaderRowDef="columns; sticky: true"></tr>
+        <tr mat-row *matRowDef="let row; columns: columns" (click)="!$event.defaultPrevented && open(row.id)"></tr>
+      </table>
+      @if (!rows().length && !error()) {
+        <p class="status" role="status">{{ busy() ? "Loading contacts…" : search() ? "No matching contacts." : "No contacts." }}</p>
+      }
+    </div>
+    </mat-card>
+  </section>
+  @if (paneOpen()) {
+    <section class="detail" aria-label="Contact details">
+      <mat-card appearance="filled" class="pane-card detail-card">
+      <header>
+        <button id="contact-back" matIconButton aria-label="Back to contacts" title="Back to contacts"
+          [disabled]="saving()" (click)="back()"><mat-icon>arrow_back</mat-icon></button>
+        @if (editing(); as mode) {
+          <h1>{{ mode === "new" ? "Add contact" : "Edit contact" }}</h1>
+        } @else if (card()) {
+          <app-contact-avatar class="large" [name]="selected()?.name ?? ''" [kind]="selected()?.kind ?? 'individual'" [source]="selected()?.avatarUri" />
+          <div class="title">
+            <h1>{{ selected()?.name ?? selected()?.email ?? "Contact" }}</h1>
+            @if (selected()?.kind === "group") {
+              <p>{{ memberCount() === 1 ? "1 member" : memberCount() + " members" }}</p>
+            } @else {
+              <p>{{ selected()?.organization ?? "" }}</p>
+            }
+          </div>
+          @if (selected()?.kind !== "group") {
+            <button id="contact-edit" matIconButton aria-label="Edit contact" title="Edit contact"
+              [disabled]="readOnly() || !selected()" (click)="edit('edit')"><mat-icon>edit</mat-icon></button>
+          }
+        }
+      </header>
+      @if (editing()) {
+        <form class="editor" (submit)="$event.preventDefault(); save()">
+          <fieldset [disabled]="saving()">
+            @for (field of editor(); track field.key; let first = $first) {
+              <mat-form-field appearance="outline">
+                <mat-label>{{ field.label }}</mat-label>
+                @if (field.path[0] === "notes") {
+                  <textarea matInput rows="3" [formField]="form[field.key]"></textarea>
+                } @else {
+                  <input matInput [attr.id]="first ? 'contact-first-field' : null" [formField]="form[field.key]">
+                }
+              </mat-form-field>
+            }
+          </fieldset>
+          @if (saveError()) {
+            <p role="alert">{{ conflict() ? "Contacts changed on the server. Reload before editing again." : saveError() }}</p>
+          }
+          <div class="actions">
+            <button type="button" matButton [disabled]="saving()" (click)="cancelEdit()">Cancel</button>
+            @if (conflict()) {
+              <button type="button" matButton="filled" [disabled]="saving()" (click)="reloadContact()">Discard edits and reload</button>
+            } @else {
+              <button type="submit" matButton="filled" [disabled]="saving()">{{ saving() ? "Saving…" : "Save" }}</button>
+            }
+          </div>
+        </form>
+      } @else if (detailError()) {
+        <p class="status" role="alert">{{ detailError() }}</p>
+        <button matButton (click)="refresh()">Sync contacts</button>
+      } @else if (card()) {
+        <dl>
+          @for (group of detail(); track group.label) {
+            <dt>{{ group.label }}</dt>
+            <dd>@for (value of group.values; track $index) { <div>{{ value }}</div> }</dd>
+          }
+        </dl>
+        @if (languages().length) {
+          <details class="languages">
+            <summary>Other languages</summary>
+            @for (entry of languages(); track entry[0]) {
+              <h2>{{ entry[0] }}</h2>
+              <dl>
+                @for (field of entry[1]; track field.path) {
+                  <dt>{{ field.path }}</dt><dd>{{ field.value }}</dd>
+                }
+              </dl>
+            }
+          </details>
+        }
+      } @else { <p class="status" role="status">Loading contact…</p> }
+      </mat-card>
+    </section>
+  }
+</div>
+</mat-sidenav-content>
+</mat-sidenav-container>

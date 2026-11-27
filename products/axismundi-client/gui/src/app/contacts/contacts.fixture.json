@@ -1,7 +1,11 @@
 {
-  "books": [{"id":"test-book","name":"Test book","isDefault":true,"isSubscribed":true}],
-  "rows": [{"id":"test-card","name":"Test Contact","email":"test@example.org","avatarUri":"https://example.org/avatar.png"}],
-  "detail": {"card":{"id":"test-card","version":"1.0","name":{"full":"Test Contact"},"emails":{"e1":{"address":"test@example.org"}},"media":{"m1":{"kind":"photo","uri":"https://example.org/avatar.png"}},"localizations":{"en":{"name/full":"Example"}}}},
+  "books": [{"id":"test-book","name":"Test book","description":"Personal contacts","sortOrder":10,"isDefault":true,"isSubscribed":true}],
+  "rows": [
+    {"id":"test-card","kind":"individual","name":"Test Contact","email":"test@example.org","avatarUri":"https://example.org/avatar.png","phone":null,"organization":null,"sortKey":"Test Contact"},
+    {"id":"test-group","kind":"group","name":"Test Group","email":null,"avatarUri":null,"phone":null,"organization":null,"sortKey":"Test Group"}
+  ],
+  "edit": {"path":["phones","p1","number"],"value":"123"},
+  "detail": {"card":{"id":"test-card","version":"1.0","name":{"full":"Test Contact"},"emails":{"e1":{"address":"test@example.org"}},"media":{"m1":{"kind":"photo","uri":"https://example.org/avatar.png"}},"localizations":{"en":{"name/full":"Example"}}},"row":{"id":"test-card","kind":"individual","name":"Test Contact","email":"test@example.org","avatarUri":"https://example.org/avatar.png","phone":null,"organization":null,"sortKey":"Test Contact"},"state":"cards-state"},
   "created": {"id":"test-card"},
   "synced": {"addressBookState":"books-state","contactCardState":"cards-state"}
 }

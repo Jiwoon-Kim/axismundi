@@ -1,6 +1,7 @@
 import { inject } from "@angular/core";
 import { CanActivateFn, Router, Routes } from "@angular/router";
 import { ConnectionService, MAIL } from "./connection.service";
+import { CONTACTS } from "./contacts/contact-model";
 
 /** A domain route opens only while the connection offers it; otherwise Settings. */
 const offered = (available: (connection: ConnectionService) => boolean): CanActivateFn =>
@@ -14,6 +15,7 @@ export const routes: Routes = [
       const connection = inject(ConnectionService);
       if (connection.actors().length) return "activitypub";
       if (connection.supports(MAIL)) return "mail";
+      if (connection.supports(CONTACTS)) return "contacts";
       return "settings";
     },
   },
@@ -26,6 +28,11 @@ export const routes: Routes = [
     path: "mail",
     canActivate: [offered(connection => connection.supports(MAIL))],
     loadComponent: () => import("./mail/mail-page.component").then(m => m.MailPageComponent),
+  },
+  {
+    path: "contacts",
+    canActivate: [offered(connection => connection.supports(CONTACTS))],
+    loadComponent: () => import("./contacts/contacts-page").then(m => m.ContactsPage),
   },
   {
     path: "settings",

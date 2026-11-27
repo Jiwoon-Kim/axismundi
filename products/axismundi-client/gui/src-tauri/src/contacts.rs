@@ -41,9 +41,14 @@ mod tests {
             "localizations":{"en":{"name/full":"Example"}}
         });
         let actual = json!({
-            "books":[Book{id:"test-book".into(), name:Some("Test book".into()), is_default:true, is_subscribed:Some(true)}],
-            "rows":[row(source.clone()).unwrap()],
-            "detail":Document{card:source},
+            "books":[book_row(json!({"id":"test-book","name":"Test book","description":"Personal contacts",
+                "sortOrder":10,"isDefault":true,"isSubscribed":true})).unwrap()],
+            "rows":[row(source.clone()).unwrap(), row(json!({
+                "id":"test-group","kind":"group","name":{"full":"Test Group"},
+                "addressBookIds":{"test-book":true},"members":{"urn:uuid:test-member":true}
+            })).unwrap()],
+            "edit": Edit {path: vec!["phones".into(),"p1".into(),"number".into()], value:json!("123")},
+            "detail":Document{row:row(source.clone()),card:source,state:Some("cards-state".into())},
             "created":Created{id:"test-card".into()},
             "synced":Synced{address_book_state:Some("books-state".into()),contact_card_state:Some("cards-state".into())}
         });
@@ -63,6 +68,8 @@ mod tests {
 pub(crate) struct Book {
     id: String,
     name: Option<String>,
+    description: Option<String>,
+    sort_order: Option<u64>,
     is_default: bool,
     is_subscribed: Option<bool>,
 }
@@ -71,17 +78,23 @@ pub(crate) struct Book {
 #[serde(rename_all = "camelCase")]
 pub(crate) struct Row {
     id: String,
+    kind: String,
     name: Option<String>,
     email: Option<String>,
     avatar_uri: Option<String>,
+    phone: Option<String>,
+    organization: Option<String>,
+    sort_key: Option<String>,
 }
 
 #[derive(Serialize)]
 pub(crate) struct Document {
     card: Value,
+    row: Option<Row>,
+    state: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub(crate) struct Edit {
     path: Vec<String>,
     value: Value,
@@ -101,6 +114,17 @@ pub(crate) struct Synced {
 
 fn string(value: &Value) -> Option<String> {
     value.as_str().filter(|s| !s.is_empty()).map(str::to_owned)
+}
+
+fn book_row(book: Value) -> Option<Book> {
+    Some(Book {
+        id: string(&book["id"])?,
+        name: string(&book["name"]),
+        description: string(&book["description"]),
+        sort_order: book["sortOrder"].as_u64(),
+        is_default: book["isDefault"] == true,
+        is_subscribed: book["isSubscribed"].as_bool(),
+    })
 }
 
 fn preferred(items: &Value, field: &str, photos: bool) -> Option<String> {
@@ -125,8 +149,14 @@ fn preferred(items: &Value, field: &str, photos: bool) -> Option<String> {
 }
 
 fn row(card: Value) -> Option<Row> {
+    let name = &card["name"];
+    let sort_key = ["surname", "given"].into_iter().filter_map(|kind| {
+        string(&name["sortAs"][kind]).or_else(|| name["components"].as_array()?.iter()
+            .find(|part| part["kind"] == kind).and_then(|part| string(&part["value"])))
+    }).collect::<Vec<_>>().join(" ");
     Some(Row {
         id: string(&card["id"])?,
+        kind: string(&card["kind"]).unwrap_or_else(|| "individual".to_owned()),
         name: string(&card["name"]["full"]).or_else(|| {
             let parts = card["name"]["components"].as_array()?;
             let name = parts
@@ -138,6 +168,9 @@ fn row(card: Value) -> Option<Row> {
         }),
         email: preferred(&card["emails"], "address", false),
         avatar_uri: preferred(&card["media"], "uri", true),
+        phone: preferred(&card["phones"], "number", false),
+        organization: preferred(&card["organizations"], "name", false),
+        sort_key: if sort_key.is_empty() { string(&name["full"]) } else { Some(sort_key) },
     })
 }
 
@@ -177,14 +210,7 @@ pub(crate) async fn contacts_books(
         Ok(store
             .list(account, BOOK)?
             .into_iter()
-            .filter_map(|book| {
-                Some(Book {
-                    id: string(&book["id"])?,
-                    name: string(&book["name"]),
-                    is_default: book["isDefault"] == true,
-                    is_subscribed: book["isSubscribed"].as_bool(),
-                })
-            })
+            .filter_map(book_row)
             .collect())
     })
     .await
@@ -223,18 +249,23 @@ pub(crate) async fn contacts_card(
     connection_id: u32,
     account_id: Option<String>,
     card_id: String,
+    reload: Option<bool>,
 ) -> Result<Document, String> {
     run(
         state,
         connection_id,
         account_id,
-        move |_, _, store, account| {
+        move |active, session, store, account| {
+            if reload == Some(true) {
+                core::sync_type(&active.client, session, store, account, CARD)?;
+                store.discard_conflict(account, &card_id)?;
+            }
             let card = store
                 .list(account, CARD)?
                 .into_iter()
                 .find(|card| card["id"] == card_id)
                 .ok_or("Contact is not cached.")?;
-            Ok(Document { card })
+            Ok(Document { row: row(card.clone()), card, state: store.state(account, CARD)? })
         },
     )
     .await
@@ -328,6 +359,7 @@ pub(crate) async fn contacts_update(
     account_id: Option<String>,
     card_id: String,
     edits: Vec<Edit>,
+    base_card: Value,
 ) -> Result<Document, String> {
     run(
         state,
@@ -336,6 +368,18 @@ pub(crate) async fn contacts_update(
         move |active, session, store, account| {
             if session.accounts[account].is_read_only {
                 return Err("account is read-only".into());
+            }
+            let base = store.list(account, CARD)?.into_iter().find(|card| card["id"] == card_id)
+                .ok_or("Contact is not cached.")?;
+            if base != base_card {
+                return Err("stateMismatch: this contact changed while editing".into());
+            }
+            for edit in &edits {
+                let mut node = &base;
+                for segment in &edit.path {
+                    if node.is_array() { return Err("Replace an array as a whole.".into()); }
+                    node = &node[segment];
+                }
             }
             let patch = core::edit_patch(
                 edits
@@ -350,7 +394,7 @@ pub(crate) async fn contacts_update(
                 .into_iter()
                 .find(|card| card["id"] == card_id)
                 .ok_or("Updated contact is no longer available.")?;
-            Ok(Document { card })
+            Ok(Document { row: row(card.clone()), card, state: store.state(account, CARD)? })
         },
     )
     .await

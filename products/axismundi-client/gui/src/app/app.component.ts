@@ -1,5 +1,5 @@
 import { Component, computed, effect, inject, untracked } from "@angular/core";
-import { NgTemplateOutlet } from "@angular/common";
+import { DOCUMENT, NgTemplateOutlet } from "@angular/common";
 import { MatSnackBar } from "@angular/material/snack-bar";
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from "@angular/router";
 import { MatIcon } from "@angular/material/icon";
@@ -51,13 +51,24 @@ export class AppComponent {
       this.snackBar.open(notice, "Dismiss", {duration: 10000});
       untracked(() => this.connection.notice.set(""));
     });
-    // A new connection opens its default domain; losing it returns to Settings.
+    // A new connection opens its default domain; losing it returns to Settings. The first connection
+    // after start is a restore, not a new one: a reload (F5) goes back to the page it was on. That page
+    // is read from the window before the router moves: a domain route's guard sends it to Settings
+    // while nothing is signed in yet.
+    const opened = inject(DOCUMENT).location;
+    let startUrl: string | null = opened.pathname + opened.search + opened.hash;
     let hadConnection = false;
     effect(() => {
       const connected = this.connection.connected();
       const shouldNavigate = !!connected || hadConnection;
       hadConnection = !!connected;
-      if (!shouldNavigate || untracked(() => this.router.url.startsWith("/settings/appearance"))) return;
+      if (!shouldNavigate) return;
+      if (connected && startUrl !== null) {
+        const target = startUrl;
+        startUrl = null;
+        if (target !== "/") { void this.router.navigateByUrl(target); return; }
+      }
+      if (untracked(() => this.router.url.startsWith("/settings/appearance"))) return;
       void this.router.navigateByUrl(connected ? "/" : "/settings");
     });
   }

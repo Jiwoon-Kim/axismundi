@@ -7,12 +7,13 @@ import { MatFormField, MatLabel } from "@angular/material/form-field";
 import { MatInput } from "@angular/material/input";
 import { MatList, MatListItem } from "@angular/material/list";
 import { MatAccordion, MatExpansionPanel, MatExpansionPanelHeader, MatExpansionPanelTitle } from "@angular/material/expansion";
+import { RouterLink } from "@angular/router";
 import { ConnectionService, Discovery, Probe } from "../connection.service";
 
 /** Server discovery, sign-in and the raw Session documents. Usable with no connection. */
 @Component({
   selector: "app-connection-page",
-  imports: [JsonPipe, MatAccordion, MatButton, MatCheckbox, MatDivider, MatExpansionPanel, MatExpansionPanelHeader,
+  imports: [RouterLink, JsonPipe, MatAccordion, MatButton, MatCheckbox, MatDivider, MatExpansionPanel, MatExpansionPanelHeader,
     MatExpansionPanelTitle, MatFormField, MatInput, MatLabel, MatList, MatListItem],
   templateUrl: "./connection-page.component.html",
   styleUrl: "./connection-page.component.css",

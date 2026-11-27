@@ -1,0 +1,66 @@
+@if (item(); as c) {
+  <header class="page-header">
+    <h1>{{ c.username }}</h1>
+    <p>{{ c.server }}{{ c.id === connection.activeId() ? " · shown in the app" : "" }}</p>
+  </header>
+
+  <div class="protocols">
+    <mat-card appearance="outlined">
+      <mat-card-header>
+        <mat-card-title>JMAP</mat-card-title>
+        <mat-card-subtitle>Mail, contacts and more</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        @if (c.jmap_document) {
+          <p>{{ c.jmap?.length ?? 0 }} {{ c.jmap?.length === 1 ? "account" : "accounts" }} · {{ jmapCapabilities() }} server capabilities</p>
+        } @else { <p class="muted">This sign-in has no JMAP Session.</p> }
+      </mat-card-content>
+      @if (c.jmap_document) {
+        <mat-card-actions><a matButton [routerLink]="['/settings/connections', c.id, 'jmap']">Open JMAP</a></mat-card-actions>
+      }
+    </mat-card>
+
+    <mat-card appearance="outlined">
+      <mat-card-header>
+        <mat-card-title>ActivityPub</mat-card-title>
+        <mat-card-subtitle>Actors this sign-in can act as</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        @if (c.activitypub_document; as document) {
+          <p>{{ c.activitypub?.length ?? 0 }} {{ c.activitypub?.length === 1 ? "actor" : "actors" }}</p>
+          <mat-expansion-panel>
+            <mat-expansion-panel-header><mat-panel-title>ActivityPub Session</mat-panel-title></mat-expansion-panel-header>
+            <pre>{{ document | json }}</pre>
+          </mat-expansion-panel>
+        } @else { <p class="muted">This sign-in has no ActivityPub Session.</p> }
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card appearance="outlined">
+      <mat-card-header>
+        <mat-card-title>WordPress</mat-card-title>
+        <mat-card-subtitle>The site's REST API</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        @if (c.wordpress_document; as document) {
+          <p>{{ c.wordpress }}</p>
+          <mat-expansion-panel>
+            <mat-expansion-panel-header><mat-panel-title>WordPress users/me</mat-panel-title></mat-expansion-panel-header>
+            <pre>{{ document | json }}</pre>
+          </mat-expansion-panel>
+        } @else { <p class="muted">This sign-in did not reach a WordPress site.</p> }
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  @for (message of c.errors; track message) { <p class="error" role="status">{{ message }}</p> }
+
+  <div class="actions">
+    @if (c.id !== connection.activeId()) {
+      <button matButton="outlined" type="button" (click)="connection.switchTo(c.id)">Show in the app</button>
+    }
+    <button matButton="outlined" type="button" [disabled]="!!connection.busy()" (click)="connection.disconnect(c.id)">Sign out of this connection</button>
+  </div>
+} @else {
+  <p class="muted" role="status">This connection is not signed in.</p>
+}

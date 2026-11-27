@@ -40,6 +40,8 @@ export const routes: Routes = [
     children: [
       {path: "", pathMatch: "full", redirectTo: "connections"},
       {path: "connections", loadComponent: () => import("./settings/connection-page.component").then(m => m.ConnectionPageComponent)},
+      {path: "connections/:id", loadComponent: () => import("./settings/connection-overview").then(m => m.ConnectionOverviewPage)},
+      {path: "connections/:id/jmap", loadComponent: () => import("./settings/connection-detail").then(m => m.ConnectionDetailPage)},
       {path: "appearance", loadComponent: () => import("./settings/appearance-page").then(m => m.AppearancePage)},
     ],
   },

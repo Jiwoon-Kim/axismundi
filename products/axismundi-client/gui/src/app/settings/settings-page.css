@@ -1,1 +1,17 @@
-:host { display: block; }
+:host { display: block; height: 100%; }
+mat-sidenav-container { height: 100%; background: transparent; }
+.settings-nav { width: 280px; padding: 12px; border-inline-end: 1px solid var(--mat-sys-outline-variant); }
+.nav-title { margin: 8px 16px 12px; font: var(--mat-sys-title-medium); }
+.settings-nav .nested { padding-inline-start: 56px; }
+.settings-nav .active { background: var(--mat-sys-secondary-container); --mat-list-list-item-label-text-color: var(--mat-sys-on-secondary-container); }
+.settings-nav a[mat-list-item] { border-radius: var(--mat-sys-corner-full); margin-block: 2px; }
+.crumb-bar { display: flex; align-items: center; gap: 4px; min-height: 48px; padding: 8px 24px 0; }
+.crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; margin: 0; padding: 0; list-style: none;
+  font: var(--mat-sys-label-large); color: var(--mat-sys-on-surface-variant); }
+.crumbs li { display: inline-flex; align-items: center; min-width: 0; overflow-wrap: anywhere; }
+.crumbs a { color: var(--mat-sys-primary); text-decoration: none; padding: 4px; border-radius: 4px; }
+.crumbs a:hover { text-decoration: underline; }
+.crumbs a:focus-visible { outline: 2px solid var(--mat-sys-secondary); }
+.crumbs [aria-current] { color: var(--mat-sys-on-surface); padding: 4px; }
+.sep { font-size: 18px; width: 18px; height: 18px; }
+@media (width < 840px) { .crumb-bar { padding-inline: 8px; } }

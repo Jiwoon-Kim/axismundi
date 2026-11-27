@@ -1,0 +1,96 @@
+:host { display: block; padding: 8px 24px 32px; max-width: 72rem; }
+h1, h2, h3, p { margin: 0; }
+h1 { font: var(--mat-sys-headline-small); overflow-wrap: anywhere; }
+h2 { font: var(--mat-sys-title-medium); margin-block: 16px 8px; }
+h3 { font: var(--mat-sys-title-small); margin-block: 12px 4px; color: var(--mat-sys-on-surface-variant); }
+.muted { color: var(--mat-sys-on-surface-variant); }
+.mono { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: 0.875em; overflow-wrap: anywhere; }
+.status { padding: 16px 0; }
+.page-header { display: flex; align-items: center; gap: 8px; margin-block-end: 8px; }
+.heading p { font: var(--mat-sys-body-medium); color: var(--mat-sys-on-surface-variant); }
+.tab { padding-block: 16px; }
+
+.overview { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); }
+.overview .wide { grid-column: 1 / -1; }
+.service-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.service-tile {
+  display: flex; flex-direction: column; gap: 8px; min-inline-size: 0; min-block-size: 112px;
+  padding: 12px; border: 1px solid var(--mat-sys-outline-variant); border-radius: 8px;
+  color: var(--mat-sys-on-surface); background: var(--mat-sys-surface); text-align: start;
+  font: var(--mat-sys-body-medium); overflow-wrap: anywhere; cursor: pointer;
+}
+.service-tile:hover { background: var(--mat-sys-surface-container-low); }
+.service-tile:focus-visible { outline: 2px solid var(--mat-sys-primary); outline-offset: 2px; }
+.service-icons { display: flex; justify-content: space-between; align-items: center; gap: 4px; }
+.service-state { font-size: 18px; width: 18px; height: 18px; color: var(--mat-sys-on-surface-variant); }
+.service-state.available { color: var(--mat-sys-primary); }
+.service-title { font: var(--mat-sys-title-medium); }
+@media (width < 840px) { .service-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (width < 360px) { .service-grid { grid-template-columns: minmax(0, 1fr); } }
+mat-card-content { padding-block-start: 8px; }
+
+.fields { display: grid; grid-template-columns: minmax(8rem, max-content) minmax(0, 1fr); gap: 6px 16px; margin: 0; }
+.fields dt { color: var(--mat-sys-on-surface-variant); overflow-wrap: anywhere; }
+.fields dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.fields .fields { grid-template-columns: minmax(6rem, max-content) minmax(0, 1fr); }
+.endpoints dd { display: flex; align-items: center; gap: 4px; }
+.endpoints dd .mono { flex: 1; }
+.flag { display: inline-flex; align-items: center; gap: 4px; }
+.flag mat-icon { font-size: 18px; width: 18px; height: 18px; }
+.values { --mdc-chip-container-height: 24px; }
+.value-chip { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; }
+
+.accounts { display: grid; gap: 16px; grid-template-columns: minmax(12rem, 18rem) minmax(0, 1fr); align-items: start; }
+.account-list { border: 1px solid var(--mat-sys-outline-variant); border-radius: 12px; }
+.account-list .selected { background: var(--mat-sys-secondary-container); --mat-list-list-item-label-text-color: var(--mat-sys-on-secondary-container); }
+.account-detail h2 { margin-block-start: 0; }
+.account-detail mat-accordion { display: block; margin-block-start: 8px; }
+
+.capabilities { display: grid; gap: 8px; }
+.search { width: 100%; max-width: 32rem; }
+.compare { width: 100%; max-width: 24rem; }
+.table-scroll { max-inline-size: 100%; overflow-x: auto; }
+.cap-table { width: 100%; border-collapse: collapse; }
+.cap-table th, .cap-table td { padding: 8px 12px; text-align: start; vertical-align: middle;
+  border-block-end: 1px solid var(--mat-sys-outline-variant); }
+.cap-table thead th { font: var(--mat-sys-label-large); color: var(--mat-sys-on-surface-variant); }
+.cap-table .name-cell { white-space: nowrap; }
+.cap-table .col-name { min-inline-size: 10rem; }
+.cap-table .col-account { min-inline-size: 7rem; }
+.cap-table .col-default { min-inline-size: 8rem; }
+.account-id { display: block; }
+.difference { font: var(--mat-sys-label-medium); color: var(--mat-sys-on-surface-variant); }
+.diff-table { width: 100%; table-layout: fixed; }
+.diff-table th, .diff-table td { overflow-wrap: anywhere; }
+.cap-table .group-row th { padding-block-start: 20px; font: var(--mat-sys-title-small); border-block-end-color: var(--mat-sys-outline); }
+.cap-row > th { font-weight: normal; padding-inline-start: 0; }
+.cap-row.open { background: var(--mat-sys-surface-container-low); }
+.cap-toggle { display: flex; align-items: center; gap: 8px; width: 100%; padding: 4px; border: 0; border-radius: 8px;
+  background: none; color: inherit; font: inherit; text-align: start; cursor: pointer; }
+.cap-toggle:hover { background: color-mix(in srgb, var(--mat-sys-on-surface) 8%, transparent); }
+.cap-toggle:focus-visible { outline: 2px solid var(--mat-sys-secondary); }
+.cap-name { display: grid; gap: 2px; min-width: 0; }
+.detail-row td { background: var(--mat-sys-surface-container-low); padding: 8px 16px 16px; }
+.fields.summary { margin-block-end: 8px; }
+.off { color: var(--mat-sys-outline); }
+
+.session-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+pre { margin-block-start: 12px; padding: 16px; max-height: 70vh; overflow: auto; white-space: pre-wrap;
+  border-radius: 12px; background: var(--mat-sys-surface-container); color: var(--mat-sys-on-surface); }
+
+@media (width < 840px) {
+  :host { padding-inline: 16px; }
+  .accounts { grid-template-columns: minmax(0, 1fr); }
+  .cap-table .col-name { min-inline-size: 8rem; }
+  .cap-table .col-account { min-inline-size: 6rem; }
+  .cap-table th, .cap-table td { padding-inline: 6px; }
+  .cap-table > thead .col-name, .cap-table .cap-row > th,
+  .permissions > tbody > tr > th {
+    position: sticky; inset-inline-start: 0; z-index: 1;
+    background: var(--mat-sys-surface);
+  }
+  .cap-table .cap-row.open > th { background: var(--mat-sys-surface-container-low); }
+  /* A nested object stacks term over value instead of squeezing two columns. */
+  .fields .fields { grid-template-columns: minmax(0, 1fr); gap: 0 0; }
+  .fields .fields dd { margin-block-end: 6px; }
+}

@@ -1,0 +1,728 @@
+{
+  "accounts": {
+    "b": {
+      "accountCapabilities": {
+        "urn:ietf:params:jmap:blob": {
+          "maxDataSources": 16,
+          "maxSizeBlobSet": 7499488,
+          "supportedDigestAlgorithms": [
+            "sha",
+            "sha-256",
+            "sha-512"
+          ],
+          "supportedTypeNames": [
+            "Email",
+            "Thread",
+            "SieveScript",
+            "CalendarEvent",
+            "ContactCard"
+          ]
+        },
+        "urn:ietf:params:jmap:calendars": {
+          "maxCalendarsPerEvent": 10,
+          "maxDateTime": "9999-12-31T23:59:59Z",
+          "maxExpandedQueryDuration": "P52W1D",
+          "maxParticipantsPerEvent": 20,
+          "mayCreateCalendar": false,
+          "minDateTime": "0001-01-01T00:00:00Z"
+        },
+        "urn:ietf:params:jmap:calendars:parse": {},
+        "urn:ietf:params:jmap:contacts": {
+          "maxAddressBooksPerCard": 10,
+          "mayCreateAddressBook": false
+        },
+        "urn:ietf:params:jmap:contacts:parse": {},
+        "urn:ietf:params:jmap:filenode": {
+          "caseInsensitiveNames": false,
+          "fileNodeQuerySortOptions": [
+            "name",
+            "size",
+            "created",
+            "modified",
+            "mediaType",
+            "nodeType",
+            "tree"
+          ],
+          "forbiddenNameChars": "/<>:\"\\|?*",
+          "forbiddenNodeNames": [
+            ".",
+            "..",
+            "CON",
+            "PRN",
+            "AUX",
+            "NUL",
+            "COM0",
+            "COM1",
+            "COM2",
+            "COM3",
+            "COM4",
+            "COM5",
+            "COM6",
+            "COM7",
+            "COM8",
+            "COM9",
+            "LPT0",
+            "LPT1",
+            "LPT2",
+            "LPT3",
+            "LPT4",
+            "LPT5",
+            "LPT6",
+            "LPT7",
+            "LPT8",
+            "LPT9"
+          ],
+          "maxFileNodeDepth": 64,
+          "maxSizeFileNodeName": 255,
+          "mayCreateTopLevelFileNode": false,
+          "supportedNodeTypes": [
+            "Directory",
+            "File",
+            "SymLink"
+          ],
+          "webTrashUrl": null,
+          "webUrlTemplate": null,
+          "webWriteUrlTemplate": null
+        },
+        "urn:ietf:params:jmap:mail": {
+          "emailQuerySortOptions": [
+            "receivedAt",
+            "size",
+            "from",
+            "to",
+            "subject",
+            "sentAt",
+            "hasKeyword",
+            "allInThreadHaveKeyword",
+            "someInThreadHaveKeyword"
+          ],
+          "maxMailboxDepth": 10,
+          "maxMailboxesPerEmail": 100,
+          "maxSizeAttachmentsPerEmail": 50000000,
+          "maxSizeMailboxName": 255,
+          "mayCreateTopLevelMailbox": true
+        },
+        "urn:ietf:params:jmap:mail:share": {},
+        "urn:ietf:params:jmap:metadata": {
+          "dataTypes": {
+            "AddressBook": {
+              "maxDepth": 8,
+              "namespaces": [],
+              "supportsPrivate": true,
+              "supportsVendorNamespaces": true
+            },
+            "Calendar": {
+              "maxDepth": 8,
+              "namespaces": [],
+              "supportsPrivate": true,
+              "supportsVendorNamespaces": true
+            },
+            "CalendarEvent": {
+              "maxDepth": 8,
+              "namespaces": [],
+              "supportsPrivate": true,
+              "supportsVendorNamespaces": true
+            },
+            "ContactCard": {
+              "maxDepth": 8,
+              "namespaces": [],
+              "supportsPrivate": true,
+              "supportsVendorNamespaces": true
+            },
+            "Email": {
+              "maxDepth": 8,
+              "namespaces": [],
+              "supportsPrivate": true,
+              "supportsVendorNamespaces": true
+            },
+            "FileNode": {
+              "maxDepth": 8,
+              "namespaces": [],
+              "supportsPrivate": true,
+              "supportsVendorNamespaces": true
+            },
+            "Mailbox": {
+              "maxDepth": 8,
+              "namespaces": [],
+              "supportsPrivate": true,
+              "supportsVendorNamespaces": true
+            }
+          }
+        },
+        "urn:ietf:params:jmap:principals": {
+          "currentUserPrincipalId": "c"
+        },
+        "urn:ietf:params:jmap:principals:availability": {
+          "maxAvailabilityDuration": "P52W1D"
+        },
+        "urn:ietf:params:jmap:principals:owner": {
+          "accountIdForPrincipal": "c",
+          "principalId": "b"
+        },
+        "urn:ietf:params:jmap:websocket": {},
+        "urn:stalwart:jmap": {}
+      },
+      "isPersonal": false,
+      "isReadOnly": false,
+      "name": "admin@example.org"
+    },
+    "c": {
+      "accountCapabilities": {
+        "urn:ietf:params:jmap:blob": {
+          "maxDataSources": 16,
+          "maxSizeBlobSet": 7499488,
+          "supportedDigestAlgorithms": [
+            "sha",
+            "sha-256",
+            "sha-512"
+          ],
+          "supportedTypeNames": [
+            "Email",
+            "Thread",
+            "SieveScript",
+            "CalendarEvent",
+            "ContactCard"
+          ]
+        },
+        "urn:ietf:params:jmap:calendars": {
+          "maxCalendarsPerEvent": 10,
+          "maxDateTime": "9999-12-31T23:59:59Z",
+          "maxExpandedQueryDuration": "P52W1D",
+          "maxParticipantsPerEvent": 20,
+          "mayCreateCalendar": true,
+          "minDateTime": "0001-01-01T00:00:00Z"
+        },
+        "urn:ietf:params:jmap:calendars:parse": {},
+        "urn:ietf:params:jmap:contacts": {
+          "maxAddressBooksPerCard": 10,
+          "mayCreateAddressBook": true
+        },
+        "urn:ietf:params:jmap:contacts:parse": {},
+        "urn:ietf:params:jmap:emailpush": {},
+        "urn:ietf:params:jmap:filenode": {
+          "caseInsensitiveNames": false,
+          "fileNodeQuerySortOptions": [
+            "name",
+            "size",
+            "created",
+            "modified",
+            "mediaType",
+            "nodeType",
+            "tree"
+          ],
+          "forbiddenNameChars": "/<>:\"\\|?*",
+          "forbiddenNodeNames": [
+            ".",
+            "..",
+            "CON",
+            "PRN",
+            "AUX",
+            "NUL",
+            "COM0",
+            "COM1",
+            "COM2",
+            "COM3",
+            "COM4",
+            "COM5",
+            "COM6",
+            "COM7",
+            "COM8",
+            "COM9",
+            "LPT0",
+            "LPT1",
+            "LPT2",
+            "LPT3",
+            "LPT4",
+            "LPT5",
+            "LPT6",
+            "LPT7",
+            "LPT8",
+            "LPT9"
+          ],
+          "maxFileNodeDepth": 64,
+          "maxSizeFileNodeName": 255,
+          "mayCreateTopLevelFileNode": true,
+          "supportedNodeTypes": [
+            "Directory",
+            "File",
+            "SymLink"
+          ],
+          "webTrashUrl": null,
+          "webUrlTemplate": null,
+          "webWriteUrlTemplate": null
+        },
+        "urn:ietf:params:jmap:mail": {
+          "emailQuerySortOptions": [
+            "receivedAt",
+            "size",
+            "from",
+            "to",
+            "subject",
+            "sentAt",
+            "hasKeyword",
+            "allInThreadHaveKeyword",
+            "someInThreadHaveKeyword"
+          ],
+          "maxMailboxDepth": 10,
+          "maxMailboxesPerEmail": 100,
+          "maxSizeAttachmentsPerEmail": 50000000,
+          "maxSizeMailboxName": 255,
+          "mayCreateTopLevelMailbox": true
+        },
+        "urn:ietf:params:jmap:mail:share": {},
+        "urn:ietf:params:jmap:metadata": {
+          "dataTypes": {
+            "AddressBook": {
+              "maxDepth": 8,
+              "namespaces": [],
+              "supportsPrivate": true,
+              "supportsVendorNamespaces": true
+            },
+            "Calendar": {
+              "maxDepth": 8,
+              "namespaces": [],
+              "supportsPrivate": true,
+              "supportsVendorNamespaces": true
+            },
+            "CalendarEvent": {
+              "maxDepth": 8,
+              "namespaces": [],
+              "supportsPrivate": true,
+              "supportsVendorNamespaces": true
+            },
+            "ContactCard": {
+              "maxDepth": 8,
+              "namespaces": [],
+              "supportsPrivate": true,
+              "supportsVendorNamespaces": true
+            },
+            "Email": {
+              "maxDepth": 8,
+              "namespaces": [],
+              "supportsPrivate": true,
+              "supportsVendorNamespaces": true
+            },
+            "FileNode": {
+              "maxDepth": 8,
+              "namespaces": [],
+              "supportsPrivate": true,
+              "supportsVendorNamespaces": true
+            },
+            "Mailbox": {
+              "maxDepth": 8,
+              "namespaces": [],
+              "supportsPrivate": true,
+              "supportsVendorNamespaces": true
+            },
+            "SieveScript": {
+              "maxDepth": 8,
+              "namespaces": [],
+              "supportsPrivate": true,
+              "supportsVendorNamespaces": true
+            }
+          }
+        },
+        "urn:ietf:params:jmap:principals": {
+          "currentUserPrincipalId": "c"
+        },
+        "urn:ietf:params:jmap:principals:availability": {
+          "maxAvailabilityDuration": "P52W1D"
+        },
+        "urn:ietf:params:jmap:principals:owner": {
+          "accountIdForPrincipal": "c",
+          "principalId": "c"
+        },
+        "urn:ietf:params:jmap:quota": {},
+        "urn:ietf:params:jmap:sieve": {
+          "externalLists": null,
+          "maxNumberRedirects": 1,
+          "maxNumberScripts": 100,
+          "maxSizeScript": 102400,
+          "maxSizeScriptName": 512,
+          "notificationMethods": [
+            "mailto"
+          ],
+          "sieveExtensions": [
+            "body",
+            "comparator-elbonia",
+            "comparator-i;ascii-casemap",
+            "comparator-i;ascii-numeric",
+            "comparator-i;octet",
+            "convert",
+            "copy",
+            "date",
+            "duplicate",
+            "editheader",
+            "enclose",
+            "encoded-character",
+            "enotify",
+            "envelope",
+            "envelope-deliverby",
+            "envelope-dsn",
+            "environment",
+            "ereject",
+            "extlists",
+            "extracttext",
+            "fcc",
+            "fileinto",
+            "foreverypart",
+            "ihave",
+            "imap4flags",
+            "include",
+            "index",
+            "mailbox",
+            "mailboxid",
+            "mboxmetadata",
+            "mime",
+            "redirect-deliverby",
+            "redirect-dsn",
+            "regex",
+            "reject",
+            "relational",
+            "replace",
+            "servermetadata",
+            "spamtest",
+            "spamtestplus",
+            "special-use",
+            "subaddress",
+            "vacation",
+            "vacation-seconds",
+            "variables",
+            "virustest"
+          ]
+        },
+        "urn:ietf:params:jmap:submission": {
+          "maxDelayedSend": 2592000,
+          "submissionExtensions": {
+            "DELIVERYBY": [],
+            "DSN": [],
+            "FUTURERELEASE": [],
+            "MT-PRIORITY": [
+              "MIXER"
+            ],
+            "REQUIRETLS": [],
+            "SIZE": []
+          }
+        },
+        "urn:ietf:params:jmap:vacationresponse": {},
+        "urn:ietf:params:jmap:websocket": {},
+        "urn:stalwart:jmap": {}
+      },
+      "isPersonal": true,
+      "isReadOnly": false,
+      "name": "alice@example.org"
+    },
+    "d": {
+      "accountCapabilities": {
+        "urn:ietf:params:jmap:blob": {
+          "maxDataSources": 16,
+          "maxSizeBlobSet": 7499488,
+          "supportedDigestAlgorithms": [
+            "sha",
+            "sha-256",
+            "sha-512"
+          ],
+          "supportedTypeNames": [
+            "Email",
+            "Thread",
+            "SieveScript",
+            "CalendarEvent",
+            "ContactCard"
+          ]
+        },
+        "urn:ietf:params:jmap:calendars": {
+          "maxCalendarsPerEvent": 10,
+          "maxDateTime": "9999-12-31T23:59:59Z",
+          "maxExpandedQueryDuration": "P52W1D",
+          "maxParticipantsPerEvent": 20,
+          "mayCreateCalendar": true,
+          "minDateTime": "0001-01-01T00:00:00Z"
+        },
+        "urn:ietf:params:jmap:calendars:parse": {},
+        "urn:ietf:params:jmap:contacts": {
+          "maxAddressBooksPerCard": 10,
+          "mayCreateAddressBook": true
+        },
+        "urn:ietf:params:jmap:contacts:parse": {},
+        "urn:ietf:params:jmap:emailpush": {},
+        "urn:ietf:params:jmap:filenode": {
+          "caseInsensitiveNames": false,
+          "fileNodeQuerySortOptions": [
+            "name",
+            "size",
+            "created",
+            "modified",
+            "mediaType",
+            "nodeType",
+            "tree"
+          ],
+          "forbiddenNameChars": "/<>:\"\\|?*",
+          "forbiddenNodeNames": [
+            ".",
+            "..",
+            "CON",
+            "PRN",
+            "AUX",
+            "NUL",
+            "COM0",
+            "COM1",
+            "COM2",
+            "COM3",
+            "COM4",
+            "COM5",
+            "COM6",
+            "COM7",
+            "COM8",
+            "COM9",
+            "LPT0",
+            "LPT1",
+            "LPT2",
+            "LPT3",
+            "LPT4",
+            "LPT5",
+            "LPT6",
+            "LPT7",
+            "LPT8",
+            "LPT9"
+          ],
+          "maxFileNodeDepth": 64,
+          "maxSizeFileNodeName": 255,
+          "mayCreateTopLevelFileNode": true,
+          "supportedNodeTypes": [
+            "Directory",
+            "File",
+            "SymLink"
+          ],
+          "webTrashUrl": null,
+          "webUrlTemplate": null,
+          "webWriteUrlTemplate": null
+        },
+        "urn:ietf:params:jmap:mail": {
+          "emailQuerySortOptions": [
+            "receivedAt",
+            "size",
+            "from",
+            "to",
+            "subject",
+            "sentAt",
+            "hasKeyword",
+            "allInThreadHaveKeyword",
+            "someInThreadHaveKeyword"
+          ],
+          "maxMailboxDepth": 10,
+          "maxMailboxesPerEmail": 100,
+          "maxSizeAttachmentsPerEmail": 50000000,
+          "maxSizeMailboxName": 255,
+          "mayCreateTopLevelMailbox": true
+        },
+        "urn:ietf:params:jmap:mail:share": {},
+        "urn:ietf:params:jmap:metadata": {
+          "dataTypes": {
+            "AddressBook": {
+              "maxDepth": 8,
+              "namespaces": [],
+              "supportsPrivate": true,
+              "supportsVendorNamespaces": true
+            },
+            "Calendar": {
+              "maxDepth": 8,
+              "namespaces": [],
+              "supportsPrivate": true,
+              "supportsVendorNamespaces": true
+            },
+            "CalendarEvent": {
+              "maxDepth": 8,
+              "namespaces": [],
+              "supportsPrivate": true,
+              "supportsVendorNamespaces": true
+            },
+            "ContactCard": {
+              "maxDepth": 8,
+              "namespaces": [],
+              "supportsPrivate": true,
+              "supportsVendorNamespaces": true
+            },
+            "Email": {
+              "maxDepth": 8,
+              "namespaces": [],
+              "supportsPrivate": true,
+              "supportsVendorNamespaces": true
+            },
+            "FileNode": {
+              "maxDepth": 8,
+              "namespaces": [],
+              "supportsPrivate": true,
+              "supportsVendorNamespaces": true
+            },
+            "Mailbox": {
+              "maxDepth": 8,
+              "namespaces": [],
+              "supportsPrivate": true,
+              "supportsVendorNamespaces": true
+            },
+            "SieveScript": {
+              "maxDepth": 8,
+              "namespaces": [],
+              "supportsPrivate": true,
+              "supportsVendorNamespaces": true
+            }
+          }
+        },
+        "urn:ietf:params:jmap:principals": {
+          "currentUserPrincipalId": "c"
+        },
+        "urn:ietf:params:jmap:principals:availability": {
+          "maxAvailabilityDuration": "P52W1D"
+        },
+        "urn:ietf:params:jmap:principals:owner": {
+          "accountIdForPrincipal": "c",
+          "principalId": "d"
+        },
+        "urn:ietf:params:jmap:quota": {},
+        "urn:ietf:params:jmap:sieve": {
+          "externalLists": null,
+          "maxNumberRedirects": 1,
+          "maxNumberScripts": 100,
+          "maxSizeScript": 102400,
+          "maxSizeScriptName": 512,
+          "notificationMethods": [
+            "mailto"
+          ],
+          "sieveExtensions": [
+            "body",
+            "comparator-elbonia",
+            "comparator-i;ascii-casemap",
+            "comparator-i;ascii-numeric",
+            "comparator-i;octet",
+            "convert",
+            "copy",
+            "date",
+            "duplicate",
+            "editheader",
+            "enclose",
+            "encoded-character",
+            "enotify",
+            "envelope",
+            "envelope-deliverby",
+            "envelope-dsn",
+            "environment",
+            "ereject",
+            "extlists",
+            "extracttext",
+            "fcc",
+            "fileinto",
+            "foreverypart",
+            "ihave",
+            "imap4flags",
+            "include",
+            "index",
+            "mailbox",
+            "mailboxid",
+            "mboxmetadata",
+            "mime",
+            "redirect-deliverby",
+            "redirect-dsn",
+            "regex",
+            "reject",
+            "relational",
+            "replace",
+            "servermetadata",
+            "spamtest",
+            "spamtestplus",
+            "special-use",
+            "subaddress",
+            "vacation",
+            "vacation-seconds",
+            "variables",
+            "virustest"
+          ]
+        },
+        "urn:ietf:params:jmap:submission": {
+          "maxDelayedSend": 2592000,
+          "submissionExtensions": {
+            "DELIVERYBY": [],
+            "DSN": [],
+            "FUTURERELEASE": [],
+            "MT-PRIORITY": [
+              "MIXER"
+            ],
+            "REQUIRETLS": [],
+            "SIZE": []
+          }
+        },
+        "urn:ietf:params:jmap:vacationresponse": {},
+        "urn:ietf:params:jmap:websocket": {},
+        "urn:stalwart:jmap": {}
+      },
+      "isPersonal": false,
+      "isReadOnly": false,
+      "name": "team@example.org"
+    }
+  },
+  "apiUrl": "https://localhost:18881/jmap/",
+  "capabilities": {
+    "urn:ietf:params:jmap:blob": {},
+    "urn:ietf:params:jmap:calendars": {},
+    "urn:ietf:params:jmap:calendars:parse": {},
+    "urn:ietf:params:jmap:contacts": {},
+    "urn:ietf:params:jmap:contacts:parse": {},
+    "urn:ietf:params:jmap:core": {
+      "collationAlgorithms": [
+        "i;ascii-numeric",
+        "i;ascii-casemap",
+        "i;unicode-casemap"
+      ],
+      "maxCallsInRequest": 16,
+      "maxConcurrentRequests": 4,
+      "maxConcurrentUpload": 4,
+      "maxObjectsInGet": 500,
+      "maxObjectsInSet": 500,
+      "maxSizeRequest": 10000000,
+      "maxSizeUpload": 50000000
+    },
+    "urn:ietf:params:jmap:emailpush": {},
+    "urn:ietf:params:jmap:filenode": {},
+    "urn:ietf:params:jmap:mail": {},
+    "urn:ietf:params:jmap:metadata": {},
+    "urn:ietf:params:jmap:principals": {},
+    "urn:ietf:params:jmap:principals:availability": {},
+    "urn:ietf:params:jmap:quota": {},
+    "urn:ietf:params:jmap:sieve": {
+      "implementation": "Stalwart v1.0.0"
+    },
+    "urn:ietf:params:jmap:submission": {},
+    "urn:ietf:params:jmap:vacationresponse": {},
+    "urn:ietf:params:jmap:webpush-vapid": {
+      "applicationServerKey": "BLMr1A0gC4dFs6q6i1y5VjannFRFomSCNpDQ9_FId7qnWH848UGNF3Ngt8ZA9UHScMiq2vYbfJMhlVzjQzIYt2k"
+    },
+    "urn:ietf:params:jmap:websocket": {
+      "supportsPush": true,
+      "url": "wss://localhost:18881/jmap/ws"
+    }
+  },
+  "downloadUrl": "https://localhost:18881/jmap/download/{accountId}/{blobId}/{name}?accept={type}",
+  "eventSourceUrl": "https://localhost:18881/jmap/eventsource/?types={types}&closeafter={closeafter}&ping={ping}",
+  "primaryAccounts": {
+    "urn:ietf:params:jmap:blob": "c",
+    "urn:ietf:params:jmap:calendars": "c",
+    "urn:ietf:params:jmap:calendars:parse": "c",
+    "urn:ietf:params:jmap:contacts": "c",
+    "urn:ietf:params:jmap:contacts:parse": "c",
+    "urn:ietf:params:jmap:emailpush": "c",
+    "urn:ietf:params:jmap:filenode": "c",
+    "urn:ietf:params:jmap:mail": "c",
+    "urn:ietf:params:jmap:mail:share": "c",
+    "urn:ietf:params:jmap:metadata": "c",
+    "urn:ietf:params:jmap:principals": "c",
+    "urn:ietf:params:jmap:principals:availability": "c",
+    "urn:ietf:params:jmap:quota": "c",
+    "urn:ietf:params:jmap:sieve": "c",
+    "urn:ietf:params:jmap:submission": "c",
+    "urn:ietf:params:jmap:vacationresponse": "c",
+    "urn:ietf:params:jmap:websocket": "c",
+    "urn:stalwart:jmap": "c"
+  },
+  "state": "ba7bf759",
+  "uploadUrl": "https://localhost:18881/jmap/upload/{accountId}/",
+  "username": "alice@example.org"
+}

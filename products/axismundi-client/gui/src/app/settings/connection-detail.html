@@ -1,0 +1,303 @@
+<!-- One read-only Session value: a mark and a word for a flag, chips for a list, nested terms for an object. -->
+<ng-template #value let-shown>
+  @switch (shown.kind) {
+    @case ("flag") {
+      <span class="flag"><mat-icon aria-hidden="true">{{ shown.on ? "check_circle" : "remove_circle_outline" }}</mat-icon>{{ shown.on ? "Yes" : "No" }}</span>
+    }
+    @case ("list") {
+      <mat-chip-set class="values" [attr.aria-label]="shown.items.length + ' values'">
+        @for (item of shown.items; track $index) { <mat-chip disabled class="value-chip">{{ item }}</mat-chip> }
+      </mat-chip-set>
+    }
+    @case ("fields") {
+      <dl class="fields">
+        @for (field of shown.fields; track field.name) {
+          <dt>{{ field.name }}</dt><dd><ng-container [ngTemplateOutlet]="value" [ngTemplateOutletContext]="{$implicit: field.value}" /></dd>
+        }
+      </dl>
+    }
+    @default { <span [class.mono]="shown.mono">{{ shown.text }}</span> }
+  }
+</ng-template>
+<ng-template #mark let-on>
+  <span class="flag" [class.off]="!on"><mat-icon aria-hidden="true">{{ on ? "check_circle" : "remove" }}</mat-icon>{{ on ? "Yes" : "No" }}</span>
+</ng-template>
+<ng-template #fieldList let-fields>
+  @if (fields.length) {
+    <dl class="fields">
+      @for (field of fields; track field.name) {
+        <dt>{{ field.name }}</dt><dd><ng-container [ngTemplateOutlet]="value" [ngTemplateOutletContext]="{$implicit: field.value}" /></dd>
+      }
+    </dl>
+  } @else { <p class="muted">Advertised, with no properties.</p> }
+</ng-template>
+
+<header class="page-header">
+  @if (item(); as connection) {
+    <div class="heading">
+      <h1>JMAP</h1>
+      <p>{{ connection.username }} · {{ connection.server }}</p>
+    </div>
+  } @else {
+    <h1>Connection not found</h1>
+  }
+</header>
+
+@if (item() && !view()) {
+  <p class="status" role="status">This connection has no JMAP Session.</p>
+}
+@if (view(); as view) {
+  <mat-tab-group [selectedIndex]="tabIndex()" (selectedIndexChange)="selectTab($event)" mat-stretch-tabs="false" animationDuration="0ms">
+    <mat-tab label="Overview">
+      <div class="tab overview">
+        <mat-card appearance="outlined">
+          <mat-card-header><mat-card-title>Connection</mat-card-title></mat-card-header>
+          <mat-card-content>
+            <dl class="fields">
+              <dt>User</dt><dd>{{ view.username }}</dd>
+              <dt>Server</dt><dd class="mono">{{ view.origin }}</dd>
+              <dt>Accounts</dt><dd>{{ view.accounts.length }}</dd>
+              <dt>Session state</dt><dd class="mono">{{ view.state }}</dd>
+            </dl>
+          </mat-card-content>
+        </mat-card>
+
+        <section class="wide" aria-labelledby="available-services">
+          <h2 id="available-services">Available services</h2>
+          <div class="service-grid">
+            @for (app of view.apps; track app.urn) {
+              @if (app.state !== "not-offered") {
+                <button type="button" class="service-tile" (click)="showCapability(app.urn)">
+                  <span class="service-icons">
+                    <mat-icon aria-hidden="true">{{ app.icon }}</mat-icon>
+                    <mat-icon class="service-state" [class.available]="app.state === 'available'" aria-hidden="true">
+                      {{ app.state === "available" ? "check_circle" : "info" }}
+                    </mat-icon>
+                  </span>
+                  <span class="service-title">{{ app.label }}</span>
+                  <span class="muted">
+                    @switch (app.state) {
+                      @case ("available") { In this app · {{ app.accounts.length }} {{ app.accounts.length === 1 ? "account" : "accounts" }} }
+                      @case ("no-account") { Advertised · No eligible account }
+                      @case ("not-in-app") { Advertised · Not in this app }
+                    }
+                  </span>
+                </button>
+              }
+            }
+          </div>
+        </section>
+
+        <mat-card appearance="outlined">
+          <mat-card-header><mat-card-title>Transport</mat-card-title></mat-card-header>
+          <mat-card-content>
+            <dl class="fields">
+              @for (t of view.transport; track t.label) {
+                <dt>{{ t.label }}</dt>
+                <dd><span class="flag"><mat-icon aria-hidden="true">{{ t.on ? "check_circle" : "remove_circle_outline" }}</mat-icon>{{ t.on ? t.detail : "Not offered" }}</span></dd>
+              }
+            </dl>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card appearance="outlined">
+          <mat-card-header><mat-card-title>Server limits</mat-card-title></mat-card-header>
+          <mat-card-content><ng-container [ngTemplateOutlet]="fieldList" [ngTemplateOutletContext]="{$implicit: view.limits}" /></mat-card-content>
+        </mat-card>
+
+        <mat-card appearance="outlined" class="wide">
+          <mat-card-header><mat-card-title>Endpoints</mat-card-title></mat-card-header>
+          <mat-card-content>
+            <dl class="fields endpoints">
+              @for (endpoint of view.endpoints; track endpoint.label) {
+                <dt>{{ endpoint.label }}</dt>
+                <dd>
+                  <span class="mono">{{ endpoint.url }}</span>
+                  <button matIconButton type="button" [attr.aria-label]="'Copy ' + endpoint.label + ' URL'"
+                    [matTooltip]="'Copy ' + endpoint.label + ' URL'" (click)="copy(endpoint.url, endpoint.label + ' URL')">
+                    <mat-icon>content_copy</mat-icon>
+                  </button>
+                </dd>
+              }
+            </dl>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </mat-tab>
+
+    <mat-tab label="Accounts">
+      <div class="tab accounts">
+        <mat-action-list class="account-list" aria-label="JMAP accounts">
+          @for (a of view.accounts; track a.id) {
+            <button mat-list-item type="button" [class.selected]="a.id === account()?.id"
+              [attr.aria-current]="a.id === account()?.id ? 'true' : null" (click)="showAccount(a.id)">
+              <span matListItemTitle>{{ a.name }}</span>
+              <span matListItemLine>{{ a.personal ? "Personal" : "Not personal" }}{{ a.readOnly ? " · Read only" : "" }}</span>
+            </button>
+          }
+        </mat-action-list>
+        @if (account(); as a) {
+          <section class="account-detail" [attr.aria-label]="a.name">
+            <h2>{{ a.name }}</h2>
+            <dl class="fields">
+              <dt>Account ID</dt><dd class="mono">{{ a.id }}</dd>
+              <dt>Kind</dt><dd>{{ a.personal ? "Personal" : "Not personal" }}</dd>
+              <dt>Access</dt><dd>{{ a.readOnly ? "Read only" : "Not read only — each object still has its own rights" }}</dd>
+              <dt>Default account for</dt>
+              <dd>
+                @if (a.primaryFor.length) {
+                  <mat-chip-set class="values" aria-label="Default account for">
+                    @for (urn of a.primaryFor; track urn) { <mat-chip disabled class="value-chip">{{ label(urn) }}</mat-chip> }
+                  </mat-chip-set>
+                } @else { None }
+              </dd>
+            </dl>
+            <h3>What this account offers</h3>
+            <mat-accordion multi>
+              @for (c of a.capabilities; track c.urn) {
+                <mat-expansion-panel>
+                  <mat-expansion-panel-header>
+                    <mat-panel-title>{{ c.label }}</mat-panel-title>
+                    <mat-panel-description class="mono">{{ c.urn }}</mat-panel-description>
+                  </mat-expansion-panel-header>
+                  <ng-container [ngTemplateOutlet]="fieldList" [ngTemplateOutletContext]="{$implicit: c.fields}" />
+                </mat-expansion-panel>
+              }
+            </mat-accordion>
+            <div class="session-bar">
+              <h3>Account JSON</h3>
+              <button matButton="outlined" type="button" (click)="copy(accountJson(), 'Account JSON')"><mat-icon>content_copy</mat-icon>Copy JSON</button>
+            </div>
+            <pre class="mono" tabindex="0" aria-label="Account JSON">{{ accountJson() }}</pre>
+          </section>
+        }
+      </div>
+    </mat-tab>
+
+    <mat-tab label="Capabilities">
+      <div class="tab capabilities">
+        <mat-form-field appearance="outline" class="search" subscriptSizing="dynamic">
+          <mat-icon matPrefix aria-hidden="true">search</mat-icon>
+          <mat-label>Search capabilities</mat-label>
+          <input matInput type="search" [value]="search()" (input)="search.set($any($event.target).value)">
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="compare" subscriptSizing="dynamic">
+          <mat-label>Compare accounts</mat-label>
+          <mat-select multiple [value]="comparisonIds()" (selectionChange)="selectComparison($event.value)">
+            @for (a of view.accounts; track a.id) { <mat-option [value]="a.id">{{ a.name }} · {{ a.id }}</mat-option> }
+          </mat-select>
+        </mat-form-field>
+        <mat-checkbox [disabled]="comparisonIds().length < 2" [checked]="onlyDifferences() && comparisonIds().length >= 2"
+          (change)="onlyDifferences.set($event.checked)">Differences only</mat-checkbox>
+        <div class="table-scroll" tabindex="0" role="region" aria-label="Capability comparison">
+        <table class="cap-table">
+          <thead>
+            <tr>
+              <th scope="col" class="col-name">Capability</th>
+              <th scope="col" class="col-server">Server</th>
+              @for (a of comparisonAccounts(); track a.id) {
+                <th scope="col" class="col-account" [title]="a.name">{{ a.name }} <span class="mono muted account-id">{{ a.id }}</span></th>
+              }
+              <th scope="col" class="col-default">Default account</th>
+              <th scope="col" class="col-app">App</th>
+            </tr>
+          </thead>
+          @for (g of groups(); track g.group) {
+            <tbody>
+              <tr class="group-row"><th scope="rowgroup" [attr.colspan]="columnCount()">{{ g.group }} <span class="muted">({{ g.rows.length }})</span></th></tr>
+              @for (entry of g.rows; track entry.row.urn) {
+                @let row = entry.row;
+                @let open = isOpen(row.urn);
+                <tr class="cap-row" [class.open]="open">
+                  <th scope="row">
+                    <button type="button" class="cap-toggle" [attr.aria-expanded]="open" [attr.aria-controls]="'cap-' + row.urn"
+                      (click)="toggle(row.urn)">
+                      <mat-icon aria-hidden="true">{{ open ? "expand_less" : "expand_more" }}</mat-icon>
+                      <span class="cap-name">
+                        <span>{{ row.label }}</span>
+                        @if (entry.comparison.differs) { <span class="difference">Values differ</span> }
+                        @if (entry.comparison.presence) { <span class="difference">Availability differs</span> }
+                      </span>
+                    </button>
+                  </th>
+                  <td class="col-server"><ng-container [ngTemplateOutlet]="mark" [ngTemplateOutletContext]="{$implicit: row.server}" /></td>
+                  @for (holder of entry.comparison.holders; track $index) {
+                    <td><ng-container [ngTemplateOutlet]="mark" [ngTemplateOutletContext]="{$implicit: !!holder}" /></td>
+                  }
+                  <td class="col-default">{{ row.primary ? accountName(row.primary) + " · " + row.primary : "—" }}</td>
+                  <td class="col-app name-cell" [class.off]="!row.client">{{ row.client ? "In app" : "Not in app" }}</td>
+                </tr>
+                @if (open) {
+                  <tr class="detail-row" [id]="'cap-' + row.urn">
+                    <td [attr.colspan]="columnCount()">
+                      <dl class="fields summary">
+                        <dt>URN</dt><dd class="mono">{{ row.urn }}</dd>
+                        <dt>Server</dt><dd>{{ row.server ? "Advertised" : "Not in the server's capabilities" }}</dd>
+                        <dt>Default account</dt><dd>{{ row.primary ? accountName(row.primary) + " · " + row.primary : "None" }}</dd>
+                        <dt>Accounts</dt><dd>{{ row.accounts.length ? accountList(row) : "None" }}</dd>
+                        <dt>App</dt><dd>{{ row.client ? "Used by this app" : "Not in this app" }}</dd>
+                      </dl>
+                      @if (row.server) {
+                        <h3>Server</h3>
+                        <ng-container [ngTemplateOutlet]="fieldList" [ngTemplateOutletContext]="{$implicit: row.serverFields}" />
+                      }
+                      @if (entry.comparison.fields.length) {
+                        <table class="diff-table" aria-label="Differing account values">
+                          <thead><tr><th scope="col">Property</th>
+                            @for (a of comparisonAccounts(); track a.id) { <th scope="col">{{ a.name }} · {{ a.id }}</th> }
+                          </tr></thead>
+                          <tbody>
+                            @for (field of entry.comparison.fields; track field.key) {
+                              <tr><th scope="row">{{ field.key }}</th>
+                                @for (cell of field.cells; track $index) {
+                                  <td><ng-container [ngTemplateOutlet]="value" [ngTemplateOutletContext]="{$implicit: cell}" /></td>
+                                }
+                              </tr>
+                            }
+                          </tbody>
+                        </table>
+                      }
+                    </td>
+                  </tr>
+                }
+              }
+            </tbody>
+          }
+        </table>
+        </div>
+        @if (!groups().length) {
+          <p class="status" role="status">{{ onlyDifferences() && comparisonIds().length > 1 ? "No differences match." : "No capability matches." }}</p>
+        }
+        @if (comparisonAccounts().length) {
+          <h2>Advertised creation permissions</h2>
+          <div class="table-scroll" tabindex="0" role="region" aria-label="Advertised creation permissions">
+            <table class="cap-table permissions">
+              <thead><tr><th scope="col" class="col-name">Permission</th>
+                @for (a of comparisonAccounts(); track a.id) {
+                  <th scope="col" class="col-account">{{ a.name }} <span class="mono muted account-id">{{ a.id }}</span></th>
+                }
+              </tr></thead>
+              <tbody>
+                @for (permission of permissions(); track permission.key) {
+                  <tr><th scope="row" [title]="permission.key">{{ permission.label }}</th>
+                    @for (answer of permission.values; track $index) { <td>{{ answer }}</td> }
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </mat-tab>
+
+    <mat-tab label="Session">
+      <div class="tab session">
+        <div class="session-bar">
+          <p>Session state <span class="mono">{{ view.state }}</span> · as received when this connection signed in</p>
+          <button matButton="outlined" type="button" (click)="copy(sessionJson(), 'Session JSON')"><mat-icon>content_copy</mat-icon>Copy JSON</button>
+        </div>
+        <pre class="mono" tabindex="0" aria-label="Session JSON">{{ sessionJson() }}</pre>
+      </div>
+    </mat-tab>
+  </mat-tab-group>
+}

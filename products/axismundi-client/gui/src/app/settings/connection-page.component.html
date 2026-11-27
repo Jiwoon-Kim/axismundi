@@ -12,6 +12,7 @@
             @if (item.id !== connection.activeId()) {
               <button matButton type="button" (click)="connection.switchTo(item.id)">Switch</button>
             }
+            <a matButton [routerLink]="['/settings/connections', item.id]">Details</a>
             <button matButton type="button" [disabled]="!!connection.busy()" (click)="connection.disconnect(item.id)">Sign out</button>
           </span>
         </div>

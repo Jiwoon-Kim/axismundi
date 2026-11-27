@@ -1,7 +1,45 @@
-<nav mat-tab-nav-bar [tabPanel]="panel" aria-label="Settings">
-  <a mat-tab-link routerLink="connections" routerLinkActive #connections="routerLinkActive"
-     [active]="connections.isActive">Connections</a>
-  <a mat-tab-link routerLink="appearance" routerLinkActive #appearance="routerLinkActive"
-     [active]="appearance.isActive">Appearance</a>
-</nav>
-<mat-tab-nav-panel #panel><router-outlet /></mat-tab-nav-panel>
+<mat-sidenav-container>
+  <mat-sidenav class="settings-nav" [mode]="expanded() ? 'side' : 'over'" [opened]="expanded() || drawer()"
+    (openedChange)="!expanded() && drawer.set($event)" aria-label="Settings sections">
+    <h2 class="nav-title">Settings</h2>
+    <mat-nav-list aria-label="Settings sections" (click)="drawer.set(false)">
+      <a mat-list-item routerLink="/settings/connections" routerLinkActive="active" #all="routerLinkActive"
+        [routerLinkActiveOptions]="{exact: true}" [attr.aria-current]="all.isActive ? 'page' : null">
+        <mat-icon matListItemIcon aria-hidden="true">hub</mat-icon>
+        <span matListItemTitle>Connections</span>
+      </a>
+      @for (item of connection.connections(); track item.id) {
+        <a mat-list-item class="nested" [routerLink]="['/settings/connections', item.id]" routerLinkActive="active"
+          #one="routerLinkActive" [attr.aria-current]="one.isActive ? 'page' : null">
+          <span matListItemTitle>{{ item.username }}</span>
+          <span matListItemLine>{{ host(item.server) }}{{ item.id === connection.activeId() ? " · shown" : "" }}</span>
+        </a>
+      }
+      <a mat-list-item routerLink="/settings/appearance" routerLinkActive="active" #look="routerLinkActive"
+        [attr.aria-current]="look.isActive ? 'page' : null">
+        <mat-icon matListItemIcon aria-hidden="true">palette</mat-icon>
+        <span matListItemTitle>Appearance</span>
+      </a>
+    </mat-nav-list>
+  </mat-sidenav>
+  <mat-sidenav-content>
+    <div class="crumb-bar">
+      @if (!expanded()) {
+        <button matIconButton type="button" aria-label="Settings sections" matTooltip="Settings sections"
+          [attr.aria-expanded]="drawer()" (click)="drawer.set(true)"><mat-icon>menu</mat-icon></button>
+      }
+      <nav aria-label="Breadcrumb">
+        <ol class="crumbs">
+          @for (crumb of crumbs(); track crumb.label; let last = $last) {
+            <li>
+              @if (crumb.link) { <a [routerLink]="crumb.link">{{ crumb.label }}</a> }
+              @else { <span aria-current="page">{{ crumb.label }}</span> }
+              @if (!last) { <mat-icon class="sep" aria-hidden="true">chevron_right</mat-icon> }
+            </li>
+          }
+        </ol>
+      </nav>
+    </div>
+    <router-outlet />
+  </mat-sidenav-content>
+</mat-sidenav-container>

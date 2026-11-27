@@ -33,6 +33,7 @@ pub fn configure<R: tauri::Runtime>(builder: tauri::Builder<R>) -> tauri::Builde
             contacts::contacts_card,
             contacts::contacts_sync,
             contacts::contacts_search,
+            contacts::contacts_query,
             contacts::contacts_create,
             contacts::contacts_update,
             connection::discover_server,

@@ -1,11 +1,113 @@
 {
-  "books": [{"id":"test-book","name":"Test book","description":"Personal contacts","sortOrder":10,"isDefault":true,"isSubscribed":true}],
-  "rows": [
-    {"id":"test-card","kind":"individual","name":"Test Contact","email":"test@example.org","avatarUri":"https://example.org/avatar.png","phone":null,"organization":null,"sortKey":"Test Contact"},
-    {"id":"test-group","kind":"group","name":"Test Group","email":null,"avatarUri":null,"phone":null,"organization":null,"sortKey":"Test Group"}
+  "books": [
+    {
+      "description": "Personal contacts",
+      "id": "test-book",
+      "isDefault": true,
+      "isSubscribed": true,
+      "name": "Test book",
+      "sortOrder": 10
+    }
   ],
-  "edit": {"path":["phones","p1","number"],"value":"123"},
-  "detail": {"card":{"id":"test-card","version":"1.0","name":{"full":"Test Contact"},"emails":{"e1":{"address":"test@example.org"}},"media":{"m1":{"kind":"photo","uri":"https://example.org/avatar.png"}},"localizations":{"en":{"name/full":"Example"}}},"row":{"id":"test-card","kind":"individual","name":"Test Contact","email":"test@example.org","avatarUri":"https://example.org/avatar.png","phone":null,"organization":null,"sortKey":"Test Contact"},"state":"cards-state"},
-  "created": {"id":"test-card"},
-  "synced": {"addressBookState":"books-state","contactCardState":"cards-state"}
+  "created": {
+    "id": "test-card"
+  },
+  "detail": {
+    "card": {
+      "emails": {
+        "e1": {
+          "address": "test@example.org"
+        }
+      },
+      "id": "test-card",
+      "localizations": {
+        "en": {
+          "name/full": "Example"
+        }
+      },
+      "media": {
+        "m1": {
+          "kind": "photo",
+          "uri": "https://example.org/avatar.png"
+        }
+      },
+      "name": {
+        "full": "Test Contact"
+      },
+      "version": "1.0"
+    },
+    "row": {
+      "avatarUri": "https://example.org/avatar.png",
+      "email": "test@example.org",
+      "id": "test-card",
+      "kind": "individual",
+      "name": "Test Contact",
+      "organization": null,
+      "phone": null,
+      "sortKey": "Test Contact"
+    },
+    "state": "cards-state"
+  },
+  "edit": {
+    "path": [
+      "phones",
+      "p1",
+      "number"
+    ],
+    "value": "123"
+  },
+  "query": {
+    "filter": {
+      "conditions": [
+        {
+          "conditions": [
+            {
+              "inAddressBook": "test-book"
+            },
+            {
+              "inAddressBook": "other-book"
+            }
+          ],
+          "operator": "OR"
+        },
+        {
+          "kind": "group",
+          "text": "Test"
+        }
+      ],
+      "operator": "AND"
+    },
+    "sort": [
+      {
+        "isAscending": false,
+        "property": "name/surname"
+      }
+    ]
+  },
+  "rows": [
+    {
+      "avatarUri": "https://example.org/avatar.png",
+      "email": "test@example.org",
+      "id": "test-card",
+      "kind": "individual",
+      "name": "Test Contact",
+      "organization": null,
+      "phone": null,
+      "sortKey": "Test Contact"
+    },
+    {
+      "avatarUri": null,
+      "email": null,
+      "id": "test-group",
+      "kind": "group",
+      "name": "Test Group",
+      "organization": null,
+      "phone": null,
+      "sortKey": "Test Group"
+    }
+  ],
+  "synced": {
+    "addressBookState": "books-state",
+    "contactCardState": "cards-state"
+  }
 }

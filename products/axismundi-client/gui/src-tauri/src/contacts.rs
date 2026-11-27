@@ -47,6 +47,12 @@ mod tests {
                 "id":"test-group","kind":"group","name":{"full":"Test Group"},
                 "addressBookIds":{"test-book":true},"members":{"urn:uuid:test-member":true}
             })).unwrap()],
+            "query": {
+                "filter": serde_json::from_value::<core::Filter>(json!({"operator":"AND","conditions":[
+                    {"operator":"OR","conditions":[{"inAddressBook":"test-book"},{"inAddressBook":"other-book"}]},
+                    {"kind":"group","text":"Test"}]})).unwrap(),
+                "sort": [core::Comparator { property: "name/surname".into(), is_ascending: false }]
+            },
             "edit": Edit {path: vec!["phones".into(),"p1".into(),"number".into()], value:json!("123")},
             "detail":Document{row:row(source.clone()),card:source,state:Some("cards-state".into())},
             "created":Created{id:"test-card".into()},
@@ -258,7 +264,7 @@ pub(crate) async fn contacts_card(
         move |active, session, store, account| {
             if reload == Some(true) {
                 core::sync_type(&active.client, session, store, account, CARD)?;
-                store.discard_conflict(account, &card_id)?;
+                store.discard_update_after_sync(account, &card_id)?;
             }
             let card = store
                 .list(account, CARD)?
@@ -294,6 +300,50 @@ pub(crate) async fn contacts_sync(
     .await
 }
 
+/// Runs the query and returns its rows in the server's order. The cache is brought up to date
+/// after the query so every id it found is held; if a card is still missing (it changed between
+/// the two), the query runs once more, and a second gap is an error rather than a short list
+/// shown as complete.
+fn query_rows(
+    active: &Active,
+    session: &Session,
+    store: &mut core::Store,
+    account: &str,
+    filter: Option<&core::Filter>,
+    sort: &[core::Comparator],
+) -> core::Result<Vec<Row>> {
+    for _ in 0..2 {
+        let ids = core::query(&active.client, session, account, filter, sort)?;
+        core::sync_type(&active.client, session, store, account, CARD)?;
+        let mut rows: std::collections::HashMap<_, _> =
+            store.list(account, CARD)?.into_iter().filter_map(row).map(|row| (row.id.clone(), row)).collect();
+        let found: Vec<Row> = ids.iter().filter_map(|id| rows.remove(id)).collect();
+        if found.len() == ids.len() {
+            return Ok(found);
+        }
+    }
+    Err("Contacts changed while the results were read. Try again.".into())
+}
+
+/// ContactCard/query with a JMAP filter and RFC 9610 comparators (online). Rows come back in the
+/// server's order and are not sorted again here or in the GUI; an unsupported filter or sort is
+/// the server's error, shown as such.
+#[tauri::command]
+pub(crate) async fn contacts_query(
+    state: tauri::State<'_, Connection>,
+    connection_id: u32,
+    account_id: Option<String>,
+    filter: Option<core::Filter>,
+    sort: Option<Vec<core::Comparator>>,
+) -> Result<Vec<Row>, String> {
+    run(state, connection_id, account_id, move |active, session, store, account| {
+        query_rows(active, session, store, account, filter.as_ref(), &sort.unwrap_or_default())
+    })
+    .await
+}
+
+/// Text search across every address book: `contacts_query` with `{text}` and no sort.
+/// Kept until the GUI calls `contacts_query` directly.
 #[tauri::command]
 pub(crate) async fn contacts_search(
     state: tauri::State<'_, Connection>,
@@ -301,22 +351,10 @@ pub(crate) async fn contacts_search(
     account_id: Option<String>,
     text: String,
 ) -> Result<Vec<Row>, String> {
-    run(
-        state,
-        connection_id,
-        account_id,
-        move |active, session, store, account| {
-            let ids = core::search(&active.client, session, account, &text)?;
-            core::sync_type(&active.client, session, store, account, CARD)?;
-            let mut rows: std::collections::HashMap<_, _> = store
-                .list(account, CARD)?
-                .into_iter()
-                .filter_map(row)
-                .map(|row| (row.id.clone(), row))
-                .collect();
-            Ok(ids.iter().filter_map(|id| rows.remove(id)).collect())
-        },
-    )
+    run(state, connection_id, account_id, move |active, session, store, account| {
+        let filter = core::Filter::Condition([("text".to_owned(), text)].into());
+        query_rows(active, session, store, account, Some(&filter), &[])
+    })
     .await
 }
 

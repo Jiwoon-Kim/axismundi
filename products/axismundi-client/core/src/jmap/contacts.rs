@@ -10,23 +10,110 @@ use std::{collections::BTreeSet, path::Path};
 pub const CAPABILITY: &str = "urn:ietf:params:jmap:contacts";
 pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
-pub fn search(
+/// RFC 9610 §3.3.1: every FilterCondition property. Values are all strings on the wire (Id,
+/// String or UTCDate).
+pub const FILTER_PROPERTIES: [&str; 20] = [
+    "inAddressBook", "uid", "hasMember", "kind", "createdBefore", "createdAfter", "updatedBefore",
+    "updatedAfter", "text", "name", "name/given", "name/surname", "name/surname2", "nickname",
+    "organization", "email", "phone", "onlineService", "address", "note",
+];
+
+/// RFC 9610 §3.3.2: `created` and `updated` MUST be supported, the three name parts SHOULD.
+pub const SORT_PROPERTIES: [&str; 5] = ["created", "updated", "name/given", "name/surname", "name/surname2"];
+
+/// A JMAP filter (RFC 8620 §5.5): an operator over child filters, or one FilterCondition.
+#[derive(Clone, Debug, PartialEq, serde::Deserialize, serde::Serialize)]
+#[serde(untagged)]
+pub enum Filter {
+    Operator(FilterOperator),
+    Condition(std::collections::BTreeMap<String, String>),
+}
+
+/// An operator object carries `operator` and `conditions` only. A condition property mixed into
+/// it is refused rather than dropped, so the query sent is the one written.
+#[derive(Clone, Debug, PartialEq, serde::Deserialize, serde::Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct FilterOperator {
+    pub operator: Operator,
+    pub conditions: Vec<Filter>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "UPPERCASE")]
+pub enum Operator { And, Or, Not }
+
+/// A JMAP Comparator (RFC 8620 §5.5) limited to the RFC 9610 sort properties.
+#[derive(Clone, Debug, PartialEq, serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Comparator {
+    pub property: String,
+    #[serde(default = "ascending")]
+    pub is_ascending: bool,
+}
+
+fn ascending() -> bool { true }
+
+impl Filter {
+    /// Refuses what RFC 9610 does not define, so a typo never reaches the server as a silently
+    /// different query. An empty condition is valid and matches every card (§3.3.1).
+    fn check(&self) -> Result<()> {
+        match self {
+            Filter::Operator(FilterOperator { conditions, .. }) => conditions.iter().try_for_each(Filter::check),
+            Filter::Condition(properties) => match properties.keys().find(|key| !FILTER_PROPERTIES.contains(&key.as_str())) {
+                Some(key) => Err(format!("not a ContactCard filter property: {key}").into()),
+                None => Ok(()),
+            },
+        }
+    }
+}
+
+/// ContactCard/query with the server's filter and order (RFC 9610 §3.3). Pages are read until the
+/// end, and the ids come back in the server's order: the caller shows them as they are. A filter or
+/// sort the server does not support fails with its error (`unsupportedFilter`, `unsupportedSort`)
+/// instead of being dropped or replaced locally.
+pub fn query(
     client: &Client,
     session: &Session,
     account: &str,
-    text: &str,
+    filter: Option<&Filter>,
+    sort: &[Comparator],
 ) -> Result<Vec<String>> {
     validate_account(session, account)?;
-    let result = call(
-        client,
-        session,
-        "ContactCard/query",
-        json!({"accountId":account,"filter":{"text":text}}),
-    )?;
-    if string(&result, "accountId")? != account {
-        return Err("Contacts query account mismatch".into());
+    if let Some(filter) = filter {
+        filter.check()?;
     }
-    ids(&result, "ids")
+    if let Some(comparator) = sort.iter().find(|c| !SORT_PROPERTIES.contains(&c.property.as_str())) {
+        return Err(format!("not a ContactCard sort property: {}", comparator.property).into());
+    }
+    let page_size = limit(session, "maxObjectsInGet")?;
+    let (mut found, mut position, mut query_state) = (Vec::new(), 0u64, None::<String>);
+    loop {
+        let mut args = json!({"accountId": account, "position": position, "limit": page_size});
+        if let Some(filter) = filter {
+            args["filter"] = serde_json::to_value(filter)?;
+        }
+        if !sort.is_empty() {
+            args["sort"] = serde_json::to_value(sort)?;
+        }
+        let page = call(client, session, "ContactCard/query", args)?;
+        if string(&page, "accountId")? != account || page.get("position").and_then(Value::as_u64) != Some(position) {
+            return Err("Contacts query position mismatch".into());
+        }
+        let state = string(&page, "queryState")?.to_owned();
+        if query_state.as_ref().is_some_and(|previous| *previous != state) {
+            return Err("Contacts changed while the query was read; retry".into());
+        }
+        query_state = Some(state);
+        let page_ids = ids(&page, "ids")?;
+        if page_ids.is_empty() {
+            return Ok(found);
+        }
+        position += page_ids.len() as u64;
+        found.extend(page_ids);
+        if page.get("total").and_then(Value::as_u64).is_some_and(|total| position >= total) {
+            return Ok(found);
+        }
+    }
 }
 
 /// A random (v4) UUID as a `urn:uuid:` URI, the form RFC 9553 recommends for uid.
@@ -210,7 +297,8 @@ fn stalwart_contact_create_update_and_search() -> Result<()> {
                 return Err(format!("unexpected change to {field}").into());
             }
         }
-        if !search(&client, &session, &account, "Codex Contacts interop")?.contains(&id) {
+        let text = Filter::Condition([("text".to_owned(), "Codex Contacts interop".to_owned())].into());
+        if !query(&client, &session, &account, Some(&text), &[])?.contains(&id) {
             return Err("server query did not find the test card".into());
         }
         println!("server version: {}", after["version"]);
@@ -420,9 +508,9 @@ impl Store {
         Ok(usize::try_from(count)?)
     }
 
-    pub fn discard_conflict(&self, account: &str, id: &str) -> Result<()> {
+    pub fn discard_update_after_sync(&self, account: &str, id: &str) -> Result<()> {
         self.db.execute(
-            "DELETE FROM pending_updates WHERE account=?1 AND id=?2 AND status='conflict'",
+            "DELETE FROM pending_updates WHERE account=?1 AND id=?2",
             params![account, id],
         )?;
         Ok(())
@@ -951,6 +1039,48 @@ mod tests {
             Some("s1")
         );
         assert_eq!(store.list("a", "ContactCard").unwrap()[0]["id"], "old");
+        thread.join().unwrap();
+    }
+
+    #[test]
+    fn a_query_sends_the_rfc_filter_and_sort_and_keeps_the_server_order() {
+        let (client, session, thread) = mock(vec![
+            json!({"accountId":"a","queryState":"q","position":0,"ids":["z","a"],"total":3}),
+            json!({"accountId":"a","queryState":"q","position":2,"ids":["m"],"total":3}),
+        ]);
+        let filter: Filter = serde_json::from_value(json!({"operator":"AND","conditions":[
+            {"operator":"OR","conditions":[{"inAddressBook":"b1"},{"inAddressBook":"b2"}]},
+            {"kind":"group","text":"kim"}]})).unwrap();
+        let sort = [Comparator { property: "name/surname".into(), is_ascending: false }];
+        assert_eq!(query(&client, &session, "a", Some(&filter), &sort).unwrap(), ["z", "a", "m"]);
+        let calls = thread.join().unwrap();
+        assert_eq!(calls.len(), 2);
+        let args = |n: usize| &calls[n]["methodCalls"][0][1];
+        assert_eq!(args(0)["filter"], serde_json::to_value(&filter).unwrap());
+        assert_eq!(args(0)["sort"], json!([{"property":"name/surname","isAscending":false}]));
+        assert_eq!((args(0)["position"].as_u64(), args(1)["position"].as_u64()), (Some(0), Some(2)));
+    }
+
+    #[test]
+    fn a_query_refuses_what_rfc_9610_does_not_define_before_sending() {
+        let (client, session, thread) = mock(vec![]);
+        let typo = Filter::Condition([("surname".to_owned(), "Kim".to_owned())].into());
+        assert!(query(&client, &session, "a", Some(&typo), &[]).is_err());
+        let full_name = [Comparator { property: "name".into(), is_ascending: true }];
+        assert!(query(&client, &session, "a", None, &full_name).is_err());
+        assert!(thread.join().unwrap().is_empty());
+        assert_eq!(serde_json::from_value::<Comparator>(json!({"property":"created"})).unwrap().is_ascending, true);
+        // An operator with a condition property mixed in is not a filter: nothing is dropped.
+        let mixed = json!({"operator":"OR","conditions":[{"kind":"group"}],"inAddressBook":"b"});
+        assert!(serde_json::from_value::<Filter>(mixed).is_err());
+    }
+
+    #[test]
+    fn an_unsupported_sort_is_the_servers_error_not_a_local_fallback() {
+        let (client, session, thread) = mock(vec![json!({"error":"unsupportedSort"})]);
+        let sort = [Comparator { property: "name/surname".into(), is_ascending: true }];
+        let error = query(&client, &session, "a", None, &sort).unwrap_err();
+        assert!(error.to_string().contains("unsupportedSort"));
         thread.join().unwrap();
     }
 

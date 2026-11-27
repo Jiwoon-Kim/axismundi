@@ -151,9 +151,10 @@
           }
           <div class="actions">
             <button type="button" matButton [disabled]="saving()" (click)="cancelEdit()">Cancel</button>
-            @if (conflict()) {
-              <button type="button" matButton="filled" [disabled]="saving()" (click)="reloadContact()">Discard edits and reload</button>
-            } @else {
+            @if (editing() === "edit" && saveError()) {
+              <button type="button" matButton [disabled]="saving()" (click)="reloadContact()">Discard edits and reload</button>
+            }
+            @if (!conflict()) {
               <button type="submit" matButton="filled" [disabled]="saving()">{{ saving() ? "Saving…" : "Save" }}</button>
             }
           </div>

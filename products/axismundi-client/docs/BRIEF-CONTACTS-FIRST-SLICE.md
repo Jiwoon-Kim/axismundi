@@ -108,10 +108,21 @@ anniversaries           date 에 "@type": "PartialDate" 추가(무해)
    - **검색**: 새 검색은 현재 선택한 주소록을 물려받지 않고 계정의 전체 주소록에서 시작한다.
      메일의 focused 검색 뷰를 공용화하고, 검색어 아래에 조건 칩을 둔다. 이미 적용한 검색을 다시 열 때는 그 검색의 조건을 복원한다.
      적용한 칩은 결과 목록의 app bar 아래에도 표시하고, 제거하면 해당 조건만 빼고 다시 조회한다.
-   - 첫 범위는 `text`, `inAddressBook`, `kind`. 여러 주소록은 `OR`로 묶고, 다른 조건과는 `AND`로 결합한다.
-     전체 주소록일 때는 `inAddressBook` 조건을 보내지 않는다. 검색어와 검색 전용 조건은 디스크·URL에 저장하지 않는다.
-   - 검색 명령은 Rust에서 JMAP 필터를 조립해 서버에 제출하고, 서버가 거절한 조건은 조용히 무시하지 않는다.
-     결과 ID는 캐시 행으로 표시하고 정렬은 지금처럼 클라이언트에서 한다.
+   - **JMAP 스펙 그대로**(소유자 결정 2026-11-27, 서버 지원 여부와 무관): 필터는 §3.3.1 FilterCondition 20개 속성 전부 +
+     `FilterOperator`(AND/OR/NOT), 정렬은 §3.3.2 comparator 5개(`created`·`updated` MUST, `name/given`·`name/surname`·
+     `name/surname2` SHOULD). 코어 `query(filter, sort)`·Tauri `contacts_query` 완료(2026-11-27, Opus) — 페이지를 끝까지
+     읽고 서버 순서를 그대로 돌려주며, 정의 밖 속성은 보내기 전에 거부, `unsupportedFilter`·`unsupportedSort` 는 서버 오류
+     그대로. 요청 형태는 fixture `query`. Stalwart 1.1.0 실측: OR/AND·`hasMember`·created/updated 정렬 됨, 이름 정렬 3개는
+     `unsupportedSort`(그대로 표시).
+   - **목록 보기도 쿼리**: 주소록 보기 = `{inAddressBook}` + sort 로 서버에 묻는다. 캐시를 `addressBookIds` 로 거르고
+     클라이언트에서 정렬하던 방식, Rust 행의 `sortKey`·`Intl.Collator` 비교, 이름 열의 `mat-sort-header` 는 걷어낸다
+     (임의 정렬이었음). 온라인 기준 — 오프라인 캐시 정렬은 나중 일.
+   - **정렬 UI**: `mat-sort-header` 는 표시된 열의 값이 곧 정렬 속성일 때만. 이름 열은 `name.full` 이라 comparator 가 아니므로
+     정렬은 별도 메뉴(Outlook 결): 기준 = 이름(given)·성(surname)·두 번째 성(surname2)·만든 날·고친 날, 순서 = 오름/내림.
+     서버가 거절하면 그 이유를 보이고 다른 정렬로 바꾸지 않는다.
+   - **칩**: 목록 바 아래엔 `inAddressBook` 과 지금 적용된 조건만. 나머지 18개는 검색 다이얼로그의 "필터 추가" 메뉴에서.
+     여러 주소록은 `OR`, 나머지와는 `AND`. 전체 주소록이면 `inAddressBook` 을 보내지 않는다. 검색어·검색 조건은
+     디스크·URL 에 저장하지 않는다.
 6. **수정 폼**: 첫 버전 편집 대상은 name(full·given·surname), emails, phones, organizations 이름, notes. 나머지 속성은 화면에
    보이되 편집하지 않고, 패치에 들어가지 않는다. 편집 중 서버 변경(ifInState 거절)은 코어처럼 pending 유지 + "서버에서
    바뀜, 다시 불러오기" 한 줄.

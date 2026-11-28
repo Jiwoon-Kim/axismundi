@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { ROOT, accessLabel, fileKind, endsFolder, folderSort, folderTree, holdsAllFolders, formatBytes, quotaLines, setFailure, uploadError, uploadOutcome, type Listing, type Quotas, type UploadResult } from "./files-model.ts";
+import { ROOT, accessLabel, fileKind, usageError, usageSummary, type Usage, endsFolder, folderSort, folderTree, holdsAllFolders, formatBytes, quotaLines, setFailure, uploadError, uploadOutcome, type Listing, type Quotas, type UploadResult } from "./files-model.ts";
 import { clearFinished, enqueue, settle, summary } from "../shell/upload-queue.ts";
 
-const fixture: {listing: Listing; upload: Record<string, UploadResult>; quota: Record<string, Quotas>} =
+const fixture: {listing: Listing; upload: Record<string, UploadResult>; quota: Record<string, Quotas>; usage: Usage} =
   JSON.parse(readFileSync(new URL("files.fixture.json", import.meta.url), "utf8"));
 
 test("the Rust fixture reads as the GUI types it", () => {
@@ -103,4 +103,15 @@ test("a file's icon and kind come from its media type, else from its extension",
   assert.deepEqual(fileKind(file(".hidden")), {icon: "draft", label: "File"});
   assert.deepEqual(fileKind({"@type": "Directory", id: "d", parentId: null, name: "d"}), {icon: "folder", label: "Folder"});
   assert.equal(fileKind(file("x", "image/png")).label, "Image", "the declared type wins over the extension");
+});
+
+test("where a file is used says only what was checked, and leaves the file itself out", () => {
+  const usage = fixture.usage;
+  assert.deepEqual(usageSummary(usage, "file"), {
+    lines: ["No other file shares its stored content", "Not attached to any email"], checked: "Checked: Files, Mail"});
+  assert.deepEqual(usageSummary({blobId: "b", types: ["Email"], references: {Email: ["m1", "m2"]}}, "x"),
+    {lines: ["Attached to 2 emails"], checked: "Checked: Mail"});
+  assert.equal(usageSummary({blobId: "b", types: ["FileNode"], references: {FileNode: ["x", "y"]}}, "x").lines[0], "Also stored as 1 other file");
+  assert.equal(usageError("Blob lookup is unavailable."), "This server does not say where files are used.");
+  assert.equal(usageError("timed out"), "Could not check where this file is used.");
 });

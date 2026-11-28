@@ -220,3 +220,32 @@ export function endsFolder(page: {nodes: readonly unknown[]; position: number; t
 export function holdsAllFolders(items: readonly FileNode[], ended: boolean, sort: readonly {property: string}[]): boolean {
   return ended || (sort[0]?.property === "nodeType" && items.some(item => !isFolder(item)));
 }
+
+// --- where a file is used (RFC 9404 Blob/lookup) ------------------------------------------------------
+/** files_usage: the data types the server was asked about, and the ids of each that reference the blob. */
+export interface Usage { blobId: string; types: string[]; references: Record<string, string[]> }
+
+const usageNames: Record<string, string> = {FileNode: "Files", Email: "Mail"};
+
+/**
+ * What Blob/lookup said, as lines. Only the types that were checked are reported, and the screen says
+ * which they were: "no emails" means none in Mail, not none anywhere. The file itself is not counted
+ * among the files that use its bytes.
+ */
+export function usageSummary(usage: Usage, self: string): {lines: string[]; checked: string} {
+  const lines = usage.types.map(type => {
+    const ids = (usage.references[type] ?? []).filter(id => type !== "FileNode" || id !== self);
+    const n = ids.length;
+    if (type === "Email") return n ? `Attached to ${n} ${n === 1 ? "email" : "emails"}` : "Not attached to any email";
+    if (type === "FileNode") return n ? `Also stored as ${n} other ${n === 1 ? "file" : "files"}` : "No other file shares its stored content";
+    return n ? `${n} ${type}` : `No ${type}`;
+  });
+  return {lines, checked: `Checked: ${usage.types.map(type => usageNames[type] ?? type).join(", ")}`};
+}
+
+/** A files_usage error as a sentence: a server without the lookup is not a failure. */
+export function usageError(error: string): string {
+  return /unavailable|No supported file usage lookup types/i.test(error)
+    ? "This server does not say where files are used."
+    : "Could not check where this file is used.";
+}

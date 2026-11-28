@@ -69,3 +69,9 @@ admin 할당량 설정은 변경하지 않았다. `Quota/get`은 `ids: null`로 
 - 휴지통은 role "trash" 디렉터리가 있을 때만. 없으면 삭제는 영구 — 확인 UI 필요(Stalwart 는 없음).
 - 용량은 Quota/get 이 값을 줄 때만 표시. Stalwart 는 빈 목록.
 - 정렬 기본은 nodeType + name(서버가 지원할 때), "id" 는 Stalwart 가 거절하므로 쓰지 않는다.
+- 사용처(Blob/lookup)는 확인한 타입 범위 안에서만 "없음"이라고 말한다. 2026-11-28 실측(admin): blob capability 의
+  supportedTypeNames 에 FileNode 가 없어 `files_usage` 는 Email 만 묻는다(types ["Email"]). 같은 바이트를 두 번
+  올린 WordPress.webp·WordPress (2).webp 의 저장 blobId 가 서로 달랐다 — 노드마다 다시 매기므로 blobId 로 같은 내용의
+  다른 파일을 찾을 수 없다. 상세 패널은 "Not attached to any email · Checked: Mail" 로 범위를 함께 적는다.
+- `FileNode/query` 응답에 total 이 없다(calculateTotal 미요청 시 null). 페이지 끝은 응답 limit(서버가 줄였으면 그 값)보다
+  짧은 페이지로 판정한다(files_list 가 limit 을 돌려준다).

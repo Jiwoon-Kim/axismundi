@@ -98,6 +98,19 @@
           @if (access(); as access) { <dt>Your access</dt><dd>{{ access }}</dd> }
           @if (node?.role) { <dt>Role</dt><dd>{{ node!.role }}</dd> }
         </dl>
+        @if (usage(); as usage) {
+          <section class="detail-usage" aria-label="Where it is used" aria-live="polite">
+            <h3>Where it is used</h3>
+            @if (usage === "loading") {
+              <p class="muted">Checking…</p>
+            } @else if ("error" in usage) {
+              <p class="muted">{{ usage.error }}</p>
+            } @else {
+              @for (line of usage.summary.lines; track line) { <p>{{ line }}</p> }
+              <p class="muted">{{ usage.summary.checked }}</p>
+            }
+          </section>
+        }
         @if (!node) {
           <section class="detail-storage" aria-label="Storage">
             <h3>Storage</h3>

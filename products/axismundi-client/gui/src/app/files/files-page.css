@@ -70,6 +70,10 @@ tr.mat-mdc-row.selected td { color: var(--mat-sys-on-secondary-container); }
 .sheet-body dt { font: var(--mat-sys-label-medium); color: var(--mat-sys-on-surface-variant); margin-block-start: 8px; }
 .sheet-body dd { margin: 0; font: var(--mat-sys-body-medium); overflow-wrap: anywhere; }
 .sheet-body dd.location { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal; }
+.detail-usage { margin-block-start: 16px; padding-block-start: 8px; border-block-start: 1px solid var(--mat-sys-outline-variant); }
+.detail-usage h3 { margin: 8px 0 4px; font: var(--mat-sys-title-small); color: var(--mat-sys-on-surface-variant); }
+.detail-usage p { margin: 0 0 4px; font: var(--mat-sys-body-medium); }
+.detail-usage p.muted { font: var(--mat-sys-body-small); color: var(--mat-sys-on-surface-variant); }
 .detail-storage { margin-block-start: 16px; padding-block-start: 8px; border-block-start: 1px solid var(--mat-sys-outline-variant); }
 .detail-storage h3 { margin: 8px 0 4px; font: var(--mat-sys-title-small); color: var(--mat-sys-on-surface-variant); }
 .detail-storage p { margin: 0; font: var(--mat-sys-body-small); color: var(--mat-sys-on-surface-variant); }

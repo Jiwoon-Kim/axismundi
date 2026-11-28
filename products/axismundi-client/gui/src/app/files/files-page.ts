@@ -25,7 +25,7 @@ import { ConnectionService } from "../connection.service";
 import { EXPANDED } from "../shell/scaffold";
 import { UploadQueueComponent } from "../shell/upload-queue.component";
 import { type QueueFile, type QueueItem, clearFinished, enqueue, settle } from "../shell/upload-queue";
-import { FILENODE, FILENODE_REVISION, type FileNode, type FolderNode, type Listing, type Quotas, type UploadResult, ROOT, accessLabel, endsFolder, folderSort, fileKind, folderTree, formatBytes, holdsAllFolders,
+import { FILENODE, FILENODE_REVISION, type FileNode, type FolderNode, type Listing, type Quotas, type UploadResult, ROOT, accessLabel, endsFolder, folderSort, fileKind, folderTree, formatBytes, type Usage, usageError, usageSummary, holdsAllFolders,
   isFolder, kindLabel, quotaLines, setFailure, uploadError, uploadOutcome } from "./files-model";
 
 const PAGE = 200;
@@ -33,6 +33,7 @@ const PAGE = 200;
 const PAGES = 20;
 
 type Scope = {connectionId: number; accountId: string; readOnly: boolean};
+type UsageState = {summary: ReturnType<typeof usageSummary>} | {error: string} | "loading";
 const sameScope = (a: Scope | null, b: Scope | null) => a?.connectionId === b?.connectionId && a?.accountId === b?.accountId;
 
 /**
@@ -115,6 +116,15 @@ export class FilesPage {
     const trail = ["Files", ...this.path().map(node => node.name)];
     return this.selected() ? trail : trail.slice(0, -1);
   });
+  /**
+   * Where the selected file is used (RFC 9404 Blob/lookup through files_usage), asked for when its
+   * details are open and kept by node and blobId until the next refresh: new content is a new blobId.
+   */
+  private readonly usages = signal<ReadonlyMap<string, UsageState>>(new Map());
+  protected readonly usage = computed(() => {
+    const node = this.selected();
+    return node && !isFolder(node) && node.blobId ? this.usages().get(`${node.id} ${node.blobId}`) ?? null : null;
+  });
   protected readonly access = computed(() => {
     const node = this.detail();
     return node ? accessLabel(isFolder(node) ? node.myRights : this.path().at(-1)?.myRights) : null;
@@ -143,10 +153,22 @@ export class FilesPage {
       const scope = this.scope();
       untracked(() => { this.quotas.set(null); if (scope) void invoke<Quotas>("files_quotas", scope).then(q => this.quotas.set(q)); });
     });
+    effect(() => {
+      const node = this.selected(), open = this.detailsOpen(), scope = this.scope();
+      if (!open || !scope || !node || isFolder(node) || !node.blobId) return;
+      const key = `${node.id} ${node.blobId}`;
+      untracked(() => {
+        if (this.usages().has(key)) return;
+        this.setUsage(key, "loading");
+        void invoke<Usage>("files_usage", {...scope, nodeId: node.id}).then(
+          usage => { if (sameScope(scope, this.scope())) this.setUsage(key, {summary: usageSummary(usage, node.id)}); },
+          error => { if (sameScope(scope, this.scope())) this.setUsage(key, {error: usageError(String(error))}); });
+      });
+    });
     // A new connection or Account starts a new tree.
     effect(() => {
       const scope = this.scope();
-      untracked(() => { this.listed.set(new Map()); this.partial.set(new Set()); this.listing.clear(); if (scope) void this.listFolders(ROOT, scope); });
+      untracked(() => { this.usages.set(new Map()); this.listed.set(new Map()); this.partial.set(new Set()); this.listing.clear(); if (scope) void this.listFolders(ROOT, scope); });
     });
     // The open folder is never hidden inside a collapsed one: list and expand each folder above it.
     effect(() => {
@@ -228,6 +250,9 @@ export class FilesPage {
       this.listing.delete(id);
     }
   }
+  private setUsage(key: string, value: UsageState): void {
+    this.usages.set(new Map(this.usages()).set(key, value));
+  }
   private setListed(id: string, items: readonly FileNode[], complete = true): void {
     const next = new Map(this.listed());
     next.set(id, items.filter(isFolder));
@@ -250,7 +275,7 @@ export class FilesPage {
     return trail;
   }
 
-  protected refresh(): void { void this.load(this.scope(), this.folderId()); }
+  protected refresh(): void { this.usages.set(new Map()); void this.load(this.scope(), this.folderId()); }
   protected loadMore(): void { void this.load(this.scope(), this.folderId(), true); }
   protected open(node: FileNode): void {
     if (isFolder(node)) void this.router.navigate([], {relativeTo: this.route, queryParams: {folder: node.id}});

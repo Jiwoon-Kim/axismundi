@@ -71,7 +71,7 @@
                   <span class="service-icons">
                     <mat-icon aria-hidden="true">{{ app.icon }}</mat-icon>
                     <mat-icon class="service-state" [class.available]="app.state === 'available'" aria-hidden="true">
-                      {{ app.state === "available" ? "check_circle" : "info" }}
+                      {{ app.state === "available" ? "check_circle" : app.state === "no-account" ? "person_off" : "extension_off" }}
                     </mat-icon>
                   </span>
                   <span class="service-title">{{ app.label }}</span>
@@ -164,6 +164,12 @@
                 </mat-expansion-panel>
               }
             </mat-accordion>
+            <h3>Advertised creation permissions</h3>
+            <dl class="fields">
+              @for (permission of accountPermissions(); track permission.key) {
+                <dt>{{ permission.label }}</dt><dd>{{ permission.values[0] }}</dd>
+              }
+            </dl>
             <div class="session-bar">
               <h3>Account JSON</h3>
               <button matButton="outlined" type="button" (click)="copy(accountJson(), 'Account JSON')"><mat-icon>content_copy</mat-icon>Copy JSON</button>
@@ -182,13 +188,30 @@
           <input matInput type="search" [value]="search()" (input)="search.set($any($event.target).value)">
         </mat-form-field>
         <mat-form-field appearance="outline" class="compare" subscriptSizing="dynamic">
-          <mat-label>Compare accounts</mat-label>
-          <mat-select multiple [value]="comparisonIds()" (selectionChange)="selectComparison($event.value)">
-            @for (a of view.accounts; track a.id) { <mat-option [value]="a.id">{{ a.name }} · {{ a.id }}</mat-option> }
-          </mat-select>
+          <mat-label>{{ comparing() ? "Accounts to compare" : "Account" }}</mat-label>
+          @if (comparing()) {
+            <mat-select multiple [value]="comparisonIds()" (selectionChange)="selectComparison($event.value)">
+              @for (a of view.accounts; track a.id) {
+                <mat-option [value]="a.id" [disabled]="comparisonIds().length >= 3 && !comparisonIds().includes(a.id)">{{ a.name }} · {{ a.id }}</mat-option>
+              }
+            </mat-select>
+          } @else {
+            <mat-select [value]="account()?.id" (selectionChange)="showAccount($event.value)">
+              @for (a of view.accounts; track a.id) { <mat-option [value]="a.id">{{ a.name }} · {{ a.id }}</mat-option> }
+            </mat-select>
+          }
         </mat-form-field>
-        <mat-checkbox [disabled]="comparisonIds().length < 2" [checked]="onlyDifferences() && comparisonIds().length >= 2"
-          (change)="onlyDifferences.set($event.checked)">Differences only</mat-checkbox>
+        <div class="compare-actions">
+          <button matButton="outlined" type="button" (click)="toggleComparison()" [disabled]="!comparing() && view.accounts.length < 2">
+            {{ comparing() ? "Exit comparison" : "Compare accounts" }}
+          </button>
+          @if (comparing() && comparisonIds().length >= 2) {
+            <mat-checkbox [checked]="onlyDifferences()" (change)="onlyDifferences.set($event.checked)">Differences only</mat-checkbox>
+          }
+        </div>
+        @if (comparing() && comparisonIds().length < 2) {
+          <p class="status" role="status">{{ comparisonIds().length ? "Choose one more account to compare." : "Choose at least two accounts to compare." }}</p>
+        } @else {
         <div class="table-scroll" tabindex="0" role="region" aria-label="Capability comparison">
         <table class="cap-table">
           <thead>
@@ -198,6 +221,7 @@
               @for (a of comparisonAccounts(); track a.id) {
                 <th scope="col" class="col-account" [title]="a.name">{{ a.name }} <span class="mono muted account-id">{{ a.id }}</span></th>
               }
+              @if (!comparing()) { <th scope="col">Accounts</th> }
               <th scope="col" class="col-default">Default account</th>
               <th scope="col" class="col-app">App</th>
             </tr>
@@ -222,9 +246,17 @@
                   </th>
                   <td class="col-server"><ng-container [ngTemplateOutlet]="mark" [ngTemplateOutletContext]="{$implicit: row.server}" /></td>
                   @for (holder of entry.comparison.holders; track $index) {
-                    <td><ng-container [ngTemplateOutlet]="mark" [ngTemplateOutletContext]="{$implicit: !!holder}" /></td>
+                    <td>
+                      @if (serverLevel(row)) { Not applicable }
+                      @else { <ng-container [ngTemplateOutlet]="mark" [ngTemplateOutletContext]="{$implicit: !!holder}" /> }
+                    </td>
                   }
-                  <td class="col-default">{{ row.primary ? accountName(row.primary) + " · " + row.primary : "—" }}</td>
+                  @if (!comparing()) { <td>{{ serverLevel(row) ? "Not applicable" : row.accounts.length }}</td> }
+                  <td class="col-default">
+                    @if (row.primary; as id) {
+                      <span class="default-name" [matTooltip]="accountName(id) + ' · ' + id">{{ accountName(id) }}</span>
+                    } @else { {{ serverLevel(row) ? "Not applicable" : "—" }} }
+                  </td>
                   <td class="col-app name-cell" [class.off]="!row.client">{{ row.client ? "In app" : "Not in app" }}</td>
                 </tr>
                 @if (open) {
@@ -233,8 +265,8 @@
                       <dl class="fields summary">
                         <dt>URN</dt><dd class="mono">{{ row.urn }}</dd>
                         <dt>Server</dt><dd>{{ row.server ? "Advertised" : "Not in the server's capabilities" }}</dd>
-                        <dt>Default account</dt><dd>{{ row.primary ? accountName(row.primary) + " · " + row.primary : "None" }}</dd>
-                        <dt>Accounts</dt><dd>{{ row.accounts.length ? accountList(row) : "None" }}</dd>
+                        <dt>Default account</dt><dd>{{ row.primary ? accountName(row.primary) + " · " + row.primary : serverLevel(row) ? "Not applicable" : "None" }}</dd>
+                        <dt>Accounts</dt><dd>{{ serverLevel(row) ? "Not applicable" : row.accounts.length ? accountList(row) : "None" }}</dd>
                         <dt>App</dt><dd>{{ row.client ? "Used by this app" : "Not in this app" }}</dd>
                       </dl>
                       @if (row.server) {
@@ -256,6 +288,9 @@
                             }
                           </tbody>
                         </table>
+                      } @else if (!comparing() && entry.comparison.holders[0]; as holder) {
+                        <h3>{{ holder.name }}</h3>
+                        <ng-container [ngTemplateOutlet]="fieldList" [ngTemplateOutletContext]="{$implicit: holder.fields}" />
                       }
                     </td>
                   </tr>
@@ -266,9 +301,9 @@
         </table>
         </div>
         @if (!groups().length) {
-          <p class="status" role="status">{{ onlyDifferences() && comparisonIds().length > 1 ? "No differences match." : "No capability matches." }}</p>
+          <p class="status" role="status">{{ comparing() && onlyDifferences() ? (search().trim() ? "No differences match this search." : "No differences between the selected accounts.") : "No capability matches." }}</p>
         }
-        @if (comparisonAccounts().length) {
+        @if (comparing()) {
           <h2>Advertised creation permissions</h2>
           <div class="table-scroll" tabindex="0" role="region" aria-label="Advertised creation permissions">
             <table class="cap-table permissions">
@@ -286,6 +321,7 @@
               </tbody>
             </table>
           </div>
+        }
         }
       </div>
     </mat-tab>

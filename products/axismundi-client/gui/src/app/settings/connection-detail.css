@@ -49,6 +49,8 @@ mat-card-content { padding-block-start: 8px; }
 .capabilities { display: grid; gap: 8px; }
 .search { width: 100%; max-width: 32rem; }
 .compare { width: 100%; max-width: 24rem; }
+.compare-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.default-name { display: block; max-inline-size: 10rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .table-scroll { max-inline-size: 100%; overflow-x: auto; }
 .cap-table { width: 100%; border-collapse: collapse; }
 .cap-table th, .cap-table td { padding: 8px 12px; text-align: start; vertical-align: middle;

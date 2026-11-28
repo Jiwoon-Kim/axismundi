@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { bytes, compareCapability, creationPermissions, duration, searchCapabilities, sessionView, show } from "./jmap-session-view.ts";
+import { bytes, compareCapability, creationPermissions, duration, isServerLevel, searchCapabilities, sessionView, show } from "./jmap-session-view.ts";
 
 const load = (name: string) => JSON.parse(readFileSync(new URL(`fixtures/${name}`, import.meta.url), "utf8"));
 const admin = load("jmap-session-admin.json");
@@ -31,6 +31,9 @@ test("Capabilities answer where a capability is: server-only, Account-only, prim
   const core = row("urn:ietf:params:jmap:core");
   assert.equal(core.server, true);
   assert.deepEqual(core.accounts, []);
+  assert.equal(isServerLevel(core), true);
+  assert.equal(isServerLevel(row("urn:ietf:params:jmap:websocket")), false);
+  assert.equal(isServerLevel({...core, primary: "c"}), false);
   const share = row("urn:ietf:params:jmap:mail:share");
   assert.equal(share.server, false);
   assert.deepEqual(share.accounts.map(a => a.id), ["c", "b", "d"]);

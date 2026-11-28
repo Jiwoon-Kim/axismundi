@@ -156,6 +156,10 @@ export interface CapabilityRow {
   client: boolean;
 }
 
+export function isServerLevel(row: CapabilityRow): boolean {
+  return row.server && !row.primary && row.accounts.length === 0;
+}
+
 function sameJson(a: unknown, b: unknown): boolean {
   if (a === b) return true;
   if (Array.isArray(a) || Array.isArray(b)) {

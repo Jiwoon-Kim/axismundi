@@ -18,7 +18,7 @@ import { MatTab, MatTabGroup } from "@angular/material/tabs";
 import { MatOption, MatSelect } from "@angular/material/select";
 import { MatTooltip } from "@angular/material/tooltip";
 import { ConnectionService } from "../connection.service";
-import { type AccountView, type CapabilityRow, capabilityInfo, compareCapability, creationPermissions, searchCapabilities, sessionView } from "./jmap-session-view";
+import { type AccountView, type CapabilityRow, capabilityInfo, compareCapability, creationPermissions, isServerLevel, searchCapabilities, sessionView } from "./jmap-session-view";
 
 const tabs = ["overview", "accounts", "capabilities", "session"] as const;
 
@@ -59,26 +59,38 @@ export class ConnectionDetailPage {
   });
   protected readonly search = signal("");
   protected readonly onlyDifferences = signal(false);
-  protected readonly comparisonSelection = signal<{connection: string | null; ids: string[]} | null>(null);
+  protected readonly comparing = computed(() => this.query().has("compare"));
   protected readonly comparisonAccounts = computed(() => {
     const accounts = this.view()?.accounts ?? [];
-    const selection = this.comparisonSelection();
-    return selection && selection.connection === this.params().get("id")
-      ? accounts.filter(account => selection.ids.includes(account.id)) : accounts.slice(0, 4);
+    const ids = this.comparing() ? (this.query().get("compare") ?? "").split(",") : [this.account()?.id];
+    return accounts.filter(account => ids.includes(account.id)).slice(0, 3);
   });
   protected readonly comparisonIds = computed(() => this.comparisonAccounts().map(account => account.id));
-  protected readonly columnCount = computed(() => this.comparisonIds().length + 4);
+  protected readonly columnCount = computed(() => this.comparisonIds().length + (this.comparing() ? 4 : 5));
   protected readonly permissions = computed(() => creationPermissions(this.comparisonAccounts()));
+  protected readonly accountPermissions = computed(() => {
+    const account = this.account();
+    return account ? creationPermissions([account]) : [];
+  });
   protected readonly accountJson = computed(() => JSON.stringify(this.account()?.raw ?? {}, null, 2));
   protected selectComparison(ids: string[]): void {
-    this.comparisonSelection.set({connection: this.params().get("id"), ids});
+    this.setComparison(ids.slice(0, 3).join(","));
   }
+  protected toggleComparison(): void {
+    this.onlyDifferences.set(false);
+    this.setComparison(this.comparing() ? null : this.account()?.id ?? "");
+  }
+  private setComparison(compare: string | null): void {
+    void this.router.navigate([], {relativeTo: this.route, queryParamsHandling: "merge",
+      queryParams: {compare}, replaceUrl: true});
+  }
+  protected readonly serverLevel = isServerLevel;
   protected readonly groups = computed(() => {
     const view = this.view();
     if (!view) return [];
     const rows = searchCapabilities(view.capabilities, this.search());
     const ids = this.comparisonIds();
-    const onlyDifferences = this.onlyDifferences() && ids.length > 1;
+    const onlyDifferences = this.comparing() && this.onlyDifferences() && ids.length > 1;
     return view.groups.map(g => ({
       group: g.group,
       rows: g.rows.filter(row => rows.includes(row)).map(row => ({row, comparison: compareCapability(row, ids)}))
@@ -111,7 +123,8 @@ export class ConnectionDetailPage {
     this.search.set("");
     this.onlyDifferences.set(false);
     void this.router.navigate([], {relativeTo: this.route, queryParamsHandling: "merge",
-      queryParams: {tab: "capabilities", capability: urn}});
+      queryParams: {tab: "capabilities", capability: urn,
+        compare: this.comparisonIds().length >= 2 ? this.query().get("compare") : null}});
   }
   protected showAccount(id: string): void {
     void this.router.navigate([], {relativeTo: this.route, queryParamsHandling: "merge", queryParams: {account: id}, replaceUrl: true});

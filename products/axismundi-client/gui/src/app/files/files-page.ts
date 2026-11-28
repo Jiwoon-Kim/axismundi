@@ -26,7 +26,7 @@ import { ConnectionService } from "../connection.service";
 import { EXPANDED } from "../shell/scaffold";
 import { UploadQueueComponent } from "../shell/upload-queue.component";
 import { type QueueFile, type QueueItem, clearFinished, enqueue, settle } from "../shell/upload-queue";
-import { FILENODE, FILENODE_REVISION, type FileNode, type FolderNode, type Listing, type Quotas, type UploadResult, ROOT, accessLabel, batchReport, endsFolder, folderTrail, moveBlocked, folderSort, fileKind, folderTree, formatBytes, type Usage, usageError, usageSummary, holdsAllFolders,
+import { FILENODE, FILENODE_REVISION, type FileNode, type FolderNode, type Listing, type Quotas, type UploadResult, ROOT, accessLabel, batchReport, endsFolder, folderTrail, moveBlocked, folderSort, fileKind, folderTree, formatBytes, type Usage, usageError, usageSummary, type Preview, mayPreview, previewNote, holdsAllFolders,
   isFolder, kindLabel, quotaLines, setFailure, uploadError, uploadOutcome } from "./files-model";
 
 const PAGE = 200;
@@ -156,6 +156,24 @@ export class FilesPage {
     const node = this.selected();
     return node && !isFolder(node) && node.blobId ? this.usages().get(`${node.id} ${node.blobId}`) ?? null : null;
   });
+  /**
+   * The selected image's preview (files_preview, variant "preview"), asked for when the details are
+   * open and kept by node and blobId. Until it is ready, and whenever it is not, the sheet shows the
+   * kind icon; an <img> that fails to load falls back the same way.
+   */
+  private readonly previews = signal<ReadonlyMap<string, Preview | "loading">>(new Map());
+  protected readonly preview = computed(() => {
+    const node = this.selected();
+    return node && mayPreview(node) ? this.previews().get(`${node.id} ${node.blobId}`) ?? "loading" : null;
+  });
+  protected readonly previewNote = previewNote;
+  protected previewBroken(): void {
+    const node = this.selected();
+    if (node) this.setPreview(`${node.id} ${node.blobId}`, {kind: "failed", error: "The image did not load."});
+  }
+  private setPreview(key: string, value: Preview | "loading"): void {
+    this.previews.set(new Map(this.previews()).set(key, value));
+  }
   protected readonly access = computed(() => {
     const node = this.detail();
     return node ? accessLabel(isFolder(node) ? node.myRights : this.path().at(-1)?.myRights) : null;
@@ -196,10 +214,22 @@ export class FilesPage {
           error => { if (sameScope(scope, this.scope())) this.setUsage(key, {error: usageError(String(error))}); });
       });
     });
+    effect(() => {
+      const node = this.selected(), open = this.detailsOpen(), scope = this.scope();
+      if (!open || !scope || !node || !mayPreview(node)) return;
+      const key = `${node.id} ${node.blobId}`;
+      untracked(() => {
+        if (this.previews().has(key)) return;
+        this.setPreview(key, "loading");
+        void invoke<Preview>("files_preview", {...scope, nodeId: node.id, variant: "preview"}).then(
+          preview => { if (sameScope(scope, this.scope())) this.setPreview(key, preview); },
+          error => { if (sameScope(scope, this.scope())) this.setPreview(key, {kind: "failed", error: String(error)}); });
+      });
+    });
     // A new connection or Account starts a new tree.
     effect(() => {
       const scope = this.scope();
-      untracked(() => { this.usages.set(new Map()); this.listed.set(new Map()); this.partial.set(new Set()); this.listing.clear(); if (scope) void this.listFolders(ROOT, scope); });
+      untracked(() => { this.previews.set(new Map()); this.usages.set(new Map()); this.listed.set(new Map()); this.partial.set(new Set()); this.listing.clear(); if (scope) void this.listFolders(ROOT, scope); });
     });
     // The open folder is never hidden inside a collapsed one: list and expand each folder above it.
     effect(() => {
@@ -306,7 +336,7 @@ export class FilesPage {
     return trail;
   }
 
-  protected refresh(): void { this.usages.set(new Map()); void this.load(this.scope(), this.folderId()); }
+  protected refresh(): void { this.previews.set(new Map()); this.usages.set(new Map()); void this.load(this.scope(), this.folderId()); }
   protected loadMore(): void { void this.load(this.scope(), this.folderId(), true); }
   protected open(node: FileNode): void {
     if (isFolder(node)) void this.router.navigate([], {relativeTo: this.route, queryParams: {folder: node.id}});

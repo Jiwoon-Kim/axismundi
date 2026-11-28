@@ -106,6 +106,22 @@
       </header>
       <div class="sheet-body">
         @let node = detail();
+        @if (preview(); as preview) {
+          <!-- The picture, or the kind icon while it loads and whenever there is none (BRIEF-FILES-PREVIEW.md). -->
+          <figure class="detail-preview" [attr.aria-busy]="preview === 'loading'">
+            @if (preview !== "loading" && preview.kind === "ready") {
+              <img [src]="preview.ref" [attr.width]="preview.width" [attr.height]="preview.height" [alt]="'Preview of ' + node!.name"
+                (error)="previewBroken()">
+            } @else {
+              <mat-icon aria-hidden="true">{{ fileKind(node!).icon }}</mat-icon>
+              @if (preview === "loading") {
+                <figcaption class="muted">Loading preview…</figcaption>
+              } @else {
+                <figcaption class="muted">{{ previewNote(preview) }}</figcaption>
+              }
+            }
+          </figure>
+        }
         <div class="detail-title">
           <mat-icon aria-hidden="true">{{ node ? fileKind(node).icon : "folder" }}</mat-icon>
           <h3 [title]="node?.name ?? 'Files'">{{ node?.name ?? "Files" }}</h3>

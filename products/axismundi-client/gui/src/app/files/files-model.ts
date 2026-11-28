@@ -279,3 +279,32 @@ export function batchReport(verb: string, total: number, failures: readonly stri
   const done = total - failures.length;
   return `${verb} ${done} of ${items(total)}. ${failures.length} failed: ${failures[0]}`;
 }
+
+// --- previews (files_preview, docs/BRIEF-FILES-PREVIEW.md) ---------------------------------------------
+/** What files_preview answers; `ref` is an opaque URL for <img src>, valid in this webview only. */
+export type Preview =
+  | {kind: "ready"; ref: string; width: number; height: number; variant: "thumbnail" | "preview"}
+  | {kind: "unsupported"; mediaType?: string | null}
+  | {kind: "tooLarge"; limit: number; size?: number; pixels?: number; decodeMemory?: boolean}
+  | {kind: "failed"; error: string};
+
+/**
+ * Whether to ask for a preview at all: only files that look like images, so a large video is not
+ * downloaded to learn it cannot be shown. This is a hint; the command decides from the content.
+ */
+export function mayPreview(node: FileNode): boolean {
+  return !isFolder(node) && !!node.blobId && fileKind(node).icon === "image";
+}
+
+/** The line under the kind icon when there is no picture; null when the picture is shown. */
+export function previewNote(preview: Preview): string | null {
+  switch (preview.kind) {
+    case "ready": return null;
+    case "unsupported": return "No preview for this file type.";
+    case "tooLarge":
+      if (preview.size !== undefined) return `No preview: larger than ${formatBytes(preview.limit)}.`;
+      if (preview.pixels !== undefined) return `No preview: more than ${Math.round(preview.limit / 1_000_000)} megapixels.`;
+      return "No preview: the image is too large to open.";
+    case "failed": return "The preview could not be loaded.";
+  }
+}

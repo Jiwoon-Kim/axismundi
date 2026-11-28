@@ -74,6 +74,13 @@ tr.mat-mdc-row.selected td { color: var(--mat-sys-on-secondary-container); }
 .detail-title mat-icon { flex: none; color: var(--mat-sys-primary); }
 .detail-title h3 { margin: 0; min-width: 0; font: var(--mat-sys-title-medium); overflow-wrap: anywhere; }
 .detail-action { margin-block-end: 16px; }
+/* Preview: the picture fits the sheet's width and at most 240px of height; without one, the kind icon. */
+.detail-preview { margin: 0 0 12px; min-height: 120px; display: grid; place-items: center; gap: 8px; padding: 8px;
+  border-radius: var(--mat-sys-corner-medium); background: var(--mat-sys-surface-container-high); }
+.detail-preview img { display: block; max-width: 100%; max-height: 240px; width: auto; height: auto; object-fit: contain;
+  border-radius: var(--mat-sys-corner-small); }
+.detail-preview > mat-icon { width: 48px; height: 48px; font-size: 48px; color: var(--mat-sys-on-surface-variant); }
+.detail-preview figcaption { font: var(--mat-sys-body-small); color: var(--mat-sys-on-surface-variant); text-align: center; }
 .sheet-body dl { margin: 0; display: grid; gap: 4px; }
 .sheet-body dt { font: var(--mat-sys-label-medium); color: var(--mat-sys-on-surface-variant); margin-block-start: 8px; }
 .sheet-body dd { margin: 0; font: var(--mat-sys-body-medium); overflow-wrap: anywhere; }

@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { ROOT, accessLabel, batchReport, fileKind, folderTrail, moveBlocked, usageError, usageSummary, type Usage, endsFolder, folderSort, folderTree, holdsAllFolders, formatBytes, quotaLines, setFailure, uploadError, uploadOutcome, type Listing, type Quotas, type UploadResult } from "./files-model.ts";
+import { ROOT, accessLabel, batchReport, mayPreview, previewNote, type Preview, fileKind, folderTrail, moveBlocked, usageError, usageSummary, type Usage, endsFolder, folderSort, folderTree, holdsAllFolders, formatBytes, quotaLines, setFailure, uploadError, uploadOutcome, type Listing, type Quotas, type UploadResult } from "./files-model.ts";
 import { clearFinished, enqueue, settle, summary } from "../shell/upload-queue.ts";
 
-const fixture: {listing: Listing; upload: Record<string, UploadResult>; quota: Record<string, Quotas>; usage: Usage} =
+const fixture: {listing: Listing; upload: Record<string, UploadResult>; quota: Record<string, Quotas>; usage: Usage; preview: Record<string, Preview>} =
   JSON.parse(readFileSync(new URL("files.fixture.json", import.meta.url), "utf8"));
 
 test("the Rust fixture reads as the GUI types it", () => {
@@ -133,4 +133,20 @@ test("a batch reports what succeeded and the first failure", () => {
   assert.equal(batchReport("Moved", 1, []), "Moved 1 item");
   assert.equal(batchReport("Moved", 3, ["An item with this name is already here."]),
     "Moved 2 of 3 items. 1 failed: An item with this name is already here.");
+});
+
+test("previews are asked for images only, and every other answer reads as a sentence", () => {
+  const file = (name: string, mediaType?: string) => ({"@type": "File", id: "f", parentId: null, name, mediaType, blobId: "b"});
+  assert.equal(mayPreview(file("a.png")), true);
+  assert.equal(mayPreview(file("a.mp4", "video/mp4")), false);
+  assert.equal(mayPreview({...file("a.png"), blobId: undefined}), false);
+  const notes = Object.fromEntries(Object.entries(fixture.preview).map(([key, preview]) => [key, previewNote(preview)]));
+  assert.deepEqual(notes, {
+    ready: null,
+    unsupported: "No preview for this file type.",
+    bytes: "No preview: larger than 20.0 MB.",
+    pixels: "No preview: more than 40 megapixels.",
+    memory: "No preview: the image is too large to open.",
+    failed: "The preview could not be loaded.",
+  });
 });

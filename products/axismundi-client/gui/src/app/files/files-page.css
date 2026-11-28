@@ -36,6 +36,14 @@ table { width: 100%; }
 .name-link:hover { text-decoration: underline; }
 .name-link:focus-visible { outline: 2px solid var(--mat-sys-secondary); }
 .name-link mat-icon { color: var(--mat-sys-primary); }
+td.mat-column-select, th.mat-column-select { width: 40px; padding-inline: 8px 0; }
+tr.mat-mdc-row.checked:not(.selected) { background: color-mix(in srgb, var(--mat-sys-primary) 8%, transparent); }
+/* M3 contextual top app bar while items are checked: secondary container, the count as its title. */
+.selection-bar { background: var(--mat-sys-secondary-container); color: var(--mat-sys-on-secondary-container); }
+.selection-count { font: var(--mat-sys-title-medium); margin-inline-start: 4px; }
+.move-content { min-height: 240px; max-height: 60vh; }
+.move-content .folder-tree mat-tree-node.active { background: var(--mat-sys-secondary-container); color: var(--mat-sys-on-secondary-container); }
+.move-problem { margin: 12px 0 0; font: var(--mat-sys-body-small); color: var(--mat-sys-error); }
 td.mat-column-actions, th.mat-column-actions { width: 56px; text-align: end; }
 .more { margin: 8px 16px; }
 .name-field { width: 100%; }

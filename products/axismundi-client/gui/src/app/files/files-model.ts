@@ -249,3 +249,33 @@ export function usageError(error: string): string {
     ? "This server does not say where files are used."
     : "Could not check where this file is used.";
 }
+
+// --- selection: move and delete several items ---------------------------------------------------------
+/** The ids from the top level down to `id` in the tree, both ends included; null when it is not in the tree. */
+export function folderTrail(root: FolderNode, id: string): string[] | null {
+  if (root.id === id) return [root.id];
+  for (const child of root.children ?? []) {
+    if (child.more !== undefined) continue;
+    const trail = folderTrail(child, id);
+    if (trail) return [root.id, ...trail];
+  }
+  return null;
+}
+
+/**
+ * Why the items cannot be moved to `target`, or null when they can as far as the screen knows (the
+ * server still decides). `trail` is the target's folderTrail; `from` is the folder they are in.
+ */
+export function moveBlocked(target: string, trail: readonly string[] | null, moving: readonly FileNode[], from: string): string | null {
+  if (target === from) return "The items are already in this folder.";
+  if (moving.some(node => isFolder(node) && (trail ?? [target]).includes(node.id))) return "A folder cannot go inside itself.";
+  return null;
+}
+
+/** One sentence for a batch: how many succeeded, and the first reason one failed. */
+export function batchReport(verb: string, total: number, failures: readonly string[]): string {
+  const items = (n: number) => `${n} ${n === 1 ? "item" : "items"}`;
+  if (!failures.length) return `${verb} ${items(total)}`;
+  const done = total - failures.length;
+  return `${verb} ${done} of ${items(total)}. ${failures.length} failed: ${failures[0]}`;
+}

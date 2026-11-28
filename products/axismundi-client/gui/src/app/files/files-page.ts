@@ -8,6 +8,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { MatButton, MatFabButton, MatIconButton } from "@angular/material/button";
 import { MatCard } from "@angular/material/card";
+import { MatCheckbox } from "@angular/material/checkbox";
 import { MatChip } from "@angular/material/chips";
 import { MatDialog, MatDialogActions, MatDialogClose, MatDialogContent, MatDialogRef, MatDialogTitle } from "@angular/material/dialog";
 import { MatFormField, MatLabel } from "@angular/material/form-field";
@@ -25,7 +26,7 @@ import { ConnectionService } from "../connection.service";
 import { EXPANDED } from "../shell/scaffold";
 import { UploadQueueComponent } from "../shell/upload-queue.component";
 import { type QueueFile, type QueueItem, clearFinished, enqueue, settle } from "../shell/upload-queue";
-import { FILENODE, FILENODE_REVISION, type FileNode, type FolderNode, type Listing, type Quotas, type UploadResult, ROOT, accessLabel, endsFolder, folderSort, fileKind, folderTree, formatBytes, type Usage, usageError, usageSummary, holdsAllFolders,
+import { FILENODE, FILENODE_REVISION, type FileNode, type FolderNode, type Listing, type Quotas, type UploadResult, ROOT, accessLabel, batchReport, endsFolder, folderTrail, moveBlocked, folderSort, fileKind, folderTree, formatBytes, type Usage, usageError, usageSummary, holdsAllFolders,
   isFolder, kindLabel, quotaLines, setFailure, uploadError, uploadOutcome } from "./files-model";
 
 const PAGE = 200;
@@ -42,7 +43,7 @@ const sameScope = (a: Scope | null, b: Scope | null) => a?.connectionId === b?.c
  * The open folder lives in the URL (`?folder=`); uploads go through the shared upload queue.
  */
 @Component({
-  imports: [DatePipe, DecimalPipe, RouterLink, MatMenuContent, MatButton, MatFabButton, MatIconButton, MatCard, MatChip, MatDialogActions, MatDialogClose, MatDialogContent,
+  imports: [DatePipe, DecimalPipe, RouterLink, MatCheckbox, MatMenuContent, MatButton, MatFabButton, MatIconButton, MatCard, MatChip, MatDialogActions, MatDialogClose, MatDialogContent,
     MatDialogTitle, MatFormField, MatLabel, MatIcon, MatInput, MatMenu, MatMenuItem, MatMenuTrigger, MatProgressBar, MatSidenav,
     MatSidenavContainer, MatSidenavContent, MatTableModule, MatToolbar, MatTooltip, MatTree, MatTreeNode, MatTreeNodeDef, MatTreeNodeToggle, UploadQueueComponent],
   templateUrl: "./files-page.html",
@@ -86,7 +87,37 @@ export class FilesPage {
   protected readonly quotas = signal<Quotas | null>(null);
   protected readonly storage = computed(() => quotaLines(this.quotas()));
   protected readonly queue = signal<QueueItem[]>([]);
-  protected readonly columns = ["name", "size", "kind", "modified", "actions"];
+  protected readonly columns = ["select", "name", "size", "kind", "modified", "actions"];
+
+  // --- selection mode -----------------------------------------------------------------------------
+  /**
+   * The checked items, by id, in the open folder. Checking one turns the toolbar into the selection bar
+   * (M3 contextual top app bar); a folder change, a new Account or a finished batch clears it, except
+   * for the items a batch could not handle, which stay checked so the user sees which.
+   */
+  protected readonly checked = signal<ReadonlySet<string>>(new Set());
+  protected readonly checkedNodes = computed(() => this.nodes().filter(node => this.checked().has(node.id)));
+  protected readonly allChecked = computed(() => !!this.nodes().length && this.checkedNodes().length === this.nodes().length);
+  protected readonly busy = signal(false);
+  protected toggleChecked(node: FileNode): void {
+    const next = new Set(this.checked());
+    if (!next.delete(node.id)) next.add(node.id);
+    this.checked.set(next);
+  }
+  protected toggleAll(): void {
+    this.checked.set(this.allChecked() ? new Set() : new Set(this.nodes().map(node => node.id)));
+  }
+  protected clearChecked(): void { this.checked.set(new Set()); }
+
+  /** The move dialog's chosen folder (ROOT for the top level) and the items it moves. */
+  protected readonly moveTarget = signal<string | null>(null);
+  protected readonly moving = signal<readonly FileNode[]>([]);
+  protected readonly moveProblem = computed(() => {
+    const target = this.moveTarget();
+    return target === null ? null : moveBlocked(target, folderTrail(this.folderRoots()[0], target), this.moving(), this.folderId() ?? ROOT);
+  });
+  protected readonly moveDialog = viewChild.required<TemplateRef<unknown>>("moveDialog");
+  private readonly moveTree = viewChild<MatTree<FolderNode, string>>("moveTree");
 
   // --- folder tree --------------------------------------------------------------------------------
   /** Each listed folder's items by parent id (ROOT for the top level); a folder is listed when expanded. */
@@ -147,7 +178,7 @@ export class FilesPage {
   constructor() {
     effect(() => {
       const scope = this.scope(), folder = this.folderId();
-      untracked(() => { this.selectedId.set(null); void this.load(scope, folder); });
+      untracked(() => { this.selectedId.set(null); this.checked.set(new Set()); void this.load(scope, folder); });
     });
     effect(() => {
       const scope = this.scope();
@@ -342,6 +373,67 @@ export class FilesPage {
   protected async rename(node: FileNode): Promise<void> {
     const name = await this.askName(`Rename ${isFolder(node) ? "folder" : "file"}`, "Rename", node.name);
     if (name && name !== node.name) await this.mutate({kind: "rename", nodeId: node.id, name}, "notUpdated", node.id, "Renamed");
+  }
+  /** Moves the items into a folder picked from the tree; each item is its own request, so each can fail alone. */
+  protected async move(nodes: readonly FileNode[]): Promise<void> {
+    if (!nodes.length) return;
+    this.moving.set(nodes);
+    this.moveTarget.set(null);
+    void this.listFolders(ROOT);
+    const ref = this.dialog.open(this.moveDialog(), {width: "420px", autoFocus: "dialog"});
+    // Open the picker where the items are: the top level and every folder down to the open one, expanded.
+    ref.afterOpened().subscribe(() => this.expandTo(this.moveTree(), [ROOT, ...this.path().map(node => node.id)]));
+    const target = await ref.afterClosed().toPromise() as string | undefined;
+    if (target === undefined || this.moveBlocked(target)) return;
+    await this.batch("Moved", nodes, node => ({kind: "move", nodeId: node.id, parentId: target === ROOT ? null : target}), "notUpdated");
+    // The destination's branch of the tree is out of date now (the source is relisted by the refresh).
+    if (this.listed().has(target)) void this.listFolders(target);
+  }
+  /** Expands these folders in a tree, listing any that have not been listed yet. */
+  private expandTo(tree: MatTree<FolderNode, string> | undefined, ids: readonly string[]): void {
+    const byId = new Map<string, FolderNode>();
+    const walk = (nodes: FolderNode[]) => nodes.forEach(node => { byId.set(node.id, node); walk(node.children ?? []); });
+    walk(this.folderRoots());
+    for (const id of ids) {
+      if (!this.listed().has(id)) void this.listFolders(id);
+      const node = byId.get(id);
+      if (tree && node && !tree.isExpanded(node)) tree.expand(node);
+    }
+  }
+  private moveBlocked(target: string): boolean {
+    return !!moveBlocked(target, folderTrail(this.folderRoots()[0], target), this.moving(), this.folderId() ?? ROOT);
+  }
+  protected async destroyChecked(): Promise<void> {
+    const nodes = this.checkedNodes();
+    if (!nodes.length) return;
+    if (nodes.length === 1) return this.destroy(nodes[0]);
+    const folders = nodes.filter(isFolder).length;
+    this.dialogText.set({title: `Delete ${nodes.length} items?`, action: "Delete permanently",
+      note: (folders ? `${folders === 1 ? "The folder" : `The ${folders} folders`} and everything in ${folders === 1 ? "it" : "them"} will be deleted too. ` : "")
+        + "This cannot be undone."});
+    const ok = await this.dialog.open(this.confirmDialog(), {width: "420px"}).afterClosed().toPromise();
+    if (ok) await this.batch("Deleted", nodes, node => ({kind: "destroy", nodeId: node.id, removeChildren: isFolder(node)}), "notDestroyed");
+  }
+  /** Runs one mutation per item, one at a time, then reports once and keeps only the failed items checked. */
+  private async batch(verb: string, nodes: readonly FileNode[], mutation: (node: FileNode) => object,
+    key: "notUpdated" | "notDestroyed"): Promise<void> {
+    const scope = this.scope();
+    if (!scope) return;
+    this.busy.set(true);
+    const failed = new Set<string>(), reasons: string[] = [];
+    for (const node of nodes) {
+      try {
+        const response = await invoke<Record<string, unknown>>("files_mutate", {...scope, mutation: mutation(node)});
+        const failure = setFailure(response, key, node.id);
+        if (failure) { failed.add(node.id); reasons.push(failure); }
+      } catch (error) {
+        failed.add(node.id); reasons.push(String(error));
+      }
+    }
+    this.busy.set(false);
+    if (sameScope(scope, this.scope())) this.checked.set(failed);
+    this.snackBar.open(batchReport(verb, nodes.length, reasons), reasons.length ? "Dismiss" : undefined, {duration: reasons.length ? 8000 : 2500});
+    this.refresh();
   }
   protected async destroy(node: FileNode): Promise<void> {
     // No trash role on this server means deletion is permanent; the dialog says so.

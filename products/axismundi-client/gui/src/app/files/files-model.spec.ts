@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { ROOT, accessLabel, fileKind, usageError, usageSummary, type Usage, endsFolder, folderSort, folderTree, holdsAllFolders, formatBytes, quotaLines, setFailure, uploadError, uploadOutcome, type Listing, type Quotas, type UploadResult } from "./files-model.ts";
+import { ROOT, accessLabel, batchReport, fileKind, folderTrail, moveBlocked, usageError, usageSummary, type Usage, endsFolder, folderSort, folderTree, holdsAllFolders, formatBytes, quotaLines, setFailure, uploadError, uploadOutcome, type Listing, type Quotas, type UploadResult } from "./files-model.ts";
 import { clearFinished, enqueue, settle, summary } from "../shell/upload-queue.ts";
 
 const fixture: {listing: Listing; upload: Record<string, UploadResult>; quota: Record<string, Quotas>; usage: Usage} =
@@ -114,4 +114,23 @@ test("where a file is used says only what was checked, and leaves the file itsel
   assert.equal(usageSummary({blobId: "b", types: ["FileNode"], references: {FileNode: ["x", "y"]}}, "x").lines[0], "Also stored as 1 other file");
   assert.equal(usageError("Blob lookup is unavailable."), "This server does not say where files are used.");
   assert.equal(usageError("timed out"), "Could not check where this file is used.");
+});
+
+test("a move is blocked into the same folder or into a folder being moved", () => {
+  const dir = (id: string, parentId: string | null) => ({"@type": "Directory", id, parentId, name: id});
+  const file = {"@type": "File", id: "f", parentId: "a", name: "f"};
+  const tree = folderTree(new Map([[ROOT, [dir("a", null), dir("b", null)]], ["a", [dir("c", "a")]]]), new Set(["a"]));
+  assert.deepEqual(folderTrail(tree, "c"), [ROOT, "a", "c"]);
+  assert.equal(folderTrail(tree, "zzz"), null);
+  assert.equal(moveBlocked("a", [ROOT, "a"], [file], "a"), "The items are already in this folder.");
+  assert.equal(moveBlocked("c", folderTrail(tree, "c"), [dir("a", null)], ROOT), "A folder cannot go inside itself.");
+  assert.equal(moveBlocked("a", folderTrail(tree, "a"), [dir("a", null)], ROOT), "A folder cannot go inside itself.");
+  assert.equal(moveBlocked("b", folderTrail(tree, "b"), [dir("a", null), file], ROOT), null);
+});
+
+test("a batch reports what succeeded and the first failure", () => {
+  assert.equal(batchReport("Deleted", 3, []), "Deleted 3 items");
+  assert.equal(batchReport("Moved", 1, []), "Moved 1 item");
+  assert.equal(batchReport("Moved", 3, ["An item with this name is already here."]),
+    "Moved 2 of 3 items. 1 failed: An item with this name is already here.");
 });

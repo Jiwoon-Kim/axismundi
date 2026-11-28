@@ -21,6 +21,39 @@
   </mat-dialog-actions>
 </ng-template>
 
+<ng-template #moveDialog>
+  <h2 mat-dialog-title>Move {{ moving().length === 1 ? "“" + moving()[0].name + "”" : moving().length + " items" }}</h2>
+  <mat-dialog-content class="move-content">
+    <!-- The same folders as the navigation tree; a row picks the destination instead of opening it. -->
+    <mat-tree #moveTree class="folder-tree" aria-label="Destination folder" [dataSource]="folderRoots()"
+      [childrenAccessor]="folderChildren" [expansionKey]="folderKey" [trackBy]="trackFolder">
+      <mat-tree-node *matTreeNodeDef="let folder; let level = level" [style.padding-inline-start.px]="4 + level * 16"
+        [isExpandable]="expandable(folder)" [class.active]="folder.id === moveTarget()" [class.more]="folder.more !== undefined"
+        [attr.aria-selected]="folder.id === moveTarget()" [title]="folder.node?.name ?? 'All files'"
+        (expandedChange)="$event && listFolders(folder.id)"
+        (click)="folder.more === undefined && moveTarget.set(folder.id)" (activation)="folder.more === undefined && moveTarget.set(folder.id)">
+        @if (expandable(folder)) {
+          <button matIconButton matTreeNodeToggle type="button" class="toggle" tabindex="-1" aria-hidden="true"
+            (click)="$event.stopPropagation()">
+            <mat-icon>{{ moveTree.isExpanded(folder) ? "arrow_drop_down" : "arrow_right" }}</mat-icon>
+          </button>
+        } @else { <span class="toggle-space" aria-hidden="true"></span> }
+        @if (folder.more !== undefined) {
+          <mat-icon aria-hidden="true">more_horiz</mat-icon><span class="name">More folders (open the folder to pick them)</span>
+        } @else {
+          <mat-icon aria-hidden="true">{{ folder.node ? "folder" : "home_storage" }}</mat-icon>
+          <span class="name">{{ folder.node?.name ?? "All files" }}</span>
+        }
+      </mat-tree-node>
+    </mat-tree>
+    @if (moveProblem(); as problem) { <p class="move-problem" role="status">{{ problem }}</p> }
+  </mat-dialog-content>
+  <mat-dialog-actions align="end">
+    <button matButton type="button" mat-dialog-close>Cancel</button>
+    <button matButton="filled" type="button" [disabled]="moveTarget() === null || !!moveProblem()" [mat-dialog-close]="moveTarget()">Move here</button>
+  </mat-dialog-actions>
+</ng-template>
+
 <mat-sidenav-container>
   <mat-sidenav [mode]="expanded() ? 'side' : 'over'" [opened]="expanded() || drawer()" (openedChange)="!expanded() && drawer.set($event)"
     aria-label="Files">
@@ -122,6 +155,17 @@
   </mat-sidenav>
   <mat-sidenav-content>
     <mat-card appearance="filled" class="pane">
+      @if (checked().size) {
+      <mat-toolbar class="bar selection-bar" role="toolbar" aria-label="Selected items">
+        <button matIconButton type="button" aria-label="Clear selection" matTooltip="Clear selection" (click)="clearChecked()"><mat-icon>close</mat-icon></button>
+        <span class="selection-count" aria-live="polite">{{ checked().size }} selected</span>
+        <span class="spacer"></span>
+        <button matIconButton type="button" aria-label="Move" matTooltip="Move" [disabled]="busy() || !folderAllowsUpload()"
+          (click)="move(checkedNodes())"><mat-icon>drive_file_move</mat-icon></button>
+        <button matIconButton type="button" aria-label="Delete" matTooltip="Delete" [disabled]="busy() || !folderAllowsUpload()"
+          (click)="destroyChecked()"><mat-icon>delete</mat-icon></button>
+      </mat-toolbar>
+      } @else {
       <mat-toolbar class="bar">
         @if (!expanded()) {
           <button matIconButton type="button" aria-label="Folders" (click)="drawer.set(true)"><mat-icon>menu</mat-icon></button>
@@ -146,11 +190,23 @@
           <mat-icon>info</mat-icon>
         </button>
       </mat-toolbar>
+      }
+      @if (busy()) { <mat-progress-bar mode="indeterminate" aria-label="Working on the selected items" /> }
       @if (loading()) { <mat-progress-bar mode="indeterminate" aria-label="Loading folder" /> }
       @if (error()) { <p class="status" role="alert">{{ error() }}</p> }
       @if (!sort().length) { <p class="status note">This server offers no name sort; items are in the server's order.</p> }
       <div class="table-scroll">
         <table mat-table [dataSource]="nodes()" aria-label="Folder contents">
+          <ng-container matColumnDef="select">
+            <th mat-header-cell *matHeaderCellDef>
+              <mat-checkbox [checked]="allChecked()" [indeterminate]="!!checked().size && !allChecked()" [disabled]="!nodes().length"
+                aria-label="Select all items in this folder" (change)="toggleAll()" />
+            </th>
+            <td mat-cell *matCellDef="let node">
+              <mat-checkbox [checked]="checked().has(node.id)" [attr.aria-label]="null" [aria-label]="'Select ' + node.name"
+                (click)="$event.stopPropagation()" (change)="toggleChecked(node)" />
+            </td>
+          </ng-container>
           <ng-container matColumnDef="name">
             <th mat-header-cell *matHeaderCellDef>Name</th>
             <td mat-cell *matCellDef="let node">
@@ -181,7 +237,7 @@
             </td>
           </ng-container>
           <tr mat-header-row *matHeaderRowDef="columns; sticky: true"></tr>
-          <tr mat-row *matRowDef="let node; columns: columns" [class.selected]="node.id === selectedId()"
+          <tr mat-row *matRowDef="let node; columns: columns" [class.selected]="node.id === selectedId()" [class.checked]="checked().has(node.id)"
             (click)="select(node)" (dblclick)="open(node)"></tr>
         </table>
         @if (!loading() && !error() && !nodes().length) { <p class="status" role="status">This folder is empty.</p> }
@@ -203,6 +259,7 @@
     }
     <button mat-menu-item type="button" (click)="details(node)"><mat-icon>info</mat-icon><span>Details</span></button>
     <button mat-menu-item type="button" (click)="rename(node)"><mat-icon>edit</mat-icon><span>Rename</span></button>
+    <button mat-menu-item type="button" (click)="move([node])"><mat-icon>drive_file_move</mat-icon><span>Move…</span></button>
     <button mat-menu-item type="button" (click)="destroy(node)"><mat-icon>delete</mat-icon><span>Delete</span></button>
   </ng-template>
 </mat-menu>

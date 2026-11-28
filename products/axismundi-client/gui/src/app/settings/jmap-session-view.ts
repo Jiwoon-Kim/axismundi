@@ -26,7 +26,7 @@ const known: Record<string, {label: string; group: Group}> = {
   "calendars:parse": {label: "Calendar parsing", group: "Calendars"},
   "contacts": {label: "Contacts", group: "Contacts"},
   "contacts:parse": {label: "Contact parsing", group: "Contacts"},
-  "filenode": {label: "Files", group: "Files & storage"},
+  "filenode": {label: "Files (experimental, draft-ietf-jmap-filenode-22)", group: "Files & storage"},
   "blob": {label: "Blob management", group: "Files & storage"},
   "quota": {label: "Quotas", group: "Files & storage"},
   "principals": {label: "Principals", group: "Principals"},
@@ -36,12 +36,13 @@ const known: Record<string, {label: string; group: Group}> = {
 };
 
 /**
- * What this app actually uses, checked in the code (2026-11-27): core and blob in every request path,
- * mail and submission (Mail, sending), contacts (Contacts), websocket (live updates). Advertised but
- * not here means "not in this app" — calendars, filenode, sieve and the rest.
+ * What this app actually uses, checked in the code (2026-11-28): core and blob in every request path,
+ * mail and submission (Mail, sending), contacts (Contacts), websocket (live updates), filenode and
+ * quota (Files, experimental). Advertised but not here means "not in this app" — calendars, sieve
+ * and the rest.
  */
 export const clientSupported: ReadonlySet<string> = new Set(
-  ["core", "blob", "mail", "submission", "contacts", "websocket"].map(name => ietf + name));
+  ["core", "blob", "mail", "submission", "contacts", "websocket", "filenode", "quota"].map(name => ietf + name));
 
 export function capabilityInfo(urn: string): {label: string; group: Group} {
   if (urn.startsWith(ietf)) return known[urn.slice(ietf.length)] ?? {label: urn.slice(ietf.length), group: "Other"};

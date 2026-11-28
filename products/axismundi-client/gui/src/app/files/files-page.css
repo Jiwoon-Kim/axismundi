@@ -1,0 +1,47 @@
+:host { display: block; height: 100%; min-height: 0; }
+mat-sidenav-container { height: 100%; background: transparent; }
+mat-sidenav { width: 240px; padding: 12px; border-inline-end: 1px solid var(--mat-sys-outline-variant); }
+mat-sidenav-content { display: flex; }
+.upload { margin-block-end: 12px; }
+nav a.root { width: 100%; justify-content: flex-start; }
+nav .selected { background: var(--mat-sys-secondary-container); color: var(--mat-sys-on-secondary-container); }
+.storage { margin-block-start: 24px; padding-inline: 8px; display: grid; gap: 6px; }
+.storage h2 { margin: 0; font: var(--mat-sys-title-small); color: var(--mat-sys-on-surface-variant); }
+.storage p { margin: 0; font: var(--mat-sys-body-small); color: var(--mat-sys-on-surface-variant); }
+.pane { flex: 1; min-width: 0; min-height: 0; margin: 12px; display: flex; flex-direction: column; overflow: hidden;
+  border-radius: 12px; background: var(--mat-sys-surface-container-low); --mat-table-background-color: var(--mat-sys-surface-container-low); }
+.bar { flex: none; gap: 4px; background: inherit; padding-inline: 8px; }
+.pane { container: pane / inline-size; }
+/* One line: ancestors shrink first, the current folder keeps the most room, each truncates with an ellipsis. */
+.crumbs { display: flex; align-items: center; flex: 0 1 auto; gap: 2px; min-width: 0; overflow: hidden; white-space: nowrap;
+  font: var(--mat-sys-title-medium); }
+.crumbs a, .crumbs [aria-current] { min-width: 0; overflow: hidden; text-overflow: ellipsis; padding: 2px 4px; flex: 0 100 auto; }
+.crumbs [aria-current] { flex-shrink: 1; }
+.crumbs a { color: var(--mat-sys-primary); text-decoration: none; border-radius: 4px; }
+.crumbs a:hover { text-decoration: underline; }
+.crumbs mat-icon { flex: none; font-size: 18px; width: 18px; height: 18px; color: var(--mat-sys-on-surface-variant); }
+.experimental { flex: none; margin-inline-start: 8px; }
+.experimental-mark { display: none; flex: none; margin-inline-start: 4px; color: var(--mat-sys-on-surface-variant); }
+/* Narrow: the path keeps only the current folder (the drawer holds All files), and the chip becomes a marked icon. */
+@container pane (width < 480px) {
+  .experimental { display: none; }
+  .experimental-mark { display: inline-block; }
+  .crumbs > :not(:last-child) { display: none; }
+}
+.spacer { flex: 1; }
+.status { margin: 0; padding: 12px 16px; }
+.note { font: var(--mat-sys-body-small); color: var(--mat-sys-on-surface-variant); }
+.table-scroll { flex: 1; min-height: 0; overflow: auto; container-type: inline-size; }
+table { width: 100%; }
+.name-link, .name-cell { display: inline-flex; align-items: center; gap: 10px; min-width: 0; }
+.name-link { padding: 4px; border: 0; border-radius: 6px; background: none; color: inherit; font: inherit; cursor: pointer; text-align: start; }
+.name-link:hover { text-decoration: underline; }
+.name-link:focus-visible { outline: 2px solid var(--mat-sys-secondary); }
+.name-link mat-icon { color: var(--mat-sys-primary); }
+td.mat-column-actions, th.mat-column-actions { width: 56px; text-align: end; }
+.more { margin: 8px 16px; }
+.name-field { width: 100%; }
+.danger { --mat-button-filled-container-color: var(--mat-sys-error); --mat-button-filled-label-text-color: var(--mat-sys-on-error); }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+@container (width < 560px) { .mat-column-kind, .mat-column-modified { display: none; } }
+@container (width < 420px) { .mat-column-size { display: none; } }

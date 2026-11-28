@@ -12,6 +12,7 @@ import { MatTooltip } from "@angular/material/tooltip";
 import { ConnectionService, MAIL } from "./connection.service";
 import { Scaffold } from "./shell/scaffold";
 import { CONTACTS } from "./contacts/contact-model";
+import { FILENODE } from "./files/files-model";
 
 interface Destination {path: string; label: string; icon: string}
 
@@ -41,6 +42,7 @@ export class AppComponent {
     ...(this.connection.actors().length ? [{path: "/activitypub", label: "ActivityPub", icon: "public"}] : []),
     ...(this.connection.supports(MAIL) ? [{path: "/mail", label: "Mail", icon: "mail"}] : []),
     ...(this.connection.supports(CONTACTS) ? [{path: "/contacts", label: "Contacts", icon: "contacts"}] : []),
+    ...(this.connection.supports(FILENODE) ? [{path: "/files", label: "Files", icon: "folder"}] : []),
   ]);
 
   constructor() {

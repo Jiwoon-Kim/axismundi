@@ -2,6 +2,7 @@ import { inject } from "@angular/core";
 import { CanActivateFn, Router, Routes } from "@angular/router";
 import { ConnectionService, MAIL } from "./connection.service";
 import { CONTACTS } from "./contacts/contact-model";
+import { FILENODE } from "./files/files-model";
 
 /** A domain route opens only while the connection offers it; otherwise Settings. */
 const offered = (available: (connection: ConnectionService) => boolean): CanActivateFn =>
@@ -33,6 +34,11 @@ export const routes: Routes = [
     path: "contacts",
     canActivate: [offered(connection => connection.supports(CONTACTS))],
     loadComponent: () => import("./contacts/contacts-page").then(m => m.ContactsPage),
+  },
+  {
+    path: "files",
+    canActivate: [offered(connection => connection.supports(FILENODE))],
+    loadComponent: () => import("./files/files-page").then(m => m.FilesPage),
   },
   {
     path: "settings",

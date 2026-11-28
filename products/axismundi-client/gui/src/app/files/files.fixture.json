@@ -1,0 +1,21 @@
+{
+  "listing": {
+    "nodes": [{"@type":"File","id":"file","parentId":null,"name":"example.txt","blobId":"stored","size":8,"mediaType":"text/plain"}],
+    "position": 0,
+    "queryState": "q",
+    "total": 1
+  },
+  "upload": {
+    "saved": {"kind":"saved","node":{"@type":"File","id":"file","parentId":null,"name":"example.txt","blobId":"stored","size":8,"mediaType":"text/plain"}},
+    "exists": {"kind":"rejected","error":{"type":"alreadyExists","existingId":"file"}},
+    "overQuota": {"kind":"rejected","error":{"type":"overQuota"}},
+    "unknown": {"kind":"unknown","parentId":null,"name":"example.txt","error":"No response"},
+    "needsRefresh": {"kind":"needsRefresh","id":"file","error":"Could not confirm"}
+  },
+  "quota": {
+    "available": {"kind":"available","list":[{"id":"q","resourceType":"octets","scope":"account","used":8,"hardLimit":4096,"types":["FileNode","Email"]}]},
+    "notApplicable": {"kind":"notApplicable"},
+    "failed": {"kind":"failed","error":"Could not load quotas"}
+  },
+  "usage": {"blobId":"stored","types":["FileNode","Email"],"references":{"FileNode":["file"]}}
+}

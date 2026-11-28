@@ -58,6 +58,10 @@ changes         생성·이동이 created/updated 로 잡힘
 
 ## Files 앱에 주는 결론
 
+2026-11-28 재검증: admin의 `isTopLevel: true` 조회, 임시 폴더 내 업로드 → 저장된 노드 재조회 →
+폴더 목록 → 다운로드 바이트 일치까지 통과했다. 업로드와 저장 blobId는 달랐다. 임시 폴더는 하위 포함 삭제했고
+admin 할당량 설정은 변경하지 않았다. `Quota/get`은 `ids: null`로 호출해도 빈 목록이었다.
+
 - 이름 검증은 capability 로: forbiddenNameChars·maxSizeFileNodeName·(있으면) forbiddenNodeNames, 형제 간 유일은 서버
   alreadyExists 를 받아 onExists 선택("rename" 제안)으로.
 - 업로드 = uploadUrl → FileNode/set create(mediaType 명시) → FileNode/get 으로 blobId·size 확정. 업로드 blobId 를 저장

@@ -40,11 +40,11 @@ pub struct FileView {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UploadView {
-    blob_id: String,
-    name: String,
-    size: u64,
+    pub(crate) blob_id: String,
+    pub(crate) name: String,
+    pub(crate) size: u64,
     #[serde(rename = "type")]
-    media_type: String,
+    pub(crate) media_type: String,
 }
 
 /// A content type from the file name. The server keeps what it is told, so an unknown kind is
@@ -173,13 +173,26 @@ pub async fn mail_attachment_upload(
     state: tauri::State<'_, Connection>,
     files: tauri::State<'_, ComposeFiles>,
 ) -> Result<UploadView, String> {
-    let (_, name, size, media_type) = files.get(&handle)?;
     let active = state.current(connection_id)?;
+    let session = active.mail.as_ref().ok_or("Mail is not available on this connection")?.session.clone();
+    let result = upload_picked(&files, active, session, account_id, handle, |_| Ok(())).await;
+    state.current(connection_id)?;
+    result
+}
+
+pub(crate) async fn upload_picked(
+    files: &ComposeFiles,
+    active: Arc<crate::connection::Active>,
+    session: axismundi_client_core::jmap::Session,
+    account_id: String,
+    handle: String,
+    validate: impl FnOnce(&str) -> Result<(), String>,
+) -> Result<UploadView, String> {
+    let (_, name, size, media_type) = files.get(&handle)?;
+    validate(&name)?;
     let running = files.running.clone();
     let registry = files.files.clone();
-    let view = tauri::async_runtime::spawn_blocking(move || {
-        let mail = active.mail.as_ref().ok_or("Mail is not available on this connection")?;
-        let session = &mail.session;
+    tauri::async_runtime::spawn_blocking(move || {
         let limit = |key: &str| session.capabilities.get(CORE_CAPABILITY)?.get(key)?.as_u64();
         if limit("maxSizeUpload").is_some_and(|max| size > max) {
             return Err("This file is larger than the server accepts.".to_owned());
@@ -201,7 +214,7 @@ pub async fn mail_attachment_upload(
                 if bytes.len() as u64 != size {
                     return Err("The file changed after it was attached. Attach it again.".into());
                 }
-                active.client.upload(session, &account_id, &media_type, &bytes)
+                active.client.upload(&session, &account_id, &media_type, &bytes)
                     .map_err(|error| failure("Attachment upload", &error))
             });
         let (count, wake) = &*running;
@@ -213,9 +226,7 @@ pub async fn mail_attachment_upload(
         Ok::<_, String>(UploadView { blob_id: uploaded.blob_id, name, size: uploaded.size, media_type })
     })
     .await
-    .map_err(|_| "The upload did not complete.")??;
-    state.current(connection_id)?;
-    Ok(view)
+    .map_err(|_| "The upload did not complete.")?
 }
 
 #[cfg(test)]

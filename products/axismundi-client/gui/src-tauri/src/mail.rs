@@ -824,7 +824,7 @@ fn attachment_bytes(active: &Active, mail: &Mail, account: &str, email: &str, pa
         .map_err(|error| failure("Attachment download", &error)))
 }
 
-fn attachment_name(raw: &str) -> String {
+pub(crate) fn attachment_name(raw: &str) -> String {
     let name: String = raw.chars().map(|c| if c.is_control() || "\\/:*?\"<>|".contains(c) { '_' } else { c })
         .take(100).collect();
     let name = name.trim_matches([' ', '.']);

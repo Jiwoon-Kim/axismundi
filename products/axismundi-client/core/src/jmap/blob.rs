@@ -4,6 +4,7 @@
 //! blob from pieces, reading a slice or a digest, and finding which objects use a blob. Both kinds
 //! send the login, so both are only used on the apiUrl origin.
 use std::collections::BTreeMap;
+use std::io::{self, Read, Write};
 
 use serde_json::{Value, json};
 
@@ -14,6 +15,20 @@ use crate::{
 };
 
 pub const CAPABILITY: &str = "urn:ietf:params:jmap:blob";
+
+fn copy_exact(mut reader: impl Read, mut writer: impl Write, size: u64) -> Result<(), Error> {
+    let copied = io::copy(&mut reader.by_ref().take(size), &mut writer)
+        .map_err(|error| Error::Transport(error.to_string()))?;
+    if copied != size {
+        return Err(Error::Shape(format!("download ended after {copied} bytes; expected {size}")));
+    }
+    let extra = reader.read(&mut [0])
+        .map_err(|error| Error::Transport(error.to_string()))?;
+    if extra != 0 {
+        return Err(Error::Shape(format!("download exceeded the expected {size} bytes")));
+    }
+    Ok(())
+}
 
 /// RFC 6570 level 1: every character outside the unreserved set is percent-encoded, `/` included,
 /// so a media type like `text/plain` cannot add a path segment to the download URL.
@@ -225,13 +240,37 @@ impl Client {
         name: &str,
         max_bytes: u64,
     ) -> Result<Vec<u8>, Error> {
+        self.download_response(session, account, blob, media_type, name)?
+            .body_mut().with_config().limit(max_bytes).read_to_vec()
+            .map_err(|error| Error::Transport(error.to_string()))
+    }
+
+    /// Streams exactly the advertised number of bytes. The caller must discard the
+    /// destination on failure, since it can contain a partial download.
+    pub fn download_to(
+        &self,
+        session: &Session,
+        account: &str,
+        blob: &str,
+        media_type: &str,
+        name: &str,
+        size: u64,
+        writer: impl Write,
+    ) -> Result<(), Error> {
+        let mut response = self.download_response(session, account, blob, media_type, name)?;
+        copy_exact(response.body_mut().with_config().limit(u64::MAX).reader(), writer, size)
+    }
+
+    fn download_response(
+        &self, session: &Session, account: &str, blob: &str, media_type: &str, name: &str,
+    ) -> Result<ureq::http::Response<ureq::Body>, Error> {
         let raw = expand(
             &session.download_url,
             &[("accountId", account), ("blobId", blob), ("type", media_type), ("name", name)],
         )?;
         let mut current = on_api_origin(session, &raw)?;
         for _ in 0..=self.redirect_limit {
-            let mut response = self
+            let response = self
                 .agent
                 .get(current.as_str())
                 .header("Authorization", self.authorization())
@@ -253,12 +292,7 @@ impl Client {
                     body: String::new(),
                 }));
             }
-            return response
-                .body_mut()
-                .with_config()
-                .limit(max_bytes)
-                .read_to_vec()
-                .map_err(|e| Error::Transport(e.to_string()));
+            return Ok(response);
         }
         Err(Error::Shape("authenticated redirect limit exceeded".into()))
     }
@@ -447,6 +481,17 @@ impl Client {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn streaming_download_never_writes_past_the_expected_size() {
+        let mut output = Vec::new();
+        super::copy_exact(&b"abc"[..], &mut output, 3).unwrap();
+        assert_eq!(output, b"abc");
+        assert!(super::copy_exact(&b""[..], io::sink(), 0).is_ok());
+        assert!(super::copy_exact(&b"ab"[..], io::sink(), 3).is_err());
+        output.clear();
+        assert!(super::copy_exact(&b"abcd"[..], &mut output, 3).is_err());
+        assert_eq!(output, b"abc");
+    }
     use super::*;
 
     type Answer = (u16, Vec<(&'static str, String)>, Vec<u8>);

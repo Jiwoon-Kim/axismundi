@@ -70,6 +70,7 @@ pub(crate) struct Active {
     /// The JMAP Session and Mail cache, when the connection signed in to a Mail server.
     pub(crate) mail: Option<crate::mail::Mail>,
     pub(crate) contacts: Option<crate::contacts::Contacts>,
+    pub(crate) files_session: Option<axismundi_client_core::jmap::Session>,
     actors_url: Option<Url>,
     actor_ids: Vec<String>,
     outboxes: Mutex<std::collections::BTreeMap<String, String>>,
@@ -673,6 +674,7 @@ fn connect(
     let client = Client::new(credentials);
     let mut mail = None;
     let mut contacts = None;
+    let mut files_session = None;
     let mut connected = Connected {
         username: username.clone(),
         server,
@@ -710,6 +712,9 @@ fn connect(
                     connected.errors.push(format!("JMAP: {reason}"));
                 }
                 connected.jmap_document = Some(document);
+                if !session.accounts_with(axismundi_client_core::jmap::filenode::CAPABILITY).is_empty() {
+                    files_session = Some(session.clone());
+                }
                 connected.jmap_primary_accounts = Some(session.primary_accounts.clone());
                 connected.jmap = Some(
                     session
@@ -779,6 +784,7 @@ fn connect(
             client,
             mail,
             contacts,
+            files_session,
             actors_url,
             actor_ids,
             outboxes: Mutex::new(Default::default()),
@@ -897,6 +903,7 @@ mod tests {
             client: Client::without_redirects(Credentials { user: user.into(), secret: "secret".into() }),
             mail: None,
             contacts: None,
+            files_session: None,
             actors_url: None,
             actor_ids: vec![],
             outboxes: Mutex::new(Default::default()),
@@ -1059,6 +1066,7 @@ mod tests {
             }),
             mail: None,
             contacts: None,
+            files_session: None,
             actors_url: Some(root),
             actor_ids: vec![id.into()],
             outboxes: Mutex::new(Default::default()),

@@ -9,7 +9,11 @@ use crate::{Error, http::Client};
 pub const CAPABILITY: &str = "urn:ietf:params:jmap:filenode";
 
 #[derive(Debug, Serialize)]
-#[serde(tag = "kind", rename_all = "camelCase")]
+#[serde(
+    tag = "kind",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
 pub enum UploadResult {
     Unknown {
         parent_id: Option<String>,
@@ -312,6 +316,97 @@ pub fn create_file(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    #[ignore = "requires the local Stalwart interop instance"]
+    fn stalwart_file_round_trip() -> Result<(), Box<dyn std::error::Error>> {
+        let client = Client::without_redirects(crate::http::Credentials {
+            user: "admin@example.org".into(),
+            secret: std::env::var("AXISMUNDI_FILES_TEST_PASSWORD")?,
+        });
+        let session = client.session("https://localhost:18881/jmap/session")?;
+        assert_eq!(
+            url::Url::parse(&session.api_url)?
+                .origin()
+                .ascii_serialization(),
+            "https://localhost:18881"
+        );
+        let account = session
+            .primary_account(CAPABILITY)
+            .ok_or("No Files primary account")?;
+        let name = format!(
+            "axismundi-files-probe-{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)?
+                .as_nanos()
+        );
+        let root = query(&client, &session, account, None, &[], 0, 20)?;
+        assert!(root["ids"].is_array());
+        let folder = set(
+            &client,
+            &session,
+            account,
+            json!({"create":{"probe":{"@type":"Directory","name":name,"parentId":null}}}),
+        )?;
+        let id = folder["created"]["probe"]["id"]
+            .as_str()
+            .ok_or_else(|| folder.to_string())?;
+        let result = (|| -> Result<(), Box<dyn std::error::Error>> {
+            let bytes = b"axismundi filenode interop\n";
+            let uploaded = client.upload(&session, account, "text/plain", bytes)?;
+            let result = create_file(
+                &client,
+                &session,
+                account,
+                Some(id),
+                "probe.txt",
+                "text/plain",
+                &uploaded.blob_id,
+                uploaded.size,
+                None,
+            )?;
+            let UploadResult::Saved { node } = result else {
+                return Err(format!("{result:?}").into());
+            };
+            let node_id = node["id"].as_str().ok_or("File has no id")?;
+            let stored = node["blobId"].as_str().ok_or("File has no stored blobId")?;
+            let listing = query(&client, &session, account, Some(id), &[], 0, 20)?;
+            if !listing["ids"]
+                .as_array()
+                .is_some_and(|ids| ids.iter().any(|id| id == node_id))
+            {
+                return Err("Saved file is missing from the folder query.".into());
+            }
+            let mut download = Vec::new();
+            let size = node["size"].as_u64().ok_or("File has no size")?;
+            client.download_to(
+                &session,
+                account,
+                stored,
+                "text/plain",
+                "probe.txt",
+                size,
+                &mut download,
+            )?;
+            if download != bytes {
+                return Err("Downloaded bytes differ.".into());
+            }
+            Ok(())
+        })();
+        let cleanup = set(
+            &client,
+            &session,
+            account,
+            json!({"destroy":[id],"onDestroyRemoveChildren":true}),
+        )?;
+        if !cleanup["destroyed"]
+            .as_array()
+            .is_some_and(|values| values.iter().any(|value| value == id))
+        {
+            return Err(format!("Could not clean up test folder {id}: {cleanup}").into());
+        }
+        result
+    }
 
     fn mock(replies: Vec<Option<Value>>) -> (Client, Session, std::thread::JoinHandle<Vec<Value>>) {
         use std::io::{BufRead, Read, Write};

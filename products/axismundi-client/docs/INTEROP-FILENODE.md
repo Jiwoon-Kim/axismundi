@@ -21,6 +21,18 @@ capability  urn:ietf:params:jmap:filenode.  Session capabilities 값은 MUST 빈
          forbidden.  trash 는 role 하나일 뿐 자동 생성 규정 없음
 ```
 
+## 인용하는 다른 문서 (2026-11-28 확인)
+
+```txt
+JMAP Sharing     RFC 9670 (2024-11).  filenode-00(2024-11-22)은 아직 draft-ietf-jmap-sharing-09 로 적었지만 -22 는 RFC 9670
+Quotas           RFC 9425.   Contacts  RFC 9610.   Metadata  draft-ietf-jmap-metadata-05(초안)
+Blob 관리        -22 는 [JMAP-BLOBEXT] = draft-ietf-jmap-blobext-04 를 인용한다 — **RFC 9404 를 대체할 후속 초안**,
+                 capability 가 urn:ietf:params:jmap:blob2 (RFC 9404 는 urn:ietf:params:jmap:blob).  Blob/get·Blob/lookup 도
+                 새 capability 아래 다시 정의하고, 한 요청의 using 에 blob 과 blob2 를 함께 넣으면 안 된다.
+                 Stalwart 는 blob 만 광고 → 우리 코드는 RFC 9404 경로(blob)로 쓰고 주석도 RFC 9404.  blob2·Blob/convert 는
+                 서버가 blob2 를 광고할 때 별도 작업
+```
+
 ## Stalwart 1.1.0 실측 (admin Account b, 시험 폴더 생성 후 삭제 — 남은 노드 0)
 
 ```txt

@@ -81,6 +81,13 @@ Session capability    Settings JMAP 상세가 이미 filenode capability 를 읽
 위 "빼는 것" + 미리보기(이미지 썸네일·텍스트) — 대기열 부품의 자리만 만들고 내용은 다음, 오프라인 캐시(첫 버전은 온라인
 조회, 캐시는 Mail·Contacts 처럼 나중), 공유 폴더 탐색(다른 Account 의 FileNode).
 
+## 다음 — 메타데이터 (Files 기본 흐름 뒤, 2026-11-28 소유자 결정)
+
+JMAP Metadata(초안, capability urn:ietf:params:jmap:metadata) — Stalwart 는 dataTypes 에 FileNode 를 광고한다(maxDepth 8,
+supportsPrivate, supportsVendorNamespaces). FileNode 초안 §10 의 xattr 네임스페이스도 여기에 얹힌다. 설명·별표·색 같은 사용자
+속성은 이 층으로. 공개 링크·버전·썸네일은 FileNode 초안 밖이라 그때 따로 정한다. AP 미디어 속성(대체 텍스트·민감 표시·초점)은
+FileNode 메타데이터가 아니라 AP·OP 쪽 모델(업로드 3영역 분리).
+
 ## 검증
 
 ```txt

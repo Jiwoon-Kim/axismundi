@@ -15,6 +15,7 @@ mod session;
 pub mod blob;
 pub mod blob_ledger;
 pub mod contacts;
+pub mod filenode;
 pub mod mail;
 pub mod websocket;
 

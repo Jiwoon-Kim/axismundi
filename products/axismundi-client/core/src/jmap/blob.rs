@@ -138,6 +138,7 @@ fn type_capability(name: &str) -> Option<&'static str> {
         "SieveScript" => "urn:ietf:params:jmap:sieve",
         "ContactCard" | "AddressBook" => "urn:ietf:params:jmap:contacts",
         "CalendarEvent" | "Calendar" => "urn:ietf:params:jmap:calendars",
+        "FileNode" => super::filenode::CAPABILITY,
         _ => return None,
     })
 }

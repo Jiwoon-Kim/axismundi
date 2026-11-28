@@ -8,6 +8,7 @@ use axismundi_client_core::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use tauri::Manager;
 use url::{Host, Url};
 
 #[derive(Default)]
@@ -494,13 +495,21 @@ pub fn disconnect_server<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
     state: tauri::State<'_, Connection>,
 ) -> Result<SignedOut, String> {
-    sign_out_one(&state, connection_id, data_dir(&app).as_deref(), &crate::saved::Vault::platform())
+    let result = sign_out_one(&state, connection_id, data_dir(&app).as_deref(), &crate::saved::Vault::platform());
+    if let Some(previews) = app.try_state::<crate::files_preview::Previews>() {
+        previews.purge(|id| state.current(id).is_ok());
+    }
+    result
 }
 
 /// Ends every connection, cancels sign-ins in flight, and forgets every saved sign-in it can.
 #[tauri::command]
 pub fn disconnect_all<R: tauri::Runtime>(app: tauri::AppHandle<R>, state: tauri::State<'_, Connection>) -> Result<SignedOut, String> {
-    sign_out_all(&state, data_dir(&app).as_deref(), &crate::saved::Vault::platform())
+    let result = sign_out_all(&state, data_dir(&app).as_deref(), &crate::saved::Vault::platform());
+    if let Some(previews) = app.try_state::<crate::files_preview::Previews>() {
+        previews.purge(|id| state.current(id).is_ok());
+    }
+    result
 }
 
 async fn read_ap(

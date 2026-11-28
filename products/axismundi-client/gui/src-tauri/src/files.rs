@@ -18,8 +18,9 @@ mod tests {
     #[test]
     fn files_fixture_matches_the_ipc_contract() {
         use filenode::{Quotas, UploadResult};
-        let fixture: Value =
+        let mut fixture: Value =
             serde_json::from_str(include_str!("../../src/app/files/files.fixture.json")).unwrap();
+        fixture.as_object_mut().unwrap().remove("preview");
         let node = json!({"@type":"File","id":"file","parentId":null,"name":"example.txt","blobId":"stored","size":8,"mediaType":"text/plain"});
         assert_eq!(
             fixture,
@@ -44,7 +45,7 @@ mod tests {
     }
 }
 
-fn context(
+pub(crate) fn context(
     state: &Connection,
     connection: u32,
     requested: Option<&str>,
@@ -313,7 +314,7 @@ pub(crate) async fn files_upload(
     result
 }
 
-fn file_node(active: &Active, session: &Session, account: &str, id: &str) -> Result<Value, String> {
+pub(crate) fn file_node(active: &Active, session: &Session, account: &str, id: &str) -> Result<Value, String> {
     let answer = filenode::get(&active.client, session, account, &[id], false).map_err(error)?;
     answer["list"]
         .as_array()

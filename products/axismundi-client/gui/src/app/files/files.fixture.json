@@ -18,5 +18,13 @@
     "notApplicable": {"kind":"notApplicable"},
     "failed": {"kind":"failed","error":"Could not load quotas"}
   },
-  "usage": {"blobId":"stored","types":["FileNode","Email"],"references":{"FileNode":["file"]}}
+  "usage": {"blobId":"stored","types":["FileNode","Email"],"references":{"FileNode":["file"]}},
+  "preview": {
+    "ready": {"kind":"ready","ref":"axismundi-preview://localhost/example","width":256,"height":128,"variant":"thumbnail"},
+    "unsupported": {"kind":"unsupported","mediaType":"image/svg+xml"},
+    "bytes": {"kind":"tooLarge","size":20000001,"limit":20000000},
+    "pixels": {"kind":"tooLarge","pixels":40000001,"limit":40000000},
+    "memory": {"kind":"tooLarge","decodeMemory":true,"limit":268435456},
+    "failed": {"kind":"failed","error":"Could not load preview"}
+  }
 }

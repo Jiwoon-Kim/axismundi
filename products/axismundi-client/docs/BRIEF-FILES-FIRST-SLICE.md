@@ -89,8 +89,10 @@ node --test "gui/src/**/*.spec.ts"     이름 검증, 대기열 상태 전이, �
 npm --prefix gui run build
 ```
 
-Quota 표시·`overQuota`·`maxSizeUpload` 문구는 fixture 로 먼저. 실서버 Quota 검증은 admin 이 아니라 **별도 테스트 계정**에
-한도를 걸어서 — 서버 설정 변경이라 소유자 확인 뒤. 한도를 걸어도 `Quota/get` 이 비면 그 상태를 기록하고 Files 를 막지 않는다.
+Quota 표시·`overQuota`·`maxSizeUpload` 문구는 fixture 로 먼저. 실서버 Quota 검증은 **admin 계정**에(소유자가 확인하기
+편하게, 2026-11-28 승인): 한도는 현재 사용량보다 넉넉히 — 메일·연락처 시험을 막지 않을 만큼, 설정 전 값을 기록하고 되돌릴지는
+검증 뒤 소유자가 정한다. admin 에서 `overQuota` 를 일부러 일으키지 않는다(실패 경로는 fixture). 한도를 걸어도 `Quota/get`
+이 비면 그 상태를 기록하고 Files 를 막지 않는다.
 Stalwart(admin)에 **시험 폴더를 만들어** 그 안에서만: 폴더 만들기 → 파일 두 개 업로드(하나는 일부러 실패 — 금지 문자 이름 등) →
 재시도 → 목록에 저장된 blobId 로 보이는지(업로드 id 아님, FileNode/get 대조) → 같은 이름 업로드 시 덮어쓰기/이름 바꾸기
 선택 → 이동 → 다운로드 바이트 일치 → 폴더 삭제(하위 포함 확인) → 남은 노드 0. 창에서(CDP) 1280 · 400, 두 인터페이스

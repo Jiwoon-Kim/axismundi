@@ -24,7 +24,7 @@ mod tests {
         assert_eq!(
             fixture,
             json!({
-                "listing": Listing { nodes: vec![node.clone()], position: 0, query_state: "q".into(), total: Some(1) },
+                "listing": Listing { nodes: vec![node.clone()], position: 0, query_state: "q".into(), total: Some(1), limit: 200 },
                 "upload": {
                     "saved": UploadResult::Saved {node},
                     "exists": UploadResult::Rejected {error: json!({"type":"alreadyExists","existingId":"file"})},
@@ -105,6 +105,10 @@ pub(crate) struct Listing {
     position: u64,
     query_state: String,
     total: Option<u64>,
+    /// The page size this page was read with: the server's `limit` when it lowered the request
+    /// (RFC 8620 §5.5), else the request clamped to maxObjectsInGet. A page shorter than this ends
+    /// the folder, which is how the GUI knows when the server does not count `total`.
+    limit: u64,
 }
 
 #[tauri::command]
@@ -134,6 +138,7 @@ pub(crate) async fn files_list(
                     .as_u64()
                     .unwrap_or(100)
                     .clamp(1, 500);
+            let asked = limit.clamp(1, max);
             let page = filenode::query(
                 &a.client,
                 s,
@@ -141,7 +146,7 @@ pub(crate) async fn files_list(
                 parent_id.as_deref(),
                 &sort,
                 position,
-                limit.clamp(1, max),
+                asked,
             )
             .map_err(error)?;
             let ids = page["ids"]
@@ -175,6 +180,7 @@ pub(crate) async fn files_list(
                     .ok_or("FileNode/query omitted queryState.")?
                     .into(),
                 total: page["total"].as_u64(),
+                limit: page["limit"].as_u64().unwrap_or(asked).min(asked),
             })
         },
     )

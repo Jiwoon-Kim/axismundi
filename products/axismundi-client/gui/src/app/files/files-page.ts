@@ -18,16 +18,19 @@ import { MatProgressBar } from "@angular/material/progress-bar";
 import { MatSidenav, MatSidenavContainer, MatSidenavContent } from "@angular/material/sidenav";
 import { MatSnackBar } from "@angular/material/snack-bar";
 import { MatTableModule } from "@angular/material/table";
+import { MatTree, MatTreeNode, MatTreeNodeDef, MatTreeNodeToggle } from "@angular/material/tree";
 import { MatToolbar } from "@angular/material/toolbar";
 import { MatTooltip } from "@angular/material/tooltip";
 import { ConnectionService } from "../connection.service";
 import { EXPANDED } from "../shell/scaffold";
 import { UploadQueueComponent } from "../shell/upload-queue.component";
 import { type QueueFile, type QueueItem, clearFinished, enqueue, settle } from "../shell/upload-queue";
-import { FILENODE, FILENODE_REVISION, type FileNode, type Listing, type Quotas, type UploadResult, accessLabel, folderSort, formatBytes,
+import { FILENODE, FILENODE_REVISION, type FileNode, type FolderNode, type Listing, type Quotas, type UploadResult, ROOT, accessLabel, endsFolder, folderSort, folderTree, formatBytes, holdsAllFolders,
   isFolder, kindLabel, quotaLines, setFailure, uploadError, uploadOutcome } from "./files-model";
 
 const PAGE = 200;
+/** The most pages the tree reads from one folder before it stops and says so. */
+const PAGES = 20;
 
 type Scope = {connectionId: number; accountId: string; readOnly: boolean};
 const sameScope = (a: Scope | null, b: Scope | null) => a?.connectionId === b?.connectionId && a?.accountId === b?.accountId;
@@ -40,7 +43,7 @@ const sameScope = (a: Scope | null, b: Scope | null) => a?.connectionId === b?.c
 @Component({
   imports: [DatePipe, DecimalPipe, RouterLink, MatMenuContent, MatButton, MatFabButton, MatIconButton, MatCard, MatChip, MatDialogActions, MatDialogClose, MatDialogContent,
     MatDialogTitle, MatFormField, MatLabel, MatIcon, MatInput, MatMenu, MatMenuItem, MatMenuTrigger, MatProgressBar, MatSidenav,
-    MatSidenavContainer, MatSidenavContent, MatTableModule, MatToolbar, MatTooltip, UploadQueueComponent],
+    MatSidenavContainer, MatSidenavContent, MatTableModule, MatToolbar, MatTooltip, MatTree, MatTreeNode, MatTreeNodeDef, MatTreeNodeToggle, UploadQueueComponent],
   templateUrl: "./files-page.html",
   styleUrl: "./files-page.css",
 })
@@ -74,7 +77,8 @@ export class FilesPage {
   /** Writing needs an Account that is not read only; the server still decides per folder (myRights). */
   protected readonly folderAllowsUpload = computed(() => !!this.scope() && !this.scope()!.readOnly);
   protected readonly nodes = signal<FileNode[]>([]);
-  protected readonly total = signal<number | null>(null);
+  /** More items after the ones shown; known from a full page when the server does not count. */
+  protected readonly more = signal(false);
   protected readonly path = signal<FileNode[]>([]);
   protected readonly loading = signal(false);
   protected readonly error = signal("");
@@ -82,6 +86,22 @@ export class FilesPage {
   protected readonly storage = computed(() => quotaLines(this.quotas()));
   protected readonly queue = signal<QueueItem[]>([]);
   protected readonly columns = ["name", "size", "kind", "modified", "actions"];
+
+  // --- folder tree --------------------------------------------------------------------------------
+  /** Each listed folder's items by parent id (ROOT for the top level); a folder is listed when expanded. */
+  private readonly listed = signal<ReadonlyMap<string, readonly FileNode[]>>(new Map());
+  /** Folders the tree stopped reading before their last subfolder (see listFolders). */
+  private readonly partial = signal<ReadonlySet<string>>(new Set());
+  private readonly listing = new Set<string>();
+  protected readonly folderRoots = computed(() => [folderTree(this.listed(), this.partial())]);
+  protected readonly folderChildren = (node: FolderNode) => node.children ?? [];
+  /** Expansion is kept by connection, Account and folder id, so it survives every rebuild of the nodes. */
+  protected readonly folderKey = (node: FolderNode) => JSON.stringify([this.scope()?.connectionId, this.scope()?.accountId, node.id]);
+  protected readonly trackFolder = (_: number, node: FolderNode) => this.folderKey(node);
+  /** Not listed yet means it may have subfolders, so it keeps its toggle until it is listed. */
+  protected readonly expandable = (node: FolderNode) => node.children === null || node.children.length > 0;
+  protected readonly activeFolder = computed(() => this.folderId() ?? ROOT);
+  private readonly tree = viewChild<MatTree<FolderNode, string>>("tree");
 
   // --- details ------------------------------------------------------------------------------------
   /** The side sheet with the selected item's details; closed until asked for, like the filter sheet. */
@@ -123,6 +143,25 @@ export class FilesPage {
       const scope = this.scope();
       untracked(() => { this.quotas.set(null); if (scope) void invoke<Quotas>("files_quotas", scope).then(q => this.quotas.set(q)); });
     });
+    // A new connection or Account starts a new tree.
+    effect(() => {
+      const scope = this.scope();
+      untracked(() => { this.listed.set(new Map()); this.partial.set(new Set()); this.listing.clear(); if (scope) void this.listFolders(ROOT, scope); });
+    });
+    // The open folder is never hidden inside a collapsed one: list and expand each folder above it.
+    effect(() => {
+      const tree = this.tree(), above = [ROOT, ...this.path().slice(0, -1).map(node => node.id)], roots = this.folderRoots();
+      untracked(() => {
+        const byId = new Map<string, FolderNode>();
+        const walk = (nodes: FolderNode[]) => nodes.forEach(node => { byId.set(node.id, node); walk(node.children ?? []); });
+        walk(roots);
+        for (const id of above) {
+          if (!this.listed().has(id)) void this.listFolders(id);
+          const node = byId.get(id);
+          if (tree && node && !tree.isExpanded(node)) tree.expand(node);
+        }
+      });
+    });
     // The window's native drop registers files for upload; this screen takes them into the open folder.
     const unlisten = listen<QueueFile[]>("compose-files-dropped", event => this.add(event.payload));
     inject(DestroyRef).onDestroy(() => { void unlisten.then(stop => stop()); this.release(this.queue().map(item => item.file.handle)); });
@@ -146,13 +185,60 @@ export class FilesPage {
       }
       if (!append) this.queryState = listing.queryState;
       this.nodes.set(append ? [...this.nodes(), ...listing.nodes] : listing.nodes);
-      this.total.set(listing.total);
+      const ended = endsFolder(listing);
+      this.more.set(!ended);
+      // The open folder's listing is also its branch of the tree, once it holds every subfolder.
+      if (holdsAllFolders(this.nodes(), ended, this.sort())) this.setListed(folder ?? ROOT, this.nodes());
       if (!append) this.path.set(folder ? await this.ancestors(scope, folder) : []);
     } catch (error) {
       if (generation === this.generation) { this.error.set(String(error)); if (!append) this.nodes.set([]); }
     } finally {
       if (generation === this.generation) this.loading.set(false);
     }
+  }
+
+  /**
+   * Lists a folder for the tree, page by page until every subfolder is in (see holdsAllFolders), for
+   * at most PAGES pages. Stopping there is not the end of the folder: the branch then ends in a row
+   * that opens the folder, rather than leaving the folders after it silently out.
+   */
+  protected async listFolders(id: string, scope = this.scope()): Promise<void> {
+    if (!scope || this.listing.has(id)) return;
+    this.listing.add(id);
+    try {
+      const items: FileNode[] = [];
+      let queryState: string | null = null, restarts = 0, complete = false;
+      for (let page = 0; page < PAGES; page++) {
+        const listing = await invoke<Listing>("files_list", {...scope, parentId: id === ROOT ? null : id, sort: this.sort(),
+          position: items.length, limit: PAGE});
+        // Pages from another queryState do not line up (RFC 8620 §5.5): start over, a couple of times at most.
+        if (queryState !== null && listing.queryState !== queryState) {
+          if (++restarts > 2) return;
+          items.length = 0; queryState = null; page = -1;
+          continue;
+        }
+        queryState = listing.queryState;
+        items.push(...listing.nodes);
+        if (holdsAllFolders(items, endsFolder(listing), this.sort())) { complete = true; break; }
+      }
+      if (sameScope(scope, this.scope())) this.setListed(id, items, complete);
+    } catch {
+      // The branch stays unlisted and keeps its toggle, so expanding it again retries.
+    } finally {
+      this.listing.delete(id);
+    }
+  }
+  private setListed(id: string, items: readonly FileNode[], complete = true): void {
+    const next = new Map(this.listed());
+    next.set(id, items.filter(isFolder));
+    this.listed.set(next);
+    const partial = new Set(this.partial());
+    if (complete) partial.delete(id); else partial.add(id);
+    this.partial.set(partial);
+  }
+  protected openFolder(id: string): void {
+    this.drawer.set(false);
+    void this.router.navigate([], {relativeTo: this.route, queryParams: id === ROOT ? {} : {folder: id}});
   }
 
   /** The breadcrumb from the root to the open folder, from one FileNode/get with fetchParents. */

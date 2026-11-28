@@ -12,7 +12,8 @@ export interface FileNode {
   created?: string; accessed?: string; executable?: boolean;
   myRights?: Record<string, boolean>;
 }
-export interface Listing { nodes: FileNode[]; position: number; queryState: string; total: number | null }
+/** `limit` is the page size the page was actually read with (the server may lower it, RFC 8620 §5.5). */
+export interface Listing { nodes: FileNode[]; position: number; queryState: string; total: number | null; limit: number }
 export type UploadResult =
   | {kind: "saved"; node: FileNode}
   | {kind: "rejected"; error: {type?: string; description?: string; existingId?: string}}
@@ -114,4 +115,47 @@ export function accessLabel(myRights: Record<string, boolean> | undefined): stri
   if (granted.length === rights.length) return "Full access";
   if (granted.length === 1 && myRights["mayRead"]) return "View only";
   return granted.length ? granted.join(", ") : "No access";
+}
+
+// --- folder tree -------------------------------------------------------------------------------------
+/** The tree's key for the Account's top level, whose parentId is null. */
+export const ROOT = "";
+/**
+ * One row of the navigation tree; children is null until that folder has been listed. A `more` row
+ * stands after the subfolders of a folder the tree stopped reading early: it opens that folder.
+ */
+export interface FolderNode { id: string; node: FileNode | null; children: FolderNode[] | null; more?: string }
+
+/**
+ * The navigation tree from the folders listed so far, keyed by parent id (ROOT for the top level). A
+ * folder that is listed again under its own descendant is not followed, so a server answer with a
+ * cycle cannot recurse forever.
+ */
+export function folderTree(listed: ReadonlyMap<string, readonly FileNode[]>, partial: ReadonlySet<string> = new Set()): FolderNode {
+  const build = (node: FileNode | null, seen: ReadonlySet<string>): FolderNode => {
+    const id = node?.id ?? ROOT, inside = new Set(seen).add(id), children = listed.get(id);
+    if (!children) return {id, node, children: null};
+    const rows = children.filter(child => isFolder(child) && !inside.has(child.id)).map(child => build(child, inside));
+    if (partial.has(id)) rows.push({id: `more:${id}`, node: null, children: [], more: id});
+    return {id, node, children: rows};
+  };
+  return build(null, new Set());
+}
+
+/**
+ * Whether a page ended the folder. The server need not count (`total` is only there when asked for,
+ * RFC 8620 §5.5), so a page shorter than the limit it was read with is the end too. That limit is the
+ * one the server used, not the one the screen asked for: a server that caps pages at 100 would
+ * otherwise look finished after its first full page.
+ */
+export function endsFolder(page: {nodes: readonly unknown[]; position: number; total: number | null; limit: number}): boolean {
+  return page.nodes.length < page.limit || (page.total !== null && page.position + page.nodes.length >= page.total);
+}
+
+/**
+ * Whether these items, read from the start of a folder, include every folder in it: either the whole
+ * folder was read, or the server sorts folders first (nodeType) and a file has already appeared.
+ */
+export function holdsAllFolders(items: readonly FileNode[], ended: boolean, sort: readonly {property: string}[]): boolean {
+  return ended || (sort[0]?.property === "nodeType" && items.some(item => !isFolder(item)));
 }

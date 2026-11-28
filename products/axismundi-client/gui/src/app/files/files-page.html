@@ -27,11 +27,32 @@
     <button matFab extended type="button" class="upload" [disabled]="!folderAllowsUpload()" (click)="pick()">
       <mat-icon>upload</mat-icon> Upload
     </button>
-    <nav aria-label="Folders">
-      <a matButton class="root" [class.selected]="!folderId()" routerLink="/files" [queryParams]="{}"
-        [attr.aria-current]="!folderId() ? 'page' : null" (click)="drawer.set(false)">
-        <mat-icon>folder_open</mat-icon> All files
-      </a>
+    <!-- Folder tree (CDK tree pattern, as the Mail mailbox tree: one tab stop, arrow keys move, Right/Left
+         expand). A folder is listed the first time it is expanded; until then it keeps its toggle. -->
+    <nav class="folder-nav" aria-label="Folders">
+      <mat-tree #tree class="folder-tree" aria-label="Folders" [dataSource]="folderRoots()"
+        [childrenAccessor]="folderChildren" [expansionKey]="folderKey" [trackBy]="trackFolder">
+        <mat-tree-node *matTreeNodeDef="let folder; let level = level" [style.padding-inline-start.px]="4 + level * 16"
+          [isExpandable]="expandable(folder)" [class.more]="folder.more !== undefined" [class.active]="folder.id === activeFolder()"
+          [attr.aria-current]="folder.id === activeFolder() ? 'page' : null" [title]="folder.more !== undefined ? 'Some folders are not shown here. Open the folder to see all of it.' : folder.node?.name ?? 'All files'"
+          (expandedChange)="$event && listFolders(folder.id)" (click)="openFolder(folder.more ?? folder.id)" (activation)="openFolder(folder.more ?? folder.id)">
+          <!-- Leading disclosure, as file trees do: it moves with the indent, so depth reads at a glance.
+               A folder with nothing to expand keeps the space, so the folder icons stay in one column. -->
+          @if (expandable(folder)) {
+            <button matIconButton matTreeNodeToggle type="button" class="toggle" tabindex="-1" aria-hidden="true"
+              (click)="$event.stopPropagation()">
+              <mat-icon>{{ tree.isExpanded(folder) ? "arrow_drop_down" : "arrow_right" }}</mat-icon>
+            </button>
+          } @else { <span class="toggle-space" aria-hidden="true"></span> }
+          @if (folder.more !== undefined) {
+            <mat-icon aria-hidden="true">more_horiz</mat-icon>
+            <span class="name">More folders</span>
+          } @else {
+            <mat-icon aria-hidden="true">{{ folder.node ? (folder.id === activeFolder() ? "folder_open" : "folder") : "home_storage" }}</mat-icon>
+            <span class="name">{{ folder.node?.name ?? "All files" }}</span>
+          }
+        </mat-tree-node>
+      </mat-tree>
     </nav>
     <section class="storage" aria-label="Storage">
       <h2>Storage</h2>
@@ -120,9 +141,9 @@
             <th mat-header-cell *matHeaderCellDef>Name</th>
             <td mat-cell *matCellDef="let node">
               @if (isFolder(node)) {
-                <button type="button" class="name-link" (click)="open(node)"><mat-icon aria-hidden="true">folder</mat-icon><span>{{ node.name }}</span></button>
+                <button type="button" class="name-link" (click)="open(node)"><mat-icon aria-hidden="true">folder</mat-icon><span [title]="node.name">{{ node.name }}</span></button>
               } @else {
-                <button type="button" class="name-link file" (click)="details(node); $event.stopPropagation()"><mat-icon aria-hidden="true">draft</mat-icon><span>{{ node.name }}</span></button>
+                <button type="button" class="name-link file" (click)="details(node); $event.stopPropagation()"><mat-icon aria-hidden="true">draft</mat-icon><span [title]="node.name">{{ node.name }}</span></button>
               }
             </td>
           </ng-container>
@@ -150,7 +171,7 @@
             (click)="select(node)" (dblclick)="open(node)"></tr>
         </table>
         @if (!loading() && !error() && !nodes().length) { <p class="status" role="status">This folder is empty.</p> }
-        @if (total() !== null && nodes().length < total()!) {
+        @if (more()) {
           <button matButton type="button" class="more" (click)="loadMore()">Load more</button>
         }
       </div>

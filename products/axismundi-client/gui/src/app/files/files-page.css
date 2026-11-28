@@ -3,8 +3,6 @@ mat-sidenav-container { height: 100%; background: transparent; }
 mat-sidenav { width: 240px; padding: 12px; border-inline-end: 1px solid var(--mat-sys-outline-variant); }
 mat-sidenav-content { display: flex; }
 .upload { margin-block-end: 12px; }
-nav a.root { width: 100%; justify-content: flex-start; }
-nav .selected { background: var(--mat-sys-secondary-container); color: var(--mat-sys-on-secondary-container); }
 .storage { margin-block-start: 24px; padding-inline: 8px; display: grid; gap: 6px; }
 .storage h2 { margin: 0; font: var(--mat-sys-title-small); color: var(--mat-sys-on-surface-variant); }
 .storage p { margin: 0; font: var(--mat-sys-body-small); color: var(--mat-sys-on-surface-variant); }
@@ -75,3 +73,25 @@ tr.mat-mdc-row.selected td { color: var(--mat-sys-on-secondary-container); }
 .detail-storage { margin-block-start: 16px; padding-block-start: 8px; border-block-start: 1px solid var(--mat-sys-outline-variant); }
 .detail-storage h3 { margin: 8px 0 4px; font: var(--mat-sys-title-small); color: var(--mat-sys-on-surface-variant); }
 .detail-storage p { margin: 0; font: var(--mat-sys-body-small); color: var(--mat-sys-on-surface-variant); }
+
+/* Folder tree: the Mail mailbox tree's rows (pill, 40px, label-large); names stay on one line and end in
+   an ellipsis, the full name in the row's title. */
+.folder-tree { --mat-tree-node-min-height: 40px; background: transparent; }
+.folder-tree mat-tree-node { gap: 8px; margin-block-end: 2px; padding-inline-end: 4px; border-radius: var(--mat-sys-corner-full);
+  color: var(--mat-sys-on-surface-variant); font: var(--mat-sys-label-large); cursor: pointer; }
+.folder-tree mat-tree-node:hover { background: color-mix(in srgb, var(--mat-sys-on-surface) 8%, transparent); }
+.folder-tree mat-tree-node.active { background: var(--mat-sys-secondary-container); color: var(--mat-sys-on-secondary-container); }
+.folder-tree mat-tree-node:focus-visible { outline: 2px solid var(--mat-sys-secondary); outline-offset: -2px; }
+.folder-tree mat-tree-node > mat-icon { flex: none; inline-size: 20px; block-size: 20px; font-size: 20px; }
+.folder-tree .name { flex: 1; min-inline-size: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.folder-tree .toggle { flex: none; --mat-icon-button-state-layer-size: 32px; padding: 4px; margin-inline-end: -4px; }
+.folder-tree mat-tree-node.more { font-style: italic; }
+.folder-tree .toggle-space { flex: none; inline-size: 32px; margin-inline-end: -4px; }
+/* The 48px touch target of the trailing toggle reaches past the drawer edge; the row itself is the target. */
+.folder-nav { overflow-x: clip; }
+
+/* Long names in the list stay on one line too: the name column takes the slack and its text ends in "…". */
+td.mat-column-name { max-width: 0; width: 100%; }
+.name-link, .name-cell { max-width: 100%; }
+.name-link > span, .name-cell > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+td.mat-column-size, td.mat-column-kind, td.mat-column-modified { white-space: nowrap; }

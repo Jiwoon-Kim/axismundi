@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { accessLabel, folderSort, formatBytes, quotaLines, setFailure, uploadError, uploadOutcome, type Listing, type Quotas, type UploadResult } from "./files-model.ts";
+import { ROOT, accessLabel, endsFolder, folderSort, folderTree, holdsAllFolders, formatBytes, quotaLines, setFailure, uploadError, uploadOutcome, type Listing, type Quotas, type UploadResult } from "./files-model.ts";
 import { clearFinished, enqueue, settle, summary } from "../shell/upload-queue.ts";
 
 const fixture: {listing: Listing; upload: Record<string, UploadResult>; quota: Record<string, Quotas>} =
@@ -60,4 +60,33 @@ test("folder access reads as words, and a missing myRights says nothing", () => 
   assert.equal(accessLabel({mayRead: true, mayAddChildren: true}), "View, Add items");
   assert.equal(accessLabel({}), "No access");
   assert.equal(accessLabel(undefined), null);
+});
+
+test("the folder tree shows only folders, unlisted ones as unknown, and stops at a cycle", () => {
+  const dir = (id: string, parentId: string | null) => ({"@type": "Directory", id, parentId, name: id});
+  const file = {"@type": "File", id: "f", parentId: null, name: "f"};
+  const tree = folderTree(new Map([[ROOT, [dir("a", null), file, dir("b", null)]], ["a", [dir("c", "a")]], ["c", [dir("a", "c")]]]));
+  assert.deepEqual(tree.children?.map(node => node.id), ["a", "b"]);
+  assert.equal(tree.children?.[1].children, null);
+  assert.deepEqual(tree.children?.[0].children?.[0].children, []);
+  assert.equal(folderTree(new Map()).children, null);
+  const cut = folderTree(new Map([[ROOT, [dir("a", null)]]]), new Set([ROOT]));
+  assert.deepEqual(cut.children?.map(node => node.more ?? node.id), ["a", ROOT], "a tree read only in part says so");
+});
+
+test("a folder's subfolders are known once a file follows them in a folders-first sort", () => {
+  const dir = {"@type": "Directory", id: "d", parentId: null, name: "d"};
+  const file = {"@type": "File", id: "f", parentId: null, name: "f"};
+  const byKind = [{property: "nodeType"}, {property: "name"}];
+  assert.equal(holdsAllFolders([dir], true, []), true);
+  assert.equal(holdsAllFolders([dir, file], false, byKind), true);
+  assert.equal(holdsAllFolders([dir], false, byKind), false);
+  assert.equal(holdsAllFolders([dir, file], false, [{property: "name"}]), false);
+});
+
+test("a short page ends the folder even when the server does not count", () => {
+  assert.equal(endsFolder({nodes: [], position: 0, total: null, limit: 200}), true);
+  assert.equal(endsFolder({nodes: Array(200), position: 0, total: null, limit: 200}), false);
+  assert.equal(endsFolder({nodes: Array(100), position: 0, total: null, limit: 100}), false, "a server cap of 100 is not the end");
+  assert.equal(endsFolder({nodes: Array(200), position: 200, total: 400, limit: 200}), true);
 });

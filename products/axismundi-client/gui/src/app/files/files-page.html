@@ -74,7 +74,7 @@
       <div class="sheet-body">
         @let node = detail();
         <div class="detail-title">
-          <mat-icon aria-hidden="true">{{ !node || isFolder(node) ? "folder" : "draft" }}</mat-icon>
+          <mat-icon aria-hidden="true">{{ node ? fileKind(node).icon : "folder" }}</mat-icon>
           <h3 [title]="node?.name ?? 'Files'">{{ node?.name ?? "Files" }}</h3>
         </div>
         @if (node && !isFolder(node)) {
@@ -85,6 +85,7 @@
         <dl>
           <dt>Kind</dt><dd>{{ node ? kindLabel(node) : "Folder" }}</dd>
           @if (node && !isFolder(node)) {
+            <dt>Media type</dt><dd>{{ node.mediaType || "Not given" }}</dd>
             <dt>Size</dt><dd>{{ formatBytes(node.size) }}@if (node.size !== undefined && node.size >= 1024) { ({{ node.size | number }} bytes)}</dd>
           }
           @if (location().length) {
@@ -143,7 +144,7 @@
               @if (isFolder(node)) {
                 <button type="button" class="name-link" (click)="open(node)"><mat-icon aria-hidden="true">folder</mat-icon><span [title]="node.name">{{ node.name }}</span></button>
               } @else {
-                <button type="button" class="name-link file" (click)="details(node); $event.stopPropagation()"><mat-icon aria-hidden="true">draft</mat-icon><span [title]="node.name">{{ node.name }}</span></button>
+                <button type="button" class="name-link file" (click)="details(node); $event.stopPropagation()"><mat-icon aria-hidden="true">{{ fileKind(node).icon }}</mat-icon><span [title]="node.name">{{ node.name }}</span></button>
               }
             </td>
           </ng-container>

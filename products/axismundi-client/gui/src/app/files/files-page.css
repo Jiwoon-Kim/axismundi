@@ -93,5 +93,7 @@ tr.mat-mdc-row.selected td { color: var(--mat-sys-on-secondary-container); }
 /* Long names in the list stay on one line too: the name column takes the slack and its text ends in "…". */
 td.mat-column-name { max-width: 0; width: 100%; }
 .name-link, .name-cell { max-width: 100%; }
+/* The icon keeps its 24px; only the name gives way. */
+.name-link > mat-icon, .name-cell > mat-icon { flex: none; }
 .name-link > span, .name-cell > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 td.mat-column-size, td.mat-column-kind, td.mat-column-modified { white-space: nowrap; }

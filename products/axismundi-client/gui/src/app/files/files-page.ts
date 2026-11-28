@@ -25,7 +25,7 @@ import { ConnectionService } from "../connection.service";
 import { EXPANDED } from "../shell/scaffold";
 import { UploadQueueComponent } from "../shell/upload-queue.component";
 import { type QueueFile, type QueueItem, clearFinished, enqueue, settle } from "../shell/upload-queue";
-import { FILENODE, FILENODE_REVISION, type FileNode, type FolderNode, type Listing, type Quotas, type UploadResult, ROOT, accessLabel, endsFolder, folderSort, folderTree, formatBytes, holdsAllFolders,
+import { FILENODE, FILENODE_REVISION, type FileNode, type FolderNode, type Listing, type Quotas, type UploadResult, ROOT, accessLabel, endsFolder, folderSort, fileKind, folderTree, formatBytes, holdsAllFolders,
   isFolder, kindLabel, quotaLines, setFailure, uploadError, uploadOutcome } from "./files-model";
 
 const PAGE = 200;
@@ -259,6 +259,7 @@ export class FilesPage {
   protected details(node: FileNode): void { this.selectedId.set(node.id); this.detailsOpen.set(true); }
   protected readonly isFolder = isFolder;
   protected readonly kindLabel = kindLabel;
+  protected readonly fileKind = fileKind;
   protected readonly formatBytes = formatBytes;
 
   // --- uploads -------------------------------------------------------------------------------------

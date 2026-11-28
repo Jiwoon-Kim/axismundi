@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { ROOT, accessLabel, endsFolder, folderSort, folderTree, holdsAllFolders, formatBytes, quotaLines, setFailure, uploadError, uploadOutcome, type Listing, type Quotas, type UploadResult } from "./files-model.ts";
+import { ROOT, accessLabel, fileKind, endsFolder, folderSort, folderTree, holdsAllFolders, formatBytes, quotaLines, setFailure, uploadError, uploadOutcome, type Listing, type Quotas, type UploadResult } from "./files-model.ts";
 import { clearFinished, enqueue, settle, summary } from "../shell/upload-queue.ts";
 
 const fixture: {listing: Listing; upload: Record<string, UploadResult>; quota: Record<string, Quotas>} =
@@ -89,4 +89,18 @@ test("a short page ends the folder even when the server does not count", () => {
   assert.equal(endsFolder({nodes: Array(200), position: 0, total: null, limit: 200}), false);
   assert.equal(endsFolder({nodes: Array(100), position: 0, total: null, limit: 100}), false, "a server cap of 100 is not the end");
   assert.equal(endsFolder({nodes: Array(200), position: 200, total: 400, limit: 200}), true);
+});
+
+test("a file's icon and kind come from its media type, else from its extension", () => {
+  const file = (name: string, mediaType?: string) => ({"@type": "File", id: "f", parentId: null, name, mediaType});
+  assert.deepEqual(fileKind(file("a.mp4", "video/mp4")), {icon: "video_file", label: "Video"});
+  assert.deepEqual(fileKind(file("x", "application/pdf")), {icon: "picture_as_pdf", label: "PDF"});
+  assert.deepEqual(fileKind(file("x", "text/plain; charset=utf-8")), {icon: "description", label: "Text"});
+  assert.deepEqual(fileKind(file("x", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")).label, "Spreadsheet");
+  assert.equal(fileKind(file("song.FLAC", "application/octet-stream")).icon, "audio_file", "octet-stream falls back to the extension");
+  assert.equal(fileKind(file("photo.webp")).icon, "image");
+  assert.deepEqual(fileKind(file("blob.bin")), {icon: "draft", label: "File"});
+  assert.deepEqual(fileKind(file(".hidden")), {icon: "draft", label: "File"});
+  assert.deepEqual(fileKind({"@type": "Directory", id: "d", parentId: null, name: "d"}), {icon: "folder", label: "Folder"});
+  assert.equal(fileKind(file("x", "image/png")).label, "Image", "the declared type wins over the extension");
 });

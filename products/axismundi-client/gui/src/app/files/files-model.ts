@@ -9,6 +9,7 @@ export const FILENODE_REVISION = "draft-ietf-jmap-filenode-22";
 export interface FileNode {
   "@type": string; id: string; parentId: string | null; name: string;
   blobId?: string; size?: number; mediaType?: string; modified?: string; role?: string | null;
+  created?: string; accessed?: string; executable?: boolean;
   myRights?: Record<string, boolean>;
 }
 export interface Listing { nodes: FileNode[]; position: number; queryState: string; total: number | null }
@@ -95,4 +96,22 @@ export function kindLabel(node: FileNode): string {
   if (node["@type"] === "SymLink") return "Link";
   const type = node.mediaType ?? "";
   return type === "application/octet-stream" || !type ? "File" : type;
+}
+
+/** draft-ietf-jmap-filenode-22 FileNodeRights, in the order a person reads them. */
+const rights: [string, string][] = [
+  ["mayRead", "View"], ["mayAddChildren", "Add items"], ["mayModifyContent", "Edit contents"], ["mayRename", "Rename"],
+  ["mayDelete", "Delete"], ["maySetMetadata", "Edit details"], ["mayShare", "Share"],
+];
+
+/**
+ * What the user may do in a folder, from its myRights. Every known right is "Full access" and View
+ * alone is "View only"; otherwise the granted rights are listed. Absent myRights says nothing.
+ */
+export function accessLabel(myRights: Record<string, boolean> | undefined): string | null {
+  if (!myRights) return null;
+  const granted = rights.filter(([key]) => myRights[key]).map(([, label]) => label);
+  if (granted.length === rights.length) return "Full access";
+  if (granted.length === 1 && myRights["mayRead"]) return "View only";
+  return granted.length ? granted.join(", ") : "No access";
 }

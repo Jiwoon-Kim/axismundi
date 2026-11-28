@@ -41,6 +41,50 @@
       } @empty { <p>Loading…</p> }
     </section>
   </mat-sidenav>
+  <!-- M3 side sheet with the selected item's details: standard beside the list in wide windows, modal in
+       compact ones (the same surface as the Contacts filter sheet). -->
+  <mat-sidenav id="file-details-sheet" class="details-sheet" position="end" aria-labelledby="file-details-title"
+    [class.modal]="!expanded()" [mode]="expanded() ? 'side' : 'over'" [opened]="detailsOpen()" (openedChange)="detailsOpen.set($event)">
+    <div class="sheet">
+      <header class="sheet-header">
+        <h2 id="file-details-title">Details</h2>
+        <button matIconButton type="button" aria-label="Close details" (click)="detailsOpen.set(false)"><mat-icon>close</mat-icon></button>
+      </header>
+      <div class="sheet-body">
+        @let node = detail();
+        <div class="detail-title">
+          <mat-icon aria-hidden="true">{{ !node || isFolder(node) ? "folder" : "draft" }}</mat-icon>
+          <h3 [title]="node?.name ?? 'Files'">{{ node?.name ?? "Files" }}</h3>
+        </div>
+        @if (node && !isFolder(node)) {
+          <button matButton="tonal" type="button" class="detail-action" (click)="download(node)"><mat-icon>download</mat-icon> Download</button>
+        } @else if (node && selected()) {
+          <button matButton="tonal" type="button" class="detail-action" (click)="open(node)"><mat-icon>folder_open</mat-icon> Open</button>
+        }
+        <dl>
+          <dt>Kind</dt><dd>{{ node ? kindLabel(node) : "Folder" }}</dd>
+          @if (node && !isFolder(node)) {
+            <dt>Size</dt><dd>{{ formatBytes(node.size) }}@if (node.size !== undefined && node.size >= 1024) { ({{ node.size | number }} bytes)}</dd>
+          }
+          @if (location().length) {
+            <dt>Location</dt>
+            <dd class="location" [title]="location().join(' › ')">{{ location().join(" › ") }}</dd>
+          }
+          @if (node?.modified) { <dt>Modified</dt><dd>{{ node!.modified | date: "medium" }}</dd> }
+          @if (node?.created) { <dt>Created</dt><dd>{{ node!.created | date: "medium" }}</dd> }
+          @if (node?.accessed) { <dt>Opened</dt><dd>{{ node!.accessed | date: "medium" }}</dd> }
+          @if (access(); as access) { <dt>Your access</dt><dd>{{ access }}</dd> }
+          @if (node?.role) { <dt>Role</dt><dd>{{ node!.role }}</dd> }
+        </dl>
+        @if (!node) {
+          <section class="detail-storage" aria-label="Storage">
+            <h3>Storage</h3>
+            @for (line of storage(); track line.text) { <p>{{ line.text }}</p> }
+          </section>
+        }
+      </div>
+    </div>
+  </mat-sidenav>
   <mat-sidenav-content>
     <mat-card appearance="filled" class="pane">
       <mat-toolbar class="bar">
@@ -62,6 +106,10 @@
         <button matIconButton type="button" aria-label="New folder" matTooltip="New folder" [disabled]="!folderAllowsUpload()"
           (click)="newFolder()"><mat-icon>create_new_folder</mat-icon></button>
         <button matIconButton type="button" aria-label="Refresh" matTooltip="Refresh" (click)="refresh()"><mat-icon>refresh</mat-icon></button>
+        <button matIconButton type="button" aria-label="Details" matTooltip="Details" [class.toggled]="detailsOpen()"
+          [attr.aria-expanded]="detailsOpen()" aria-controls="file-details-sheet" (click)="detailsOpen.set(!detailsOpen())">
+          <mat-icon>info</mat-icon>
+        </button>
       </mat-toolbar>
       @if (loading()) { <mat-progress-bar mode="indeterminate" aria-label="Loading folder" /> }
       @if (error()) { <p class="status" role="alert">{{ error() }}</p> }
@@ -74,7 +122,7 @@
               @if (isFolder(node)) {
                 <button type="button" class="name-link" (click)="open(node)"><mat-icon aria-hidden="true">folder</mat-icon><span>{{ node.name }}</span></button>
               } @else {
-                <span class="name-cell"><mat-icon aria-hidden="true">draft</mat-icon><span>{{ node.name }}</span></span>
+                <button type="button" class="name-link file" (click)="details(node); $event.stopPropagation()"><mat-icon aria-hidden="true">draft</mat-icon><span>{{ node.name }}</span></button>
               }
             </td>
           </ng-container>
@@ -98,7 +146,8 @@
             </td>
           </ng-container>
           <tr mat-header-row *matHeaderRowDef="columns; sticky: true"></tr>
-          <tr mat-row *matRowDef="let node; columns: columns" (dblclick)="open(node)"></tr>
+          <tr mat-row *matRowDef="let node; columns: columns" [class.selected]="node.id === selectedId()"
+            (click)="select(node)" (dblclick)="open(node)"></tr>
         </table>
         @if (!loading() && !error() && !nodes().length) { <p class="status" role="status">This folder is empty.</p> }
         @if (total() !== null && nodes().length < total()!) {
@@ -117,6 +166,7 @@
     } @else {
       <button mat-menu-item type="button" (click)="download(node)"><mat-icon>download</mat-icon><span>Download</span></button>
     }
+    <button mat-menu-item type="button" (click)="details(node)"><mat-icon>info</mat-icon><span>Details</span></button>
     <button mat-menu-item type="button" (click)="rename(node)"><mat-icon>edit</mat-icon><span>Rename</span></button>
     <button mat-menu-item type="button" (click)="destroy(node)"><mat-icon>delete</mat-icon><span>Delete</span></button>
   </ng-template>

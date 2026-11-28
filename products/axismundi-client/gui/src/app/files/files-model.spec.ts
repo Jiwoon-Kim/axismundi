@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { folderSort, formatBytes, quotaLines, setFailure, uploadError, uploadOutcome, type Listing, type Quotas, type UploadResult } from "./files-model.ts";
+import { accessLabel, folderSort, formatBytes, quotaLines, setFailure, uploadError, uploadOutcome, type Listing, type Quotas, type UploadResult } from "./files-model.ts";
 import { clearFinished, enqueue, settle, summary } from "../shell/upload-queue.ts";
 
 const fixture: {listing: Listing; upload: Record<string, UploadResult>; quota: Record<string, Quotas>} =
@@ -51,4 +51,13 @@ test("the upload queue keeps states apart and clears only what is finished", () 
   items = settle(items, "k2", "unknown", "check");
   assert.deepEqual(summary(items), {active: 0, attention: 1, done: 1});
   assert.deepEqual(clearFinished(items).map(item => item.key), ["k2"]);
+});
+
+test("folder access reads as words, and a missing myRights says nothing", () => {
+  const all = {mayRead: true, mayAddChildren: true, mayModifyContent: true, mayRename: true, mayDelete: true, maySetMetadata: true, mayShare: true};
+  assert.equal(accessLabel(all), "Full access");
+  assert.equal(accessLabel({mayRead: true}), "View only");
+  assert.equal(accessLabel({mayRead: true, mayAddChildren: true}), "View, Add items");
+  assert.equal(accessLabel({}), "No access");
+  assert.equal(accessLabel(undefined), null);
 });

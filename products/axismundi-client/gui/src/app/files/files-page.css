@@ -45,3 +45,33 @@ td.mat-column-actions, th.mat-column-actions { width: 56px; text-align: end; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 @container (width < 560px) { .mat-column-kind, .mat-column-modified { display: none; } }
 @container (width < 420px) { .mat-column-size { display: none; } }
+
+/* Selected row: the item the details sheet describes. */
+tr.mat-mdc-row { cursor: default; }
+tr.mat-mdc-row.selected { background: var(--mat-sys-secondary-container); }
+tr.mat-mdc-row.selected td { color: var(--mat-sys-on-secondary-container); }
+.name-link.file mat-icon { color: var(--mat-sys-on-surface-variant); }
+.toggled { background: var(--mat-sys-secondary-container); color: var(--mat-sys-on-secondary-container); }
+
+/* M3 side sheet (products/styleguide/_data/surface.yml, sheet-side): 256dp wide; standard = surface,
+   level0, divider on the edge facing the page; modal = surface-container-low, level1, 16dp corners facing
+   the page. Headline stays put; only the body scrolls. */
+.details-sheet { width: 256px; padding: 0; background: var(--mat-sys-surface); border-inline-end: 0;
+  border-inline-start: 1px solid var(--mat-sys-outline); }
+.details-sheet.modal { background: var(--mat-sys-surface-container-low); box-shadow: var(--mat-sys-level1); border: 0;
+  border-start-start-radius: 16px; border-end-start-radius: 16px; }
+.sheet { display: flex; flex-direction: column; height: 100%; }
+.sheet-header { flex: none; display: flex; align-items: center; gap: 12px; padding: 12px 12px 12px 24px; }
+.sheet-header h2 { flex: 1; margin: 0; font: var(--mat-sys-title-large); color: var(--mat-sys-on-surface-variant); }
+.sheet-body { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 0 24px 16px; }
+.detail-title { display: flex; align-items: center; gap: 12px; margin-block: 8px 16px; min-width: 0; }
+.detail-title mat-icon { flex: none; color: var(--mat-sys-primary); }
+.detail-title h3 { margin: 0; min-width: 0; font: var(--mat-sys-title-medium); overflow-wrap: anywhere; }
+.detail-action { margin-block-end: 16px; }
+.sheet-body dl { margin: 0; display: grid; gap: 4px; }
+.sheet-body dt { font: var(--mat-sys-label-medium); color: var(--mat-sys-on-surface-variant); margin-block-start: 8px; }
+.sheet-body dd { margin: 0; font: var(--mat-sys-body-medium); overflow-wrap: anywhere; }
+.sheet-body dd.location { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal; }
+.detail-storage { margin-block-start: 16px; padding-block-start: 8px; border-block-start: 1px solid var(--mat-sys-outline-variant); }
+.detail-storage h3 { margin: 8px 0 4px; font: var(--mat-sys-title-small); color: var(--mat-sys-on-surface-variant); }
+.detail-storage p { margin: 0; font: var(--mat-sys-body-small); color: var(--mat-sys-on-surface-variant); }

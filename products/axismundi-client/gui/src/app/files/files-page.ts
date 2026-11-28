@@ -1,6 +1,6 @@
 import { Component, DestroyRef, TemplateRef, computed, effect, inject, signal, untracked, viewChild } from "@angular/core";
 import { toSignal } from "@angular/core/rxjs-interop";
-import { DatePipe } from "@angular/common";
+import { DatePipe, DecimalPipe } from "@angular/common";
 import { ActivatedRoute, Router, RouterLink } from "@angular/router";
 import { BreakpointObserver } from "@angular/cdk/layout";
 import { map } from "rxjs";
@@ -24,7 +24,7 @@ import { ConnectionService } from "../connection.service";
 import { EXPANDED } from "../shell/scaffold";
 import { UploadQueueComponent } from "../shell/upload-queue.component";
 import { type QueueFile, type QueueItem, clearFinished, enqueue, settle } from "../shell/upload-queue";
-import { FILENODE, FILENODE_REVISION, type FileNode, type Listing, type Quotas, type UploadResult, folderSort, formatBytes,
+import { FILENODE, FILENODE_REVISION, type FileNode, type Listing, type Quotas, type UploadResult, accessLabel, folderSort, formatBytes,
   isFolder, kindLabel, quotaLines, setFailure, uploadError, uploadOutcome } from "./files-model";
 
 const PAGE = 200;
@@ -38,7 +38,7 @@ const sameScope = (a: Scope | null, b: Scope | null) => a?.connectionId === b?.c
  * The open folder lives in the URL (`?folder=`); uploads go through the shared upload queue.
  */
 @Component({
-  imports: [DatePipe, RouterLink, MatMenuContent, MatButton, MatFabButton, MatIconButton, MatCard, MatChip, MatDialogActions, MatDialogClose, MatDialogContent,
+  imports: [DatePipe, DecimalPipe, RouterLink, MatMenuContent, MatButton, MatFabButton, MatIconButton, MatCard, MatChip, MatDialogActions, MatDialogClose, MatDialogContent,
     MatDialogTitle, MatFormField, MatLabel, MatIcon, MatInput, MatMenu, MatMenuItem, MatMenuTrigger, MatProgressBar, MatSidenav,
     MatSidenavContainer, MatSidenavContent, MatTableModule, MatToolbar, MatTooltip, UploadQueueComponent],
   templateUrl: "./files-page.html",
@@ -82,6 +82,23 @@ export class FilesPage {
   protected readonly storage = computed(() => quotaLines(this.quotas()));
   protected readonly queue = signal<QueueItem[]>([]);
   protected readonly columns = ["name", "size", "kind", "modified", "actions"];
+
+  // --- details ------------------------------------------------------------------------------------
+  /** The side sheet with the selected item's details; closed until asked for, like the filter sheet. */
+  protected readonly detailsOpen = signal(false);
+  protected readonly selectedId = signal<string | null>(null);
+  protected readonly selected = computed(() => this.nodes().find(node => node.id === this.selectedId()) ?? null);
+  /** With nothing selected the sheet describes the open folder; at the root, the root itself (null). */
+  protected readonly detail = computed(() => this.selected() ?? this.path().at(-1) ?? null);
+  /** The folders that hold the described item, root first. */
+  protected readonly location = computed(() => {
+    const trail = ["Files", ...this.path().map(node => node.name)];
+    return this.selected() ? trail : trail.slice(0, -1);
+  });
+  protected readonly access = computed(() => {
+    const node = this.detail();
+    return node ? accessLabel(isFolder(node) ? node.myRights : this.path().at(-1)?.myRights) : null;
+  });
   /**
    * Where each queued file goes, fixed when it is queued: a retry or a conflict choice made after the
    * user switched connection or Account still writes to the folder the file was dropped on.
@@ -100,7 +117,7 @@ export class FilesPage {
   constructor() {
     effect(() => {
       const scope = this.scope(), folder = this.folderId();
-      untracked(() => { void this.load(scope, folder); });
+      untracked(() => { this.selectedId.set(null); void this.load(scope, folder); });
     });
     effect(() => {
       const scope = this.scope();
@@ -152,6 +169,8 @@ export class FilesPage {
   protected open(node: FileNode): void {
     if (isFolder(node)) void this.router.navigate([], {relativeTo: this.route, queryParams: {folder: node.id}});
   }
+  protected select(node: FileNode): void { this.selectedId.set(node.id); }
+  protected details(node: FileNode): void { this.selectedId.set(node.id); this.detailsOpen.set(true); }
   protected readonly isFolder = isFolder;
   protected readonly kindLabel = kindLabel;
   protected readonly formatBytes = formatBytes;
